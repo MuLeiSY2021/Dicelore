@@ -9,6 +9,7 @@ description = "Anko/Anka interactive fiction framework with dice-respect mechani
 requires-python = ">=3.12"
 dependencies = [
     "mcp>=1.0.0",
+    "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]
@@ -20,6 +21,7 @@ dev = [
 [project.scripts]
 anko-dice = "anko_dice.server:main"
 anko-game = "anko_game.server:main"
+anko-session = "anko_db.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

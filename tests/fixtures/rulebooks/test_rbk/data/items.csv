@@ -1,0 +1,4 @@
+id,name,type,effect
+sword,铁剑,weapon,攻击+3
+shield,木盾,armor,防御+2
+potion,生命药水,consumable,恢复1d8 HP
