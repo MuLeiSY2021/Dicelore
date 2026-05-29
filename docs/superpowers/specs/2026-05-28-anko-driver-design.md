@@ -513,10 +513,10 @@ extensions:
   "hooks": {
     "PostToolUse": [
       {
-        "matcher": "mcp__anko_core__action_resolve",
+        "matcher": "mcp__anko_game__action_resolve",
         "hooks": [{
           "type": "command",
-          "command": "python -m anko_core.hooks.verify_state_sync"
+          "command": "python -m anko_game.hooks.verify_state_sync"
         }]
       }
     ]
@@ -531,8 +531,8 @@ extensions:
 ### 安装脚本
 
 `adapters/claude_code/install.sh`：
-1. 将 `src/anko_core/skills/*.md` 拷贝到项目 `.claude/skills/`
-2. 生成 `.mcp.json`（配置 anko-core server 路径）
+1. 将 `src/anko_skills/*.md` 拷贝到项目 `.claude/skills/`
+2. 生成 `.mcp.json`（配置 `anko_dice` + `anko_game` 两个 MCP server）
 3. 生成 `.claude/settings.local.json`（hooks 配置）
 4. 生成 `CLAUDE.md` 片段（AI 指南）
 
@@ -588,3 +588,80 @@ extensions:
 3. **Phase 2**：`action_resolve("攻击哥布林", {scene_type:"combat"})` 强制骰点判定，AI 按结果叙事（包括失败）
 4. **Phase 3**：`/anko-start orc_dnd` → `/anko-action 攻击哥布林` → 完整游戏循环
 5. **Phase 4**：自定义规则书 + 自定义骰子脚本正常运行
+
+---
+
+## 模块集成管道
+
+### 可选模块的 MCP 工具注册
+
+所有可选模块的工具在 `anko_game` MCP server 上**动态注册**。`anko_dice` MCP 保持静态（只有骰子工具，始终可用）。
+
+注册流程：
+1. `session_create(rulebook_id)` → 加载规则书 `manifest.yml`
+2. 读取 `modules` 配置，确定激活哪些模块
+3. 在 `anko_game` MCP server 上注册激活模块的工具
+4. 将活跃工具清单 + AI 指南注入到 agent 上下文
+
+### `action_resolve` 内部管道
+
+`action_resolve` 是 AI 最常调用的工具，可选模块通过内部管道集成：
+
+```
+action_resolve(action, context)
+  │
+  ├─ 1. [constraints] 约束验证（如果激活）
+  │     验证失败 → 返回 {outcome: "rejected", reason: "..."}
+  │
+  ├─ 2. [paradigm] 范式选择 + 骰子执行
+  │     dice_resolution → 骰点 + 判定
+  │     pure_anko → story_branch 逻辑
+  │     ...
+  │
+  ├─ 3. [entities] 特性结算（如果激活）
+  │     检查受影响实体 → 评估特性条件 → 级联触发
+  │     追加 state_changes
+  │
+  ├─ 4. [timers] 回合过渡（如果 phases 也激活）
+  │     倒计时 → 到期触发 → 级联效果
+  │
+  └─ 5. [phases] 阶段推进检查（如果激活）
+        检查当前阶段是否可推进 → 返回阶段状态
+```
+
+模块间交互顺序：`constraints` → `paradigm/dice` → `entities` → `timers` → `phases`
+
+### `anko_core` / `anko_db` 规则书加载边界
+
+```
+anko_db.rulebook.load(path)
+  │
+  ├── 读取 manifest.yml → 返回原始字典
+  ├── 读取 Markdown 文件
+  │     ├── 提取 YAML frontmatter → 返回为结构化数据
+  │     └── 剩余 Markdown → 灌入 FTS5 knowledge 表
+  ├── 读取 YAML/JSON 文件 → 返回为字典
+  └── 读取 CSV 文件 → 返回为行列表
+
+anko_core 初始化
+  │
+  ├── 接收 anko_db 返回的原始字典
+  ├── 解析 paradigm_overrides → 注册范式覆盖
+  ├── 解析 modules 配置 → 初始化可选模块
+  └── 注册激活模块的 MCP 工具到 anko_game server
+```
+
+**数据归属**：
+- Markdown 正文 → FTS5 knowledge 表（全文搜索）
+- YAML frontmatter → state 表（结构化查询）
+- CSV 数据行 → state 表（key=表名.行ID, value=行数据）
+- YAML/JSON 配置 → 内存（anko_core 解析后使用）
+
+### AI 上下文管理策略
+
+当多个模块激活时，AI 可见的 MCP 工具可能多达 20+。策略：
+
+1. **`anko_dice` MCP 始终可见** — 但仅暴露 `dice_roll`，用于调试/自由使用。`action_resolve` 内部调用 `anko_core.dice`，不走 MCP。
+2. **`anko_game` MCP 动态工具集** — 只注册当前 session 激活模块对应的工具。
+3. **规则书 `ai/` 内容强制注入** — `guidelines.md` 和 `style.md` 不放入 FTS5 等待搜索，而是在 `session_create` 时直接注入到 agent 系统提示中。确保"AI 必须尊重骰子"等核心规则不被遗漏。
+4. **`paradigm_overrides` 中的 `ai_instruction` 优先级高于 `ai/guidelines.md`** — 场景级指令覆盖全局指南。
