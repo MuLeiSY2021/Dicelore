@@ -31,9 +31,18 @@ def dice_judge(
 ) -> dict:
     """Roll dice and judge against a threshold.
 
+    For critical detection, only single-die expressions are supported
+    (crits check the natural die face, not the sum of multiple dice).
     Returns outcome: critical_success, success, failure, or critical_failure.
     """
     roll_result = dice_engine.dice_roll(expression)
+    if len(roll_result.rolls) != 1 and (
+        critical_success_on is not None or critical_failure_on is not None
+    ):
+        raise ValueError(
+            "Critical thresholds require a single-die expression "
+            f'(got {len(roll_result.rolls)} dice in "{expression}")'
+        )
     judge_result = dice_engine.dice_judge(
         roll=roll_result.rolls[0] if len(roll_result.rolls) == 1 else roll_result.total,
         threshold=threshold,

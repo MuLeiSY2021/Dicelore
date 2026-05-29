@@ -122,6 +122,10 @@ def dice_range_map(roll: int, ranges: dict[str, list[int]]) -> RangeMapResult:
                 f"Range for '{label}' must have exactly 2 values, got {len(bounds)}"
             )
         low, high = bounds
+        if low > high:
+            raise ValueError(
+                f"Range for '{label}' has inverted bounds: low ({low}) > high ({high})"
+            )
         if low <= roll <= high:
             return RangeMapResult(
                 roll=roll,

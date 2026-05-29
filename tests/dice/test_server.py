@@ -49,6 +49,14 @@ class TestDiceJudgeTool:
             )
             assert result["outcome"] == "critical_success"
 
+    def test_multi_die_with_crits_rejected(self):
+        with pytest.raises(ValueError, match="single-die expression"):
+            dice_judge(
+                expression="2d6",
+                threshold=10,
+                critical_success_on=12,
+            )
+
 
 class TestDiceRangeMapTool:
     def test_returns_dict_with_label(self):

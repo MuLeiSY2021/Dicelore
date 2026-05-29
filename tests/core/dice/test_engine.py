@@ -183,6 +183,11 @@ class TestDiceRangeMap:
         result = dice_range_map(50, ranges)
         assert result.range_definition == ranges
 
+    def test_inverted_bounds(self):
+        ranges = {"bad": [50, 10]}
+        with pytest.raises(ValueError, match="inverted bounds"):
+            dice_range_map(20, ranges)
+
 
 class TestDiceContest:
     def test_a_wins(self):
