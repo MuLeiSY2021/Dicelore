@@ -85,7 +85,7 @@ anko_driver/
 │   │   ├── session.py             # Session 生命周期管理
 │   │   ├── store.py               # SQLite 持久化
 │   │   ├── knowledge.py           # 知识库搜索（FTS5 + sqlite-vec）
-│   │   └── rulebook.py            # 规则书加载（Markdown→知识库，YAML→数据结构）
+│   │   └── rulebook.py            # 规则书加载（Markdown→知识库，YAML/CSV→数据结构）
 │   ├── anko_dice/                 # MCP Server：骰子（无状态，纯计算）
 │   │   └── server.py
 │   ├── anko_game/                 # MCP Server：游戏逻辑（场景驱动工具 + Session 管理）
@@ -373,10 +373,10 @@ rulebooks/<rulebook_id>/
 ├── rules/                    # 游戏规则
 │   ├── combat.md             # 战斗规则叙述
 │   └── paradigm_overrides.yml  # 可选：范式覆盖/扩展（唯一必须结构化的规则文件）
-├── data/                     # 游戏数据（YAML → 结构化数据表）
-│   ├── items.yml             # 物品数据
-│   ├── enemies.yml           # 怪物/敌人面板
-│   └── random_tables.yml     # 随机表（名字、遭遇、宝藏...）
+├── data/                     # 游戏数据（YAML/JSON/CSV → 结构化数据表）
+│   ├── items.csv              # 物品数据（CSV，Excel 友好）
+│   ├── enemies.csv            # 怪物/敌人面板
+│   └── random_tables.yml      # 随机表（嵌套结构，YAML 更合适）
 ├── ai/                       # AI 指南（Markdown → 知识库 + 上下文注入）
 │   ├── guidelines.md         # 叙事指南、骰子尊重规则
 │   └── style.md              # 叙事风格示例
@@ -387,7 +387,8 @@ rulebooks/<rulebook_id>/
 
 **格式划分原则**：
 - **Markdown**：叙事性、指导性内容（世界观、规则叙述、AI 指南）— 加载时灌入 FTS5 知识库
-- **YAML/JSON**：可计算的结构化数据（物品面板、随机表、范式参数）— 加载时解析为数据结构
+- **YAML/JSON**：嵌套结构化数据（范式覆盖、骰子规则、复杂配置）— 加载时解析为数据结构
+- **CSV**：表格数据（物品表、怪物面板、随机表、技能表）— 加载时解析为数据行，可用 Excel/LibreOffice 编辑
 - **YAML frontmatter**：Markdown 文件可内嵌结构化数据（如 NPC 叙述 + 属性面板）
 
 ### 范式覆盖（paradigm_overrides.yml）
