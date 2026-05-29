@@ -4,7 +4,7 @@ import random
 
 import pytest
 
-from anko_core.dice.engine import DiceResult, dice_roll
+from anko_core.dice.engine import DiceResult, JudgeOutcome, JudgeResult, dice_roll, dice_judge
 
 
 class TestDiceRoll:
@@ -79,3 +79,58 @@ class TestDiceRoll:
         assert all(1 <= r <= 8 for r in result.rolls)
         assert result.modifier == 10
         assert result.total == sum(result.rolls) + 10
+
+
+class TestDiceJudge:
+    def test_success(self):
+        result = dice_judge(roll=15, threshold=10)
+        assert result.outcome == JudgeOutcome.SUCCESS
+        assert result.total == 15
+
+    def test_failure(self):
+        result = dice_judge(roll=5, threshold=10)
+        assert result.outcome == JudgeOutcome.FAILURE
+
+    def test_exact_threshold_is_success(self):
+        result = dice_judge(roll=10, threshold=10)
+        assert result.outcome == JudgeOutcome.SUCCESS
+
+    def test_with_modifier(self):
+        result = dice_judge(roll=8, threshold=10, modifier=3)
+        assert result.total == 11
+        assert result.outcome == JudgeOutcome.SUCCESS
+
+    def test_modifier_not_enough(self):
+        result = dice_judge(roll=5, threshold=10, modifier=2)
+        assert result.total == 7
+        assert result.outcome == JudgeOutcome.FAILURE
+
+    def test_critical_success(self):
+        result = dice_judge(roll=20, threshold=10, critical_success_on=20)
+        assert result.outcome == JudgeOutcome.CRITICAL_SUCCESS
+
+    def test_critical_success_overrides_failure(self):
+        """Natural 20 is crit success even if total < threshold."""
+        result = dice_judge(roll=20, threshold=30, critical_success_on=20)
+        assert result.outcome == JudgeOutcome.CRITICAL_SUCCESS
+
+    def test_critical_failure(self):
+        result = dice_judge(roll=1, threshold=10, critical_failure_on=1)
+        assert result.outcome == JudgeOutcome.CRITICAL_FAILURE
+
+    def test_critical_failure_overrides_success(self):
+        """Natural 1 is crit failure even if total >= threshold."""
+        result = dice_judge(roll=1, threshold=0, critical_failure_on=1)
+        assert result.outcome == JudgeOutcome.CRITICAL_FAILURE
+
+    def test_no_crits_defined(self):
+        result = dice_judge(roll=20, threshold=10)
+        assert result.outcome == JudgeOutcome.SUCCESS
+
+    def test_result_fields(self):
+        result = dice_judge(roll=15, threshold=10, modifier=2)
+        assert result.roll == 15
+        assert result.threshold == 10
+        assert result.modifier == 2
+        assert result.total == 17
+        assert result.outcome == JudgeOutcome.SUCCESS

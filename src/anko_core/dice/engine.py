@@ -5,6 +5,7 @@ from __future__ import annotations
 import random
 import re
 from dataclasses import dataclass
+from enum import Enum
 
 
 @dataclass
@@ -46,4 +47,56 @@ def dice_roll(expression: str) -> DiceResult:
         rolls=rolls,
         modifier=modifier,
         total=total,
+    )
+
+
+class JudgeOutcome(Enum):
+    """Outcome of a dice judgment."""
+
+    CRITICAL_SUCCESS = "critical_success"
+    SUCCESS = "success"
+    FAILURE = "failure"
+    CRITICAL_FAILURE = "critical_failure"
+
+
+@dataclass
+class JudgeResult:
+    """Result of judging a dice roll against a threshold."""
+
+    roll: int
+    threshold: int
+    modifier: int
+    total: int
+    outcome: JudgeOutcome
+
+
+def dice_judge(
+    roll: int,
+    threshold: int,
+    modifier: int = 0,
+    critical_success_on: int | None = None,
+    critical_failure_on: int | None = None,
+) -> JudgeResult:
+    """Judge a roll value against a threshold.
+
+    Criticals take priority: if the natural roll matches a crit, that
+    outcome is forced regardless of total vs threshold.
+    """
+    total = roll + modifier
+
+    if critical_failure_on is not None and roll == critical_failure_on:
+        outcome = JudgeOutcome.CRITICAL_FAILURE
+    elif critical_success_on is not None and roll == critical_success_on:
+        outcome = JudgeOutcome.CRITICAL_SUCCESS
+    elif total >= threshold:
+        outcome = JudgeOutcome.SUCCESS
+    else:
+        outcome = JudgeOutcome.FAILURE
+
+    return JudgeResult(
+        roll=roll,
+        threshold=threshold,
+        modifier=modifier,
+        total=total,
+        outcome=outcome,
     )
