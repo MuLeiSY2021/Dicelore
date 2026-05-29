@@ -7,6 +7,9 @@ from pathlib import Path
 import pytest
 
 from anko_db.session import Session, SessionInfo
+from anko_db.rulebook import Rulebook
+
+FIXTURES = Path(__file__).parent.parent / "fixtures" / "rulebooks" / "test_rbk"
 
 
 class TestSessionCreate:
@@ -157,4 +160,57 @@ class TestHistoryCRUD:
     def test_history_get_missing_turn_returns_none(self, tmp_path: Path):
         session = Session.create("rbk", sessions_dir=tmp_path)
         assert session.history_get(turn=999) is None
+        session.close()
+
+
+class TestSessionImportRulebook:
+    def test_import_rulebook_populates_knowledge(self, tmp_path: Path):
+        session = Session.create("test_rbk", sessions_dir=tmp_path)
+        rb = Rulebook.load(FIXTURES)
+        session.import_rulebook(rb)
+        from anko_db.knowledge import Knowledge
+        k = Knowledge(session._store)
+        results = k.search("荒野")
+        assert len(results) >= 1
+        session.close()
+
+    def test_import_rulebook_stores_ai_guidelines(self, tmp_path: Path):
+        session = Session.create("test_rbk", sessions_dir=tmp_path)
+        rb = Rulebook.load(FIXTURES)
+        session.import_rulebook(rb)
+        row = session._store.query_one(
+            "SELECT value FROM session_meta WHERE key = ?", ("ai_guidelines",)
+        )
+        assert row is not None
+        assert "尊重骰子" in row["value"]
+        session.close()
+
+    def test_import_rulebook_stores_paradigm_overrides(self, tmp_path: Path):
+        session = Session.create("test_rbk", sessions_dir=tmp_path)
+        rb = Rulebook.load(FIXTURES)
+        session.import_rulebook(rb)
+        row = session._store.query_one(
+            "SELECT value FROM session_meta WHERE key = ?", ("paradigm_overrides",)
+        )
+        assert row is not None
+        overrides = json.loads(row["value"])
+        assert "overrides" in overrides
+        session.close()
+
+    def test_import_rulebook_stores_csv_data_as_state(self, tmp_path: Path):
+        session = Session.create("test_rbk", sessions_dir=tmp_path)
+        rb = Rulebook.load(FIXTURES)
+        session.import_rulebook(rb)
+        items = session.state_get("data.items")
+        assert items is not None
+        assert len(items) == 3
+        session.close()
+
+    def test_import_rulebook_stores_frontmatter_as_state(self, tmp_path: Path):
+        session = Session.create("test_rbk", sessions_dir=tmp_path)
+        rb = Rulebook.load(FIXTURES)
+        session.import_rulebook(rb)
+        setting = session.state_get("world.setting")
+        assert setting is not None
+        assert setting["type"] == "region"
         session.close()

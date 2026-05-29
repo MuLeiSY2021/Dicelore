@@ -228,8 +228,7 @@ class Session:
 
         # Import knowledge entries
         knowledge = Knowledge(self._store)
-        for entry in rb.knowledge_entries:
-            knowledge.add(entry)
+        knowledge.import_entries(rb.knowledge_entries)
 
         # Store ai_guidelines, ai_style in session_meta
         if rb.ai_guidelines is not None:
