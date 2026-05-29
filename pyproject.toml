@@ -21,6 +21,7 @@ dev = [
 [project.scripts]
 anko-dice = "anko_dice.server:main"
 anko-game = "anko_game.server:main"
+anko-session = "anko_db.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
