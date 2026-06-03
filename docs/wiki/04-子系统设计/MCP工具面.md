@@ -11,9 +11,15 @@
 - **`anko_` 前缀是实际注册 ID**（防多 server 撞名）：`anko_resolve_choice`、`anko_sheet_update`……本页正文为简洁**一律写无前缀名**，实际工具 ID 加 `anko_`。
 - **expr 全程是字符串、MCP 不解析**（[内层 §3.1](内层能力库.md)、[ADR](../05-决策记录-ADR/)）：凡 `expr` 字段都是 `"1d20 + {张三.力量}"` 这样的串，MCP 原样透传给内层求值器，本层不拆。
 - **AI 只给引用、不给真实数值**（铁律，[03 §4](../03-架构/总体架构.md)）：靠 expr 的 `{实体.属性}` 约定 + 内层引擎取真值；**schema 不强卡**（自由串拦不住硬编数字），降级为 L2 教 + L3 账本审计（与状态骰下沉同构，[ADR-0007](../05-决策记录-ADR/)）。
-- **通用出参信封**：多数工具回 `{ ...本工具结果, event_id?, reminders? }`。`event_id` = 该操作落的 event 行；`reminders` = 补刀（§5）。
+- **通用出参信封（成功路径）**：多数工具回 `{ ...本工具结果, event_id?, reminders? }`。`event_id` = 该操作落的 event 行；`reminders` = 补刀（§5）。
 - **一轮时序**（[03 §6](../03-架构/总体架构.md)）：工具**轮内可多次、任意顺序**调用；`resolve_choice` 是**暂存**（回合末经 Stop hook 物化）、`narrate` 是**散文 stream**，其余即时返回即时生效。
 - **三流归属**：resolver / `sheet_update` 的**结构化结果回 AI**（流③，本页 schema 即流③形状）；玩家看到的机械回显 + 菜单由**输出层**读 store/event 渲染（流②，非本页）。
+- **接口契约（本页定骨架，实现期补全文案）**：
+  - **out ＝ MCP `outputSchema`**：各工具 out 形状即注册期 `outputSchema`，经 `structuredContent` 回 AI（流③），**不塞进 `content[].text` 当散文**。
+  - **入参一律 `.strict()`**：in schema 默认禁多余字段，未列字段报错而非静默吞（自由度只在 `expr` 串内，字段集本身收紧）。
+  - **工具 `description`/`title` 属本页契约、非 L2**：MCP description 注册期固定、skill 改不动，必含五段——①一句功能 ②Args 逐参 ③Returns（＝outputSchema 形状）④1–2 条 use / don't-use 示例 ⑤错误说明。本页 schema 是其骨架；与补刀**措辞**（L2，归 [Skills 包](Skills包.md)）分属两层、别混。
+  - **失败路径信封**：出错回 MCP `isError: true` + `content` 带可执行 message，并附结构化 `{ error: { code, message, hint } }`。`code` 枚举：`EXPR_EVAL`（求值失败）/`NOT_NUMERIC`（该掷/算术却给非数值）/`RANGE_INVALID`（档位重叠或不全覆盖）/`ENTITY_NOT_FOUND` 等。**触发条件归 [内层能力库](内层能力库.md)**，本页只定信封 + code 枚举 +「message 必可执行」。`reminders` **不**兼任错误通道。
+  - **CHARACTER_LIMIT 封顶**：回可变大文本的工具（`sheet_list`/`world_search`/`event_recall` 等）出参封顶 ~25k 字符，超出则截断 + `truncated: true` + 续取提示。**enforcement 归内层**，本页定字段约定。
 
 ---
 
@@ -90,8 +96,12 @@
 
 ```ts
 sheet_get:  { entity: z.string(), attr: z.string() }            → { value: string|null, visible: 0|1|2 }
-sheet_list: { entity: z.string(), prefix: z.string().optional() } → { cells: [{attr, value, visible}] }
+sheet_list: { entity: z.string(), prefix: z.string().optional(),
+              limit: z.number().int().min(1).max(200).default(100),
+              offset: z.number().int().min(0).default(0) }
+          → { cells: [{attr, value, visible}], has_more: boolean, next_offset?: number }
 //   prefix 走前缀扫：`张三.`取整卡、`张三.库存:`取整库存（[内层 §4.1](内层能力库.md)）。不用 `_like`（泄漏 SQL）。
+//   limit 是上下文分块、非可见性限制：AI 可翻页取全貌（可见性只由 visible 列控制，不冲突“GM 全见”）。
 ```
 
 - **AI 读到的是含 `visible` 的全貌（GM 全见）**；`visible` 仅供输出层过滤玩家所见，不限制 AI 读取。
@@ -119,7 +129,7 @@ sheet_list: { entity: z.string(), prefix: z.string().optional() } → { cells: [
 ```
 
 - **状态骰已下沉**（[ADR-0007](../05-决策记录-ADR/)）：带骰项（`HP-2d6`）引擎内掷、AI 给不出真值；纯赋值/集合增减同批，**整批原子**，非数值算术报错+整批回滚。
-- "该掷却用了 `=`/裸 set" 的 L1 摩擦已降级 → L2 教 + L3 据 `kind` 标记审计。
+- "该掷却用了 `=`/裸 set" 的 L1 摩擦已降级 → L2 教（[Skills 包 §2 dispatcher 形状表](Skills包.md)，该页自述此处塑形权重最高）+ L3 据 `kind` 标记审计。
 
 ### 2.3 event：`event_append` / `event_recall` / `timer_set`
 
@@ -127,7 +137,7 @@ sheet_list: { entity: z.string(), prefix: z.string().optional() } → { cells: [
 event_append: {
   content: z.string().optional(),             // 散文进 content 走 FTS
   kind: z.enum(["narrate","note","verdict","mutation","timer_fired","reveal"]).default("note"),
-  data_json: z.any().optional(), tags: z.array(z.string()).optional(),
+  data_json: z.unknown().optional(), tags: z.array(z.string()).optional(),
   visible: z.union([z.literal(0),z.literal(1)]).optional(),  // 省略＝按 kind 默认（[内层 §4.2](内层能力库.md)）
 } → { event_id }
 
@@ -168,7 +178,7 @@ rule_search: { query: z.string(), k?: z.number() } → { rules: [{name, content,
 
 ---
 
-## 3. 可见性工具 schema（`sheet_show` / `world_show` / `shot`）
+## 3. 可见性工具 schema（`sheet_show` / `world_show` / `reveal_once`）
 
 承接 [03 §3.1](../03-架构/总体架构.md)、[ADR-0010](../05-决策记录-ADR/)。GM 用这三个工具控制"玩家能看到什么"；输出层据 `visible` 过滤渲染。
 
@@ -187,11 +197,11 @@ world_show: {
 //   show 各写一条 kind=note、visible=0（对玩家隐）的审计 event（"第 N seq 揭示了 X"），供 L3/回看。
 
 // 一次性快照披露（不翻持久可见位；多态：sheet cell | world 条目）
-shot: {
+reveal_once: {
   sheet?: z.object({ entity: z.string(), attr: z.string() }),   // 二选一
   world?: z.object({ name?: z.string(), pool?: z.string(), row_ref?: z.string() }),
 } → { ref, content, event_id }                // append 一条 kind=reveal 的可见 event（冻结副本）
-//   sheet（值暗变）→ 玩家见旧值、下次 shot 才刷新；world（基本静态）→ 一次性披露、不入持久可见集。
+//   sheet（值暗变）→ 玩家见旧值、下次 reveal_once 才刷新；world（基本静态）→ 一次性披露、不入持久可见集。
 ```
 
 ---
@@ -217,8 +227,8 @@ narrate: {
 
 承接 [03 §2/§4.1/§5](../03-架构/总体架构.md)（L1/L2 混合）。
 
-- **挂载点**：塑形相关工具的出参带可选 `reminders: string[]`（走流③、**只回 AI**，是反讨好提醒，不进玩家输出层）。承载工具：`resolve_outcome`/`resolve_contest`（掷出坏结果时）、`sheet_update`（账本异常时）、`resolve_choice`、`narrate`。
-- **填充（混合）**：MCP server 内置一张**极小的"结构触发 → 短提醒"表**作 L1 底线（如命中失败档 → "尊重结果，别软着陆"；后果已锁 → "后续叙述须与已锁后果一致"）；**丰富措辞归 [Skills 包](Skills包.md)（L2）**，可由 guideline/hook 增补。
+- **挂载点**：塑形相关工具的出参带可选 `reminders: string[]`（走流③、**只回 AI**、是反讨好提醒，不进玩家输出层）。承载工具：`resolve_outcome`/`resolve_contest`（掷出坏结果时）、`sheet_update`（账本异常时）、`resolve_choice`（后果已锁时）。**`narrate` 不挂 reminder**（散文通道、无客观结构触发位）。
+- **填充（混合）**：MCP server 内置一张**极小的"结构触发 → 短提醒"表**作 L1 底线（如命中失败档 → "尊重结果，别软着陆"；后果已锁 → "后续叙述须与已锁后果一致"）；本字段**只载这张内置 terse 表**。**丰富措辞归 [Skills 包](Skills包.md)（L2）**，由 AI 内化为 doctrine 后体现在**自身输出**——**v1 不在运行时把 L2 富文本拼进本字段**（详 [Skills 包 §5](Skills包.md)）。
 - 本页只定**字段 + 触发位**；具体**措辞**与触发表条目 → [Skills 包](Skills包.md)。
 
 ---
@@ -252,17 +262,37 @@ game_end: { reason: z.string(), outcome?: z.string() } → { ended: true, event_
 | `world_search`/`sample`/`register` | world store + FTS + 加权抽样 | — | sample=content resolver |
 | `rule_search` | rule store + FTS | — | 只读 |
 | `sheet_show`/`world_show` | store 翻 visible（+__show_all） | note（审计、隐） | 持久揭示 |
-| `shot` | 读目标 + append reveal event | reveal | 多态、快照副本 |
+| `reveal_once` | 读目标 + append reveal event | reveal | 多态、快照副本 |
 | `narrate` | event 追加 | narrate | 散文 stream |
 | `game_end` | 会话态终态标记 | note | 终局 |
 
 > **裸骰子永居内层、AI 调不到**——限制工具面本身即 L1（[03 §2](../03-架构/总体架构.md)）。
 
+### 7.1 工具注解（MCP annotations）
+
+> `openWorldHint` 全局 `false`（封闭世界、无外部实体），下表略。
+
+| 工具 | readOnlyHint | destructiveHint | idempotentHint |
+|---|---|---|---|
+| `sheet_get`/`sheet_list`/`world_search`/`event_recall`/`rule_search` | ✅ | false | ✅ |
+| `world_sample` | ✅ | false | false（随机抽样） |
+| `sheet_update` | false | false | `=` 幂等 / `+`/`-` 非幂等 |
+| `event_append` | false | false | false（每调用新行） |
+| `narrate` | false | false | false（每调用新行） |
+| `resolve_outcome` / `resolve_contest` | false | false | false（含随机） |
+| `resolve_choice` | false | false | ✅（暂存、末次为准） |
+| `sheet_show` / `world_show` | false | false | ✅ |
+| `reveal_once` | false | false | false（每次新 reveal） |
+| `world_register` | false | false | false |
+| `timer_set` | false | false | false |
+| `game_end` | false | **true** | false |
+
 ---
 
 ## 本页**不**负责定的
 
-- 表 schema、FTS5、`expr` 文法与求值、`visible` 列存储/强制隐藏标记/`shot`=reveal 的写入语义 → [内层能力库](内层能力库.md)
+- 表 schema、FTS5、`expr` 文法与求值、`visible` 列存储/强制隐藏标记/`reveal_once`=reveal 的写入语义 → [内层能力库](内层能力库.md)
+- 错误的**触发条件**（求值失败、`rangeMap` 校验、非数值算术）与 **CHARACTER_LIMIT 截断的 enforcement** → [内层能力库](内层能力库.md)（本页只定错误信封 + code 枚举 + 截断字段约定）
 - 教条内容（别软着陆怎么写）、补刀**措辞**与触发表条目、工具选择决策树 skill → [Skills 包](Skills包.md)（本页只定补刀的**结构挂载点**）
 - 各 agent 的工具注册、`narrate` 降级、Stop hook（物化 choice + L3 审计）、被动 rule 召回 / timer 到期 hook、玩家输入捕获 → [adapter 与 L3 审计](adapter与L3审计.md) / [跨agent与适配层](../03-架构/跨agent与适配层.md)
 - 玩家选择的捕获方式（聊天 / 转轮 / 投票）、单/多人模式 → 模式/adapter 层

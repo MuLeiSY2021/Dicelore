@@ -58,7 +58,7 @@
 **要改的页**：02 §6 数据流；03 §4.1（narrate 重定位）+ §6（数据流改"一轮+三流"图）+ §5/§8（**输出层从纯未来层 → v1 一等概念**）；内层 §4.2（L3 窗口）。
 **依赖**：输出层的 `visible` 过滤 → 见 E（可见性，R2）；`time_*` 插点 → 见 F（time 决定不升格、仍用 `sheet_update`，R3）。
 
-### E. 可见性模型：`visible` 列 + show 白名单 + shot 快照　✅ 已落地（2026-06-03）
+### E. 可见性模型：`visible` 列 + show 白名单 + reveal_once 快照　✅ 已落地（2026-06-03）
 
 **触发**：R1 输出层三流要按"可见性"过滤渲染（流②只渲染玩家可见的），但项目此前无可见性概念。补齐 deny-by-default 的可见性模型，供输出层引用。
 
@@ -68,10 +68,10 @@
 - **默认全隐藏（deny-by-default）**：sheet / world 两域**全部默认隐藏**。event 按 `kind` 写入时定默认——`narrate` / `verdict` / `mutation` / `timer_fired`（给玩家的散文 + 要回显的机械事实）**默认可见**；`note`（AI 写的伏笔 / GM 注记）**默认隐藏**；`event_append` 可**显式覆盖**默认。
 - **`sheet_show` / `world_show` = 持久白名单**：翻 `visible=true`、输出层**每轮渲染实时值**（跟着变）。给"该长期可见"的东西。**玩家自己人物卡也默认隐藏 → AI 开局 `sheet_show` 一次**（接受"多一次 show"代价）；NPC 卡、暗值默认隐着。
 - **show 粒度 = 混合（丙）**：默认 **attr 级**显式授权；另给 **entity 级递归**当便利档（show 整 entity → 其下全部 cell 可见）；但带 **`强制隐藏` 标记的 cell（暗值）即使 entity-show 也不露**。**entity 级授权 = 长效策略**（覆盖该 entity 未来新增的 attr，贴"权限组"语义），靠强制隐藏标记兜暗值。
-- **`shot` = 一次性快照披露（第三态，中优先级披露动作）**：把某隐藏 cell **此刻的值以冻结副本披露一次**，**不翻持久可见位**；底层 `visible` 仍隐藏、值继续暗变,玩家见的是那一刻旧值,**下次 shot 才刷新**。给"瞥一眼 / 侦查 / 占卜"。**落点 = 写一条「可见 event」**——快照 `{attr, value@该 seq}`、`visible=true`：① 不碰 sheet `visible` 列（底层始终隐藏，语义干净）；② "每次 shot 才更新"自动成立（每次新 event 行、旧行留历史、随时间陈旧）；③ 输出层按 `visible` 同管道渲染。**粒度暂定单 cell**（整 entity 窥探罕见、可多次单 cell 拼；待实现表现再定）。
-- **un-show 降边角**：`shot` 顶掉了"情报重新成谜"主需求（根本不 show、只 shot，底层一直是谜）。仅剩"曾持久 `show` 的东西要收回"（如中毒看不清自己 HP）这种罕见情形 → **不单设工具**，让 `sheet_show` 传 `visible=false` 兜底，不做一等公民。
+- **`reveal_once` = 一次性快照披露（第三态，中优先级披露动作）**：把某隐藏 cell **此刻的值以冻结副本披露一次**，**不翻持久可见位**；底层 `visible` 仍隐藏、值继续暗变,玩家见的是那一刻旧值,**下次 reveal_once 才刷新**。给"瞥一眼 / 侦查 / 占卜"。**落点 = 写一条「可见 event」**——快照 `{attr, value@该 seq}`、`visible=true`：① 不碰 sheet `visible` 列（底层始终隐藏，语义干净）；② "每次 reveal_once 才更新"自动成立（每次新 event 行、旧行留历史、随时间陈旧）；③ 输出层按 `visible` 同管道渲染。**粒度暂定单 cell**（整 entity 窥探罕见、可多次单 cell 拼；待实现表现再定）。
+- **un-show 降边角**：`reveal_once` 顶掉了"情报重新成谜"主需求（根本不 show、只 reveal_once，底层一直是谜）。仅剩"曾持久 `show` 的东西要收回"（如中毒看不清自己 HP）这种罕见情形 → **不单设工具**，让 `sheet_show` 传 `visible=false` 兜底，不做一等公民。
 
-**要改的页**：02 §2（四域补"`visible` 事实"一句）+ 术语表（`visible` / `show` / `shot` / 强制隐藏标记 词条）；03 §3 数据表（各域补 `visible` 列 + `sheet_show` / `world_show` / `shot` 工具）+ §5/§6（输出层流②按 `visible` 过滤渲染，承接 D）+ §7 工具清单；内层（`visible` 列存储 + 强制隐藏标记 + `shot`=event append 的求值语义）。
+**要改的页**：02 §2（四域补"`visible` 事实"一句）+ 术语表（`visible` / `show` / `reveal_once` / 强制隐藏标记 词条）；03 §3 数据表（各域补 `visible` 列 + `sheet_show` / `world_show` / `reveal_once` 工具）+ §5/§6（输出层流②按 `visible` 过滤渲染，承接 D）+ §7 工具清单；内层（`visible` 列存储 + 强制隐藏标记 + `reveal_once`=event append 的求值语义）。
 **依赖**：被 D 的输出层三流依赖（流②的"按 visible 过滤"就指本条）。
 
 ### F. time 不升格：留 `sheet_update` + skill 声明钟属性　✅ 已落地（2026-06-03）
@@ -92,7 +92,7 @@
 - [x] **ADR-0007 状态骰下沉**（roll_value 并入 sheet_update）——已写（2026-06-02）。
 - [x] **ADR-0008 定位重述**——已写（2026-06-02）。
 - [x] **ADR-0009 narrate 升格 stream + 一轮范式 + 输出层三流**（含 resolve_choice 暂存 / Stop hook 物化、L3 窗口=回合）——R1，已写（2026-06-03）。
-- [x] **ADR-0010 可见性模型（`visible` 列 + show 白名单 + shot 快照合入 event）**——R2，已写（2026-06-03）。（含 deny-by-default、show 混合粒度+强制隐藏标记防暗值泄漏、shot=可见 event 冻结副本、un-show 降边角）
+- [x] **ADR-0010 可见性模型（`visible` 列 + show 白名单 + reveal_once 快照合入 event）**——R2，已写（2026-06-03）。（含 deny-by-default、show 混合粒度+强制隐藏标记防暗值泄漏、reveal_once=可见 event 冻结副本、un-show 降边角）
 - [x] **ADR-0011 time 不升格（留 `sheet_update` + skill 声明钟属性）**——R3，已写（2026-06-03）。（被否：专用 `time_*` 独立通道，待"时间乱流逝"失败模式实证再议）
 
 ## 小涟漪（非专轮；路过 / 写到对应页时顺手补，别现在 drip-edit）
