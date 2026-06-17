@@ -19,7 +19,7 @@
 | | 内容 | 绑定 | 换基底时 |
 |---|---|---|---|
 | **core（标准件）** | `anko-mcp-server`（MCP 协议）、Skill 教条（markdown）、SQLite store + 团本 | 不绑——协议 / 格式标准 | 可搬（理论上） |
-| **Claude Code 绑定（v1 承重）** | 安装配置（`.claude/` + `settings.json`：注册 MCP / 放 skill / 配 hook）、**hook（被动 rule 召回、timer 到期注入、L3 审计）**、subagent 裁判、（未来）GUI 包裹 | 绑 Claude Code | 需重做这层 |
+| **Claude Code 绑定（v1 承重）** | 安装配置（`.claude/` + `settings.json`：注册 MCP / 放 skill / 配 hook）、**hook（被动 rule 召回、L3 审计）**、（未来）裁判 subagent / GUI 包裹 | 绑 Claude Code | 需重做这层 |
 
 > **可移植在模型层、不在 agent 层**：Claude Code 本身 model-agnostic，所以"窄绑一个 harness"不锁模型——用户真正在乎的"用哪个大模型"仍自由（含国产）。这就是重述后"可移植"的确切含义。
 
@@ -33,19 +33,20 @@
 |---|---|---|---|
 | **L1 工具强制** | MCP 工具 schema | **core 标准** | MCP 标准，结构强制随工具走 |
 | **L2 skill 教** | markdown 教条 | 内容 core 标准、**装载走 Claude Code skill 机制** | 教条本身可搬；放 `.claude/skills/` 由 Claude Code 装载 |
-| **L3 + 被动注入** | Claude Code hook / subagent | **绑 Claude Code、v1 承重** | 被动 rule 召回、timer 到期、掷骰绕过 / 后果-叙事审计、裁判 subagent——都靠 hook |
+| **L3 + 被动注入** | Claude Code hook | **绑 Claude Code、v1 承重** | 被动 rule 召回、掷骰绕过 / 后果-叙事审计——靠 hook（watcher 到期已下沉为 `sheet_update` 就地触发、非 hook，[ADR-0013](../05-决策记录-ADR/README.md)；裁判 subagent 降为未来，[ADR-0014](../05-决策记录-ADR/README.md)） |
 
-→ 与旧版差别：旧版说"L3 可缺、优雅降级"。**重述后 hook 承重**——被动 rule 召回、timer 到期是核心玩法的一部分（[内层 §4.4 / §4.2](../04-子系统设计/内层能力库.md)），不是可有可无的事后审计。我们用"绑 Claude Code"换"这些承重机制白嫖、不自研"。
+→ 与旧版差别：旧版说"L3 可缺、优雅降级"。**重述后 hook 承重**——被动 rule 召回是核心玩法的一部分（[内层 §4.4](../04-子系统设计/内层能力库.md)），不是可有可无的事后审计。我们用"绑 Claude Code"换"这些承重机制白嫖、不自研"。
 
 ---
 
 ## 3. hook：v1 承重机制（不再是可选优化）
 
-Claude Code 的 hook 承担三类**核心**活（实现落 [04 adapter 与 L3 审计](../04-子系统设计/adapter与L3审计.md)）：
+Claude Code 的 hook 承担两类**核心**活（实现落 [04 adapter 与 L3 审计](../04-子系统设计/adapter与L3审计.md)）：
 
-1. **被动 rule 召回**：AI 描述某情节时，hook 把相关 rule 约束注入下一轮提示词（rule 被动拉取、AI 只读，[内层 §4.4](../04-子系统设计/内层能力库.md)）。
-2. **timer 到期注入**：hook 在回合开始比对 sheet 钟、把到期 timer 注入（[内层 §4.2](../04-子系统设计/内层能力库.md)）。
-3. **L3 审计**：掷骰绕过率、后果-叙事一致性（**回合末 Stop hook** 比对本轮——一个 agent 回合——的 verdict / mutation vs narrate）、裁判 subagent 二次纠偏。
+1. **被动 rule 召回**（回合开始 ＝ UserPromptSubmit）：AI 描述某情节时，hook 把相关 rule 约束注入本轮提示词（rule 被动拉取、AI 只读，[内层 §4.4](../04-子系统设计/内层能力库.md)）。
+2. **L3 审计**（回合末 ＝ Stop）：物化暂存 choice；掷骰绕过率、后果-叙事一致性（机械层比对本轮——一个 agent 回合——的 verdict / mutation vs narrate；语义疑点 `block` ＋ reason 让主 agent 自纠，**不 spawn 独立裁判 subagent**，[ADR-0014](../05-决策记录-ADR/README.md)）。
+
+> **watcher 到期不在 hook**：旧版列的"timer 到期注入"已由 [ADR-0013](../05-决策记录-ADR/README.md) 改为 `sheet_update` 写完就地触发（内层 / MCP 的 core 能力、不绑 Claude Code）——hook 承重因此再缩一项。
 
 **跨端约束**（因 npm 包跨 Win/Mac/Linux 分发，[技术选型 §6.1](技术选型.md)）：
 - **hook 脚本一律用 Node 写、不用 bash**——否则 Windows 跑不了。
@@ -67,7 +68,7 @@ L2 教条内容是 core 标准件，但**装载走 Claude Code 的 skill 机制*
 
 - **可移植不是目标**（[01](../01-业务分析/问题域.md) / [技术选型 §6](技术选型.md)）：为"嫁接任意 agent"做工程，是为不需要的东西付费、还牺牲效果。
 - **绑 harness ≠ 绑模型 ≠ 闭环产品**：Claude Code model-agnostic（模型层仍可移植）；core 是开源标准件（未来可搬、不自跑模型）。绑的只是"用哪套 hook / skill / subagent 机制"。
-- **承重 hook 白嫖**：被动召回、timer、裁判这些自研太重（违低开发成本），Claude Code 现成。
+- **承重 hook 白嫖**：被动 rule 召回、L3 审计这些自研太重（违低开发成本），Claude Code 现成（watcher 到期 / 裁判已分别下沉 sheet 引擎 / 降为未来，见 [ADR-0013](../05-决策记录-ADR/README.md) / [ADR-0014](../05-决策记录-ADR/README.md)）。
 - **底线仍在**：core（MCP / Skill / SQLite / 团本）保持标准、不锁死——这是"未来想搬就能搬"的保险，也是和闭环产品的实质区别。
 
 ---

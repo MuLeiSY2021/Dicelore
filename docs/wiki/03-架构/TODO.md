@@ -34,9 +34,11 @@
 
 **已落地（2026-06-02）**：基底定为 **Claude Code（model-agnostic，可接各种大模型 / 国产）**、可移植在**模型层**；分发 = **npm 包 + `anko` CLI（跨端 Win/Mac/Linux、预编译依赖）**；未来 GUI 取代终端。已改：**01 问题域 §0/§1 卡位重述 + 用户与场景 场景 A / 呈现层轨迹**、**技术选型 §6 重写 + 新增 §6.1 分发 + §7 表两行**、**跨agent与适配层 整页重写**（hook 承重、翻掉旧 §5"绝不依赖专属能力"）、内层 §6 路径改平台感知。
 
-### B. timer 到期触发 = hook（非新增 MCP 工具）　✅ 已落地（2026-06-02）
+### B. timer 到期触发 = hook（非新增 MCP 工具）　✅ 已落地（2026-06-02）　⚠️ 已被 [ADR-0013](../05-决策记录-ADR/README.md) 取代（2026-06-05）
 
-已写入 [跨agent与适配层 §3](跨agent与适配层.md)：`anko_timer_set` 仅登记；到期由 hook 在回合开始比对 sheet 钟注入，与 rule 召回同属 hook 系。
+~~已写入 [跨agent与适配层 §3](跨agent与适配层.md)：`anko_timer_set` 仅登记；到期由 hook 在回合开始比对 sheet 钟注入，与 rule 召回同属 hook 系。~~
+
+> **2026-06-05 反转**：填 04 adapter 时定 timer **泛化为 sheet watcher、从 hook 解绑**——`watcher_set` 登记谓词 expr，触发 ＝ `sheet_update` 写完就地比对（非 hook 轮询），命中经出参回 AI + 落 `watcher_fired`。详见 [ADR-0013](../05-决策记录-ADR/README.md)。本条历史保留。
 
 ### C. resolver 升格为统一概念　✅ 已落地（2026-06-02）
 

@@ -88,6 +88,28 @@
 - **决策**：**焊进 skill 本体**（候选①）。guideline 作静态 markdown，走 [跨agent §2/§4](../03-架构/跨agent与适配层.md) 既定的 Claude Code skill 装载路径（放 `.claude/skills/`）。**这不是回头路**——[技术选型 §2](../03-架构/技术选型.md)（**Skill 承载 L2 / MCP 承载 L1**）+ 跨agent §2（**L2 教条放 `.claude/skills/` 装载**）**已蕴含焊进**；本 ADR 只把原"待决策"升格收口，不改 02/03。
 - **后果**：教条内容（markdown）是 **core 标准件、未来可搬**；装载机制绑 Claude Code skill（[跨agent §1](../03-架构/跨agent与适配层.md) 的 core/绑定边界）。**补刀分工随之确定**：MCP `reminders` 只内置极小 L1 基线（terse 反射），丰富措辞活在焊进的 guideline 里（L2）；**v1 不让 hook 往 `reminders` 塞 L2 富文本**——MCP §5"可由 guideline/hook 增补"读作"AI 用内化 doctrine 增补输出"。**被否**：运行时 MCP 读取 guideline——会让 **MCP 承载 L2 = 范畴错误**（[03 §5](../03-架构/总体架构.md) 警告"把正交轴误当一层"），且须开回头路改 [技术选型 §2](../03-架构/技术选型.md)。**措辞终稿**留实现期 eval-loop（with/without baseline；可复用 L3 审计信号作 assertions）调，非本 ADR 范围。落地见 [04 Skills 包 §6](../04-子系统设计/Skills包.md)。
 
+## ADR-0013 `timer` 升格为 `watcher`（sheet 数据触发器），从 hook 解绑
+
+- **背景**：[ADR-0011](#) 把游戏时间留在 sheet 钟，`timer_set` 仅"对钟 attr 的到期条件"，到期靠 hook 每轮回合开始轮询（[跨agent §3](../03-架构/跨agent与适配层.md)、[03 TODO B](../03-架构/TODO.md)）。填 [04 adapter](../04-子系统设计/adapter与L3审计.md) 时反推：既然 time 已与对话回合解绑（只是 sheet 的一个 attr），"到期"本质就是"**某 sheet 属性满足某谓词**"，时间到期只是其中一个特例——没理由特化成时间专属，更没理由绑在对话回合 hook 上轮询。[语料 c](../01-业务分析/调研-论坛语料痛点.md)（倒计时埋点、漏触发金獾）也只是"属性满足条件就触发"的子集。
+- **决策**：`timer` **泛化为 `watcher`（sheet 数据触发器），并从 Claude Code hook 解绑、下沉为内层引擎 / MCP 的 core 能力**。
+  - **条件 ＝ sheet 谓词**：`{张三.HP} < 30`、`{世界.天} >= 18`（时间型 ＝ 监视钟 attr 的特例）。复用 [expr 文法](../04-子系统设计/内层能力库.md) ＋ **新增比较算符** `< <= > >= == !=`（求值出 bool）；**不加乘除**——百分比 / 相对时间由 AI 创建时读真值算成绝对值填入（GM 全见可 `sheet_get`）。
+  - **就地触发**：`sheet_update` 写完，引擎重算本次 entity 上挂的 watcher，满足则触发。**不再 hook 轮询**。
+  - **出口双管**：① `sheet_update` 出参带 `fired_watchers`（watcher_id ＋ payload）→ AI **当轮即时**反应；② 落 `event(kind=watcher_fired)` 供回看 / 输出层 / L3。payload ＝ 给 AI 的提示文本（框架只提醒、不替演）。
+  - **去抖 ＝ edge-triggered**：仅"不满足→满足"跨越沿触发一次；须条件先解除（disarm）才能再 arming。`mode`：`once`（触发即永久失效）/ `repeat`（可反复 re-arm）。**v1 不做显式 cooldown**。
+  - **命名 / 创建**：`anko_timer_set`→`anko_watcher_set`；event kind `timer_fired`→`watcher_fired`；timer 表→watcher 表（加 `mode` / `armed`）。v1 由 **AI 用工具创建**；团本 / rule 预声明 watcher 留未来。
+- **后果**：**hook 承重再缩一项**——timer 不再是 hook 的活，"回合开始 hook（UserPromptSubmit）"只剩被动 rule 召回（见 [ADR-0014](#)）；**core 边界更干净**——watcher 与基底无关、不绑 Claude Code，比 timer-on-hook 更符合"core 不锁死"；**expr 升格为可求值谓词**（[内层 §3.1](../04-子系统设计/内层能力库.md) 扩比较、返回 bool）。落地：[03 §3/§5/§6](../03-架构/总体架构.md)、[跨agent §2/§3](../03-架构/跨agent与适配层.md)、[内层 §3.1/§4.2](../04-子系统设计/内层能力库.md)、[MCP §2.2/§2.3/§7](../04-子系统设计/MCP工具面.md)。**修正 [ADR-0008](#)**"timer 到期靠 hook"的表述（追加式，不回改其正文）。**被否**：① 维持 timer 时间专属 ＋ hook 轮询（无谓特化、绑 hook）；② level-triggered（满足即触发 → 刷屏）；③ 显式 cooldown（edge ＋ mode 已够，徒增 seq / 钟单位之争，待"反复横跳"实证再议）。
+
+## ADR-0014 L3 兜底动作分两档烈度；无独立裁判 subagent；hook 回合时序定稿
+
+- **背景**：填 [04 adapter](../04-子系统设计/adapter与L3审计.md) 把 [ADR-0009](#) 的"L3 ＝ Stop hook 审计"落到具体动作时，需定：判违规后做什么、烈度多大、要不要真·裁判 subagent、回合开始 / 末各 hook 干什么。
+- **决策**：
+  - **违规两档烈度**：**档 A（block 当场纠偏）＝ 结构确凿、补救无歧义**——① 非终局轮没留暂存 choice、② 本轮有实质散文输出却没走 `narrate`（散文没进 event ＝ 没法审计 / 召回）；Stop hook `decision:"block"` ＋ reason 让 agent 当回合补，靠 `stop_hook_active` 防重入（最多纠一次，仍缺则放行 ＋ 记违规）。**档 B（只记录、不阻止当下）＝ 需语义判断或仅统计偏差**——疑似软着陆（坏结果后叙述 / 数值偏正向）、该掷却用 `=`（账本 set 比例）、掷骰绕过率；写 `kind=note` 审计 event 喂 [eval-loop](../04-子系统设计/Skills包.md)，守 [02 §4](../02-领域模型/核心概念.md) 事后兜底。
+  - **无独立裁判 subagent**：机械比对（缺 choice、漏 narrate、账本统计）由 **Stop hook 纯 Node 脚本**做（零 LLM、确定性）。**语义判断（软着陆与否）v1 不当场 block**（误报率高、打断叙事、违"L3 不阻止当下"），纯记录；"让主 agent 自查"经**下一轮 UserPromptSubmit 轻推**实现（列未来强化），仍**不 spawn 独立裁判 subagent**（与主 agent 自纠职责重叠、成本高、依赖实验特性）——降为未来 / 可选。
+  - **hook 回合时序定稿**：**SessionStart** ＝ 开局上下文 ＋ 常驻身份注入；**UserPromptSubmit（回合开始）** ＝ 仅被动 rule 召回（timer 已由 [ADR-0013](#) 摘走）；**Stop（回合末）** ＝ ① 物化暂存 choice ② L3 审计。**修正 [03 §6](../03-架构/总体架构.md)**：rule 召回从 Stop 三件事里拆出、归回合开始（旧 §6 把它误列在 Stop 下，而 Stop 无法注入"下一轮"）。
+  - **narrate 不自动捕获**：v1 `narrate` 作 MCP 工具直接用，Stop hook 机械兜底"漏 narrate"（本轮有大段 assistant 文本却无 narrate event）；"talk 自动捕获写 event"是未来非 CC 基底的饼。
+  - **常驻保证**：`anko init` 写 `CLAUDE.md` 指针 ＋ SessionStart 注入身份 / 极简纪律摘要；**不每轮 UserPromptSubmit 强化**（教条本体仍靠 skill 触发载入，hook 只放指路牌，避免 token 累积 ＋ 与 skill body 重复）。
+- **后果**：落 [03 §5/§6](../03-架构/总体架构.md)、[跨agent §2/§3](../03-架构/跨agent与适配层.md)、[04 adapter 全页](../04-子系统设计/adapter与L3审计.md)；收口 [Skills包 §1.1](../04-子系统设计/Skills包.md) 踢来的"常驻保证机制"。**被否**：① 一致性问题也 block（误报率高、打断叙事、违 L3 事后兜底）；② 真·裁判 subagent（与主 agent 自纠重叠、成本高、依赖实验特性）；③ 每轮 hook 注全摘要（token 灾难、抵消渐进式披露）。
+
 ---
 
 ## 待决策（记录但未定，勿当结论引用）

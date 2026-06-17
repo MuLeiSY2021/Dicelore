@@ -124,19 +124,20 @@ sheet_list: { entity: z.string(), prefix: z.string().optional(),
 {
   entity,
   applied: [{ attr, op, kind: "rolled"|"set", old, rolls?: number[], delta?, new }],
-  event_id,                                   // 落一条 kind=mutation event
+  fired_watchers?: [{ watcher_id, payload, condition }],  // 本次写就地触发的 watcher（[ADR-0013](../05-决策记录-ADR/)）→ AI 当轮即时反应
+  event_id,                                   // 落一条 kind=mutation event（每个触发的 watcher 另落一条 kind=watcher_fired）
 }
 ```
 
 - **状态骰已下沉**（[ADR-0007](../05-决策记录-ADR/)）：带骰项（`HP-2d6`）引擎内掷、AI 给不出真值；纯赋值/集合增减同批，**整批原子**，非数值算术报错+整批回滚。
 - "该掷却用了 `=`/裸 set" 的 L1 摩擦已降级 → L2 教（[Skills 包 §2 dispatcher 形状表](Skills包.md)，该页自述此处塑形权重最高）+ L3 据 `kind` 标记审计。
 
-### 2.3 event：`event_append` / `event_recall` / `timer_set`
+### 2.3 event：`event_append` / `event_recall` / `watcher_set`
 
 ```ts
 event_append: {
   content: z.string().optional(),             // 散文进 content 走 FTS
-  kind: z.enum(["narrate","note","verdict","mutation","timer_fired","reveal"]).default("note"),
+  kind: z.enum(["narrate","note","verdict","mutation","watcher_fired","reveal"]).default("note"),
   data_json: z.unknown().optional(), tags: z.array(z.string()).optional(),
   visible: z.union([z.literal(0),z.literal(1)]).optional(),  // 省略＝按 kind 默认（[内层 §4.2](内层能力库.md)）
 } → { event_id }
@@ -144,11 +145,13 @@ event_append: {
 event_recall: { query: z.string(), k: z.number().default(8), kind?: ... } → { events: [...] }
 //   FTS5(jieba) 召回（[内层 §5](内层能力库.md)）；AI 自读，不靠高亮片段。
 
-timer_set: {                                  // 命名 anko_timer_set（独立名，不挂 event_ 前缀）
-  fire_condition: z.string(),                 // 对 sheet 钟的条件 "{世界.回合} >= 15" 或文本条件
-  payload: z.string(),
-} → { timer_id }
-//   引擎只登记；到期检查＝hook 每轮读钟 attr 比对（[跨agent §3](../03-架构/跨agent与适配层.md)），触发落 kind=timer_fired。
+watcher_set: {                                // 命名 anko_watcher_set（独立名；泛化并取代旧 timer_set，[ADR-0013](../05-决策记录-ADR/)）
+  condition: z.string(),                      // §3.1 谓词 expr "{张三.HP} < 30"、"{世界.天} >= 18"（求值 bool）
+  payload:   z.string(),                      // 触发时给 AI 的提示文本
+  mode:      z.enum(["once","repeat"]).default("once"),
+} → { watcher_id }
+//   引擎只登记；**触发＝sheet_update 写完就地比对、非 hook 轮询**：命中经 sheet_update 出参回 AI + 落 kind=watcher_fired。
+//   edge-triggered（跨越沿触发、条件解除才 re-arm），v1 无显式 cooldown。详见 [内层 §4.2](内层能力库.md)。
 ```
 
 > `narrate` 虽落 event，但作为输出通道单列 §4，不在此。
@@ -258,7 +261,7 @@ game_end: { reason: z.string(), outcome?: z.string() } → { ended: true, event_
 | `sheet_get`/`sheet_list` | store 读 | — | 含 visible 全貌回 AI |
 | `sheet_update` | `applyMutations`（带骰调引擎） | mutation | 批量原子、状态骰下沉 |
 | `event_append`/`event_recall` | event store + FTS | note/… | — |
-| `timer_set` | timer 表登记 | —（触发时 timer_fired） | hook 比对到期 |
+| `watcher_set` | watcher 表登记 | —（触发时 watcher_fired） | sheet_update 就地比对、非 hook |
 | `world_search`/`sample`/`register` | world store + FTS + 加权抽样 | — | sample=content resolver |
 | `rule_search` | rule store + FTS | — | 只读 |
 | `sheet_show`/`world_show` | store 翻 visible（+__show_all） | note（审计、隐） | 持久揭示 |
@@ -284,7 +287,7 @@ game_end: { reason: z.string(), outcome?: z.string() } → { ended: true, event_
 | `sheet_show` / `world_show` | false | false | ✅ |
 | `reveal_once` | false | false | false（每次新 reveal） |
 | `world_register` | false | false | false |
-| `timer_set` | false | false | false |
+| `watcher_set` | false | false | false |
 | `game_end` | false | **true** | false |
 
 ---
@@ -294,5 +297,5 @@ game_end: { reason: z.string(), outcome?: z.string() } → { ended: true, event_
 - 表 schema、FTS5、`expr` 文法与求值、`visible` 列存储/强制隐藏标记/`reveal_once`=reveal 的写入语义 → [内层能力库](内层能力库.md)
 - 错误的**触发条件**（求值失败、`rangeMap` 校验、非数值算术）与 **CHARACTER_LIMIT 截断的 enforcement** → [内层能力库](内层能力库.md)（本页只定错误信封 + code 枚举 + 截断字段约定）
 - 教条内容（别软着陆怎么写）、补刀**措辞**与触发表条目、工具选择决策树 skill → [Skills 包](Skills包.md)（本页只定补刀的**结构挂载点**）
-- 各 agent 的工具注册、`narrate` 降级、Stop hook（物化 choice + L3 审计）、被动 rule 召回 / timer 到期 hook、玩家输入捕获 → [adapter 与 L3 审计](adapter与L3审计.md) / [跨agent与适配层](../03-架构/跨agent与适配层.md)
+- 各 agent 的工具注册、`narrate` 降级、Stop hook（物化 choice + L3 审计）、被动 rule 召回 hook、watcher 触发 payload 怎么经 `sheet_update` 出参回 AI、玩家输入捕获 → [adapter 与 L3 审计](adapter与L3审计.md) / [跨agent与适配层](../03-架构/跨agent与适配层.md)
 - 玩家选择的捕获方式（聊天 / 转轮 / 投票）、单/多人模式 → 模式/adapter 层

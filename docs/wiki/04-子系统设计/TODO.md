@@ -16,12 +16,12 @@
 - [x] **§1 骰子引擎（resolver 轮收口）**：分两层——**引擎 A**（纯、RNG 注入可单测）：`rollDice(count,sides,rng)` + `rangeMap(value,bands)`；**求值器 B**（内层、为引用碰 store）：`expr` 文法 `term(±term)*`、`{}` 界定引用，逐项调 A 求和、回账本。**砍** `dice_judge`（DC 折进 contest）/`dice_multi`（批量上移）/独立 `dice_contest`（=evalExpr×2+比大小）。**暴击** = `resolve_outcome` 档位表里定档，非引擎逻辑。
 
 - [x] **event 域 schema（2026-06-02 锁定）**：
-  - 一张统一 `event(seq[=FTS5 rowid], kind, content, data_json, tags, game_time?, created_at)`，`kind ∈ {narrate, verdict, mutation, note, timer_fired}`；`content` 走 FTS5(jieba) 只索引散文(narrate/note)、结构进 `data_json`(UNINDEXED)、`tags` 兜底召回。
+  - 一张统一 `event(seq[=FTS5 rowid], kind, content, data_json, tags, game_time?, created_at)`，`kind ∈ {narrate, verdict, mutation, note, watcher_fired, reveal}`；`content` 走 FTS5(jieba) 只索引散文(narrate/note)、结构进 `data_json`(UNINDEXED)、`tags` 兜底召回。
   - **时间观拆分**：框架只拥有单调 `seq`（通用排序）；**"游戏时间/回合"是团本定义的 sheet 钟**（`世界.回合`/`世界.时间`），由团本 rule 推进、AI 用 `sheet_update` 改；**砍框架 turn 计数器**。
   - **L3 分组 = "一个 agent 回合"**（玩家输入→回合末 Stop hook，按 seq 圈定本轮 event）——机械范围，非游戏时间；narrate 不推进游戏时间。（2026-06-03 R1 重定义，取代旧"两个 narrate 标记间"——narrate 已升格 stream。）
   - `event.game_time?` = 写入时对 sheet 钟拍的可选快照(文本)，仅供回看展示/召回，框架不解释。
   - 溢出后续优化（压缩 / RAG），v1 不做。
-- [x] **timer 单独表**：`timer(id, created_seq, fire_condition, payload, status)`；`fire_condition` = 对 sheet 钟的条件(`{世界.回合}>=15`)或文本(AI/hook 判)；**hook 在回合开始比对触发**（[03 TODO B](../03-架构/TODO.md)）；fired 后落一条 `event(kind=timer_fired)`、status→fired。属 event 域、域内两表。
+- [x] ~~**timer 单独表**~~ → **改 watcher 表**（[ADR-0013](../05-决策记录-ADR/README.md)，2026-06-05）：`watcher(id, created_seq, condition, payload, mode, armed, last_fired_seq, status)`；`condition` = §3.1 谓词 expr（`{张三.HP}<30`、`{世界.天}>=18`，时间到期是特例）；**触发 = `sheet_update` 写完就地比对、非 hook 轮询**；edge-triggered + mode once/repeat；fired 落 `event(kind=watcher_fired)`、经出参回 AI。属 event 域、域内两表。
 
 **已写定**（见 [内层能力库.md](内层能力库.md) §6）：
 
@@ -51,7 +51,7 @@
 - [x] **mutation 用结构化数组** `[{attr, op, expr}]`；`expr` 统一命名（弃 operand），值表达式用 B（字符串 DSL + `{}` 引用），随 op 多态，交内层求值器。
 - [x] **mcp 用法教条 → [Skills包](Skills包.md)**：一个"工具选择决策树"skill（三条掷的路怎么选；F3 的 L2 二层保险）。
 - [x] 是否为保 L1 再分出掷骰名（纯塑形取舍）→ **否**：合一 `sheet_update`，靠 L2+L3（[ADR-0007](../05-决策记录-ADR/)）。
-- [x] `timer_set` 命名 → **`anko_timer_set`**（独立名、不挂 `event_` 前缀，与全 wiki 既有用法一致）。
+- [x] ~~`timer_set` 命名 → `anko_timer_set`~~ → **泛化改名 `anko_watcher_set`**（[ADR-0013](../05-决策记录-ADR/README.md)，2026-06-05；sheet 数据触发器、非时间专属）。
 - [x] **R1-R3 带来的工具面新增**（已落页）：`narrate` schema `{text,tags?}→{event_id,reminders?}`（无 game_time、stream）；`resolve_choice` 暂存语义（回合末 Stop hook 物化）；可见性工具 `sheet_show`/`world_show`/`reveal_once`（多态 sheet+world）；写工具可选 `visible` 参（`sheet_update` mutation / `event_append` / `world_register`）；**补刀 = 出参可选 `reminders` 字段**（内置 L1 基线 + Skills 增强，措辞归 Skills）；终局 `game_end`/`you_death`（v1 极简、复盘是饼）。
 - [x] **接口契约补全（2026-06-03，/mcp-builder review）**：§0 加 5 条通用约定——`outputSchema`/`structuredContent` 落地、入参 `.strict()`、工具 `description` 属本页契约（非 L2）、失败路径信封 `{error:{code,message,hint}}`（触发条件归内层）、`CHARACTER_LIMIT` 封顶；`sheet_list` 加 `limit/offset/has_more`（分块非可见性限制）；`event_append.data_json` `z.any`→`z.unknown`；新增 **§7.1 工具注解表**（readOnly/destructive/idempotent，openWorld 全 false）；§2.2 互指 Skills dispatcher。**未越界**：注解/分页/错误信封/契约皆属工具接口、本页职责内，无需回头路。
 - [x] **接缝对齐**：§5 `reminders` 删去"可由 guideline/hook 增补"、改为"只载内置 terse 表、v1 不运行时注入 L2"（对齐 [Skills 包 §5](Skills包.md) v1 裁定）；`narrate` 从承载工具移除（无客观结构触发位）。
@@ -80,6 +80,24 @@
 
 **值表达式 `expr`（2026-06-02 锁定）**：表示用 **B＝字符串 DSL + `{}` 界定引用**（`"1d20 + {张三.力量}"`、`"500 + 6d100"`、`"60"`）；**统一命名 `expr`**（弃 operand），用于 `resolve_contest.{a,b}.expr` 与 `sheet_update` mutation 的 `{attr,op,expr}`。`sheet_update` 里 `expr` 随 op 多态（值表达式 / 成员字面量 `小刀[*N]` / 文本字面量），求值器按 op+内容派发；`resolve_contest.expr` 恒为值表达式；`resolve_outcome.die` 是单骰串、不卷入。
 
+## adapter 与 L3 审计（组件4）— ✅ 已写定（2026-06-05），整页见 [adapter与L3审计.md](adapter与L3审计.md)
+
+**已锁定**：
+
+- [x] **三 hook 映射**：SessionStart（开局身份 + 极简纪律注入）/ UserPromptSubmit（回合开始 ＝ 被动 rule 召回，唯一职责，30s 内本地 FTS）/ Stop（回合末 ＝ ① 物化 `pending_choice` 为 `kind=choice` event ② L3 审计）。Node 写、exec form、`${CLAUDE_PROJECT_DIR}`、与 MCP 共享 `ANKO_SESSION`。
+- [x] **常驻保证 = CLAUDE.md 指针 + SessionStart 注入**（指路牌恒在、教条本体靠 skill 触发载入；**不每轮 UserPromptSubmit 强化**）（[ADR-0014](../05-决策记录-ADR/README.md)）。
+- [x] **L3 两档烈度**（[ADR-0014](../05-决策记录-ADR/README.md)）：档 A block 当场纠偏（缺 choice / 漏 narrate，结构确凿、`stop_hook_active` 防重入、最多纠一次）；档 B 只记录（软着陆 / set 比例 / 绕过率，语义或统计，喂 eval-loop）。**无独立裁判 subagent**（语义自查经下一轮轻推、列未来）。
+- [x] **watcher 不在 hook**（[ADR-0013](../05-决策记录-ADR/README.md)）：timer→watcher、`sheet_update` 就地触发，hook 栈只剩三件事。
+- [x] **narrate**：v1 直用 MCP 工具 + 漏 narrate 机械兜底；"talk 自动捕获"降级列未来。
+- [x] **输出层上下拆**：呈现模型生成器（读侧纯逻辑、按 `visible` 过滤、零 token、可单测）本页定；前端壳（终端 / GUI）正交分层、本期不做不锁形态（GUI 真实目标但重、属未来）；与 hook 靠共享 SQLite 解耦、非 IPC。
+
+**填本页时收口的接缝**（反哺上游，已落）：
+
+- [x] **`pending_choice` session 级暂存槽 + `event kind=choice`**（`resolve_choice` 回合末物化的跨进程载体）→ 落 [内层 §4.2](内层能力库.md)、event enum 加 `choice`。
+- [x] **ADR-0014 两档收窄自洽**（语义疑点 v1 不 block、只记录，避免与"②只记录"矛盾）；[03 §6](../03-架构/总体架构.md) rule 召回从 Stop 三件事拆出、归回合开始（Stop 注不进"下一轮"）。
+
+**留下游 / 未来**：GUI 前端壳；玩家选择捕获（聊天 / 转轮 / 投票）；语义自查轻推；多人远程。
+
 ## 跨域 / 上游联动
 
-- timer 到期触发、被动 rule 召回 = hook 系 → 见 [03 TODO](../03-架构/TODO.md) A/B。
+- 被动 rule 召回 = hook 系（回合开始 UserPromptSubmit）→ 见 [03 TODO](../03-架构/TODO.md) A；**watcher 到期已从 hook 解绑、改 `sheet_update` 就地触发**（[ADR-0013](../05-决策记录-ADR/README.md)）。
