@@ -16,7 +16,7 @@
 |---|---|---|
 | [内层能力库](内层能力库.md)（组件1） | 骰子引擎 + 四域 store 的**表 schema / 取数语法** | 🟢 已成型（2026-06-02） |
 | [MCP 工具面](MCP工具面.md)（组件2） | 全部工具 + `narrate` 的**入参/出参 schema（Zod）**、可见性工具、补刀形态 | 🟢 已成型（2026-06-03） |
-| [Skills 包](Skills包.md)（组件3） | L2 塑形层本体：dispatcher + 流程库 + guideline | 🟢 已成型（2026-06-03） |
+| [Skills 包](Skills包.md)（组件3） | L2 塑形层本体：Moves + 流程库 + Principles | 🟢 已成型（2026-06-03） |
 | [adapter 与 L3 审计](adapter与L3审计.md)（组件4） | `.claude/` 装法、常驻保证、三 hook（SessionStart / UserPromptSubmit / Stop）、L3 两档、输出层呈现模型 | 🟢 已成型（2026-06-05） |
 | [团本与 manifest](团本与manifest.md)（组件6） | manifest 形态、CSV 列规范、包→四域 import 映射、版本迁移语义 | 🟢 已成型（2026-06-17） |
 | [团本构建工具链](团本构建工具链.md)（组件5） | 作者侧构建台：读写层 + 双门面（MCP/Web）+ 素材检索库 + 构建 skill | 🟢 已成型（2026-06-17） |

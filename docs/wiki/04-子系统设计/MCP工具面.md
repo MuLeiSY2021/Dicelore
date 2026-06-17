@@ -65,6 +65,7 @@
 
 - 引擎掷 `die` → `rangeMap` 命中一档（[内层 §2](内层能力库.md)）。**暴击不是引擎逻辑**，是档位表里的一档（如 `{label:"完美",min:96,max:100}`）。
 - `die` 是单骰串、不卷入 expr 文法（只 resolver_contest / sheet_update 用 expr）。
+- **三档结果（PbtA 对齐，[ADR-0016](../05-决策记录-ADR/README.md)）**：`bands` 是团本/AI 定义"三档结果"的落点——典型应是**完全成功 / 部分成功（成功但有代价）/ 失败（有后果）**而非二元成败，"零代价完全得手"是窄档、非默认。每档 `consequence` 即该档的 fail-forward 后果（[Skills 包 §3](Skills包.md)）。
 
 ### 1.3 `resolve_contest`（随机选 verdict：对抗骰）
 
@@ -130,7 +131,7 @@ sheet_list: { entity: z.string(), prefix: z.string().optional(),
 ```
 
 - **状态骰已下沉**（[ADR-0007](../05-决策记录-ADR/)）：带骰项（`HP-2d6`）引擎内掷、AI 给不出真值；纯赋值/集合增减同批，**整批原子**，非数值算术报错+整批回滚。
-- "该掷却用了 `=`/裸 set" 的 L1 摩擦已降级 → L2 教（[Skills 包 §2 dispatcher 形状表](Skills包.md)，该页自述此处塑形权重最高）+ L3 据 `kind` 标记审计。
+- "该掷却用了 `=`/裸 set" 的 L1 摩擦已降级 → L2 教（[Skills 包 §2 Moves 形状表](Skills包.md)，该页自述此处塑形权重最高）+ L3 据 `kind` 标记审计。
 
 ### 2.3 event：`event_append` / `event_recall` / `watcher_set`
 

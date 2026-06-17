@@ -31,11 +31,11 @@
 
 **已锁定**：
 
-- [x] **结构 = 两层**：常驻 **GM 核心 skill**（`anko-gm-core`：dispatcher + guideline + 补刀指针在 body，深表入 `references/`）+ **流程 skill 库**（`anko-flow-*` 各一独立 skill、manifest 选、genre-context 触发）。dispatcher+guideline 合在常驻核心（都"每轮必在"，拆开翻倍 under-trigger 风险）。
-- [x] **dispatcher 形态 = 决策表**（非流程图）：**两道闸 + 形状表**。闸 A 谁拥有决定（自主→`resolve_choice`）；闸 B 该不该骰（公认裁决律：不确定∧失败有意义，否则别骰直接 narrate）；形状表镜像 resolver 二轴（label→`resolve_outcome`/verdict→`resolve_contest`/number→`sheet_update`带骰/content→`world_sample`）。补丁：安全vs冒险、打平降级。顶部立 anti 两极端（别什么都骰/别什么都选）。**扎 [01 §2c 语料](../01-业务分析/调研-论坛语料痛点.md) + 桌游公认律（Vincent Baker/AW）+ resolver 二轴三角证据。**
-- [x] **guideline 组织 = F 轴 + 两新范式簇**：F1 必掷 / F2 别软着陆（恶龙团"分层范式"作可教范本）/ F3 薄（指 dispatcher）/ **一轮范式纪律**（作者式创作·narrate 非终结·非终局留暂存 choice·不吐数值菜单）/ **可见性纪律**（开局 show 玩家卡·暗值强制隐·别在 narrate 吐隐藏值）。写法：imperative + 讲 why、忌硬 MUST、串成"一轮怎么走"（skill-creator）。
+- [x] **结构 = 两层**：常驻 **GM 核心 skill**（`anko-gm-core`：Moves + Principles + 补刀指针在 body，深表入 `references/`）+ **流程 skill 库**（`anko-flow-*` 各一独立 skill、manifest 选、genre-context 触发）。Moves+Principles 合在常驻核心（都"每轮必在"，拆开翻倍 under-trigger 风险）。
+- [x] **Moves 形态 = 决策表**（非流程图）：**两道闸 + 形状表**。闸 A 谁拥有决定（自主→`resolve_choice`）；闸 B 该不该骰（公认裁决律：不确定∧失败有意义，否则别骰直接 narrate）；形状表镜像 resolver 二轴（label→`resolve_outcome`/verdict→`resolve_contest`/number→`sheet_update`带骰/content→`world_sample`）。补丁：安全vs冒险、打平降级。顶部立 anti 两极端（别什么都骰/别什么都选）。**扎 [01 §2c 语料](../01-业务分析/调研-论坛语料痛点.md) + 桌游公认律（Vincent Baker/AW）+ resolver 二轴三角证据。**
+- [x] **Principles 组织 = F 轴 + 两新范式簇**：F1 必掷 / F2 别软着陆（恶龙团"分层范式"作可教范本）/ F3 薄（指 Moves）/ **一轮范式纪律**（作者式创作·narrate 非终结·非终局留暂存 choice·不吐数值菜单）/ **可见性纪律**（开局 show 玩家卡·暗值强制隐·别在 narrate 吐隐藏值）。写法：imperative + 讲 why、忌硬 MUST、串成"一轮怎么走"（skill-creator）。
 - [x] **载体 = 焊进** `.claude/skills/`（[ADR-0012](../05-决策记录-ADR/)）：静态 markdown、走 Claude Code skill 装载（顺技术选型§2/跨agent§2、非回头路）。被否运行时 MCP 读取（=MCP 承载 L2 范畴错误）。
-- [x] **补刀分工**：MCP `reminders` = 极小 L1 基线（terse 反射，归 [MCP工具面 §5](MCP工具面.md) 挂载点）；丰富措辞 + why = 焊进 guideline（L2，`references/reminders.md`）。v1 不让 hook 往 reminders 塞 L2 富文本。
+- [x] **补刀分工**：MCP `reminders` = 极小 L1 基线（terse 反射，归 [MCP工具面 §5](MCP工具面.md) 挂载点）；丰富措辞 + why = 焊进 Principles（L2，`references/reminders.md`）。v1 不让 hook 往 reminders 塞 L2 富文本。
 - [x] **流程库起步清单**：`anko-flow-gacha`(world_sample)/`-contest`(resolve_contest)/`-anka`(resolve_choice)/`-explore`(world_search/reveal_once)；开放扩展。流程 skill 只编排已有工具调用序、不新增工具/不碰 schema/存储。
 
 **印证 skill-creator（写进页面、未改决策）**：渐进式披露三级（metadata 恒在/body 触发载/references 按需，<500 行）；`description` 是唯一触发器且 under-trigger → 核心写 pushy 常驻描述、流程写 genre-context；**简单查询可能不触发** → 常驻*保证*（CLAUDE.md 指针/系统上下文/hook 强化）踢给 [adapter](adapter与L3审计.md)；措辞终稿靠 eval-loop（with/without baseline），**F1/F2/F3 可客观验证 → L3 审计信号（掷骰绕过率/后果-叙事一致）复用作 assertions**。
@@ -53,8 +53,8 @@
 - [x] 是否为保 L1 再分出掷骰名（纯塑形取舍）→ **否**：合一 `sheet_update`，靠 L2+L3（[ADR-0007](../05-决策记录-ADR/)）。
 - [x] ~~`timer_set` 命名 → `anko_timer_set`~~ → **泛化改名 `anko_watcher_set`**（[ADR-0013](../05-决策记录-ADR/README.md)，2026-06-05；sheet 数据触发器、非时间专属）。
 - [x] **R1-R3 带来的工具面新增**（已落页）：`narrate` schema `{text,tags?}→{event_id,reminders?}`（无 game_time、stream）；`resolve_choice` 暂存语义（回合末 Stop hook 物化）；可见性工具 `sheet_show`/`world_show`/`reveal_once`（多态 sheet+world）；写工具可选 `visible` 参（`sheet_update` mutation / `event_append` / `world_register`）；**补刀 = 出参可选 `reminders` 字段**（内置 L1 基线 + Skills 增强，措辞归 Skills）；终局 `game_end`/`you_death`（v1 极简、复盘是饼）。
-- [x] **接口契约补全（2026-06-03，/mcp-builder review）**：§0 加 5 条通用约定——`outputSchema`/`structuredContent` 落地、入参 `.strict()`、工具 `description` 属本页契约（非 L2）、失败路径信封 `{error:{code,message,hint}}`（触发条件归内层）、`CHARACTER_LIMIT` 封顶；`sheet_list` 加 `limit/offset/has_more`（分块非可见性限制）；`event_append.data_json` `z.any`→`z.unknown`；新增 **§7.1 工具注解表**（readOnly/destructive/idempotent，openWorld 全 false）；§2.2 互指 Skills dispatcher。**未越界**：注解/分页/错误信封/契约皆属工具接口、本页职责内，无需回头路。
-- [x] **接缝对齐**：§5 `reminders` 删去"可由 guideline/hook 增补"、改为"只载内置 terse 表、v1 不运行时注入 L2"（对齐 [Skills 包 §5](Skills包.md) v1 裁定）；`narrate` 从承载工具移除（无客观结构触发位）。
+- [x] **接口契约补全（2026-06-03，/mcp-builder review）**：§0 加 5 条通用约定——`outputSchema`/`structuredContent` 落地、入参 `.strict()`、工具 `description` 属本页契约（非 L2）、失败路径信封 `{error:{code,message,hint}}`（触发条件归内层）、`CHARACTER_LIMIT` 封顶；`sheet_list` 加 `limit/offset/has_more`（分块非可见性限制）；`event_append.data_json` `z.any`→`z.unknown`；新增 **§7.1 工具注解表**（readOnly/destructive/idempotent，openWorld 全 false）；§2.2 互指 Skills Moves。**未越界**：注解/分页/错误信封/契约皆属工具接口、本页职责内，无需回头路。
+- [x] **接缝对齐**：§5 `reminders` 删去"可由 Principles/hook 增补"、改为"只载内置 terse 表、v1 不运行时注入 L2"（对齐 [Skills 包 §5](Skills包.md) v1 裁定）；`narrate` 从承载工具移除（无客观结构触发位）。
 - [x] **`shot` → `reveal_once` 全量改名回头路（2026-06-03）**：领域术语改名，按单向推导一次扫全——02（术语表/核心概念）、03（总体架构/TODO）、04（MCP工具面/Skills包/内层能力库/本 TODO）统一；ADR-0010 加历史注解（决策原文保留 `shot`、不重写）。理由：`shot` 单字、语义糊，`reveal_once` 与 `kind=reveal` 同源、与持久 `*_show` 成对照。
 
 ## 团本构建台（组件5 + 组件6）— ✅ 已写定（2026-06-17），见 [团本与manifest.md](团本与manifest.md) + [团本构建工具链.md](团本构建工具链.md)
@@ -68,6 +68,19 @@
 - [x] **两个填页待定已拍**：开局 sheet **纳入包**（`sheets/*.csv` 可选）；NPC **人设散文进 world_doc、机械数值卡进 sheets**（v1 以人设散文为主、数值运行时现起）。
 
 **留未来**：语义向量检索（FTS 起步）；实时双向同步（即写即读够）；深版本化迁移（diff/merge，v1 仅 rule 热更新 + source 列区分）。
+
+## PbtA 术语对齐 + Agenda 层 + fail-forward + Front/Clock（[ADR-0016](../05-决策记录-ADR/README.md)）— ✅ 已写定（2026-06-17）
+
+英文 TRPG 正典调研 → 与现架构逐层比对 → 全盘对齐。结论：anko 是 PbtA 最硬核分支的**机械强制版**（PbtA 信任 GM 自律处 ＝ anko 用 L1/L2/L3 焊死处）。
+
+**已锁定**：
+- [x] **术语全盘对齐**：`guideline → Principles`、`dispatcher 形状表+两道闸 → Moves + 判定时机`、`resolve_outcome 概念对齐三档结果`（工具名不改）。**边界 ＝ 保留独有抽象**（resolver 二轴 / 四域 / 三层 L1L2L3 / F1F2F3 / watcher 底层）不套壳。
+- [x] **新增 Agenda 议程层**（三段式 Agenda→Principles→Moves）：四条，**第 0 条"诚实仲裁者不取悦者"为 anko 特有、凌驾**；其余三条（活世界 / 选择有后果 / play to find out）借自 DW。落 02 §4.1 / Skills包 §1.2 / adapter §2 注入。
+- [x] **F2 升级双边护栏**：上边界 anti-讨好（原 F2）+ 下边界 anti-死胡同（借 fail-forward）；引入 craft（三档结果 / 软招·硬招 / 后果手法菜单 / 末日钟 / "有时失败就是失败"）→ Principles + `references/consequences.md`。
+- [x] **新增 Front/Clock 团本内容类型**：Clock ＝ sheet 钟+watcher 封装；Front ＝ 名字+利害+Clock+阶梯凶兆表 → 一组**预声明 watcher**。**推进 [ADR-0013](../05-决策记录-ADR/README.md)**：团本预声明 watcher 从"留未来"提前到 v1。组件6 加 `fronts/*.md` 格式 + import 映射。
+- [x] **定位陈述（02 §4）+ 洋葱层旁证（03 §5）**：anko ＝ PbtA 纪律的机械强制版；L2漏→L1兜底→L3网 ≈ AW 洋葱层优雅坍缩（强制力冗余 vs 规则复杂度回退）。
+
+**改名回头路**：02→03→04 一次扫全；旧 ADR（0012）正文不回改、加注解；**01 调研里的 dispatcher 是外部引用、不改**。
 
 ## resolver 模型（行动层核心，2026-06-02 锁定；resolver 概念待升格 → 见 [03 TODO](../03-架构/TODO.md) C）
 
