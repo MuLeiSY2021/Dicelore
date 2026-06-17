@@ -57,6 +57,18 @@
 - [x] **接缝对齐**：§5 `reminders` 删去"可由 guideline/hook 增补"、改为"只载内置 terse 表、v1 不运行时注入 L2"（对齐 [Skills 包 §5](Skills包.md) v1 裁定）；`narrate` 从承载工具移除（无客观结构触发位）。
 - [x] **`shot` → `reveal_once` 全量改名回头路（2026-06-03）**：领域术语改名，按单向推导一次扫全——02（术语表/核心概念）、03（总体架构/TODO）、04（MCP工具面/Skills包/内层能力库/本 TODO）统一；ADR-0010 加历史注解（决策原文保留 `shot`、不重写）。理由：`shot` 单字、语义糊，`reveal_once` 与 `kind=reveal` 同源、与持久 `*_show` 成对照。
 
+## 团本构建台（组件5 + 组件6）— ✅ 已写定（2026-06-17），见 [团本与manifest.md](团本与manifest.md) + [团本构建工具链.md](团本构建工具链.md)
+
+**已锁定**（[ADR-0015](../05-决策记录-ADR/README.md) 六连决策）：
+
+- [x] **产物 = MD+CSV 文件包**（非 SQLite 草稿库）：目录即包、纯文本、可 git/分发；贴合技术选型 §5"MD 主体+CSV → import 建库"。组件6 定包布局 / manifest YAML schema / 各 CSV 列规范 / sheets 开局态 / rule 版本 / 包→四域 import 映射。
+- [x] **构建台四件套**（组件5）：① **读写层**（纯逻辑结构化 CRUD over 文件 + 内置校验器，把格式正确性吃进去，镜像内层分层）；② **双门面**（MCP `anko_build_*` 给 agent + 轻量 http Web 门面给用户，共享读写层、即写即读、无实时同步）；③ **素材检索库**（整本小说切块、FTS5+jieba 起步、按阶段检索、临时品不进包）；④ **构建 skill `anko-build-pack`**（分阶段：世界观→NPC→卡池→机制→manifest 收口，边建边审、可回退）。
+- [x] **构建模式 = 同一 Claude Code 换装**（加载构建 skill+构建 MCP，非运行时 resolve_*/sheet_update）。
+- [x] **构建期 Web ≠ 运行时 GUI**：作者侧专属、v1 即做；运行时游玩仍终端、GUI 仍属未来（adapter §7.2 补澄清句，不改其运行时裁定）。
+- [x] **两个填页待定已拍**：开局 sheet **纳入包**（`sheets/*.csv` 可选）；NPC **人设散文进 world_doc、机械数值卡进 sheets**（v1 以人设散文为主、数值运行时现起）。
+
+**留未来**：语义向量检索（FTS 起步）；实时双向同步（即写即读够）；深版本化迁移（diff/merge，v1 仅 rule 热更新 + source 列区分）。
+
 ## resolver 模型（行动层核心，2026-06-02 锁定；resolver 概念待升格 → 见 [03 TODO](../03-架构/TODO.md) C）
 
 **核心**：resolver = 把未定局面产出一个"叙述者无法伪造"的结果，并推动剧情（落 event / 可能写 sheet）。骰子引擎只是其下的逻辑机制；**玩家选择 = "选择者=玩家" 的 resolver**。
