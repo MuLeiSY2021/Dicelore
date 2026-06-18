@@ -39,5 +39,5 @@ export function ruleGet(db: DB, name: string): RuleDoc | undefined {
 export function ruleSearch(db: DB, query: string, limit = 20): RuleDoc[] {
   const hits = ftsSearch(db, "rule_doc_fts", query, limit);
   const stmt = db.prepare("SELECT rowid, name, content, category, version FROM rule_doc WHERE rowid=?");
-  return hits.map((h) => stmt.get(h.rowid) as RuleDoc).filter(Boolean);
+  return hits.map((h) => stmt.get(h.rowid) as RuleDoc | undefined).filter((r): r is RuleDoc => r !== undefined);
 }

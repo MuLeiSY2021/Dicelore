@@ -35,14 +35,14 @@ export function worldDocUpsert(
 
 export function worldDocGet(db: DB, name: string): WorldDoc | undefined {
   return db
-    .prepare("SELECT rowid, name, content, category, tags, visible FROM world_doc WHERE name=?")
+    .prepare("SELECT rowid, name, content, category, tags, visible FROM world_doc WHERE name=? LIMIT 1")
     .get(name) as WorldDoc | undefined;
 }
 
 export function worldDocSearch(db: DB, query: string, limit = 20): WorldDoc[] {
   const hits = ftsSearch(db, "world_doc_fts", query, limit);
   const stmt = db.prepare("SELECT rowid, name, content, category, tags, visible FROM world_doc WHERE rowid=?");
-  return hits.map((h) => stmt.get(h.rowid) as WorldDoc).filter(Boolean);
+  return hits.map((h) => stmt.get(h.rowid) as WorldDoc | undefined).filter((r): r is WorldDoc => r !== undefined);
 }
 
 export interface PoolAdd {
@@ -76,6 +76,7 @@ export function worldSample(
   const args: (string | number)[] = [pool];
   if (opts.filter) {
     for (const [k, v] of Object.entries(opts.filter)) {
+      // filter key 拼入 '$.<key>' JSON 路径；含 '.' 的 key 解析为嵌套路径，畸形 key 静默返回空行。
       sql += " AND json_extract(row_json, '$.' || ?) = ?";
       args.push(k, v);
     }

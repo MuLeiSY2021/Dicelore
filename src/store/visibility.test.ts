@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test } from "vitest";
 import { initSchema, openDb, type DB } from "./db.js";
 import { sheetGet, sheetSetRaw } from "./sheet.js";
 import { eventSince } from "./event.js";
-import { worldDocUpsert } from "./world.js";
+import { worldDocUpsert, worldPoolAdd } from "./world.js";
 import { revealOnce, sheetShow, worldShow } from "./visibility.js";
 
 let db: DB;
@@ -32,6 +32,13 @@ describe("worldShow", () => {
     const rowid = worldDocUpsert(db, { name: "青云门", content: "正道大派" });
     worldShow(db, "world_doc", rowid);
     expect(db.prepare("SELECT visible FROM world_doc WHERE rowid=?").get(rowid)).toMatchObject({ visible: 1 });
+    expect(eventSince(db, 0).some((e) => e.kind === "note" && e.visible === 0)).toBe(true);
+  });
+
+  test("置 world_pool.visible=1 + 审计", () => {
+    const rowid = worldPoolAdd(db, { pool: "npc", row: { name: "老李", job: "铁匠" } });
+    worldShow(db, "world_pool", rowid);
+    expect(db.prepare("SELECT visible FROM world_pool WHERE rowid=?").get(rowid)).toMatchObject({ visible: 1 });
     expect(eventSince(db, 0).some((e) => e.kind === "note" && e.visible === 0)).toBe(true);
   });
 });
