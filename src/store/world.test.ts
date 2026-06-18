@@ -55,6 +55,13 @@ describe("world_pool", () => {
     expect(worldSample(db, "p", 1, { rng: () => 0 })[0]).toEqual({ n: "A" });
     expect(worldSample(db, "p", 1, { rng: () => 0.99 })[0]).toEqual({ n: "C" });
   });
+  test("左边界归属锁定:>= 确保边界点落在左边界元素", () => {
+    worldPoolAdd(db, { pool: "p", row: { n: "A" }, weight: 1 });
+    worldPoolAdd(db, { pool: "p", row: { n: "B" }, weight: 1 });
+    worldPoolAdd(db, { pool: "p", row: { n: "C" }, weight: 2 }); // total=4: A[0,1) B[1,2) C[2,4)
+    expect(worldSample(db, "p", 1, { rng: () => 0.25 })[0]).toEqual({ n: "B" }); // x=1.0 → B 左边界
+    expect(worldSample(db, "p", 1, { rng: () => 0.5 })[0]).toEqual({ n: "C" }); // x=2.0 → C 左边界
+  });
   test("无放回:抽 n 个不重复", () => {
     worldPoolAdd(db, { pool: "p", row: { n: "A" } });
     worldPoolAdd(db, { pool: "p", row: { n: "B" } });
