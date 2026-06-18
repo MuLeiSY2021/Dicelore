@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "vitest";
 import { initSchema, openDb, type DB } from "./db.js";
-import { eventAppend, eventSince } from "./event.js";
+import { eventAppend, eventRecall, eventSince } from "./event.js";
 
 let db: DB;
 beforeEach(() => { db = openDb(":memory:"); initSchema(db); });
@@ -28,5 +28,23 @@ describe("event store", () => {
     const mark = eventAppend(db, { kind: "narrate", content: "b" });
     eventAppend(db, { kind: "narrate", content: "c" });
     expect(eventSince(db, mark).map((r) => r.content)).toEqual(["c"]);
+  });
+});
+
+describe("eventRecall (FTS + tag 兜底)", () => {
+  test("按内容 2 字词召回", () => {
+    eventAppend(db, { kind: "narrate", content: "青云门派今日收徒" });
+    eventAppend(db, { kind: "narrate", content: "城外风平浪静" });
+    const hits = eventRecall(db, "门派");
+    expect(hits.map((r) => r.content)).toEqual(["青云门派今日收徒"]);
+  });
+  test("content 为空的 event 不进 FTS、不报错", () => {
+    eventAppend(db, { kind: "verdict", data_json: { winner: "a" } });
+    expect(eventRecall(db, "门派")).toEqual([]);
+  });
+  test("tag LIKE 兜底(内容未命中、tag 命中)", () => {
+    eventAppend(db, { kind: "narrate", content: "昨夜无事", tags: "剧情线,伏笔" });
+    const hits = eventRecall(db, "剧情线");
+    expect(hits.map((r) => r.content)).toEqual(["昨夜无事"]);
   });
 });
