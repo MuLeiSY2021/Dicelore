@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vitest";
 import { initSchema, openDb, type DB } from "./db.js";
 import {
   worldDocGet, worldDocSearch, worldDocUpsert,
@@ -7,12 +7,9 @@ import {
 
 let db: DB;
 beforeEach(() => {
-  // trigram mode:子串精确匹配,reindex 后旧内容不再命中(jieba OR 模式下共享词根会误召回)
-  process.env.ANKO_FTS_MODE = "trigram";
   db = openDb(":memory:");
   initSchema(db);
 });
-afterEach(() => { delete process.env.ANKO_FTS_MODE; });
 
 describe("world_doc", () => {
   test("upsert 后 get", () => {
@@ -36,10 +33,12 @@ describe("world_doc", () => {
     expect(worldDocSearch(db, "仙侠").map((d) => d.name)).toEqual(["青云门"]);
   });
   test("重 upsert 后旧内容搜不到(reindex)", () => {
-    worldDocUpsert(db, { name: "青云门", content: "旧设定甲乙丙" });
-    worldDocUpsert(db, { name: "青云门", content: "新设定丁戊己" });
-    expect(worldDocSearch(db, "旧设定")).toEqual([]);
-    expect(worldDocSearch(db, "新设定").map((d) => d.name)).toEqual(["青云门"]);
+    // jieba: "剑冢古地" → ["剑冢","古","地"]  /  "天山雪莲" → ["天山","雪莲"]
+    // 两版本无共享词根,确保 DELETE+INSERT 已物理替换影子行
+    worldDocUpsert(db, { name: "青云门", content: "剑冢古地" });
+    worldDocUpsert(db, { name: "青云门", content: "天山雪莲" });
+    expect(worldDocSearch(db, "剑冢")).toEqual([]);
+    expect(worldDocSearch(db, "天山").map((d) => d.name)).toEqual(["青云门"]);
   });
 });
 
