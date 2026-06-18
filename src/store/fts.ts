@@ -55,9 +55,11 @@ export function ftsTableDDL(table: string, mode: FtsMode = ftsMode()): string {
 }
 
 // 从 sqlite_master 探查虚表 DDL,判断是否为 trigram 模式(不依赖 env)。
+// 若表不存在则抛出错误(编程错误:拼写错误或在 initSchema 前调用)。
 function tableMode(db: FtsDB, table: string): FtsMode {
   const row = db.prepare("SELECT sql FROM sqlite_master WHERE name=?").get(table) as { sql: string } | undefined;
-  if (row && /tokenize\s*=\s*'trigram'/i.test(row.sql)) return "trigram";
+  if (!row) throw new Error(`fts table not found: ${table}`);
+  if (/tokenize\s*=\s*'trigram'/i.test(row.sql)) return "trigram";
   return "jieba";
 }
 
@@ -78,8 +80,10 @@ export interface FtsHit {
 }
 
 // table 是内部固定常量(FTS_TABLES),非用户输入 → 插值安全。
+// mode 从虚表 DDL 读取(tableMode),不依赖全局 env → index 与 search 一致。
 export function ftsSearch(db: FtsDB, table: string, query: string, limit = 20): FtsHit[] {
-  const { match, like } = buildFtsQuery(query);
+  const mode = tableMode(db, table);
+  const { match, like } = buildFtsQuery(query, mode);
   if (match) {
     return db
       .prepare(`SELECT rowid, raw FROM ${table} WHERE text MATCH ? ORDER BY bm25(${table}) LIMIT ?`)

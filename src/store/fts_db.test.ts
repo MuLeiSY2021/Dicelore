@@ -40,4 +40,14 @@ describe("trigram 保底", () => {
     expect(ftsSearch(t, "world_doc_fts", "门派收").map((h) => h.rowid)).toEqual([1]); // MATCH
     expect(ftsSearch(t, "world_doc_fts", "门派").map((h) => h.rowid)).toEqual([1]); // LIKE 兜底
   });
+  test("trigram 表搜索不依赖 ANKO_FTS_MODE env(非对称消除)", () => {
+    // env 保持默认 jieba,但表是 trigram — ftsSearch 应从表 DDL 读 mode
+    const t = new Database(":memory:");
+    t.exec(ftsTableDDL("world_doc_fts", "trigram"));
+    ftsIndex(t, "world_doc_fts", 1, "青云门派收弟子");
+    // 不设置 ANKO_FTS_MODE,env 保持 jieba 默认
+    expect(process.env.ANKO_FTS_MODE).toBeUndefined();
+    expect(ftsSearch(t, "world_doc_fts", "门派收").map((h) => h.rowid)).toEqual([1]); // trigram MATCH
+    expect(ftsSearch(t, "world_doc_fts", "门派").map((h) => h.rowid)).toEqual([1]); // <3 字 → LIKE 兜底
+  });
 });
