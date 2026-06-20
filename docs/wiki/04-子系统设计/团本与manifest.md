@@ -30,7 +30,7 @@
     └── 魔道入侵.md
 ```
 
-运行时由 `anko` 的建库流程 import 该目录（§8）。除 `manifest.yaml` 外全部子目录**按需出现**——最小团本可以只有 manifest + 一篇 `world/设定.md`。
+运行时由 `dicelore` 的建库流程 import 该目录（§8）。除 `manifest.yaml` 外全部子目录**按需出现**——最小团本可以只有 manifest + 一篇 `world/设定.md`。
 
 ---
 
@@ -44,9 +44,9 @@ version: 1.2.0              # 团本版本（迁移用，§8）
 name: 凡人修仙传
 description: 低武凡人流修仙，资质平庸者的逆袭。
 flows:                     # 选用的流程 skill（见 Skills 包）；框架核心 skill 恒载、不在此列
-  - anko-flow-gacha        # 抽灵根 / 抽机缘
-  - anko-flow-contest      # 斗法对抗
-  - anko-flow-explore      # 秘境探索
+  - dicelore-flow-gacha        # 抽灵根 / 抽机缘
+  - dicelore-flow-contest      # 斗法对抗
+  - dicelore-flow-explore      # 秘境探索
 clock: 世界.年             # 钟属性声明（watcher 比对用；ADR-0011 / ADR-0013）
 entry: world/设定.md#引子   # 开局引子（指向 world 某 doc 锚点，或内联文本）
 ```

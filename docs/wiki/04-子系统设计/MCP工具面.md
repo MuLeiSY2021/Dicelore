@@ -8,7 +8,7 @@
 
 ## 0. 命名与通用约定
 
-- **`anko_` 前缀是实际注册 ID**（防多 server 撞名）：`anko_resolve_choice`、`anko_sheet_update`……本页正文为简洁**一律写无前缀名**，实际工具 ID 加 `anko_`。
+- **`dicelore_` 前缀是实际注册 ID**（防多 server 撞名）：`dicelore_resolve_choice`、`dicelore_sheet_update`……本页正文为简洁**一律写无前缀名**，实际工具 ID 加 `dicelore_`。
 - **expr 全程是字符串、MCP 不解析**（[内层 §3.1](内层能力库.md)、[ADR](../05-决策记录-ADR/)）：凡 `expr` 字段都是 `"1d20 + {张三.力量}"` 这样的串，MCP 原样透传给内层求值器，本层不拆。
 - **AI 只给引用、不给真实数值**（铁律，[03 §4](../03-架构/总体架构.md)）：靠 expr 的 `{实体.属性}` 约定 + 内层引擎取真值；**schema 不强卡**（自由串拦不住硬编数字），降级为 L2 教 + L3 账本审计（与状态骰下沉同构，[ADR-0007](../05-决策记录-ADR/)）。
 - **通用出参信封（成功路径）**：多数工具回 `{ ...本工具结果, event_id?, reminders? }`。`event_id` = 该操作落的 event 行；`reminders` = 补刀（§5）。
@@ -147,7 +147,7 @@ event_append: {
 event_recall: { query: z.string(), k: z.number().default(8), kind?: ... } → { events: [...] }
 //   FTS5(jieba) 召回（[内层 §5](内层能力库.md)）；AI 自读，不靠高亮片段。
 
-watcher_set: {                                // 命名 anko_watcher_set（独立名；泛化并取代旧 timer_set，[ADR-0013](../05-决策记录-ADR/)）
+watcher_set: {                                // 命名 dicelore_watcher_set（独立名；泛化并取代旧 timer_set，[ADR-0013](../05-决策记录-ADR/)）
   condition: z.string(),                      // §3.1 谓词 expr "{张三.HP} < 30"、"{世界.天} >= 18"（求值 bool）
   payload:   z.string(),                      // 触发时给 AI 的提示文本
   mode:      z.enum(["once","repeat"]).default("once"),
@@ -255,7 +255,7 @@ game_end: { reason: z.string(), outcome?: z.string() } → { ended: true, event_
 
 承接 [03 §2](../03-架构/总体架构.md)"不是 1:1 暴露"：外层是内层原子的**有意组合 + L1 包装**。
 
-| 外层工具（`anko_` 前缀） | 调用的内层原子 | 落 event | 备注 |
+| 外层工具（`dicelore_` 前缀） | 调用的内层原子 | 落 event | 备注 |
 |---|---|---|---|
 | `resolve_choice` | 会话态暂存（无引擎） | 回合末物化时落 | 暂存、回合末 Stop hook 物化 |
 | `resolve_outcome` | 骰子引擎 `rollDice`+`rangeMap` | verdict | 选项骰 |

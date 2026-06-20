@@ -8,7 +8,7 @@
 
 ## 0. 目标与范围
 
-把内层(组件1,已在 main)包成一组 `anko_*` MCP 工具(stdio server),Zod in/out schema,**薄包装**内层原子。范围 = spec §7 工具清单:
+把内层(组件1,已在 main)包成一组 `dicelore_*` MCP 工具(stdio server),Zod in/out schema,**薄包装**内层原子。范围 = spec §7 工具清单:
 
 - resolver 三件:`resolve_choice` / `resolve_outcome` / `resolve_contest`
 - 数据工具:`sheet_get` / `sheet_list` / `sheet_update` / `event_append` / `event_recall` / `watcher_set` / `world_search` / `world_sample` / `world_register` / `rule_search`
@@ -27,27 +27,27 @@
 
 ```
 src/
-  errors.ts              ★新:AnkoError + code 枚举(叶子模块,无依赖)
+  errors.ts              ★新:DiceloreError + code 枚举(叶子模块,无依赖)
   resolve/               ★新:③层裁决编排(脱 MCP、喂内存 db/RNG 可单测)
     outcome.ts             resolveOutcome(die, bands, rng?) → {roll, band}
     contest.ts             resolveContest(db, a, b, rng?)   → {a,b,winner}
   store/
     choice.ts            ★新:pending_choice 单行槽读写
     truncate.ts          ★新:CHARACTER_LIMIT 截断 helper(纯函数)
-    (既有 sheet/event/watcher/mutate/world/rule/visibility/db 在已知触发点改抛 AnkoError)
+    (既有 sheet/event/watcher/mutate/world/rule/visibility/db 在已知触发点改抛 DiceloreError)
   mcp/                   ★新:外层工具面
     schemas.ts             每工具 Zod in(.strict()) / out schema
     reminders.ts           内置极小「结构触发→terse 提醒」表
     envelope.ts            成功/错误信封 + classify(e)→code + 截断套用
     runTool.ts             dispatch:校验→handler→reminders→成功信封 / catch→错误信封
     tools.ts               工具注册表 ToolDef[]
-    handlers/*.ts          纯 handler:(db, input)=>out,失败 throw AnkoError
+    handlers/*.ts          纯 handler:(db, input)=>out,失败 throw DiceloreError
     main.ts                bin:openSession(env)→db→McpServer→registerTool→stdio
 ```
 
 **依赖单向向下**:`mcp/handlers` 吃 `resolve/`、`store/`、`errors`;`mcp/main` 吃 `session/openSession` + `mcp/tools` + SDK。内层不 import `mcp/`。
 
-**handler / wiring 分离(核心约束)**:handler 是 `(db: DB, input) => out` 纯函数,失败 throw `AnkoError`;**注入内存 db 即可脱 stdio 单测**。`runTool` 围绕 handler 加信封/reminders/错误捕获,可用假 handler 单测。`main.ts` 只做 openSession + 注册 + 连 transport,薄到不强求集成测。
+**handler / wiring 分离(核心约束)**:handler 是 `(db: DB, input) => out` 纯函数,失败 throw `DiceloreError`;**注入内存 db 即可脱 stdio 单测**。`runTool` 围绕 handler 加信封/reminders/错误捕获,可用假 handler 单测。`main.ts` 只做 openSession + 注册 + 连 transport,薄到不强求集成测。
 
 ---
 
@@ -59,7 +59,7 @@ src/
 import type { Band, Rng } from "../dice/index.js";
 export interface OutcomeResult { roll: number; die: string; band: Band; }
 // 解析单骰串 "1d100"→rollDice(1,100,rng)→求和→rangeMap(roll, bands)。
-// 不落 event(落 event 是 MCP handler 的事)。die 非法 → AnkoError(DIE_INVALID)。
+// 不落 event(落 event 是 MCP handler 的事)。die 非法 → DiceloreError(DIE_INVALID)。
 export function resolveOutcome(die: string, bands: Band[], rng?: Rng): OutcomeResult
 ```
 - `die` 用就地正则 `^\s*(\d+)[dD](\d+)\s*$` 解析(不卷入 expr 文法,spec §1.2);非此形状 → `DIE_INVALID`。解析出 count/sides 后调 `rollDice`(其 count≥1/sides≥2 校验亦抛 `DIE_INVALID`)。
@@ -79,7 +79,7 @@ export function resolveContest(
   rng?: Rng,
 ): ContestResult
 ```
-- `getRef = (e,a)=>sheetGet(db,e,a)?.value`(与 `applyMutations` 同构)。求值失败 → `evalExpr` 抛的 `AnkoError`(EXPR_EVAL/ENTITY_NOT_FOUND/NOT_NUMERIC)透传。
+- `getRef = (e,a)=>sheetGet(db,e,a)?.value`(与 `applyMutations` 同构)。求值失败 → `evalExpr` 抛的 `DiceloreError`(EXPR_EVAL/ENTITY_NOT_FOUND/NOT_NUMERIC)透传。
 
 ### 2.3 `src/store/choice.ts`(pending_choice 单行槽)
 
@@ -101,7 +101,7 @@ export function materializePendingChoice(db: DB): number | undefined
 ### 3.1 `src/errors.ts`(叶子模块)
 
 ```ts
-export type AnkoErrorCode =
+export type DiceloreErrorCode =
   | "EXPR_EVAL"       // expr 解析/求值失败
   | "NOT_NUMERIC"     // 该掷/算术却给非数值
   | "RANGE_INVALID"   // 档位重叠 / 不全覆盖 / min>max / 落空
@@ -109,10 +109,10 @@ export type AnkoErrorCode =
   | "DIE_INVALID"     // 单骰串非法(resolve_outcome)
   | "NOT_FOUND"       // 通用目标缺失(pool/doc 等)
   | "INTERNAL";       // 未分类(兜底,不泄漏原始栈)
-export class AnkoError extends Error {
-  code: AnkoErrorCode;
+export class DiceloreError extends Error {
+  code: DiceloreErrorCode;
   hint?: string;
-  constructor(code: AnkoErrorCode, message: string, hint?: string);
+  constructor(code: DiceloreErrorCode, message: string, hint?: string);
 }
 ```
 
@@ -128,13 +128,13 @@ export class AnkoError extends Error {
 | store/mutate:`toNum` | 非数值算术 | `NOT_NUMERIC` |
 | store/visibility:`revealOnce` | 目标缺失 | `ENTITY_NOT_FOUND` |
 
-- `AnkoError extends Error` 且保留 message,既有断言 message 的测试继续绿;新增断言 `e.code` 的测试。
+- `DiceloreError extends Error` 且保留 message,既有断言 message 的测试继续绿;新增断言 `e.code` 的测试。
 - **不一次性铺满**:只改 spec §0 code 枚举涉及的已知触发点;其余内层错误经 `classify` 归 `INTERNAL`。
 
 ### 3.3 MCP 侧 `classify(e)`(envelope.ts)
 
 ```ts
-// e instanceof AnkoError → { code: e.code, message: e.message, hint: e.hint }
+// e instanceof DiceloreError → { code: e.code, message: e.message, hint: e.hint }
 // 否则 → { code: "INTERNAL", message: "工具内部错误", hint: ... }(不回传原始 e.message,避免泄漏)
 ```
 
@@ -153,14 +153,14 @@ export class AnkoError extends Error {
 
 ```ts
 interface ToolDef<I, O> {
-  name: string;                 // 无前缀;注册时加 anko_
+  name: string;                 // 无前缀;注册时加 dicelore_
   title: string;
   description: string;          // spec §0 五段:①功能 ②Args ③Returns ④use/don't ⑤错误
   inputSchema: z.ZodObject<...>;// .strict()
   outputSchema: z.ZodObject<...>;
   annotations: { readOnlyHint; destructiveHint; idempotentHint };  // openWorldHint 全 false
   reminders?: (out: O) => string[];  // 见 §5;无则不挂
-  handler: (db: DB, input: I) => O;  // 纯,失败 throw AnkoError
+  handler: (db: DB, input: I) => O;  // 纯,失败 throw DiceloreError
 }
 ```
 - `tools.ts` 导出 `TOOLS: ToolDef[]`,逐工具组合 schema(schemas.ts)+ handler(handlers/*.ts)+ annotations(spec §7.1)+ reminders(reminders.ts)。
@@ -189,16 +189,16 @@ function runTool(db, tool, rawInput): CallToolResult {
 ### 4.4 `main.ts`(stdio wiring)
 
 ```ts
-const { db } = openSession();                 // env: ANKO_SESSION / ANKO_SESSIONS_DIR
-const server = new McpServer({ name:"anko-driver", version });
+const { db } = openSession();                 // env: DICELORE_SESSION / DICELORE_SESSIONS_DIR
+const server = new McpServer({ name:"dicelore", version });
 for (const t of TOOLS)
-  server.registerTool(`anko_${t.name}`,
+  server.registerTool(`dicelore_${t.name}`,
     { title:t.title, description:t.description,
       inputSchema:t.inputSchema.shape, outputSchema:t.outputSchema.shape, annotations:t.annotations },
     (args) => runTool(db, t, args));
 await server.connect(new StdioServerTransport());
 ```
-- npm script:`"anko:mcp": "tsx src/mcp/main.ts"`。
+- npm script:`"dicelore:mcp": "tsx src/mcp/main.ts"`。
 
 ### 4.5 handler 薄包装映射(spec §7)
 
@@ -283,7 +283,7 @@ handler:`metaSet(db,"ended", JSON.stringify({reason,outcome,seq}))` + `eventAppe
 
 | 模块 | 做什么 | 怎么用 | 依赖 |
 |---|---|---|---|
-| `errors` | 定 typed error + code | `throw new AnkoError(code,msg,hint)` | 无 |
+| `errors` | 定 typed error + code | `throw new DiceloreError(code,msg,hint)` | 无 |
 | `resolve/*` | ③层裁决编排 | `resolveOutcome/Contest(...)` | dice/expr/store |
 | `store/choice` | pending_choice 槽读写 | `stage/get/materialize` | db/event |
 | `store/truncate` | 出参截断 | `truncateText(s,limit)` | 无 |
