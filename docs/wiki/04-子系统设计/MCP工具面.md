@@ -19,6 +19,7 @@
   - **入参一律 `.strict()`**：in schema 默认禁多余字段，未列字段报错而非静默吞（自由度只在 `expr` 串内，字段集本身收紧）。
   - **工具 `description`/`title` 属本页契约、非 L2**：MCP description 注册期固定、skill 改不动，必含五段——①一句功能 ②Args 逐参 ③Returns（＝outputSchema 形状）④1–2 条 use / don't-use 示例 ⑤错误说明。本页 schema 是其骨架；与补刀**措辞**（L2，归 [Skills 包](Skills包.md)）分属两层、别混。
   - **失败路径信封**：出错回 MCP `isError: true` + `content` 带可执行 message，并附结构化 `{ error: { code, message, hint } }`。`code` 枚举：`EXPR_EVAL`（求值失败）/`NOT_NUMERIC`（该掷/算术却给非数值）/`RANGE_INVALID`（档位重叠或不全覆盖）/`ENTITY_NOT_FOUND` 等。**触发条件归 [内层能力库](内层能力库.md)**，本页只定信封 + code 枚举 +「message 必可执行」。`reminders` **不**兼任错误通道。
+    - **实现约束（SDK v1.x 实测，2026-06）**：错误信封的结构化 `{ error }` **必须序列化进 `content[].text`、绝不放 `structuredContent`**。因 `@modelcontextprotocol/sdk` 即便 `isError: true` 也会拿 `structuredContent` 去校验该工具的 `outputSchema`（成功形状），带上即触发 `-32602` 校验失败（社区实测确认、官方维护者认证此为唯一规避）。故成功路径用 `structuredContent`（流③），错误路径只用 `content` text 承载结构化 error。
   - **CHARACTER_LIMIT 封顶**：回可变大文本的工具（`sheet_list`/`world_search`/`event_recall` 等）出参封顶 ~25k 字符，超出则截断 + `truncated: true` + 续取提示。**enforcement 归内层**，本页定字段约定。
 
 ---
