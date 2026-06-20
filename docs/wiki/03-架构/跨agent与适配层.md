@@ -2,13 +2,13 @@
 
 > **本页职责**：回答"v1 骑哪个 agent 基底、core 与基底绑定怎么切、hook 怎么承重、未来怎么演进到 GUI"。
 > **上游依赖**：[总体架构](总体架构.md)、[技术选型 §6 基底 / §6.1 分发](技术选型.md)、[01 卡位重述](../01-业务分析/问题域.md)。
-> **状态**：🟢 已成型（2026-06-01；**2026-06-02 据定位重述重写**）。
+> **状态**：🟢 已成型（2026-06-01；**2026-06-02 据定位重述重写**；**2026-06-20 修订 §6**：呈现层轴二从"未来层"提前为组件7「玩家客户端」、机制定为 Agent SDK headless host，[ADR-0018](../05-决策记录-ADR/README.md)）。
 
 ---
 
 ## 0. 一句话
 
-**core 是标准件，v1 骑定 Claude Code 基底、承重地用它的 hook / skill / subagent。** 框架的塑形能力，一部分活在与基底无关的标准载体里（MCP + markdown skill + SQLite + 团本），一部分**有意地、承重地**交给 Claude Code 的专属机制（hook 注入、subagent 裁判、skill 装载）。可移植性兑现在**模型层**（Claude Code model-agnostic，可接各种大模型，含国产）而非 agent 层。未来用 GUI 隐藏终端 / Claude Code。这是 [01 卡位重述](../01-业务分析/问题域.md) + [技术选型 §6](技术选型.md) 的落地。
+**core 是标准件，v1 骑定 Claude Code 基底、承重地用它的 hook / skill / subagent。** 框架的塑形能力，一部分活在与基底无关的标准载体里（MCP + markdown skill + SQLite + 团本），一部分**有意地、承重地**交给 Claude Code 的专属机制（hook 注入、subagent 裁判、skill 装载）。可移植性兑现在**模型层**（Claude Code model-agnostic，可接各种大模型，含国产）而非 agent 层。经玩家客户端（组件7、[ADR-0018](../05-决策记录-ADR/README.md)）用 GUI 隐藏终端 / Claude Code（呈现层从未来层提前、机制 ＝ Agent SDK headless host）。这是 [01 卡位重述](../01-业务分析/问题域.md) + [技术选型 §6](技术选型.md) 的落地。
 
 > **与旧版的根本变化（2026-06-02）**：旧版把"可嫁接任意 agent、hook 仅可选优化、绝不依赖某 agent 专属能力"当立身。重述后——**可移植不是目标，效果 / 分发 / 低开发成本才是**：core 保持标准不锁死，但 v1 明确骑 Claude Code，**hook 从"可选降级"升为"承重"**（详见 §5）。
 
@@ -82,7 +82,7 @@ L2 教条内容是 core 标准件，但**装载走 Claude Code 的 skill 机制*
 ```
 
 - **轴一**：core 标准、交付绑基底——但"绑"是**有意承重**，非旧版"可选装法"。
-- **轴二 · 呈现层 = 未来 GUI**：v1 是终端（玩家用 `dicelore play` / `claude`）；**未来把 Claude Code / 终端隐藏在简易图形界面后**（Tauri 那类轻量跨端壳，非 Electron 几百 M），玩家不碰命令行。GUI 读 SQLite store / `narrate` 输出展示人物卡 / 剧情 / 卡池，**与"哪个模型当 GM"正交**。按纪律仍是"未来层"，本页只锚定其位置与轨迹。
+- **轴二 · 呈现层 = 玩家客户端（组件7，[ADR-0018](../05-决策记录-ADR/README.md)）**：v1 终端（`dicelore play` / `claude`）仍在，**并行推进 web 玩家客户端**——机制 ＝ **Agent SDK headless host**（用 `@anthropic-ai/claude-agent-sdk` ＝ 程序化 Claude Code 把 GM 作为库嵌进自建 Node 服务），而非 Tauri 包交互式终端。**这不离开轴一"骑定 Claude Code"**：三 hook / 进程内 MCP / skill 装载原样复用，只换宿主外壳（TUI → web）。一个编排契约（REST + 流式）套两种分发壳：**Tauri（个人向头等分发、开箱即用，壳内捎带 orchestrator 的 Node sidecar）** / **Web（企业·多人向托管 ＝ [场景 B](../01-业务分析/用户与场景.md)）**。GUI 仍读 SQLite store / `narrate` 展示人物卡 / 剧情 / 卡池，**与"哪个模型当 GM"正交**；与 core 则**单向依赖 + 一条变更通知缝**（core/MCP 写规范态时发信号、后端订阅推呈现增量，为反应式 / 性能，详见 [04 玩家客户端](../04-子系统设计/玩家客户端.md)）。详见 [总体架构 §7 组件7](总体架构.md)。
 
 ---
 
@@ -90,5 +90,5 @@ L2 教条内容是 core 标准件，但**装载走 Claude Code 的 skill 机制*
 
 - hook 脚本（Node）、`.claude/` 目录结构、裁判 subagent、L3 审计实现 → [04 adapter 与 L3 审计](../04-子系统设计/adapter与L3审计.md)
 - `dicelore` CLI / npm 包 / 一键安装的实现 → [04-子系统设计](../04-子系统设计/) / [技术选型 §6.1](技术选型.md)
-- 未来 GUI 的技术栈与界面 → 未来
+- 玩家客户端（组件7）的编排契约 / UI / 分发壳 / 变更通知缝 详细设计 → [04 玩家客户端](../04-子系统设计/玩家客户端.md)
 - 多人论坛安价的远程部署（Streamable HTTP）→ 未来（[场景 B](../01-业务分析/用户与场景.md)）
