@@ -18,6 +18,7 @@
 **不在范围**(spec §7 末、跨agent/adapter):回滚/快照/branch/swipe(玩家元动作,hook 处理,不给 AI 工具)、玩家选择捕获、Stop hook 物化 choice、L3 审计、被动 rule 召回 hook、watcher payload 注入机制。
 
 **先补两处内层缺口**(均属内层③层「裁决编排」,可单测、是薄包装的前置):
+
 1. `resolveOutcome` / `resolveContest` 编排(③层,Plan1 只做了 `applyMutations` 一个③层函数)。
 2. `pending_choice` 槽读写(`resolve_choice` 暂存语义,表已建、读写未实现)。
 
@@ -62,6 +63,7 @@ export interface OutcomeResult { roll: number; die: string; band: Band; }
 // 不落 event(落 event 是 MCP handler 的事)。die 非法 → DiceloreError(DIE_INVALID)。
 export function resolveOutcome(die: string, bands: Band[], rng?: Rng): OutcomeResult
 ```
+
 - `die` 用就地正则 `^\s*(\d+)[dD](\d+)\s*$` 解析(不卷入 expr 文法,spec §1.2);非此形状 → `DIE_INVALID`。解析出 count/sides 后调 `rollDice`(其 count≥1/sides≥2 校验亦抛 `DIE_INVALID`)。
 - `rangeMap` 的重叠/落空校验沿用,抛 `RANGE_INVALID`(见 §3)。
 
@@ -79,6 +81,7 @@ export function resolveContest(
   rng?: Rng,
 ): ContestResult
 ```
+
 - `getRef = (e,a)=>sheetGet(db,e,a)?.value`(与 `applyMutations` 同构)。求值失败 → `evalExpr` 抛的 `DiceloreError`(EXPR_EVAL/ENTITY_NOT_FOUND/NOT_NUMERIC)透传。
 
 ### 2.3 `src/store/choice.ts`(pending_choice 单行槽)
@@ -91,6 +94,7 @@ export function getPendingChoice(db: DB): { prompt: string; options: ChoiceOptio
 // 回合末 Stop hook 用(本组件不调,留接口):落 kind=choice、visible=1 event,status→materialized。
 export function materializePendingChoice(db: DB): number | undefined
 ```
+
 - MCP `resolve_choice` handler 只调 `stagePendingChoice`,出参 `{ staged:true, options }`(不含 event_id,spec §1.1)。
 - `materializePendingChoice` 本组件不接线(归 adapter/Stop hook),但一并实现 + 单测,因它是槽语义闭环、纯内层、可单测。
 
@@ -118,15 +122,16 @@ export class DiceloreError extends Error {
 
 ### 3.2 既有内层改抛点(message 原文保留 → 既有 `toThrow(/中文/)` 测试不破)
 
-| 文件:函数 | 原 throw | 改 code |
-|---|---|---|
-| dice:`rollDice` | count/sides 非法 | `DIE_INVALID` |
-| dice:`rangeMap` | 重叠/min>max/落空 | `RANGE_INVALID` |
-| expr/evaluate:`evalExpr` | 引用不存在 | `ENTITY_NOT_FOUND` |
-| expr/evaluate:`evalExpr` | 引用非数值 | `NOT_NUMERIC` |
-| expr/parse:`parseExpr` | 文法非法 | `EXPR_EVAL` |
-| store/mutate:`toNum` | 非数值算术 | `NOT_NUMERIC` |
-| store/visibility:`revealOnce` | 目标缺失 | `ENTITY_NOT_FOUND` |
+
+| 文件:函数                     | 原 throw          | 改 code            |
+| ----------------------------- | ----------------- | ------------------ |
+| dice:`rollDice`               | count/sides 非法  | `DIE_INVALID`      |
+| dice:`rangeMap`               | 重叠/min>max/落空 | `RANGE_INVALID`    |
+| expr/evaluate:`evalExpr`      | 引用不存在        | `ENTITY_NOT_FOUND` |
+| expr/evaluate:`evalExpr`      | 引用非数值        | `NOT_NUMERIC`      |
+| expr/parse:`parseExpr`        | 文法非法          | `EXPR_EVAL`        |
+| store/mutate:`toNum`          | 非数值算术        | `NOT_NUMERIC`      |
+| store/visibility:`revealOnce` | 目标缺失          | `ENTITY_NOT_FOUND` |
 
 - `DiceloreError extends Error` 且保留 message,既有断言 message 的测试继续绿;新增断言 `e.code` 的测试。
 - **不一次性铺满**:只改 spec §0 code 枚举涉及的已知触发点;其余内层错误经 `classify` 归 `INTERNAL`。
@@ -147,7 +152,6 @@ export class DiceloreError extends Error {
 - 装 **`@modelcontextprotocol/sdk`**(v1.x,生产推荐;`main` 的 v2 拆包 pre-alpha 不用)+ **Zod v3**。
 - `import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"`、`import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"`。
 - `registerTool(name, { title, description, inputSchema: ZodRawShape, outputSchema: ZodRawShape, annotations }, handler)`;handler 回 `{ content, structuredContent, isError? }`。
-- npm install 网络失败走 WSL 代理:`export https_proxy=http://172.17.128.1:7897 http_proxy=同`。
 
 ### 4.2 `ToolDef`(tools.ts)
 
@@ -163,6 +167,7 @@ interface ToolDef<I, O> {
   handler: (db: DB, input: I) => O;  // 纯,失败 throw DiceloreError
 }
 ```
+
 - `tools.ts` 导出 `TOOLS: ToolDef[]`,逐工具组合 schema(schemas.ts)+ handler(handlers/*.ts)+ annotations(spec §7.1)+ reminders(reminders.ts)。
 - **outputSchema 必须囊括信封字段**:凡出参带 `event_id` / `reminders` / `truncated` / `has_more` / `next_offset` 的工具,其 `outputSchema` 必须显式声明这些字段(`reminders: z.array(z.string()).optional()` 等)。否则成功路径 `structuredContent` 也会被 SDK 拿 outputSchema 校验而 `-32602`(同 §4.3 错误路径的同一校验机制,只是成功路径无法靠"不带 structuredContent"规避)。
 
@@ -182,6 +187,7 @@ function runTool(db, tool, rawInput): CallToolResult {
   }
 }
 ```
+
 - **成功路径**:`structuredContent` 回流③(AI 读结构化);`content[].text` 放同一份 JSON 供兼容(spec §0:out 不塞散文,这里 text 是结构化镜像非散文菜单)。
 - **错误路径(SDK v1.x 硬约束)**:**绝不带 `structuredContent`**——SDK 即便 `isError:true` 也校验 `structuredContent` against `outputSchema`,带上即 `-32602`(实测确认)。结构化 `{error}` 只进 `content[].text`。
 - 校验失败(`runTool` 内 `inputSchema.parse` 抛 ZodError)走同一错误信封,归 `code:"INTERNAL"`、message 列出非法/缺失字段。注:生产路径 SDK 在调 handler 前已按 `inputSchema` 校验入参,`runTool` 内 parse 是防御 + 脱 SDK 单测用,故 ZodError 主要出现在测试路径。
@@ -198,25 +204,27 @@ for (const t of TOOLS)
     (args) => runTool(db, t, args));
 await server.connect(new StdioServerTransport());
 ```
+
 - npm script:`"dicelore:mcp": "tsx src/mcp/main.ts"`。
 
 ### 4.5 handler 薄包装映射(spec §7)
 
-| 工具 | handler 调用 | 落 event |
-|---|---|---|
-| `resolve_choice` | `stagePendingChoice` | 否(回合末物化) |
-| `resolve_outcome` | `resolveOutcome` + `eventAppend(kind:"verdict")` | verdict |
-| `resolve_contest` | `resolveContest` + `eventAppend(kind:"verdict")` | verdict |
-| `sheet_get`/`sheet_list` | `sheetGet`/`sheetList` | — |
-| `sheet_update` | `applyMutations` | mutation(+watcher_fired) |
-| `event_append`/`event_recall` | `eventAppend`/`eventRecall` | note/… |
-| `watcher_set` | `watcherSet` | — |
-| `world_search`/`sample`/`register` | `worldDocSearch`/`worldSample`/`worldRegister` | — |
-| `rule_search` | `ruleSearch` | — |
-| `sheet_show`/`world_show` | `sheetShow`/`worldShow` | note(审计,内层已落) |
-| `reveal_once` | `revealOnce` | reveal |
-| `narrate` | `eventAppend(kind:"narrate")` | narrate |
-| `game_end` | `metaSet("ended",…)` + `eventAppend(kind:"note")` | note |
+
+| 工具                               | handler 调用                                       | 落 event                 |
+| ---------------------------------- | -------------------------------------------------- | ------------------------ |
+| `resolve_choice`                   | `stagePendingChoice`                               | 否(回合末物化)           |
+| `resolve_outcome`                  | `resolveOutcome` + `eventAppend(kind:"verdict")`   | verdict                  |
+| `resolve_contest`                  | `resolveContest` + `eventAppend(kind:"verdict")`   | verdict                  |
+| `sheet_get`/`sheet_list`           | `sheetGet`/`sheetList`                             | —                       |
+| `sheet_update`                     | `applyMutations`                                   | mutation(+watcher_fired) |
+| `event_append`/`event_recall`      | `eventAppend`/`eventRecall`                        | note/…                  |
+| `watcher_set`                      | `watcherSet`                                       | —                       |
+| `world_search`/`sample`/`register` | `worldDocSearch`/`worldSample`/`worldRegister`     | —                       |
+| `rule_search`                      | `ruleSearch`                                       | —                       |
+| `sheet_show`/`world_show`          | `sheetShow`/`worldShow`                            | note(审计,内层已落)      |
+| `reveal_once`                      | `revealOnce`                                       | reveal                   |
+| `narrate`                          | `eventAppend(kind:"narrate")`                      | narrate                  |
+| `game_end`                         | `metaSet("ended",…)` + `eventAppend(kind:"note")` | note                     |
 
 - 落 event 在 handler(非内层编排函数),因 event 是行动层副作用。`sheet_update` 的 mutation event 由 `applyMutations` 自落、handler 直接透传其 `event_id`。
 
@@ -226,13 +234,14 @@ await server.connect(new StdioServerTransport());
 
 spec §5:走流③、只回 AI、L1 底线。v1 只载**结构可证**的触发,不臆测语义:
 
-| 工具 | 触发(结构) | terse 提醒 |
-|---|---|---|
-| `resolve_choice` | 恒(暂存即后果已锁) | "后续叙述须与已锁后果一致" |
-| `resolve_outcome` | 命中**最低档**(bands 中 min 最小者) | "尊重结果,别软着陆" |
-| `sheet_update` | `fired_watchers` 非空 | "watcher 已触发,本轮即时反应" |
-| `resolve_contest` | — | 字段保留、默认 `[]`(不知哪边是玩家,不臆测) |
-| `narrate` | 不挂(spec §5) | — |
+
+| 工具              | 触发(结构)                          | terse 提醒                                |
+| ----------------- | ----------------------------------- | ----------------------------------------- |
+| `resolve_choice`  | 恒(暂存即后果已锁)                  | "后续叙述须与已锁后果一致"                |
+| `resolve_outcome` | 命中**最低档**(bands 中 min 最小者) | "尊重结果,别软着陆"                       |
+| `sheet_update`    | `fired_watchers` 非空               | "watcher 已触发,本轮即时反应"             |
+| `resolve_contest` | —                                  | 字段保留、默认`[]`(不知哪边是玩家,不臆测) |
+| `narrate`         | 不挂(spec §5)                      | —                                        |
 
 - 富措辞归 Skills 包(L2),本表只 terse 底线;reminders 字段挂在出参(进 structuredContent)。
 
@@ -243,6 +252,7 @@ spec §5:走流③、只回 AI、L1 底线。v1 只载**结构可证**的触发,
 ```ts
 export function truncateText(s: string, limit = 25000): { text: string; truncated: boolean }
 ```
+
 - 可变大出参工具(`sheet_list`/`world_search`/`event_recall`/`rule_search`)在 handler 拼装结果后套用,出参带 `truncated: boolean`。
 - `sheet_list` 另有 `has_more` / `next_offset`(分页本就有,limit/offset 入参)。
 - enforcement 归内层(本 helper),MCP 只在 handler 调。
@@ -252,6 +262,7 @@ export function truncateText(s: string, limit = 25000): { text: string; truncate
 ## 7. game_end 终态
 
 handler:`metaSet(db,"ended", JSON.stringify({reason,outcome,seq}))` + `eventAppend(db,{kind:"note", visible:0, data_json:{reason,outcome}})`。
+
 - out:`{ ended:true, event_id }`。annotations:`destructiveHint:true`(spec §7.1 唯一 destructive)。
 - `you_death` = 语义特例,走同工具 + reason(v1 不单列别名)。
 
@@ -281,16 +292,17 @@ handler:`metaSet(db,"ended", JSON.stringify({reason,outcome,seq}))` + `eventAppe
 
 ## 10. 模块边界自检(isolation & clarity)
 
-| 模块 | 做什么 | 怎么用 | 依赖 |
-|---|---|---|---|
-| `errors` | 定 typed error + code | `throw new DiceloreError(code,msg,hint)` | 无 |
-| `resolve/*` | ③层裁决编排 | `resolveOutcome/Contest(...)` | dice/expr/store |
-| `store/choice` | pending_choice 槽读写 | `stage/get/materialize` | db/event |
-| `store/truncate` | 出参截断 | `truncateText(s,limit)` | 无 |
-| `mcp/schemas` | Zod in/out | `import { sheetGetIn,... }` | zod |
-| `mcp/reminders` | terse 提醒表 | `remindersFor(name,out)` | 无 |
-| `mcp/envelope` | 信封+classify+截断 | `successEnvelope/errorEnvelope/classify` | errors/truncate |
-| `mcp/runTool` | dispatch | `runTool(db,tool,input)` | envelope/reminders |
-| `mcp/tools` | 注册表 | `TOOLS` | schemas/handlers/reminders |
-| `mcp/handlers/*` | 薄包装 | `(db,input)=>out` | resolve/store/errors |
-| `mcp/main` | stdio 接线 | bin | session/tools/sdk |
+
+| 模块             | 做什么                | 怎么用                                   | 依赖                       |
+| ---------------- | --------------------- | ---------------------------------------- | -------------------------- |
+| `errors`         | 定 typed error + code | `throw new DiceloreError(code,msg,hint)` | 无                         |
+| `resolve/*`      | ③层裁决编排          | `resolveOutcome/Contest(...)`            | dice/expr/store            |
+| `store/choice`   | pending_choice 槽读写 | `stage/get/materialize`                  | db/event                   |
+| `store/truncate` | 出参截断              | `truncateText(s,limit)`                  | 无                         |
+| `mcp/schemas`    | Zod in/out            | `import { sheetGetIn,... }`              | zod                        |
+| `mcp/reminders`  | terse 提醒表          | `remindersFor(name,out)`                 | 无                         |
+| `mcp/envelope`   | 信封+classify+截断    | `successEnvelope/errorEnvelope/classify` | errors/truncate            |
+| `mcp/runTool`    | dispatch              | `runTool(db,tool,input)`                 | envelope/reminders         |
+| `mcp/tools`      | 注册表                | `TOOLS`                                  | schemas/handlers/reminders |
+| `mcp/handlers/*` | 薄包装                | `(db,input)=>out`                        | resolve/store/errors       |
+| `mcp/main`       | stdio 接线            | bin                                      | session/tools/sdk          |
