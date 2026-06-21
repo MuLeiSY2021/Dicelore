@@ -11,8 +11,12 @@ import { Hono } from "hono";
 import { serve } from "@hono/node-server";
 import { openDb, initSchema, type DB } from "@dicelore/core";
 import type { SessionInfo, SessionSummary } from "@dicelore/shared";
+import { MessageRequestSchema, ChoiceRequestSchema, RollRequestSchema } from "@dicelore/shared";
 import { buildSnapshot } from "./presentation.js";
 import { listSessionSummaries } from "./sessions.js";
+import { getOrCreateHost, getHost } from "./session/registry.js";
+import type { SessionHost } from "./session/SessionHost.js";
+import type { GmDriver } from "./gm/GmDriver.js";
 
 export interface ServerDeps {
   openSession: (sessionId: string) => DB; // 读侧句柄(每会话一文件；测试可注入内存库)
@@ -42,7 +46,51 @@ export function createApp(deps: ServerDeps): Hono {
   return app;
 }
 
-// 生产入口：每会话按 DICELORE_SESSIONS_DIR/{id}.db 打开(读侧)。
+// 实时引擎面：动作进(POST messages/choices/roll) + 首屏快照，经 registry/SessionHost。
+export interface LiveDeps {
+  driverFactory: (host: SessionHost) => GmDriver;
+  openSession?: (id: string) => DB; // 省略则 SessionHost 用内存库(测试)
+}
+
+export function createLiveApp(deps: LiveDeps): Hono {
+  const app = new Hono();
+  const hostDeps = (id: string) => ({ db: deps.openSession?.(id), driverFactory: deps.driverFactory });
+
+  app.get("/sessions/:id/presentation", (c) => {
+    const id = c.req.param("id");
+    const host = getOrCreateHost(id, hostDeps(id));
+    return c.json(buildSnapshot(host.db, id));
+  });
+  app.get("/sessions/:id", (c) => {
+    const id = c.req.param("id");
+    const info: SessionInfo = { sessionId: id, ended: false, title: id };
+    return c.json(info);
+  });
+
+  app.post("/sessions/:id/messages", async (c) => {
+    const id = c.req.param("id");
+    const body = MessageRequestSchema.parse(await c.req.json());
+    const host = getOrCreateHost(id, hostDeps(id));
+    const { turnId } = await host.handleMessage(body.text);
+    return c.json({ turnId }, 202);
+  });
+  app.post("/sessions/:id/choices", async (c) => {
+    const id = c.req.param("id");
+    const body = ChoiceRequestSchema.parse(await c.req.json());
+    const host = getOrCreateHost(id, hostDeps(id));
+    const { turnId } = await host.handleMessage(`[choice ${body.eventId}#${body.optionIndex}]`);
+    return c.json({ turnId }, 202);
+  });
+  app.post("/sessions/:id/roll", async (c) => {
+    const id = c.req.param("id");
+    const body = RollRequestSchema.parse(await c.req.json());
+    const host = getHost(id);
+    if (!host || !host.handleRoll(body.eventId)) return c.json({ code: "no_pending_roll" }, 409);
+    return c.json({ turnId: id }, 202);
+  });
+
+  return app;
+}
 export function startServer(port: number): void {
   const dir = process.env.DICELORE_SESSIONS_DIR ?? ".";
   const app = createApp({
