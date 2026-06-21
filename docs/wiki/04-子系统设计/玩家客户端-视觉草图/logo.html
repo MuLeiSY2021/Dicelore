@@ -3,110 +3,91 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
 <style>
-:root{ --ink:#0c211a; --paper:#ece4d2; --gold:#d4a83e; --gold-h:#e6bd5a; --zhu:#d8553f; }
+:root{ --ink:#0c211a; --paper:#ece4d2; --gold:#d4a83e; --zhu:#d8553f; }
 *{box-sizing:border-box}
 body{margin:0;background:#06130d;font-family:'Playfair Display',Georgia,serif;color:var(--paper);padding:26px;display:flex;flex-wrap:wrap;gap:22px;align-items:flex-start}
 .cap{width:100%;font-family:'JetBrains Mono',monospace;font-size:12px;color:#7d8c80;margin:0 0 -6px}
-/* 每个 logo 装在一个可单独截图的方框里 */
 .frame{border:1px solid #25433a;border-radius:14px;display:flex;align-items:center;justify-content:center;position:relative}
-.frame.dark{background:var(--ink)}
-.frame.light{background:#eef4ed}
+.frame.dark{background:var(--ink)} .frame.light{background:#eef4ed}
 .frame .tag{position:absolute;top:8px;left:12px;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.08em;color:#5d6b60}
 .frame.light .tag{color:#9bb0a0}
-
-/* 字标 */
-.wm{font-weight:700;letter-spacing:.01em;line-height:1;display:inline-flex;align-items:baseline}
-.wm .dot{color:var(--zhu)}
-.wm.gold{color:var(--gold)}
-.wm.paper{color:var(--paper)}
-.wm.dark-on-light{color:#16302a}
-
-/* d20 */
-.d20{display:block}
-.lockup{display:flex;align-items:center;gap:16px}
+.wm{font-weight:700;letter-spacing:.01em;line-height:1}
+.wm .dot{color:var(--zhu)} .wm .g{color:var(--gold)} .wm .w{color:var(--paper)} .wm .dk{color:#16302a}
+.d20{display:block;color:var(--gold)}
+.lockup{display:flex;align-items:center;gap:18px}
 .stack{display:flex;flex-direction:column;align-items:center;gap:14px}
+.num{font-family:'JetBrains Mono',monospace;font-weight:600}
 </style></head>
 <body>
-<p class="cap">Dicelore brand / logo — 每个方框可单独截图。d20 线描骰标 + 朱砂红点字标。</p>
 
-<!-- A 纯字标(金) -->
-<div class="frame dark" style="width:360px;height:150px">
-  <span class="tag">A · 字标(金)</span>
-  <span class="wm gold" style="font-size:54px">Dicelore<span class="dot">.</span></span>
-</div>
+<!-- d20 symbol:对称几何 + 圆角连接 + 几何精度 -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="d20" viewBox="0 0 64 64">
+    <g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" shape-rendering="geometricPrecision">
+      <!-- 外六边形(尖顶) -->
+      <polygon points="32,4.5 55.9,18.25 55.9,45.75 32,59.5 8.1,45.75 8.1,18.25"/>
+      <!-- 中央上三角(面向观者的面) -->
+      <polygon points="32,13 51,44 13,44"/>
+      <!-- 棱线:三角三顶各连最近的六边形顶点(对称) -->
+      <line x1="32" y1="13" x2="32" y2="4.5"/>
+      <line x1="51" y1="44" x2="55.9" y2="45.75"/>
+      <line x1="13" y1="44" x2="8.1" y2="45.75"/>
+      <line x1="51" y1="44" x2="55.9" y2="18.25"/>
+      <line x1="13" y1="44" x2="8.1" y2="18.25"/>
+      <line x1="32" y1="44" x2="32" y2="59.5"/>
+    </g>
+    <text x="32" y="38" text-anchor="middle" class="num" font-size="12.5" fill="currentColor">20</text>
+  </symbol>
+</defs></svg>
 
-<!-- B 纯字标(羊皮纸白) -->
-<div class="frame dark" style="width:360px;height:150px">
-  <span class="tag">B · 字标(纸白)</span>
-  <span class="wm paper" style="font-size:54px">Dicelore<span class="dot">.</span></span>
-</div>
+<p class="cap">Dicelore brand / logo — d20 已重做(对称 + 圆角 + 几何精度);字标 Dice 金 / lore 白。每框可单独截图。</p>
 
-<!-- C d20 + 字标 横排 -->
-<div class="frame dark" style="width:430px;height:150px">
-  <span class="tag">C · d20 + 字标 横排</span>
+<!-- 主推:Dice 金 / lore 白 + d20 横排 -->
+<div class="frame dark" style="width:480px;height:170px">
+  <span class="tag">★ 主标 · d20 + Dice金/lore白 横排</span>
   <span class="lockup">
-    <svg class="d20" width="62" height="62" viewBox="0 0 64 64" fill="none" stroke="var(--gold)" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round">
-      <polygon points="32,5 55,18.5 55,45.5 32,59 9,45.5 9,18.5"/>
-      <polygon points="32,14 50,46 14,46"/>
-      <line x1="32" y1="14" x2="32" y2="5"/>
-      <line x1="50" y1="46" x2="55" y2="18.5"/><line x1="14" y1="46" x2="9" y2="18.5"/>
-      <line x1="50" y1="46" x2="55" y2="45.5"/><line x1="14" y1="46" x2="9" y2="45.5"/>
-      <line x1="32" y1="46" x2="32" y2="59"/>
-      <text x="32" y="40" text-anchor="middle" font-size="13" font-family="JetBrains Mono,monospace" stroke="none" fill="var(--gold)" font-weight="600">20</text>
-    </svg>
-    <span class="wm gold" style="font-size:46px">Dicelore<span class="dot">.</span></span>
+    <svg class="d20" width="66" height="66"><use href="#d20"/></svg>
+    <span class="wm" style="font-size:48px"><span class="g">Dice</span><span class="w">lore</span><span class="dot">.</span></span>
   </span>
 </div>
 
-<!-- D d20 单标(金) -->
-<div class="frame dark" style="width:170px;height:170px">
-  <span class="tag">D · d20 单标</span>
-  <svg class="d20" width="96" height="96" viewBox="0 0 64 64" fill="none" stroke="var(--gold)" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round">
-    <polygon points="32,5 55,18.5 55,45.5 32,59 9,45.5 9,18.5"/>
-    <polygon points="32,14 50,46 14,46"/>
-    <line x1="32" y1="14" x2="32" y2="5"/>
-    <line x1="50" y1="46" x2="55" y2="18.5"/><line x1="14" y1="46" x2="9" y2="18.5"/>
-    <line x1="50" y1="46" x2="55" y2="45.5"/><line x1="14" y1="46" x2="9" y2="45.5"/>
-    <line x1="32" y1="46" x2="32" y2="59"/>
-    <text x="32" y="40" text-anchor="middle" font-size="13" font-family="JetBrains Mono,monospace" stroke="none" fill="var(--gold)" font-weight="600">20</text>
-  </svg>
+<!-- 纯字标 -->
+<div class="frame dark" style="width:400px;height:170px">
+  <span class="tag">字标 · Dice金 / lore白</span>
+  <span class="wm" style="font-size:52px"><span class="g">Dice</span><span class="w">lore</span><span class="dot">.</span></span>
 </div>
 
-<!-- E d20 红点 + 字标(d20 顶点一颗红点) -->
-<div class="frame dark" style="width:170px;height:170px">
-  <span class="tag">E · d20(红点顶)</span>
-  <svg class="d20" width="96" height="96" viewBox="0 0 64 64" fill="none" stroke="var(--gold)" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round">
-    <polygon points="32,5 55,18.5 55,45.5 32,59 9,45.5 9,18.5"/>
-    <polygon points="32,14 50,46 14,46"/>
-    <line x1="50" y1="46" x2="55" y2="18.5"/><line x1="14" y1="46" x2="9" y2="18.5"/>
-    <line x1="50" y1="46" x2="55" y2="45.5"/><line x1="14" y1="46" x2="9" y2="45.5"/>
-    <line x1="32" y1="46" x2="32" y2="59"/>
-    <text x="32" y="40" text-anchor="middle" font-size="13" font-family="JetBrains Mono,monospace" stroke="none" fill="var(--gold)" font-weight="600">20</text>
-    <circle cx="32" cy="9" r="3.4" fill="var(--zhu)" stroke="none"/>
-  </svg>
+<!-- d20 单标 -->
+<div class="frame dark" style="width:180px;height:180px">
+  <span class="tag">d20 单标</span>
+  <svg class="d20" width="104" height="104"><use href="#d20"/></svg>
 </div>
 
-<!-- F 竖排 d20 + 字标 -->
-<div class="frame dark" style="width:230px;height:210px">
-  <span class="tag">F · 竖排</span>
+<!-- d20 红点顶 -->
+<div class="frame dark" style="width:180px;height:180px">
+  <span class="tag">d20 · 红点顶</span>
+  <span style="position:relative;display:inline-block">
+    <svg class="d20" width="104" height="104"><use href="#d20"/></svg>
+    <span style="position:absolute;left:50%;top:6px;transform:translateX(-50%);width:11px;height:11px;border-radius:50%;background:var(--zhu)"></span>
+  </span>
+</div>
+
+<!-- 竖排 -->
+<div class="frame dark" style="width:240px;height:220px">
+  <span class="tag">竖排</span>
   <span class="stack">
-    <svg class="d20" width="72" height="72" viewBox="0 0 64 64" fill="none" stroke="var(--gold)" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round">
-      <polygon points="32,5 55,18.5 55,45.5 32,59 9,45.5 9,18.5"/>
-      <polygon points="32,14 50,46 14,46"/>
-      <line x1="32" y1="14" x2="32" y2="5"/>
-      <line x1="50" y1="46" x2="55" y2="18.5"/><line x1="14" y1="46" x2="9" y2="18.5"/>
-      <line x1="50" y1="46" x2="55" y2="45.5"/><line x1="14" y1="46" x2="9" y2="45.5"/>
-      <line x1="32" y1="46" x2="32" y2="59"/>
-      <text x="32" y="40" text-anchor="middle" font-size="13" font-family="JetBrains Mono,monospace" stroke="none" fill="var(--gold)" font-weight="600">20</text>
-    </svg>
-    <span class="wm gold" style="font-size:34px">Dicelore<span class="dot">.</span></span>
+    <svg class="d20" width="78" height="78"><use href="#d20"/></svg>
+    <span class="wm" style="font-size:34px"><span class="g">Dice</span><span class="w">lore</span><span class="dot">.</span></span>
   </span>
 </div>
 
-<!-- G 亮底字标 -->
-<div class="frame light" style="width:360px;height:150px">
-  <span class="tag">G · 亮底</span>
-  <span class="wm dark-on-light" style="font-size:54px">Dicelore<span class="dot">.</span></span>
+<!-- 亮底 -->
+<div class="frame light" style="width:400px;height:170px">
+  <span class="tag">亮底</span>
+  <span class="lockup">
+    <svg class="d20" width="58" height="58" style="color:#a07e1f"><use href="#d20"/></svg>
+    <span class="wm" style="font-size:46px"><span style="color:#a07e1f">Dice</span><span class="dk">lore</span><span class="dot">.</span></span>
+  </span>
 </div>
 
 </body></html>
