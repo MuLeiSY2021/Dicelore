@@ -7,7 +7,7 @@ describe("TOOLS 注册表", () => {
     expect(names).toHaveLength(18);
     expect(new Set(names).size).toBe(18);
     for (const n of [
-      "resolve_choice", "resolve_outcome", "resolve_contest",
+      "resolve_choice", "resolve_outcome_hidden", "resolve_contest_hidden",
       "sheet_get", "sheet_list", "sheet_update",
       "event_append", "event_recall", "watcher_set",
       "world_search", "world_sample", "world_register", "rule_search",

@@ -23,9 +23,9 @@ describe("resolver handlers", () => {
     expect(eventSince(db, 0)).toHaveLength(0); // 不落 event
   });
 
-  it("resolve_outcome:掷骰命中档位 + 落 kind=verdict event", () => {
+  it("resolve_outcome_hidden:掷骰命中档位 + 落 kind=verdict event", () => {
     const db = freshDb();
-    const out = byName("resolve_outcome").handler(db, {
+    const out = byName("resolve_outcome_hidden").handler(db, {
       context: "撬锁",
       die: "1d100",
       bands: [
@@ -41,10 +41,10 @@ describe("resolver handlers", () => {
     expect(verdicts).toHaveLength(1);
   });
 
-  it("resolve_contest:取真值比大小 + 落 verdict;winner 正确", () => {
+  it("resolve_contest_hidden:取真值比大小 + 落 verdict;winner 正确", () => {
     const db = freshDb();
     sheetSetRaw(db, "张三", "力量", "18");
-    const out = byName("resolve_contest").handler(db, {
+    const out = byName("resolve_contest_hidden").handler(db, {
       context: "掰手腕",
       a: { name: "张三", expr: "{张三.力量}" },
       b: { name: "DC", expr: "10" },
