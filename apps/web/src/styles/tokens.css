@@ -18,6 +18,11 @@
   --font-display: "Playfair Display", serif;
   --font-ui: "Inter", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  /* 草图别名 */
+  --serif: var(--font-display);
+  --sans: var(--font-ui);
+  --mono: var(--font-mono);
+  --dial-empty: #1a392f;
 }
 
 [data-theme="light"] {
@@ -33,6 +38,7 @@
   --acc-h: #a98a2c;
   --acc-soft: #6f561a;
   --acc-on: #fff;
+  --dial-empty: #d3e2d4;
 }
 
 /* 可选强调色（主题 token；data-accent 覆盖 --acc 组）。亮态 --acc-soft 取 acc 本色保对比 ≥4.5:1。 */

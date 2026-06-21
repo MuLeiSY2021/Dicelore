@@ -8,11 +8,17 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import { render, screen } from "@testing-library/react";
+import { vi } from "vitest";
 import { MemoryRouter, Routes, Route, Outlet } from "react-router-dom";
 import { ThemeProvider } from "./theme/ThemeProvider.js";
 import { TopBar } from "./shell/TopBar.js";
 import HomePage from "./pages/HomePage.js";
 import PlayPage from "./pages/PlayPage.js";
+
+vi.mock("./api/client.js", () => ({ listSessions: vi.fn().mockResolvedValue([]) }));
+vi.mock("./live/useSession.js", () => ({
+  useSession: () => ({ snapshot: null, narration: [], pendingRoll: null, postMessage: vi.fn(), roll: vi.fn() }),
+}));
 
 function tree(initial: string) {
   return (
@@ -31,9 +37,10 @@ function tree(initial: string) {
 
 it("bar 渲染四个页面导航 + 品牌", () => {
   render(tree("/"));
-  expect(screen.getByText("Dicelore")).toBeInTheDocument();
+  expect(screen.getByText(/Dicelore/)).toBeInTheDocument();
   for (const label of ["主页", "跑团", "团本制作", "配置"]) {
-    expect(screen.getByText(label)).toBeInTheDocument();
+    // 精确名只匹配导航链接(主页的 quick 卡片可访问名含描述,不精确匹配)
+    expect(screen.getByRole("link", { name: label })).toBeInTheDocument();
   }
 });
 
