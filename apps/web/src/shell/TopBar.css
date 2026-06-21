@@ -1,0 +1,24 @@
+.topbar {
+  display: flex; align-items: center; gap: 24px;
+  height: 48px; padding: 0 16px;
+  background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.brand { font-family: var(--font-display); font-weight: 700; font-size: 18px; color: var(--acc-soft); }
+.nav { display: flex; gap: 4px; }
+.navitem {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 6px;
+  color: var(--text2); text-decoration: none;
+}
+.navitem:hover { background: var(--surface2); color: var(--text); }
+.navitem.active { color: var(--acc-soft); background: var(--surface2); }
+.tools { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.tools button {
+  display: inline-flex; padding: 6px; border: none; border-radius: 6px;
+  background: transparent; color: var(--text2); cursor: pointer;
+}
+.tools button:hover { background: var(--surface2); color: var(--text); }
+.tools select {
+  background: var(--surface2); color: var(--text); border: 1px solid var(--line);
+  border-radius: 6px; padding: 4px 6px;
+}

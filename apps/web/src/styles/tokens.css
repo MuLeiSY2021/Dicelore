@@ -1,0 +1,53 @@
+:root,
+[data-theme="dark"] {
+  --bg: #0c211a;
+  --surface: #122a22;
+  --surface2: #18342a;
+  --line: #25433a;
+  --line2: #33574a;
+  --text: #e9e3d1;
+  --text2: #9aae9f;
+  --text3: #62756a;
+  --acc: #d4a83e;
+  --acc-h: #e6bd5a;
+  --acc-soft: #ecd28c;
+  --acc-on: #13261d;
+  --ok: #5fae7e;
+  --warn: #d99a3a;
+  --err: #cd5b4a;
+  --font-display: "Playfair Display", serif;
+  --font-ui: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+[data-theme="light"] {
+  --bg: #dde8de;
+  --surface: #eef4ed;
+  --surface2: #e6efe5;
+  --line: #c8d8c9;
+  --line2: #aec4af;
+  --text: #123a2c;
+  --text2: #4b6356;
+  --text3: #7e9488;
+  --acc: #937420;
+  --acc-h: #a98a2c;
+  --acc-soft: #6f561a;
+  --acc-on: #fff;
+}
+
+/* 可选强调色（主题 token；data-accent 覆盖 --acc 组）。亮态 --acc-soft 取 acc 本色保对比 ≥4.5:1。 */
+[data-accent="copper"] { --acc: #c47a3e; --acc-h: #d68f50; --acc-soft: #e0a667; --acc-on: #1c1209; }
+[data-accent="teal"]   { --acc: #3aa896; --acc-h: #4cc0ad; --acc-soft: #7fd6c8; --acc-on: #06231f; }
+[data-accent="crimson"]{ --acc: #b4453a; --acc-h: #cc5a4f; --acc-soft: #e08a82; --acc-on: #fff; }
+[data-accent="indigo"] { --acc: #6f74e8; --acc-h: #868bf0; --acc-soft: #a9adf5; --acc-on: #fff; }
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 14px;
+}
+:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
