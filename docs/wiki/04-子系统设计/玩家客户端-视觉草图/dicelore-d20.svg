@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="256" height="256" shape-rendering="geometricPrecision">
+  <title>Dicelore d20 mark</title>
+  <style>@import url('https://fonts.googleapis.com/css2?family=Pirata+One&amp;display=swap');</style>
+  <!-- 切面填充(同色描边修抗锯齿接缝) -->
+  <g stroke-linejoin="round">
+    <polygon points="32,4.5 8.1,18.25 13,44 32,13" fill="#ecca7a" stroke="#ecca7a" stroke-width=".8"/>
+    <polygon points="32,4.5 32,13 51,44 55.9,18.25" fill="#ecca7a" stroke="#ecca7a" stroke-width=".8"/>
+    <polygon points="32,13 13,44 51,44" fill="#d4a83e" stroke="#d4a83e" stroke-width=".8"/>
+    <polygon points="8.1,18.25 8.1,45.75 13,44" fill="#ad8430" stroke="#ad8430" stroke-width=".8"/>
+    <polygon points="55.9,18.25 51,44 55.9,45.75" fill="#ad8430" stroke="#ad8430" stroke-width=".8"/>
+    <polygon points="13,44 8.1,45.75 32,59.5 32,44" fill="#8a6826" stroke="#8a6826" stroke-width=".8"/>
+    <polygon points="51,44 32,44 32,59.5 55.9,45.75" fill="#8a6826" stroke="#8a6826" stroke-width=".8"/>
+  </g>
+  <!-- 内部黑棱 -->
+  <g fill="none" stroke="#0c211a" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round">
+    <polygon points="32,13 13,44 51,44"/>
+    <line x1="32" y1="13" x2="32" y2="4.5"/>
+    <line x1="13" y1="44" x2="8.1" y2="18.25"/><line x1="51" y1="44" x2="55.9" y2="18.25"/>
+    <line x1="13" y1="44" x2="8.1" y2="45.75"/><line x1="51" y1="44" x2="55.9" y2="45.75"/>
+    <line x1="32" y1="44" x2="32" y2="59.5"/>
+  </g>
+  <!-- 外圈金边 -->
+  <polygon points="32,4.5 55.9,18.25 55.9,45.75 32,59.5 8.1,45.75 8.1,18.25" fill="none" stroke="#f2d98e" stroke-width="1.6" stroke-linejoin="round"/>
+  <!-- 数字(Pirata One;无该字体时回退衬线) -->
+  <text x="32" y="39" text-anchor="middle" font-family="'Pirata One',serif" font-size="15" fill="#0c211a">20</text>
+</svg>

@@ -42,3 +42,18 @@
 直接用浏览器打开任一 `.html`。**需联网**——字体(Google Fonts)与图标(Lucide CDN unpkg)走 CDN;离线则字体 fallback、图标不显。`play.html` / `home.html` 的明暗/色板按钮可点切换。
 
 > 这些是 brainstorming 视觉伴侣的定稿快照(2026-06-21),后续实现以 `packages/shared` 契约 + apps/web 为准,样式从这些草图取色取形。
+
+## 品牌 / Logo
+
+终版字标 **Dicelore.**(`Dice` 金 / `lore` 纸白 / 句点朱砂红)+ **宝石切面 d20**(亮金分面 + 内部黑棱錾刻 + 外圈金边,"20" 用 Pirata One 哥特体)。可交互预览见 [logo.html](logo.html)。
+
+![Dicelore 主标](dicelore-logo-dark.png)
+
+| 文件 | 内容 |
+|---|---|
+| [dicelore-d20.svg](dicelore-d20.svg) | d20 单标 · 矢量(可任意缩放;"20" 依赖 Pirata One,缺字回退衬线) |
+| dicelore-logo.png / -dark.png | 主标(d20 + 字标)· 透明底 / 墨绿底 · 1732×592 |
+| dicelore-mark.png / -dark.png | d20 单标 · 透明 / 墨绿 · 1184² |
+| dicelore-wordmark.png / -dark.png | 纯字标 · 透明 / 墨绿 · 1292×480 |
+
+> 字体来源(均 Google Fonts/开源):Playfair Display(字标)· Pirata One(d20 数字)。
