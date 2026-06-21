@@ -1,0 +1,102 @@
+import type { DB } from "../../store/db.js";
+import { eventAppend, eventRecall, type EventRow } from "../../store/event.js";
+import { watcherSet } from "../../store/watcher.js";
+import { truncateText } from "../../store/truncate.js";
+import type { ToolDef } from "../tooldef.js";
+import {
+  eventAppendIn,
+  eventAppendOut,
+  eventRecallIn,
+  eventRecallOut,
+  watcherSetIn,
+  watcherSetOut,
+} from "../schemas/event.js";
+
+function appendHandler(
+  db: DB,
+  input: { content?: string; kind: any; data_json?: unknown; tags?: string[]; visible?: 0 | 1 },
+) {
+  const event_id = eventAppend(db, {
+    content: input.content,
+    kind: input.kind,
+    data_json: input.data_json,
+    tags: input.tags?.length ? input.tags.join(" ") : undefined,
+    visible: input.visible,
+  });
+  return { event_id };
+}
+
+function recallHandler(db: DB, input: { query: string; k: number }) {
+  const rows = eventRecall(db, input.query, { limit: input.k });
+  const events = rows.map((e: EventRow) => ({
+    seq: e.seq,
+    kind: e.kind,
+    content: e.content,
+    visible: e.visible,
+  }));
+  const { truncated } = truncateText(JSON.stringify(events));
+  return { events, truncated };
+}
+
+function watcherHandler(
+  db: DB,
+  input: { condition: string; payload: string; mode: "once" | "repeat" },
+) {
+  const watcher_id = watcherSet(db, {
+    condition: input.condition,
+    payload: input.payload,
+    mode: input.mode,
+  });
+  return { watcher_id };
+}
+
+export const eventTools: ToolDef[] = [
+  {
+    name: "event_append",
+    title: "追加事件",
+    description:
+      "向事件流追加一条记录(散文进 content 走 FTS)。Args: content?、kind(narrate/note/verdict/mutation/watcher_fired/reveal,默认 note)、data_json?、tags?(数组)、visible?(0|1,省略按 kind 默认)。" +
+      "Returns: {event_id}。use: 记录非裁决的事实/旁注。don't: 当叙述通道(用 narrate)。错误: 入参非法→INTERNAL。",
+    inputSchema: eventAppendIn,
+    outputSchema: eventAppendOut,
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: false,
+    },
+    handler: appendHandler,
+  },
+  {
+    name: "event_recall",
+    title: "召回历史事件",
+    description:
+      "FTS5(jieba)召回历史事件。Args: query、k(1-100,默认8)。Returns: {events:[{seq,kind,content,visible}], truncated}。" +
+      "use: 找回早前剧情/伏笔。don't: 取角色属性(用 sheet_*)。错误: 入参非法→INTERNAL。",
+    inputSchema: eventRecallIn,
+    outputSchema: eventRecallOut,
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+    handler: recallHandler,
+  },
+  {
+    name: "watcher_set",
+    title: "登记条件触发器",
+    description:
+      '登记谓词触发器,sheet_update 写完就地比对(非轮询),edge-triggered。Args: condition(谓词 expr 如 "{张三.HP} < 30")、payload(触发时给 AI 的提示)、mode(once/repeat,默认 once)。' +
+      "Returns: {watcher_id}。use: 埋「HP 跌破阈值」类反应。don't: 立刻判定(那直接读 sheet)。错误: condition 文法非法→EXPR_EVAL(触发时)。",
+    inputSchema: watcherSetIn,
+    outputSchema: watcherSetOut,
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: false,
+    },
+    handler: watcherHandler,
+  },
+];

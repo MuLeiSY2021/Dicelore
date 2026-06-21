@@ -1,0 +1,39 @@
+// src/mcp/handlers/event.test.ts
+import { describe, it, expect } from "vitest";
+import { openDb, initSchema } from "../../store/db.js";
+import { eventSince } from "../../store/event.js";
+import { watcherList } from "../../store/watcher.js";
+import { eventTools } from "./event.js";
+
+function freshDb() { const db = openDb(":memory:"); initSchema(db); return db; }
+const byName = (n: string) => eventTools.find((t) => t.name === n)!;
+
+describe("event handlers", () => {
+  it("event_append:落 event 回 event_id;tags 数组合并写入", () => {
+    const db = freshDb();
+    const out = byName("event_append").handler(db, {
+      content: "夜里下起暴雨", kind: "note", tags: ["天气", "夜"],
+    });
+    expect(typeof out.event_id).toBe("number");
+    expect(eventSince(db, 0)).toHaveLength(1);
+  });
+
+  it("event_recall:FTS 召回独有词", () => {
+    const db = freshDb();
+    byName("event_append").handler(db, { content: "苍鹭栖息在钟楼尖顶", kind: "note" });
+    byName("event_append").handler(db, { content: "无关的另一条记录", kind: "note" });
+    const out = byName("event_recall").handler(db, { query: "苍鹭", k: 8 });
+    expect(out.events.length).toBeGreaterThanOrEqual(1);
+    expect(out.events.some((e: any) => e.content.includes("苍鹭"))).toBe(true);
+    expect(out.truncated).toBe(false);
+  });
+
+  it("watcher_set:登记 active watcher 回 watcher_id", () => {
+    const db = freshDb();
+    const out = byName("watcher_set").handler(db, {
+      condition: "{张三.HP} < 10", payload: "濒死!", mode: "once",
+    });
+    expect(typeof out.watcher_id).toBe("number");
+    expect(watcherList(db)).toHaveLength(1);
+  });
+});
