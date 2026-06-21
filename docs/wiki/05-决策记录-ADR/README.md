@@ -182,6 +182,17 @@
 
 ---
 
+## ADR-0020 组件7 实时引擎面：dicelore MCP in-process 挂载 + onCanonWrite 写后接缝 + GmDriver 抽象
+
+- **背景**：[ADR-0018](#) 立组件7，把 orchestrator 接成「实时引擎面」（GM 叙述流式 / 呈现增量 / 掷骰裁决）。两个实现决策须拍：① dicelore MCP 怎么挂进 Agent SDK——stdio 子进程 vs in-process；② 呈现增量怎么从「MCP 写规范态」反应式驱动；③ GM 驱动怎么接、怎么测（真 Claude 经 Agent SDK，非确定 / 烧 token）。
+- **决策**：
+  - **① in-process 挂载**（非 stdio 子进程）：`mcpServers:{dicelore:{type:"sdk",instance: createMcpServer(db,deps)}}`。**理由**：企业多 session 并发下，stdio = 每 session 一个额外 Node 子进程（内存 / 启动 / FD 随 session 线性涨），in-process 单 session 开销低一个量级、工具调用无 IPC 跳；瓶颈是 LLM 推理（网络 I/O 秒级），同步 sqlite（微秒~毫秒）可忽略；扩展靠多 orchestrator 实例**分片 session**（webhook payload 带会话标识，[接口 §5](../04-子系统设计/玩家客户端-接口.md)），隔离放实例级（per-session try/catch + 有界 N/实例）；明骰 gate 注入零 hack。承接 ADR-0018「进程内挂载为可选优化」，本期定为**默认**。
+  - **② core additive 工厂 + onCanonWrite 写后接缝**：core 加 `createMcpServer(db, deps)`（抽 `main.ts` 的 registerTool 循环；`main.ts` stdio 路径行为不变），在工具处理器**外层包**——工具写规范态成功后回调 `deps.onCanonWrite(evt)`（**不进 `runTool`**，引擎纯逻辑零改动；按实例注入、多 session 安全）。orchestrator 据 `onCanonWrite` 映射 `presentation_delta`（普通写，web refetch 全量对账）/ `roll_committed`（`resolve_*_open` 明骰 verdict）。`deps.rollGate` 经工厂接既有模块级 `setRollGate`（[ADR-0019](#) 的 `awaitPlayerRoll` 接缝）——单人；多 session/多人 per-instance gate 化为未来。详见 [MCP工具面](../04-子系统设计/MCP工具面.md)。
+  - **③ GmDriver 抽象**：orchestrator 依赖抽象 `GmDriver`；真实现 `AgentSdkDriver` 包 `@anthropic-ai/claude-agent-sdk` 的 `query()`，测试用脚本化 `FakeGmDriver` → 整个回合循环 / WS / notify / 明骰 gate **全程不烧 LLM 可单测**；真 SDK 跑通另设 `RUN_LIVE=1` opt-in 集成冒烟。Agent SDK 鉴权沿用 env `ANTHROPIC_BASE_URL`/`ANTHROPIC_AUTH_TOKEN`（密钥只读 env、不入库）。
+- **后果**：组件7 实时引擎面 **Phase 1（含单人明骰）实现并合并 `main`**（[玩家客户端 §9.2](../04-子系统设计/玩家客户端.md)），Playwright 端到端实测通过（浏览器发消息 → WS narration 流回）。落 [玩家客户端 §9.2](../04-子系统设计/玩家客户端.md)、[MCP工具面](../04-子系统设计/MCP工具面.md)（工厂 + 接缝）。设计 / 计划：[实时引擎面 Phase 1 设计](../../superpowers/specs/2026-06-21-orchestrator-live-engine-phase1-design.md) / [实现计划](../../superpowers/plans/2026-06-21-orchestrator-live-engine-phase1-impl.md)。**下一阶段**（交接 [todo](../../todo/2026-06-21-orchestrator-live-engine.md)）：多人明骰 per-instance gate 硬化、组件3/4 hook 接入 Agent SDK（Phase 1 用 `turnLoop.runTurnEnd` 物化 choice）、BG3 动效精修、团本制作页（组件5）。**被否**：① stdio 默认挂载（多 session 子进程 sprawl 先到顶、明骰跨进程 gate 须 hack）；② onCanonWrite 写进 `runTool`（破「不改引擎」边界；外层包同样拿得到出参）；③ orchestrator 直接耦合 Agent SDK 不抽 GmDriver（测试须 mock SDK 内部、脆、烧 token）。
+
+---
+
 ## 待决策（记录但未定，勿当结论引用）
 
 - ~~**注入机制**：guideline 规则是"安装时焊进 skill 本体" vs "运行时 MCP 读取"~~ → **已由 [ADR-0012](#adr-0012-guideline-载体焊进-skill-本体静态-markdown非运行时-mcp-读取) 决议**：焊进 skill 本体（静态 markdown，走 Claude Code skill 装载）。

@@ -1,5 +1,8 @@
 # 下一步（组件7 · 实时引擎面）— 给组件7 线的交接 todo + 起手提示词
 
+> **✅ 已消费（2026-06-21）**：本交接的 **Phase 1 已实现并合并 `main`**——见 [实时引擎面 Phase 1 设计](../superpowers/specs/2026-06-21-orchestrator-live-engine-phase1-design.md) + [实现计划](../superpowers/plans/2026-06-21-orchestrator-live-engine-phase1-impl.md) + [玩家客户端 §9.2](../wiki/04-子系统设计/玩家客户端.md)。落地：core `createMcpServer`/`onCanonWrite` 接缝 · orchestrator `GmDriver`/`AgentSdkDriver`(in-process MCP)/WS 流/动作进/**单人明骰**/宕机恢复 · web `useSession`/掷骰卡/PlayPage 流式。架构定 **in-process 挂载**。Playwright 端到端实测通过。
+> **下一阶段（未做）**：多人明骰「谁来点这一掷」协调（per-instance gate 硬化）· BG3 动效精修 · token 级逐字 narration · 组件3/4 hook 接入 Agent SDK（现用 `turnLoop.runTurnEnd` 物化 choice）· 团本制作页（等组件5）· Tauri · Web 多人鉴权。本文以下留作 Phase 1 历史。
+
 > **用途**：给**组件7 线**（玩家客户端 / orchestrator 后端）的待办 + 起手提示词。组件7 v1 非阻塞竖切（`packages/shared` 契约 + 只读 REST + web 外壳）已落；本 todo 是它的**下一阶段：把 orchestrator 接成「实时引擎面」**——GM 叙述流式 / 掷骰裁决 / 回合推进。
 >
 > **缘起**：组件7 跑团页中央区标注「流式待组件2」。**那个前提条件已满足**——组件2（MCP 工具面）+ 组件4（三 hook）都已合并在 main。这套实时引擎面**不是组件2 的活、也不是 GM 运行时核心线（组件3/4）的活，是组件7 自己 orchestrator 后端的集成活**（[ADR-0018](../wiki/05-决策记录-ADR/README.md) §3）。现在不阻塞、可动手。

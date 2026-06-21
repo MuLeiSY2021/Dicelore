@@ -357,6 +357,32 @@ game_end: { reason: z.string(), outcome?: z.string() } → { ended: true, event_
 
 ---
 
+## in-process 挂载工厂 + onCanonWrite 写后接缝（组件7 实时引擎面，2026-06-21）
+
+为让 [组件7 orchestrator](玩家客户端.md) 把 dicelore MCP **in-process** 挂进 Agent SDK（`mcpServers:{dicelore:{type:"sdk",instance}}`），core 加一个 **additive 工厂**（不改任何工具行为、`main.ts` stdio 路径不变）：
+
+```ts
+// packages/core/src/mcp/server.ts
+export interface CanonWriteEvent {
+  kind: "mutation" | "event" | "visibility" | "reveal" | "choice_staged" | "game_end";
+  seq: number;        // 写后 store head seq
+  toolName: string;   // 触发的工具内部名
+  output: unknown;    // 工具原始出参(从信封 content[0].text 解出)
+}
+export interface McpServerDeps {
+  onCanonWrite?: (evt: CanonWriteEvent) => void; // 工具写规范态成功后同步回调(按实例注入)
+  rollGate?: RollGate;                           // 单人明骰 gate;工厂内 setRollGate(deps.rollGate)
+}
+export function createMcpServer(db: DB, deps?: McpServerDeps): McpServer;
+```
+
+- **onCanonWrite 落点**：工厂在工具处理器**外层包**——`runTool` 成功（非 error 信封）且工具属规范态写（`sheet_update`/`event_append`/`narrate`/`sheet_show`/`world_show`/`reveal_once`/`resolve_choice`/`game_end`/`resolve_*_*`）时回调 `{kind,seq,toolName,output}`。**不进 `runTool`**，引擎纯逻辑零改动。
+- **多 session 安全**：回调按 `createMcpServer` 实例传入（非模块全局）。
+- **明骰 gate**：`deps.rollGate` 经工厂接既有模块级 `setRollGate`（单人；多人 per-instance 化为未来）。
+- **orchestrator 侧映射**：onCanonWrite → `presentation_delta`（普通写，web refetch 对账）或 `roll_committed`（`resolve_*_open` 明骰 verdict）。详见 [玩家客户端 §9.2](玩家客户端.md) / [接口页 §4/§5](玩家客户端-接口.md)。
+
+---
+
 ## 本页**不**负责定的
 
 - 表 schema、FTS5、`expr` 文法与求值、`visible` 列存储/强制隐藏标记/`reveal_once`=reveal 的写入语义 → [内层能力库](内层能力库.md)
