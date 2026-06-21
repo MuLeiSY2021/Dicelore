@@ -7,6 +7,7 @@
 // Software Foundation, either version 3 of the License, or (at your option)
 // any later version. See <https://www.gnu.org/licenses/>.
 
+import { ZodError } from "zod";
 import { DiceloreError, type DiceloreErrorCode } from "../errors.js";
 
 export interface ErrShape {
@@ -25,6 +26,13 @@ export function classify(e: unknown): ErrShape {
     const out: ErrShape = { code: e.code, message: e.message };
     if (e.hint !== undefined) out.hint = e.hint;
     return out;
+  }
+  // 入参 schema 校验失败:回字段级错(path + 原因),便于 agent 自纠,不再笼统 INTERNAL。
+  if (e instanceof ZodError) {
+    const fields = e.issues
+      .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
+      .join("; ");
+    return { code: "BAD_INPUT", message: `入参校验失败: ${fields}`, hint: "请按工具 inputSchema 修正入参" };
   }
   // 不回传原始 e.message,避免泄漏内部栈/路径。
   return { code: "INTERNAL", message: "工具内部错误", hint: "请检查入参或重试" };

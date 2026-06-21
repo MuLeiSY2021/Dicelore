@@ -54,9 +54,11 @@ describe("runTool", () => {
     expect(JSON.parse(env.content[0].text).error.code).toBe("NOT_FOUND");
   });
 
-  it("ZodError(入参非法)→ 错误信封 INTERNAL", async () => {
+  it("ZodError(入参非法)→ 错误信封 BAD_INPUT,message 含字段路径", async () => {
     const env = await runTool(db, makeTool({}), { x: "not a number" });
     expect(env.isError).toBe(true);
-    expect(JSON.parse(env.content[0].text).error.code).toBe("INTERNAL");
+    const err = JSON.parse(env.content[0].text).error;
+    expect(err.code).toBe("BAD_INPUT");
+    expect(err.message).toContain("x");
   });
 });

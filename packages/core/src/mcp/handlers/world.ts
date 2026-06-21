@@ -22,7 +22,7 @@ import {
 function searchHandler(db: DB, input: { query: string; k: number; category?: string }) {
   let docs = worldDocSearch(db, input.query, input.k);
   if (input.category) docs = docs.filter((d) => d.category === input.category);
-  const mapped = docs.map((d: WorldDoc) => ({ name: d.name, content: d.content, category: d.category, visible: d.visible }));
+  const mapped = docs.map((d: WorldDoc) => ({ rowid: d.rowid, name: d.name, content: d.content, category: d.category, visible: d.visible }));
   const { truncated } = truncateText(JSON.stringify(mapped));
   return { docs: mapped, truncated };
 }
@@ -60,8 +60,8 @@ export const worldTools: ToolDef[] = [
     name: "world_search",
     title: "检索世界设定",
     description:
-      "FTS5 检索世界散文设定。Args: query、k(1-100,默认20)、category?(命中后过滤)。Returns: {docs:[{name,content,category,visible}], truncated}。" +
-      "use: 取地点/NPC/背景设定。don't: 取随机表(用 world_sample)。错误: 入参非法→INTERNAL。",
+      "FTS5 检索世界散文设定。Args: query、k(1-100,默认20)、category?(命中后过滤)。Returns: {docs:[{rowid,name,content,category,visible}], truncated}(rowid 可直接喂 reveal_once/world_show 披露)。" +
+      "use: 取地点/NPC/背景设定。don't: 取随机表(用 world_sample)。错误: 入参非法→BAD_INPUT。",
     inputSchema: worldSearchIn,
     outputSchema: worldSearchOut,
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },

@@ -33,6 +33,18 @@ describe("world/rule handlers", () => {
     expect(found.truncated).toBe(false);
   });
 
+  it("world_search 出参带 rowid(可直接喂 reveal_once/world_show)", () => {
+    const db = freshDb();
+    byName("world_register").handler(db, {
+      target: "doc", doc: { name: "黯礁港", content: "雾锁的走私者港湾", category: "地点" }, visible: 0,
+    });
+    const found = byName("world_search").handler(db, { query: "走私者", k: 8 });
+    const hit = found.docs.find((d: any) => d.name === "黯礁港");
+    expect(hit).toBeDefined();
+    expect(typeof (hit as any).rowid).toBe("number");
+    expect((hit as any).rowid).toBe(worldDocGet(db, "黯礁港")!.rowid);
+  });
+
   it("world_register(pool)+world_sample:抽样回 rows", () => {
     const db = freshDb();
     byName("world_register").handler(db, {

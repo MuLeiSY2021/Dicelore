@@ -14,7 +14,7 @@ export const worldSearchIn = z
   .object({ query: z.string(), k: z.number().int().min(1).max(100).default(20), category: z.string().optional() })
   .strict();
 export const worldSearchOut = z.object({
-  docs: z.array(z.object({ name: z.string(), content: z.string(), category: z.string().nullable(), visible: z.number() })),
+  docs: z.array(z.object({ rowid: z.number(), name: z.string(), content: z.string(), category: z.string().nullable(), visible: z.number() })),
   truncated: z.boolean(),
 });
 

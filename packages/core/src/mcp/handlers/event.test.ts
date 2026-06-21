@@ -45,4 +45,15 @@ describe("event handlers", () => {
     expect(typeof out.watcher_id).toBe("number");
     expect(watcherList(db)).toHaveLength(1);
   });
+
+  it("watcher_list:列出所有 active(armed) watcher,供 GM 回顾未触发的钟/Front", () => {
+    const db = freshDb();
+    byName("watcher_set").handler(db, { condition: "{世界.入侵} >= 6", payload: "破阵", mode: "once" });
+    byName("watcher_set").handler(db, { condition: "{张三.HP} < 10", payload: "濒死", mode: "repeat" });
+    const out = byName("watcher_list").handler(db, {});
+    expect(out.watchers).toHaveLength(2);
+    const w = out.watchers.find((x: any) => x.condition === "{世界.入侵} >= 6");
+    expect(w).toMatchObject({ payload: "破阵", mode: "once", armed: 1, status: "active" });
+    expect(typeof w.id).toBe("number");
+  });
 });

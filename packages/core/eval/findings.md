@@ -28,8 +28,10 @@
 > **路由**:B1-B6 攒成「叙事脚手架」设计周期——可能新 ADR + 新工具/抽象(plotline / 伏笔 lifecycle / 事件触发器 / 分级线索 / NPC 双层值)。**不在 gm-core 提示词里硬塞**(用户明示:低效甚至无解)。Front/Clock([ADR-0016]) 与 watcher 是部分地基,需评估扩展 vs 新建。
 
 ## 小核 nit（非架构、择机修）
-- `sheet_update` 非法 `op`(如传 `set` 而非 `=`)→ 回笼统 `INTERNAL` 而非明确校验错;应回「op 非法」级错误信息便于 agent 自纠。
-- eval 子agent 提示词的工具速查须与真 schema 对齐(`op` 取值 `+|-|=`、`sheet_list` 用 `{entity,prefix?}`)。
+- ✅**已修(2026-06-21)** Zod 校验失败一律包成笼统 `INTERNAL`(`sheet_update` op 传 `set`、band 漏 `consequence`、`sheet_show` 传 `attr` 应 `attrs` 都踩过)→ 现 `classify` 摊成字段级 `BAD_INPUT`(`path: 原因`),agent 可自纠。
+- ✅**已修(2026-06-21)** `world_search` 出参不带 rowid→无法 reveal:现 `world_search` docs 带 `rowid`。
+- ✅**已修(2026-06-21)** `watcher_list` 未暴露(armed watcher 只写不可读)→ 现新增只读工具 `watcher_list`。
+- eval 子agent 提示词的工具速查须与真 schema 对齐(`op` 取值 `+|-|=`、`sheet_list` 用 `{entity,prefix?}`、band 必填 `consequence`、`sheet_show` 用 `attrs` 数组)。
 
 ## 备注
 

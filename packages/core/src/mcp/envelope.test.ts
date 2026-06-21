@@ -8,6 +8,7 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import { describe, it, expect } from "vitest";
+import { z } from "zod";
 import { classify, successEnvelope, errorEnvelope } from "./envelope.js";
 import { DiceloreError } from "../errors.js";
 
@@ -21,6 +22,25 @@ describe("classify", () => {
     const r = classify(new Error("内部栈细节"));
     expect(r.code).toBe("INTERNAL");
     expect(r.message).not.toContain("内部栈细节");
+  });
+  it("ZodError(入参校验失败) → BAD_INPUT,message 含字段路径,非笼统 INTERNAL", () => {
+    const schema = z.object({ bands: z.array(z.object({ consequence: z.string() })) });
+    let err: unknown;
+    try { schema.parse({ bands: [{}] }); } catch (e) { err = e; }
+    const r = classify(err);
+    expect(r.code).toBe("BAD_INPUT");
+    expect(r.message).toContain("bands");
+    expect(r.message).toContain("consequence");
+    expect(r.message).not.toBe("工具内部错误");
+  });
+  it("ZodError → 多字段缺失时逐条列出", () => {
+    const schema = z.object({ a: z.string(), b: z.number() }).strict();
+    let err: unknown;
+    try { schema.parse({}); } catch (e) { err = e; }
+    const r = classify(err);
+    expect(r.code).toBe("BAD_INPUT");
+    expect(r.message).toContain("a");
+    expect(r.message).toContain("b");
   });
 });
 

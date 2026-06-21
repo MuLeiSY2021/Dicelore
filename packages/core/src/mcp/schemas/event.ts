@@ -45,3 +45,17 @@ export const watcherSetIn = z
   })
   .strict();
 export const watcherSetOut = z.object({ watcher_id: z.number() });
+
+export const watcherListIn = z.object({}).strict();
+export const watcherListOut = z.object({
+  watchers: z.array(
+    z.object({
+      id: z.number(),
+      condition: z.string(),
+      payload: z.string(),
+      mode: z.enum(["once", "repeat"]),
+      armed: z.number(),
+      status: z.string(),
+    }),
+  ),
+});

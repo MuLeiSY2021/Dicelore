@@ -14,6 +14,7 @@ export type DiceloreErrorCode =
   | "ENTITY_NOT_FOUND" // 引用/目标实体不存在
   | "DIE_INVALID"      // 单骰串非法(resolve_outcome)
   | "NOT_FOUND"        // 通用目标缺失(pool/doc 等)
+  | "BAD_INPUT"        // 入参 schema 校验失败(字段级,便于 agent 自纠)
   | "INTERNAL";        // 未分类(兜底,不泄漏原始栈)
 
 export class DiceloreError extends Error {

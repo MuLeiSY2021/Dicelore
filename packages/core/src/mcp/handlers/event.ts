@@ -9,7 +9,7 @@
 
 import type { DB } from "../../store/db.js";
 import { eventAppend, eventRecall, type EventRow } from "../../store/event.js";
-import { watcherSet } from "../../store/watcher.js";
+import { watcherSet, watcherList, type WatcherRow } from "../../store/watcher.js";
 import { truncateText } from "../../store/truncate.js";
 import type { ToolDef } from "../tooldef.js";
 import {
@@ -19,6 +19,8 @@ import {
   eventRecallOut,
   watcherSetIn,
   watcherSetOut,
+  watcherListIn,
+  watcherListOut,
 } from "../schemas/event.js";
 
 function appendHandler(
@@ -57,6 +59,18 @@ function watcherHandler(
     mode: input.mode,
   });
   return { watcher_id };
+}
+
+function watcherListHandler(db: DB) {
+  const watchers = watcherList(db).map((w: WatcherRow) => ({
+    id: w.id,
+    condition: w.condition,
+    payload: w.payload,
+    mode: w.mode,
+    armed: w.armed,
+    status: w.status,
+  }));
+  return { watchers };
 }
 
 export const eventTools: ToolDef[] = [
@@ -107,5 +121,21 @@ export const eventTools: ToolDef[] = [
       openWorldHint: false,
     },
     handler: watcherHandler,
+  },
+  {
+    name: "watcher_list",
+    title: "列出未触发的触发器",
+    description:
+      "列出当前所有 active(armed)watcher,供 GM 回顾自己埋下、尚未触发的钟/Front/伏笔反应。Args: 无。" +
+      "Returns: {watchers:[{id,condition,payload,mode,armed,status}]}。use: 长程局盘点未结张力(哪些条件还没满足)。don't: 改触发器(用 watcher_set)。错误: 入参非法(传了多余键)→BAD_INPUT。",
+    inputSchema: watcherListIn,
+    outputSchema: watcherListOut,
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+    handler: watcherListHandler,
   },
 ];
