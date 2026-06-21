@@ -3,6 +3,7 @@
 > **状态**：🟢 已 brainstorming 定稿(2026-06-20)。
 > **上游权威 spec**：[MCP工具面.md](../../wiki/04-子系统设计/MCP工具面.md)(§0 通用约定 / §1 resolver / §2 数据工具 / §3 可见性 / §4 narrate / §5 reminders / §6 终局 / §7 映射+annotations)、[内层能力库.md](../../wiki/04-子系统设计/内层能力库.md)(§1 三原子层 / §3 expr / §4 四域)、[技术选型.md](../../wiki/03-架构/技术选型.md) §1(Zod/SDK v1.x)/§4(stdio)。
 > **本文档职责**:把上游 spec 的工具契约落成可实现的**模块边界、编排归属、接线方式、错误/reminders 实现位**。spec 已定的工具语义不复述。
+> **路径说明**(2026-06-21 起):引擎已迁入 `packages/core`,下文 `src/…` 路径对应 `packages/core/src/…`;运行入口为 `npm run dicelore:mcp`(root 委托至 `@dicelore/core`)。
 
 ---
 

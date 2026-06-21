@@ -1,5 +1,7 @@
 # 内层地基·确定性核心 Implementation Plan
 
+> **路径迁移说明**（2026-06-21）：引擎已从 root `src/` 迁入 `packages/core/`(= `@dicelore/core`，对齐 monorepo 约定)。本计划为历史执行记录,下文所有 `src/…` 路径与 `npx vitest run src/…` 命令对应 `packages/core/src/…`(测试经 root `npm test` 委托执行)。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 从零搭建 Dicelore 的 TS 内层能力库的确定性核心——骰子引擎、expr 求值器/谓词、sheet/event/watcher store、applyMutations 批量写、session 解析建库——全部可单测、不依赖 MCP、不引入全文检索。

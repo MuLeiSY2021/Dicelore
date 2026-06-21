@@ -2,34 +2,34 @@
 
 > **状态**：🟢 已 brainstorming 定稿（2026-06-20）。
 > **上游权威 spec**：[玩家客户端.md](../../wiki/04-子系统设计/玩家客户端.md)（§0 范围 / §1 总览 / §2 编排后端 / §3 数据流 / §5 选择捕获 / §6 通知缝 / §7 双壳 / §8 自定义MCP / §9 v1）、[玩家客户端-接口.md](../../wiki/04-子系统设计/玩家客户端-接口.md)（§1 呈现模型 / §2 REST / §3-4 流式 / §5 webhook）、[ADR-0018](../../wiki/05-决策记录-ADR/README.md)、[总体架构 §6/§7](../../wiki/03-架构/总体架构.md)、[跨agent §6](../../wiki/03-架构/跨agent与适配层.md)、[adapter §7 呈现模型生成器](../../wiki/04-子系统设计/adapter与L3审计.md)、[MCP工具面](../../wiki/04-子系统设计/MCP工具面.md)。
-> **本文档职责**：把上游 spec 落成可实现的**模块边界、workspace 布局、接线方式、唯一 src/ 触点的协调、v1 竖切任务 + 上游排序**。wiki 已定的语义不复述。
+> **本文档职责**：把上游 spec 落成可实现的**模块边界、workspace 布局、接线方式、唯一 `packages/core` 触点的协调、v1 竖切任务 + 上游排序**。wiki 已定的语义不复述。
 
 ---
 
 ## 0. 目标与范围
 
-把组件7（玩家客户端）落地为 workspace 多包：**编排后端**（Agent SDK headless host）+ **呈现 UI**（web）+ **wire 契约包**，对 `src/` core **单向依赖、几乎不改**（唯一例外 = 组件2 加可选 notify 模块）。
+把组件7（玩家客户端）落地为 workspace 多包：**编排后端**（Agent SDK headless host）+ **呈现 UI**（web）+ **wire 契约包**，对 `@dicelore/core` 引擎 **单向依赖、几乎不改**（唯一例外 = 组件2 加可选 notify 模块）。
 
 **v1 竖切**（[玩家客户端 §9](../../wiki/04-子系统设计/玩家客户端.md)）：orchestrator + web（浏览器连 localhost）跑通**一个回合**的 GM↔玩家闭环（真 Agent SDK + 真 dicelore MCP + 真 SQLite，样式从简）。**推迟**：Tauri 壳打包、自定义 MCP 管理 UI、视觉美术、元动作 UI、Web 多人托管。
 
 ---
 
-## 1. workspace 布局（不动 `src/`）
+## 1. workspace 布局
 
 ```
-dicelore/                     ← root 既是引擎包又是 workspace root
-  src/                        ← 引擎(组件1-6)，本组件只在组件2 加 notify 模块(§4)
-  package.json                ← + "workspaces": ["apps/*","packages/*"]（root 唯一改动）
+dicelore/                     ← 薄 workspace root（private,只管 workspaces + 委托 scripts）
+  packages/
+    core/                     ← 引擎(组件1-6) = @dicelore/core；本组件只在组件2 加 notify 模块(§4)
+      src/
+    shared/                   ← wire 契约 TS 类型(§2) = @dicelore/shared
   apps/
     orchestrator/             ← Node 服务(§3)
     web/                      ← 浏览器 UI(§5)
     desktop/                  ← Tauri 壳(§6，fast-follow)
-  packages/
-    shared/                   ← wire 契约 TS 类型(§2)
 ```
 
-- workspace 化只动 root `package.json`（加 `workspaces`），**不移 `src/`**——避开正在 `src/` 推进的组件2 agent。
-- 依赖方向：`apps/*` → 引擎包 + `packages/shared`；引擎包反向零 import。
+- root `package.json` 为 `private` workspace 管理者（`workspaces: ["apps/*","packages/*"]` + 委托 scripts）；引擎已从 root `src/` 迁入 `packages/core`，对齐主流 monorepo 约定（薄 root + 库在 `packages/`，apps 为部署单元）。
+- 依赖方向：`apps/*` → `@dicelore/core` + `@dicelore/shared`；引擎反向零 import。
 - `apps/web` 是壳无关纯前端（给 base URL + WS 端点即跑）；`apps/desktop` 仅打包 web 构建 + spawn orchestrator sidecar。
 
 ---
@@ -68,14 +68,14 @@ dicelore/                     ← root 既是引擎包又是 workspace root
 
 ---
 
-## 4. 组件2 notify 模块（唯一 `src/` 触点，**需与组件2 协调**）
+## 4. 组件2 notify 模块（唯一 `packages/core` 触点）
 
 [玩家客户端 §6](../../wiki/04-子系统设计/玩家客户端.md) 的缝，落在组件2 MCP server：
 
-- **位置**：`src/mcp/` 新增 `notify.ts`（叶子 + env 读取），在 `runTool` 成功路径后**据出参拼 `delta` + POST**（fire-and-forget）。
+- **位置**：`packages/core/src/mcp/` 新增 `notify.ts`（叶子 + env 读取），在 `runTool` 成功路径后**据出参拼 `delta` + POST**（fire-and-forget）。
 - **门控**：`DICELORE_NOTIFY_URL` 未配 → no-op（Claude Code / stdio 路径零影响）。
 - **不改既有工具语义**：纯 additive 包装,挂在 dispatch 之后；自定义 MCP（非本 server）天然不发。
-- **协调**：与组件2 agent 约定 `runTool` 出参已含 `event_id` / `fired_watchers` / mutation 账本（[MCP工具面 §4.2/§4.3](../../wiki/04-子系统设计/MCP工具面.md)），notify 模块只读不改；**改动集中在新文件 + dispatch 后一个 hook 点**，评审 package 精确圈定。
+- **协调**：组件2 已合并（`packages/core`），`runTool` 出参已含 `event_id` / `fired_watchers` / mutation 账本（[MCP工具面 §4.2/§4.3](../../wiki/04-子系统设计/MCP工具面.md)），notify 模块只读不改；**改动集中在新文件 + dispatch 后一个 hook 点**，评审 package 精确圈定。
 
 ---
 
@@ -102,12 +102,12 @@ dicelore/                     ← root 既是引擎包又是 workspace root
 ## 7. v1 竖切任务 + 上游排序
 
 1. **`packages/shared`**：契约类型（§2）——无上游阻塞，先行。
-2. **组件2 notify 模块**（§4）——**阻塞于组件2 合并**；未合并前对着 `runTool` 出参接口 stub + 单测。
+2. **组件2 notify 模块**（§4）——组件2 已合并（`packages/core`），可直接对真 `runTool` 出参实现 + 单测。
 3. **orchestrator**：`presentation.ts`（复用 adapter 生成器，可先单测）→ `agent.ts`/`hooks.ts`（接 Agent SDK）→ `notify-sink.ts` → `http.ts`/`ws.ts` → `main.ts`。
 4. **web**：`transport.ts` → `store.ts` → panels。
 5. **端到端**：浏览器连 localhost 跑通一个回合。
 
-> **硬排序点**：进程内/标准 stdio 挂载都依赖组件2 的 `TOOLS`/`runTool` + notify 出参；orchestrator 接 MCP 那步**等组件2 合并**。`presentation.ts` / `packages/shared` / web 骨架不阻塞，可并行先做。
+> **硬排序点**：进程内/标准 stdio 挂载都依赖组件2 的 `TOOLS`/`runTool` + notify 出参；组件2 已合并（`packages/core`），orchestrator 接 MCP 那步可直接进行。`presentation.ts` / `packages/shared` / web 骨架不阻塞，可并行先做。
 
 ---
 
@@ -125,8 +125,8 @@ dicelore/                     ← root 既是引擎包又是 workspace root
 ## 9. 协调与边界
 
 - **不碰 `docs/wiki`**（本设计的 wiki 沉淀已在 brainstorming 阶段独立 commit）。
-- **`src/` 唯一改动 = 组件2 notify 模块**（§4）——与组件2 agent 协调、改动集中、`git add` 自己的文件，绝不 `git add -A`。
-- **root `package.json` workspaces** 是另一处 root 改动——与组件2 错峰、注释清楚。
+- **`packages/core` 唯一改动 = 组件2 notify 模块**（§4）——改动集中在新文件 `src/mcp/notify.ts` + dispatch 后一个 hook 点，`git add` 自己的文件，绝不 `git add -A`。
+- workspace 布局（薄 `private` root + `packages/core` 引擎 + `packages/shared`）已落地；`apps/*` 在新目录，与引擎物理隔离。
 - 其余全在 `apps/*` + `packages/*` 新目录，物理隔离。
 
 ---
@@ -140,6 +140,6 @@ dicelore/                     ← root 既是引擎包又是 workspace root
 | `orchestrator/agent`+`hooks` | Agent SDK 接线 + hook 复用 | SDK / adapter 纯逻辑 |
 | `orchestrator/notify-sink` | 收 webhook → 推流 | shared |
 | `orchestrator/http`+`ws` | REST + 流式 | shared |
-| `src/mcp/notify`（组件2） | 规范态写后发 webhook | env / runTool 出参 |
+| `@dicelore/core` src/mcp/notify（组件2） | 规范态写后发 webhook | env / runTool 出参 |
 | `web/transport`+`store` | 连接/重连 + 增量合并 | shared |
 | `web/panels` | 渲染三流 | store |

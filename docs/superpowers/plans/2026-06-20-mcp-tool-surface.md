@@ -1,5 +1,8 @@
 # 组件2「MCP 工具面」实现计划 (Implementation Plan)
 
+> **路径迁移说明**（2026-06-21）：引擎已从 root `src/` 迁入 `packages/core/`(= `@dicelore/core`)。下文 `src/…` 路径对应 `packages/core/src/…`,运行入口 `npm run dicelore:mcp`(root 委托)。
+> **实现偏离说明**：实际落地时 schema 未用单文件 `src/mcp/schemas.ts`,而是**每域一文件** `src/mcp/schemas/<域>.ts`(resolver/sheet/event/world/io),以解锁阶段三各域并发;计划里 `.refine()` 因产出 `ZodEffects`(与 `ToolDef.inputSchema: ZodObject` 及 `main.ts` 的 `.shape` 不兼容)已移除,互斥/一致性校验下沉各 handler 抛 `DiceloreError`。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 把内层(组件1)包成一组 `dicelore_*` MCP 工具(stdio server),Zod in/out schema,薄包装内层原子。

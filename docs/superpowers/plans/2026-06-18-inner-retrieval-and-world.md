@@ -1,5 +1,7 @@
 # 内层检索与世界域 (Plan 2) Implementation Plan
 
+> **路径迁移说明**（2026-06-21）：引擎已从 root `src/` 迁入 `packages/core/`(= `@dicelore/core`，对齐 monorepo 约定)。本计划为历史执行记录,下文所有 `src/…` 路径与 `npx vitest run src/…` 命令对应 `packages/core/src/…`(测试经 root `npm test` 委托执行)。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 补完 Dicelore 内层地基的最后一块——world 域(散文 doc + 可抽样结构 pool)与 rule 域(版本化只读规则)的读写检索、FTS5+jieba 全文检索(event/world_doc/rule_doc,trigram 零依赖保底)、以及可见性写(show/reveal_once)。
