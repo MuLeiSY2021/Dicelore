@@ -4,6 +4,24 @@
 
 **Dicelore** 不自己跑模型、不绑定某套规则、不做闭环产品，而是给一个主流、可换底层模型的 AI agent（v1 骑定 Claude Code）套上一层"让它当好游戏主持人"的框架。
 
+## 预览 · 玩家客户端
+
+> 完整独立的 web 玩家客户端（组件7）——VSCode 式可拖拽组件工作区,**「墨金」主题**(深墨绿 + 描金,可换肤 + 明暗双态 + 可选强调色)。下面是设计定稿草图(实现推进中)。
+
+![跑团页](docs/wiki/04-子系统设计/玩家客户端-视觉草图/play.png)
+
+<p align="center"><em>跑团页：左活动轨 · 中央叙事/打字一体 · d10 掷骰 · 右「呈现台」(网格停靠面板) · 圆形 PbtA 倒计时钟</em></p>
+
+<table>
+<tr>
+<td width="33%"><a href="docs/wiki/04-子系统设计/玩家客户端-视觉草图/home.html"><img src="docs/wiki/04-子系统设计/玩家客户端-视觉草图/home.png" alt="主页"></a><p align="center"><sub>主页 · 欢迎页</sub></p></td>
+<td width="33%"><a href="docs/wiki/04-子系统设计/玩家客户端-视觉草图/build.html"><img src="docs/wiki/04-子系统设计/玩家客户端-视觉草图/build.png" alt="团本制作"></a><p align="center"><sub>团本制作 · 构建台</sub></p></td>
+<td width="33%"><a href="docs/wiki/04-子系统设计/玩家客户端-视觉草图/config.html"><img src="docs/wiki/04-子系统设计/玩家客户端-视觉草图/config.png" alt="配置"></a><p align="center"><sub>配置 · MCP / 模型 / 主题</sub></p></td>
+</tr>
+</table>
+
+<p align="center"><sub>设计语言与四页 IA → <a href="docs/wiki/04-子系统设计/玩家客户端-视觉.md">玩家客户端-视觉</a> · 可运行草图 → <a href="docs/wiki/04-子系统设计/玩家客户端-视觉草图/">视觉草图/</a></sub></p>
+
 ## 它解决什么
 
 LLM 当 GM 有个根本毛病：**讨好玩家**。表现为三种可观测的失败——
@@ -39,7 +57,7 @@ npm run dicelore -- new <团名>   # CLI：建 / 开一局会话
 
 ## 文档
 
-设计 wiki 见 [`docs/wiki/`](docs/wiki/)：业务分析 → 领域模型 → 架构 → 子系统设计 → 决策记录（ADR）。
+设计 wiki 见 [`docs/wiki/`](docs/wiki/)：业务分析 → 领域模型 → 架构 → 子系统设计 → 决策记录（ADR）。玩家客户端的视觉设计与四页 IA 见 [玩家客户端-视觉](docs/wiki/04-子系统设计/玩家客户端-视觉.md)。
 
 ## 状态
 
