@@ -1,5 +1,7 @@
 # 玩家客户端（组件7）— 视觉定稿后,下一步起手提示词
 
+> **✅ 已消费（2026-06-21）**：选项 **A（出实现计划）已执行并合并 main**——见 [实现计划](../superpowers/plans/2026-06-21-player-client-v1-impl.md) 与接续 handoff [2026-06-21-player-client-after-v1-vertical-todo.md](2026-06-21-player-client-after-v1-vertical-todo.md)。**B（视觉 spec §8 回填）/ C（工程地基）未单独执行**：C 的 workspace 多包已随 A 落地（已建 `apps/web`/`apps/orchestrator`/`packages/shared`）；B 仍待做（见接续 handoff 的 F 项）。本文留作历史。
+>
 > **用途**：给**下一个 session** 的待办 + 起手提示词。视觉设计专轮已完成(2026-06-21,墨金主题 + 四页 IA 定稿、落 wiki + 草图 + spec)。接下来进**实现计划**。把下面「起手提示词」整段贴给新 session。
 > **前一阶段产物**：[玩家客户端-视觉](../wiki/04-子系统设计/玩家客户端-视觉.md) + [定稿草图](../wiki/04-子系统设计/玩家客户端-视觉草图/) + [视觉 spec](../superpowers/specs/2026-06-21-player-client-visual-design.md)。
 
