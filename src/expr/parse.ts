@@ -1,5 +1,7 @@
 export type TermKind = "dice" | "int" | "ref";
 
+import { DiceloreError } from "../errors.js";
+
 export interface Term {
   kind: TermKind;
   sign: 1 | -1;
@@ -26,7 +28,7 @@ export function parseExpr(expr: string): Term[] {
     const c = expr[i];
     if (c === "{") {
       const end = expr.indexOf("}", i);
-      if (end === -1) throw new Error(`parseExpr: 引用缺 '}' — ${expr}`);
+      if (end === -1) throw new DiceloreError("EXPR_EVAL", `parseExpr: 引用缺 '}' — ${expr}`);
       buf += expr.slice(i, end + 1);
       i = end + 1;
       continue;
@@ -51,5 +53,5 @@ function parseTerm(sign: 1 | -1, raw: string): Term {
   const dice = raw.match(/^(\d+)[dD](\d+)$/);
   if (dice) return { kind: "dice", sign, raw, count: Number(dice[1]), sides: Number(dice[2]) };
   if (/^\d+$/.test(raw)) return { kind: "int", sign, raw, intValue: Number(raw) };
-  throw new Error(`parseExpr: 非法项 "${raw}"(只支持 NdS / 整数 / {实体.属性} 与 +/-）`);
+  throw new DiceloreError("EXPR_EVAL", `parseExpr: 非法项 "${raw}"(只支持 NdS / 整数 / {实体.属性} 与 +/-）`);
 }

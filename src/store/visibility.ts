@@ -1,6 +1,7 @@
 import type { DB } from "./db.js";
 import { sheetGet, sheetSetRaw } from "./sheet.js";
 import { eventAppend } from "./event.js";
+import { DiceloreError } from "../errors.js";
 
 // 可见性变更审计:kind=note、visible=0(对玩家隐),供 L3 / 回看(§4.2)。
 function auditNote(db: DB, content: string): void {
@@ -32,7 +33,7 @@ export type RevealTarget =
 export function revealOnce(db: DB, target: RevealTarget): number {
   if (target.kind === "sheet") {
     const cell = sheetGet(db, target.entity, target.attr);
-    if (!cell) throw new Error(`revealOnce: sheet cell 不存在 ${target.entity}.${target.attr}`);
+    if (!cell) throw new DiceloreError("ENTITY_NOT_FOUND", `revealOnce: sheet cell 不存在 ${target.entity}.${target.attr}`);
     return eventAppend(db, {
       kind: "reveal",
       visible: 1,
@@ -43,7 +44,7 @@ export function revealOnce(db: DB, target: RevealTarget): number {
   const doc = db.prepare("SELECT name, content FROM world_doc WHERE rowid=?").get(target.rowid) as
     | { name: string; content: string }
     | undefined;
-  if (!doc) throw new Error(`revealOnce: world_doc#${target.rowid} 不存在`);
+  if (!doc) throw new DiceloreError("ENTITY_NOT_FOUND", `revealOnce: world_doc#${target.rowid} 不存在`);
   return eventAppend(db, {
     kind: "reveal",
     visible: 1,

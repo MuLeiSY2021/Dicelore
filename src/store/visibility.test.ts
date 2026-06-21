@@ -1,9 +1,10 @@
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, it, test } from "vitest";
 import { initSchema, openDb, type DB } from "./db.js";
 import { sheetGet, sheetSetRaw } from "./sheet.js";
 import { eventSince } from "./event.js";
 import { worldDocUpsert, worldPoolAdd } from "./world.js";
 import { revealOnce, sheetShow, worldShow } from "./visibility.js";
+import { DiceloreError } from "../errors.js";
 
 let db: DB;
 beforeEach(() => { db = openDb(":memory:"); initSchema(db); });
@@ -54,4 +55,24 @@ describe("revealOnce", () => {
     // 目标底层仍隐
     expect(sheetGet(db, "张三", "真名")!.visible).toBe(0);
   });
+});
+
+it("revealOnce sheet cell 不存在抛 ENTITY_NOT_FOUND", () => {
+  const localDb = openDb(":memory:");
+  initSchema(localDb);
+  try {
+    revealOnce(localDb, { kind: "sheet", entity: "不存在实体", attr: "HP" });
+  } catch (e) {
+    expect(e).toBeInstanceOf(DiceloreError);
+    expect((e as DiceloreError).code).toBe("ENTITY_NOT_FOUND");
+  }
+});
+it("revealOnce world_doc 不存在抛 ENTITY_NOT_FOUND", () => {
+  const localDb = openDb(":memory:");
+  initSchema(localDb);
+  try {
+    revealOnce(localDb, { kind: "world_doc", rowid: 9999 });
+  } catch (e) {
+    expect((e as DiceloreError).code).toBe("ENTITY_NOT_FOUND");
+  }
 });

@@ -4,6 +4,7 @@ import type { DB } from "./db.js";
 import { sheetGet, sheetSetRaw } from "./sheet.js";
 import { eventAppend } from "./event.js";
 import { recomputeWatchers } from "./watcher.js";
+import { DiceloreError } from "../errors.js";
 
 export type MutOp = "+" | "-" | "=";
 
@@ -103,6 +104,6 @@ export function applyMutations(
 
 function toNum(raw: string, attr: string): number {
   const n = Number(raw);
-  if (!Number.isFinite(n)) throw new Error(`applyMutations: ${attr}="${raw}" 非数值,不能做算术`);
+  if (!Number.isFinite(n)) throw new DiceloreError("NOT_NUMERIC", `applyMutations: ${attr}="${raw}" 非数值,不能做算术`);
   return n;
 }

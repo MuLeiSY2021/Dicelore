@@ -1,5 +1,6 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, it, test } from "vitest";
 import { evalExpr } from "./evaluate.js";
+import { DiceloreError } from "../errors.js";
 
 const refs: Record<string, string> = { "张三|力量": "7", "张三|状态": "活着" };
 const getRef = (e: string, a: string) => refs[`${e}|${a}`];
@@ -19,4 +20,16 @@ describe("evalExpr", () => {
   test("引用非数值 → 报错", () => {
     expect(() => evalExpr("{张三.状态}", { getRef })).toThrow();
   });
+});
+
+it("evalExpr 引用不存在抛 ENTITY_NOT_FOUND", () => {
+  try { evalExpr("{李四.力量}", { getRef }); } catch (e) {
+    expect(e).toBeInstanceOf(DiceloreError);
+    expect((e as DiceloreError).code).toBe("ENTITY_NOT_FOUND");
+  }
+});
+it("evalExpr 引用非数值抛 NOT_NUMERIC", () => {
+  try { evalExpr("{张三.状态}", { getRef }); } catch (e) {
+    expect((e as DiceloreError).code).toBe("NOT_NUMERIC");
+  }
 });

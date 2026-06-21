@@ -1,5 +1,6 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, it, test } from "vitest";
 import { rangeMap, rollDice, type Band } from "./index.js";
+import { DiceloreError } from "../errors.js";
 
 describe("rollDice", () => {
   test("注入定种子 rng → 确定性", () => {
@@ -38,4 +39,16 @@ describe("rangeMap", () => {
       { label: "b", min: 10, max: 20 },
     ])).toThrow();
   });
+});
+
+it("rollDice 非法参数抛 DIE_INVALID", () => {
+  try { rollDice(0, 6); } catch (e) {
+    expect(e).toBeInstanceOf(DiceloreError);
+    expect((e as DiceloreError).code).toBe("DIE_INVALID");
+  }
+});
+it("rangeMap 落空抛 RANGE_INVALID", () => {
+  try { rangeMap(999, [{ label: "a", min: 1, max: 10 }]); } catch (e) {
+    expect((e as DiceloreError).code).toBe("RANGE_INVALID");
+  }
 });

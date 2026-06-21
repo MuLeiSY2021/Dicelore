@@ -1,9 +1,10 @@
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, it, test } from "vitest";
 import { initSchema, openDb, type DB } from "./db.js";
 import { sheetGet, sheetSetRaw } from "./sheet.js";
 import { applyMutations } from "./mutate.js";
 import { watcherSet } from "./watcher.js";
 import { eventSince } from "./event.js";
+import { DiceloreError } from "../errors.js";
 
 let db: DB;
 beforeEach(() => { db = openDb(":memory:"); initSchema(db); });
@@ -56,4 +57,16 @@ describe("applyMutations", () => {
     expect(r.fired_watchers).toEqual([{ id: 1, payload: "濒死" }]);
     expect(eventSince(db, 0).some((e) => e.kind === "mutation")).toBe(true);
   });
+});
+
+it("toNum 非数值算术抛 NOT_NUMERIC", () => {
+  const localDb = openDb(":memory:");
+  initSchema(localDb);
+  sheetSetRaw(localDb, "张三", "状态", "活着");
+  try {
+    applyMutations(localDb, "张三", [{ attr: "状态", op: "-", expr: "1" }]);
+  } catch (e) {
+    expect(e).toBeInstanceOf(DiceloreError);
+    expect((e as DiceloreError).code).toBe("NOT_NUMERIC");
+  }
 });

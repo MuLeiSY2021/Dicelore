@@ -1,5 +1,6 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, it, test } from "vitest";
 import { parseExpr } from "./parse.js";
+import { DiceloreError } from "../errors.js";
 
 describe("parseExpr", () => {
   test("骰子 + 引用 - 整数", () => {
@@ -20,4 +21,11 @@ describe("parseExpr", () => {
   test("非法 token 报错", () => {
     expect(() => parseExpr("1d20 * 2")).toThrow();
   });
+});
+
+it("parseExpr 非法 token 抛 EXPR_EVAL", () => {
+  try { parseExpr("1d20 * 2"); } catch (e) {
+    expect(e).toBeInstanceOf(DiceloreError);
+    expect((e as DiceloreError).code).toBe("EXPR_EVAL");
+  }
 });
