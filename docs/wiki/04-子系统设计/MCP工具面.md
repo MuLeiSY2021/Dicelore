@@ -28,7 +28,7 @@
 
 承接 [02 §3](../02-领域模型/核心概念.md)、[03 §4](../03-架构/总体架构.md) 与 [resolver 二轴表](TODO.md)。独立裁决工具——共性：**随机/取真值全在引擎内执行，AI 给不出也改不了真实结果**（anti-F1/F2），且**各落一条"裁决记录"event 供 L3 比对叙述**。
 
-> **明/暗 L1 名分流**（[玩家闸控明骰设计 §1/§2](../../superpowers/specs/2026-06-21-player-gated-roll-design.md)、承接 [03 §2 名分流 / §4 resolver 二轴](../03-架构/总体架构.md)）：掷骰类 resolver 按**「掷骰动作归谁」**拆成不同工具名——**不给 `resolve_*` 加 `gated`/`visible` 布尔参，而是拆成 `_hidden`（暗骰=引擎自动掷）/ `_open`（明骰=玩家闸控掷、阻塞式）两组名**，逼 GM 在调用点显式回答「这一掷是玩家的还是 GM 的」、不留布尔默认值偷渡。两组共享同一套入参与点数权威（恒引擎，anti-F1 不破），只差「谁触发掷骰 + 透明度」一轴。`resolve_choice`（玩家选 label）与明骰同属「玩家面向交互式 resolver」族，一个选、一个掷，并列、不拆名。
+> **明/暗 L1 名分流**（玩家闸控明骰设计 §1/§2、承接 [03 §2 名分流 / §4 resolver 二轴](../03-架构/总体架构.md)）：掷骰类 resolver 按**「掷骰动作归谁」**拆成不同工具名——**不给 `resolve_*` 加 `gated`/`visible` 布尔参，而是拆成 `_hidden`（暗骰=引擎自动掷）/ `_open`（明骰=玩家闸控掷、阻塞式）两组名**，逼 GM 在调用点显式回答「这一掷是玩家的还是 GM 的」、不留布尔默认值偷渡。两组共享同一套入参与点数权威（恒引擎，anti-F1 不破），只差「谁触发掷骰 + 透明度」一轴。`resolve_choice`（玩家选 label）与明骰同属「玩家面向交互式 resolver」族，一个选、一个掷，并列、不拆名。
 
 ### 1.1 `resolve_choice`（玩家选 label；暂存、回合末物化）
 
@@ -96,7 +96,7 @@
 
 ### 1.4 `resolve_outcome_open`（明骰=玩家闸控掷、阻塞式；随机选 label）
 
-> **明骰**：玩家在客户端**点击触发**掷骰、亮 DC/档位、见证成败（BG3 式）；本调用**阻塞**、结果作为工具返回值在**同一 GM 回合内**返回（仿 AskUserQuestion，[明骰设计 §3 阻塞机制](../../superpowers/specs/2026-06-21-player-gated-roll-design.md)）。**点数仍由引擎在点击时计算**（anti-F1 不破，§9）；玩家只提供「我掷了」这一动作，值由引擎出。
+> **明骰**：玩家在客户端**点击触发**掷骰、亮 DC/档位、见证成败（BG3 式）；本调用**阻塞**、结果作为工具返回值在**同一 GM 回合内**返回（仿 AskUserQuestion，明骰设计 §3 阻塞机制）。**点数仍由引擎在点击时计算**（anti-F1 不破，§9）；玩家只提供「我掷了」这一动作，值由引擎出。
 
 ```ts
 // in —— 同 resolve_outcome_hidden（§1.2）
@@ -113,7 +113,7 @@
 { awaiting: "player_roll", roll: z.number(), die, band: {label, consequence}, event_id }
 ```
 
-- **阻塞语义**（[明骰设计 §3](../../superpowers/specs/2026-06-21-player-gated-roll-design.md)）：handler ① 持久化 `pending_roll`（规格 `die`/`bands`，**无结果**，[内层能力库](内层能力库.md)）→ ② 经后端通知前端「待掷」→ ③ `await awaitPlayerRoll(eventId)` → ④ 玩家点击 → ⑤ core `commitPendingRoll` 此刻掷 + 写 `kind=verdict` event（含点数、命中档、`visible=1`）→ ⑥ **回合内返回结果给 GM**。`awaiting:"player_roll"` 标记本结果经玩家闸控产出。
+- **阻塞语义**（明骰设计 §3）：handler ① 持久化 `pending_roll`（规格 `die`/`bands`，**无结果**，[内层能力库](内层能力库.md)）→ ② 经后端通知前端「待掷」→ ③ `await awaitPlayerRoll(eventId)` → ④ 玩家点击 → ⑤ core `commitPendingRoll` 此刻掷 + 写 `kind=verdict` event（含点数、命中档、`visible=1`）→ ⑥ **回合内返回结果给 GM**。`awaiting:"player_roll"` 标记本结果经玩家闸控产出。
 - **裸 CC 降级**：无前端可阻塞 → 当场立即 `commitPendingRoll` 掷、直接返回（不卡死，结果仍回合内返回）。
 - 入参 `die`/`bands` 语义与 §1.2 完全相同（含三档结果 PbtA 对齐、暴击是档位一档）；明骰只改「谁触发 + 阻塞返回 + 透明度」，不改点数与档位规则。
 
@@ -144,7 +144,7 @@
 
 ### 1.6 实现期注：现有 core 用旧名
 
-> **本页记目标态**。现有 core 代码仍用旧名 `resolve_outcome` / `resolve_contest`（即本页 §1.2/§1.3 的暗骰）；**重命名为 `_hidden` + 新增 `_open` 明骰属实现期**（pre-1.0，为消歧值得改）。`_open` 的 `pending_roll` 槽 / `commitPendingRoll` / `awaitPlayerRoll` 接缝落点见 [明骰设计 §3/§10 分线](../../superpowers/specs/2026-06-21-player-gated-roll-design.md)（core 侧定接口，阻塞/WS 桥接归组件7 线）。
+> **本页记目标态**。现有 core 代码仍用旧名 `resolve_outcome` / `resolve_contest`（即本页 §1.2/§1.3 的暗骰）；**重命名为 `_hidden` + 新增 `_open` 明骰属实现期**（pre-1.0，为消歧值得改）。`_open` 的 `pending_roll` 槽 / `commitPendingRoll` / `awaitPlayerRoll` 接缝落点见 明骰设计 §3/§10 分线（core 侧定接口，阻塞/WS 桥接归组件7 线）。
 
 ---
 
