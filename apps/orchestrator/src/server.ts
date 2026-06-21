@@ -56,11 +56,14 @@ export function createApp(deps: ServerDeps): Hono {
 export interface LiveDeps {
   driverFactory: (host: SessionHost) => GmDriver;
   openSession?: (id: string) => DB; // 省略则 SessionHost 用内存库(测试)
+  listSessions?: () => SessionSummary[]; // 会话列表(主页继续上次/最近);省略则空
 }
 
 export function createLiveApp(deps: LiveDeps): Hono {
   const app = new Hono();
   const hostDeps = (id: string) => ({ db: deps.openSession?.(id), driverFactory: deps.driverFactory });
+
+  app.get("/sessions", (c) => c.json({ sessions: deps.listSessions?.() ?? [] }));
 
   app.get("/sessions/:id/presentation", (c) => {
     const id = c.req.param("id");
@@ -105,7 +108,7 @@ export function startServer(port: number): void {
     ? () => new FakeGmDriver((input) => [{ type: "narration", text: `（GM）你说：「${input.text}」。门吱呀一声开了。` }, { type: "turn_end" }])
     : (host) => new AgentSdkDriver({ mcpServer: host.mcpServer });
 
-  const app = createLiveApp({ driverFactory, openSession });
+  const app = createLiveApp({ driverFactory, openSession, listSessions: () => listSessionSummaries(dir) });
   const server = serve({ fetch: app.fetch, port });
   const wss = new WebSocketServer({ noServer: true });
   (server as unknown as { on(ev: string, cb: (req: IncomingMessage, socket: Duplex, head: Buffer) => void): void }).on(

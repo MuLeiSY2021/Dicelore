@@ -9,15 +9,27 @@
 
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { Play, Dices, Hammer, MessagesSquare, Settings, Swords, Clock, Flag } from "lucide-react";
 import type { SessionSummary } from "@dicelore/shared";
 import { listSessions } from "../api/client.js";
-import "./HomePage.css";
 
 const STATUS_LABEL: Record<SessionSummary["status"], string> = {
   active: "进行中",
-  archived: "已归档",
-  ended: "已终局",
+  archived: "已存档",
+  ended: "终局",
 };
+const STATUS_ICON: Record<SessionSummary["status"], typeof Swords> = {
+  active: Swords,
+  archived: Clock,
+  ended: Flag,
+};
+
+const QUICK = [
+  { Icon: Dices, qt: "开新局", qd: "选团本 / 存档起一局", to: "/play" },
+  { Icon: Hammer, qt: "团本制作", qd: "丢本小说造团本", to: "/build" },
+  { Icon: MessagesSquare, qt: "会话管理", qd: "搜索 / 续档 / 删档", to: "/config" },
+  { Icon: Settings, qt: "配置", qd: "服务 / MCP / 模型", to: "/config" },
+];
 
 export default function HomePage() {
   const [sessions, setSessions] = useState<SessionSummary[] | null>(null);
@@ -31,49 +43,57 @@ export default function HomePage() {
     return () => { alive = false; };
   }, []);
 
-  if (error) {
-    return (
-      <main className="home">
-        <div className="home-error">加载失败：{error}</div>
-      </main>
-    );
-  }
-
   const list = sessions ?? [];
   const last = list[0];
 
   return (
     <main className="home">
-      <h1 className="home-title">欢迎回到案上</h1>
+      <div className="hello">Good evening · 旅人</div>
+      <div className="htitle">{last ? `夜还长，要继续${last.title}吗？` : "欢迎回到案上"}</div>
+      <div className="hsub">
+        {error ? "" : last ? "上次的故事还在等你落座。" : "选一个团本，开一局新的故事。"}
+      </div>
 
-      {last ? (
-        <section className="home-continue" aria-label="继续上次">
-          <div className="home-continue-label">继续上次</div>
-          <div className="home-continue-title">{last.title}</div>
-          <span className="home-badge">{STATUS_LABEL[last.status]}</span>
-          <Link className="home-resume" to="/play">继续跑团</Link>
-        </section>
-      ) : (
-        <section className="home-empty">
-          暂无会话，<Link className="home-link" to="/build">去开新局</Link>
-        </section>
+      {error && <div className="herror">加载失败：{error}</div>}
+
+      {last && (
+        <div className="resume" aria-label="继续上次">
+          <div className="meta">
+            <div className="scen">{last.title}</div>
+            <div className="where">{STATUS_LABEL[last.status]}{last.updatedAt ? ` · ${new Date(last.updatedAt).toLocaleString()}` : ""}</div>
+          </div>
+          <Link className="cont" to="/play"><Play className="lucide" />继续跑团</Link>
+        </div>
       )}
 
-      <section className="home-recent" aria-label="最近 Session">
-        <h2 className="home-h2">最近 Session</h2>
+      <div className="quick">
+        {QUICK.map(({ Icon, qt, qd, to }) => (
+          <Link className="qcard" to={to} key={qt}>
+            <div className="ico"><Icon className="lucide" /></div>
+            <div className="qt">{qt}</div>
+            <div className="qd">{qd}</div>
+          </Link>
+        ))}
+      </div>
+
+      <div className="label">最近 Session</div>
+      <div className="recent">
         {list.length === 0 ? (
-          <p className="home-muted">暂无会话</p>
+          <div className="row"><span className="rs">暂无会话，去开新局</span></div>
         ) : (
-          <ul className="home-sessions">
-            {list.map((s) => (
-              <li key={s.sessionId} className="home-session">
-                <span className="home-session-title">{s.title}</span>
-                <span className="home-badge">{STATUS_LABEL[s.status]}</span>
-              </li>
-            ))}
-          </ul>
+          list.map((s) => {
+            const Icon = STATUS_ICON[s.status];
+            return (
+              <Link className="row" to="/play" key={s.sessionId}>
+                <Icon className="lucide" />
+                <span className="rs">{s.title}</span>
+                <span className={"tag" + (s.status === "active" ? " live" : "")}>{STATUS_LABEL[s.status]}</span>
+                {s.updatedAt && <span className="rt">{new Date(s.updatedAt).toLocaleDateString()}</span>}
+              </Link>
+            );
+          })
         )}
-      </section>
+      </div>
     </main>
   );
 }

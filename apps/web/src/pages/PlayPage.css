@@ -1,5 +1,0 @@
-.play { display: grid; grid-template-columns: 56px 1fr 320px; height: 100%; }
-.rail   { background: var(--surface);  border-right: 1px solid var(--line); padding: 12px 8px; color: var(--text3); font-size: 12px; }
-.center { background: var(--bg);       padding: 24px; color: var(--text2); }
-.stage  { background: var(--surface);  border-left: 1px solid var(--line);  padding: 16px; color: var(--text3); font-size: 12px; }
-.stage-error { color: var(--err); font-size: 12px; }
