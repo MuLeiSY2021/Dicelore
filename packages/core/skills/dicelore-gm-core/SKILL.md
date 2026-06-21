@@ -37,6 +37,12 @@ description: Use on EVERY turn of running an anko/anki (dice/vote-driven interac
 | number 数值 | `sheet_update` 带骰 | 结果是具体数值变化(伤害/成长/资源) |
 | content 抽内容 | `world_sample` | 从池子随机抽一行(卡/掉落/遭遇) |
 
+### 谁掷？明骰 vs 暗骰(L1 工具名分流)
+确定要骰之后,还要显式选「这一掷是玩家的还是 GM 的」——拆成不同工具名、非布尔参:
+- **玩家主动行动的检定**(你攻击/说服/潜行)→ **明骰** `resolve_outcome_open` / `resolve_contest_open`:玩家在客户端点击掷、亮 DC、见证成败。把"掷骰这个动作"交还玩家=参与感(否则玩家觉得"还不是 AI 替我定命")。
+- **NPC/世界/暗检定**(敌人攻击、暗感知、隐藏 DC)→ **暗骰** `resolve_*_hidden`:引擎自动掷。
+- 点数恒由引擎算(明暗皆然,anti-F1);明暗只差"谁触发 + 透不透明"。明骰阻塞:玩家掷完结果回合内回你,再据成败叙述。
+
 ### 两个补丁
 - **安全 vs 冒险**:给"稳妥/冒险一掷"的 `resolve_choice`,玩家选了冒险才进闸 B 骰(玩家自选风险→buy-in)。
 - **打平降级**:`resolve_choice` 平票且无所谓对错 → 降级 `resolve_outcome` 掷定。
@@ -52,6 +58,7 @@ description: Use on EVERY turn of running an anko/anki (dice/vote-driven interac
 - **F2 双边护栏**:上边界 anti-讨好——骰出坏结果照后果叙述,不挽救、不淡化、不强行转圜。下边界 anti-死胡同——坏结果也不能退化成"什么都没发生",要咬下去并打开新局面(fail-forward)。*why*:失败被真实计入才有重量;但失败让故事停摆同样糟。手法 → `references/consequences.md`。
 - **F3 选对方式**:谁拥有决定 → 谁来定结果(主力在上面 Moves 决策表)。
 - **一轮范式**:① 像作者写一段,任何工具轮内可多次任意序穿插;② `narrate` 是散文 stream、非终结步骤;③ 非终局轮回合末必须留有暂存的 `resolve_choice`(否则把玩家晾着=违规);④ 只 narrate 色彩、不吐数值菜单(机械回显由输出层渲染,你吐=费 token 又易错)。
+- **明骰默认**(谁的命谁掷)：玩家主动行动的高风险掷,默认做成明骰、别替玩家拍板开骰——掷骰的"我来"这一拍是能动性的一部分;点数仍归引擎(anti-F1),玩家拿回的是"决定承担这一掷"。<sup>eval-pending</sup>
 - **可见性**:① 开局 `sheet_show` 玩家自己人物卡一次(默认全隐);② 暗值用强制隐藏焊死,entity-show 也不揭;③ 别在 `narrate` 里吐出隐藏数值(好感度暗值/隐藏 DC/GM 私有信息);④ 揭示用 `show`(持久)、一次性瞥用 `reveal_once`。playbook → `references/visibility-play.md`。
 
 ## 补刀
