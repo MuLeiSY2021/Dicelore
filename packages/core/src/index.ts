@@ -28,3 +28,14 @@ export {
 export { commitPendingRoll, type RollResult } from "./resolve/commitRoll.js";
 export { setRollGate, getRollGate, type RollGate } from "./mcp/rollGate.js";
 
+// in-process MCP 工厂 + 写后回调接缝（组件7 orchestrator 用）。
+export {
+  createMcpServer,
+  type CanonWriteEvent,
+  type McpServerDeps,
+} from "./mcp/server.js";
+
+// 回合末 hook（choice 物化 + L3 审计）——组件4，供 orchestrator turn-end 复用。
+export { runTurnEnd } from "./adapter/turnEnd.js";
+
+
