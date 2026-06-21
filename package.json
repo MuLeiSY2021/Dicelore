@@ -9,7 +9,8 @@
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "dicelore": "tsx src/cli.ts"
+    "dicelore": "tsx src/cli.ts",
+    "dicelore:mcp": "tsx src/mcp/main.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
