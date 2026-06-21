@@ -7,30 +7,13 @@
 // Software Foundation, either version 3 of the License, or (at your option)
 // any later version. See <https://www.gnu.org/licenses/>.
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { openSession } from "../session/resolve.js";
-import { TOOLS } from "./tools.js";
-import { runTool } from "./runTool.js";
+import { createMcpServer } from "./server.js";
 
 async function main() {
   const { db } = openSession(); // env: DICELORE_SESSION / DICELORE_SESSIONS_DIR
-  const server = new McpServer({ name: "dicelore", version: "0.0.0" });
-
-  for (const t of TOOLS) {
-    server.registerTool(
-      `dicelore_${t.name}`,
-      {
-        title: t.title,
-        description: t.description,
-        inputSchema: t.inputSchema.shape,
-        outputSchema: t.outputSchema.shape,
-        annotations: t.annotations,
-      },
-      (args: unknown) => runTool(db, t, args) as any,
-    );
-  }
-
+  const server = createMcpServer(db, {}); // stdio 路径无 onCanonWrite/rollGate(行为不变)
   await server.connect(new StdioServerTransport());
 }
 
