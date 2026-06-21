@@ -40,6 +40,10 @@ export const SessionSummarySchema = z.object({
 });
 export const SessionsListResponseSchema = z.object({ sessions: z.array(SessionSummarySchema) });
 
+// 明骰：玩家点击触发掷骰（仿 POST /choices）
+export const RollRequestSchema = z.object({ eventId: z.number() });
+export const RollResponseSchema = z.object({ turnId: z.string() });
+
 export type MessageRequest = z.infer<typeof MessageRequestSchema>;
 export type MessageResponse = z.infer<typeof MessageResponseSchema>;
 export type ChoiceRequest = z.infer<typeof ChoiceRequestSchema>;
@@ -52,3 +56,5 @@ export type EventsResponse = z.infer<typeof EventsResponseSchema>;
 export type SessionStatus = z.infer<typeof SessionStatusSchema>;
 export type SessionSummary = z.infer<typeof SessionSummarySchema>;
 export type SessionsListResponse = z.infer<typeof SessionsListResponseSchema>;
+export type RollRequest = z.infer<typeof RollRequestSchema>;
+export type RollResponse = z.infer<typeof RollResponseSchema>;

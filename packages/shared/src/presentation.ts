@@ -38,6 +38,17 @@ export const ChoicesViewSchema = z.object({
   options: z.array(ChoiceOptionSchema),
 });
 
+// 明骰待掷规格（只含规格、无结果；exprDisplay 如 "1d20+{说服}"，真值不下发）
+export const RollBandSchema = z.object({ label: z.string(), min: z.number(), max: z.number() });
+export const PendingRollSchema = z.object({
+  eventId: z.number(),
+  shape: z.enum(["outcome", "contest"]),
+  label: z.string(),
+  yourSide: z.object({ name: z.string(), exprDisplay: z.string() }),
+  dc: z.number().optional(),
+  bands: z.array(RollBandSchema).optional(),
+});
+
 // §1 全量快照（GET /presentation 与 WS 重连补齐）
 export const PresentationSnapshotSchema = z.object({
   protocol: z.literal(CLIENT_PROTOCOL),
@@ -47,6 +58,7 @@ export const PresentationSnapshotSchema = z.object({
   mechanics: z.array(MechanicEntrySchema),
   choices: ChoicesViewSchema.nullable(),
   narrativeCursor: z.number(),
+  pendingRoll: PendingRollSchema.nullish(),
 });
 
 // §4 presentation_delta.changes（webhook 驱动的局部）
@@ -70,5 +82,6 @@ export type SheetGroup = z.infer<typeof SheetGroupSchema>;
 export type MechanicEntry = z.infer<typeof MechanicEntrySchema>;
 export type ChoiceOption = z.infer<typeof ChoiceOptionSchema>;
 export type ChoicesView = z.infer<typeof ChoicesViewSchema>;
+export type PendingRoll = z.infer<typeof PendingRollSchema>;
 export type PresentationSnapshot = z.infer<typeof PresentationSnapshotSchema>;
 export type PresentationDelta = z.infer<typeof PresentationDeltaSchema>;

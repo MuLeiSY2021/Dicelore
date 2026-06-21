@@ -22,4 +22,18 @@ describe("StreamMessageSchema", () => {
       StreamMessageSchema.parse({ protocol: CLIENT_PROTOCOL, type: "bogus" }),
     ).toThrow();
   });
+
+  it("roll_staged / roll_committed 可判别", () => {
+    const staged = StreamMessageSchema.parse({
+      protocol: CLIENT_PROTOCOL, type: "roll_staged",
+      pendingRoll: { eventId: 12, shape: "outcome", label: "撬锁",
+        yourSide: { name: "张三", exprDisplay: "1d100" }, bands: [{ label: "成功", min: 1, max: 60 }] },
+    });
+    expect(staged.type).toBe("roll_staged");
+    const committed = StreamMessageSchema.parse({
+      protocol: CLIENT_PROTOCOL, type: "roll_committed",
+      eventId: 12, rolls: [18], total: 18, dc: 15, outcome: "success",
+    });
+    expect(committed.type).toBe("roll_committed");
+  });
 });

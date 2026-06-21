@@ -8,7 +8,7 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import { describe, it, expect } from "vitest";
-import { PresentationSnapshotSchema, CLIENT_PROTOCOL } from "./index.js";
+import { PresentationSnapshotSchema, PendingRollSchema, CLIENT_PROTOCOL } from "./index.js";
 
 describe("PresentationSnapshotSchema", () => {
   it("接受接口页 §1 形状的全量快照", () => {
@@ -39,5 +39,19 @@ describe("PresentationSnapshotSchema", () => {
         sheets: [], mechanics: [], choices: null, narrativeCursor: 0,
       }),
     ).toThrow();
+  });
+
+  it("PendingRoll 只含规格无结果；快照 pendingRoll 可省略", () => {
+    const pr = PendingRollSchema.parse({
+      eventId: 12, shape: "contest", label: "说服守卫",
+      yourSide: { name: "张三", exprDisplay: "1d20+{说服}" }, dc: 15,
+    });
+    expect(pr.eventId).toBe(12);
+    // 快照不带 pendingRoll 仍合法(nullish)
+    const snap = PresentationSnapshotSchema.parse({
+      protocol: CLIENT_PROTOCOL, sessionId: "s1", seq: 0,
+      sheets: [], mechanics: [], choices: null, narrativeCursor: 0,
+    });
+    expect(snap.pendingRoll ?? null).toBeNull();
   });
 });
