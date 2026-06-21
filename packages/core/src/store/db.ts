@@ -45,6 +45,13 @@ export function initSchema(db: DB): void {
       id INTEGER PRIMARY KEY CHECK (id = 1),
       seq_staged INTEGER, prompt TEXT, options_json TEXT, status TEXT
     );
+    CREATE TABLE IF NOT EXISTS pending_roll (
+      event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      shape TEXT NOT NULL,          -- 'outcome' | 'contest'
+      spec_json TEXT NOT NULL,      -- 规格(无结果)
+      status TEXT NOT NULL DEFAULT 'awaiting',  -- 'awaiting' | 'committed'
+      verdict_seq INTEGER           -- commit 后链接 kind=verdict event 的 seq
+    );
   `);
 
   // ===== FTS5 全文检索虚表(Plan 2)=====

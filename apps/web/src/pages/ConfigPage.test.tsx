@@ -18,3 +18,23 @@ it("点「主题外观」显示主题外观子页(含强调色控件)", () => {
   act(() => { screen.getByRole("button", { name: "主题外观" }).click(); });
   expect(screen.getByLabelText("强调色")).toBeInTheDocument();
 });
+
+it("点「MCP 服务器」显示 MCP 子页(含必需与 out-of-canon)", () => {
+  mount();
+  act(() => { screen.getByRole("button", { name: "MCP 服务器" }).click(); });
+  expect(screen.getByText("dicelore")).toBeInTheDocument();
+  expect(screen.getByText(/必需/)).toBeInTheDocument();
+  expect(screen.getAllByText(/out-of-canon/).length).toBeGreaterThan(0);
+});
+
+it("点「数据与存储」显示数据子页(含 DICELORE_SESSIONS_DIR)", () => {
+  mount();
+  act(() => { screen.getByRole("button", { name: "数据与存储" }).click(); });
+  expect(screen.getByText("DICELORE_SESSIONS_DIR")).toBeInTheDocument();
+});
+
+it("点「服务与网络」显示服务子页(含 DICELORE_NOTIFY_URL)", () => {
+  mount();
+  act(() => { screen.getByRole("button", { name: "服务与网络" }).click(); });
+  expect(screen.getByText("DICELORE_NOTIFY_URL")).toBeInTheDocument();
+});

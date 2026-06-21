@@ -2,12 +2,13 @@ import { describe, it, expect } from "vitest";
 import { TOOLS } from "./tools.js";
 
 describe("TOOLS 注册表", () => {
-  it("囊括全部 18 个工具,名字唯一", () => {
+  it("囊括全部 20 个工具,名字唯一", () => {
     const names = TOOLS.map((t) => t.name);
-    expect(names).toHaveLength(18);
-    expect(new Set(names).size).toBe(18);
+    expect(names).toHaveLength(20);
+    expect(new Set(names).size).toBe(20);
     for (const n of [
-      "resolve_choice", "resolve_outcome", "resolve_contest",
+      "resolve_choice", "resolve_outcome_hidden", "resolve_contest_hidden",
+      "resolve_outcome_open", "resolve_contest_open",
       "sheet_get", "sheet_list", "sheet_update",
       "event_append", "event_recall", "watcher_set",
       "world_search", "world_sample", "world_register", "rule_search",

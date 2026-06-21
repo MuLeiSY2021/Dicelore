@@ -22,6 +22,15 @@ export const EventRowSchema = z.object({
 });
 export const EventsResponseSchema = z.object({ events: z.array(EventRowSchema) });
 
+export const SessionStatusSchema = z.enum(["active", "archived", "ended"]);
+export const SessionSummarySchema = z.object({
+  sessionId: z.string(),
+  title: z.string(),
+  status: SessionStatusSchema,
+  updatedAt: z.number().optional(), // epoch ms；无则省略
+});
+export const SessionsListResponseSchema = z.object({ sessions: z.array(SessionSummarySchema) });
+
 export type MessageRequest = z.infer<typeof MessageRequestSchema>;
 export type MessageResponse = z.infer<typeof MessageResponseSchema>;
 export type ChoiceRequest = z.infer<typeof ChoiceRequestSchema>;
@@ -31,3 +40,6 @@ export type CreateSessionResponse = z.infer<typeof CreateSessionResponseSchema>;
 export type SessionInfo = z.infer<typeof SessionInfoSchema>;
 export type EventRow = z.infer<typeof EventRowSchema>;
 export type EventsResponse = z.infer<typeof EventsResponseSchema>;
+export type SessionStatus = z.infer<typeof SessionStatusSchema>;
+export type SessionSummary = z.infer<typeof SessionSummarySchema>;
+export type SessionsListResponse = z.infer<typeof SessionsListResponseSchema>;

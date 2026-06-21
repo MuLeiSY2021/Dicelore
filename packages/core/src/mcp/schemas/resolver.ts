@@ -34,8 +34,28 @@ const contestSideIn = z.object({ name: z.string(), expr: z.string() });
 export const resolveContestIn = z
   .object({ context: z.string(), a: contestSideIn, b: contestSideIn })
   .strict();
-const contestSideOut = z.object({ name: z.string(), total: z.number(), rolls: z.array(z.number()) });
+export const contestSideOut = z.object({ name: z.string(), total: z.number(), rolls: z.array(z.number()) });
 export const resolveContestOut = z.object({
+  a: contestSideOut,
+  b: contestSideOut,
+  winner: z.enum(["a", "b", "tie"]),
+  event_id: z.number(),
+  reminders: z.array(z.string()).optional(),
+});
+
+// ===== 明骰(玩家闸控、阻塞):入参同暗骰,出参加 awaiting 标记 =====
+export const resolveOutcomeOpenIn = resolveOutcomeIn;
+export const resolveOutcomeOpenOut = z.object({
+  awaiting: z.literal("player_roll"),
+  roll: z.number(),
+  die: z.string(),
+  band: z.object({ label: z.string(), consequence: z.string() }),
+  event_id: z.number(),
+  reminders: z.array(z.string()).optional(),
+});
+export const resolveContestOpenIn = resolveContestIn;
+export const resolveContestOpenOut = z.object({
+  awaiting: z.literal("player_roll"),
   a: contestSideOut,
   b: contestSideOut,
   winner: z.enum(["a", "b", "tie"]),

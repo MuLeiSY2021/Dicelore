@@ -123,6 +123,29 @@
 
 **留下游 / 未来**：GUI 前端壳；玩家选择捕获（聊天 / 转轮 / 投票）；语义自查轻推；多人远程。
 
+## 玩家闸控明骰（BG3 式）— 🟢 已实现 core 侧（2026-06-21，[ADR-0019](../05-决策记录-ADR/README.md) / [设计](../../superpowers/specs/2026-06-21-player-gated-roll-design.md)）
+
+把「掷骰这个动作的归属」交还玩家（参与感），点数仍恒由引擎算（anti-F1）。两轴正交。
+
+**已锁定**：
+- [x] **两条正交轴**：点数权威恒引擎（anti-F1，谁都伪造不了）；掷骰动作归属（明骰玩家点击+亮 DC / 暗骰引擎自动）。
+- [x] **L1 名分流、无布尔参**：`resolve_outcome`/`resolve_contest` 各拆 `_hidden`（暗、引擎自动）/ `_open`（明、玩家闸控）；现有两工具**已重命名加 `_hidden`**（消歧:"hidden"=引擎自动掷、非结果隐藏）。MCP 工具数 18→20。
+- [x] **明骰=阻塞式 MCP 调用**（仿 AskUserQuestion）：handler 暂存 `pending_roll`（规格无结果）→ 有 roll-gate（组件7 注入）则 await 玩家点击、无则裸 CC 降级立即掷 → `commitPendingRoll` 此刻掷+写 `kind=verdict`（`gated:true`、`visible=1`）→ 回合内返回 `awaiting:"player_roll"`。**不经 Stop 物化**（与 choice 跨回合相反）。
+- [x] **anti-F1 边界**：点数恒 `commitPendingRoll` 内引擎在点击时算；`pending_roll` 只存规格；`rng` 仅供单测。
+- [x] **幂等**（宕机恢复基石）：`commitPendingRoll` 已 committed 据 verdict event 重建、不重掷。
+
+**已实现**（core 侧，commits 10fcddf→1b178b8；全量 189 tests passed / typecheck 绿）：
+- `store/pendingRoll.ts`：`pending_roll(event_id PK AUTOINCREMENT, shape, spec_json, status, verdict_seq)` + `stagePendingRoll`/`getPendingRoll`/`markRollCommitted`。
+- `resolve/commitRoll.ts`：`commitPendingRoll(db, eventId, rng?) → RollResult`（union by shape、复用 `resolveOutcome`/`resolveContest`、幂等重建）。
+- `mcp/rollGate.ts`：`setRollGate`/`getRollGate` 接缝（模块级单例）；`runTool` 改 async（await 明骰 handler）。
+- `mcp/handlers/resolver.ts`：`resolve_outcome_open`/`resolve_contest_open` async handler（stage→gate?await:降级→commit→返回）+ 暗骰改名 `_hidden`。
+- `skills/dicelore-gm-core/SKILL.md`：Moves §2.4「谁掷」+ Principle「明骰默认」（eval-pending）。
+- `src/index.ts`：barrel additive 导出明骰原语（供 orchestrator）。
+
+**留组件7 线（本线只造接缝，未实现）**：`awaitPlayerRoll` 阻塞/WS 桥接实现、`POST /sessions/{id}/roll` 端点、BG3 掷骰卡 UI、宕机恢复重驱 GM、`packages/shared` 契约（`pendingRoll`/`roll_staged`/`roll_committed`）。
+
+**留未来**：明骰措辞 eval-loop 终稿；多人安价「谁来点这一掷」。
+
 ## 跨域 / 上游联动
 
 - 被动 rule 召回 = hook 系（回合开始 UserPromptSubmit）→ 见 [03 TODO](../03-架构/TODO.md) A；**watcher 到期已从 hook 解绑、改 `sheet_update` 就地触发**（[ADR-0013](../05-决策记录-ADR/README.md)）。

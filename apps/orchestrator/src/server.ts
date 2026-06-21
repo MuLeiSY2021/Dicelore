@@ -1,15 +1,20 @@
 import { Hono } from "hono";
 import { serve } from "@hono/node-server";
 import { openDb, initSchema, type DB } from "@dicelore/core";
-import type { SessionInfo } from "@dicelore/shared";
+import type { SessionInfo, SessionSummary } from "@dicelore/shared";
 import { buildSnapshot } from "./presentation.js";
+import { listSessionSummaries } from "./sessions.js";
 
 export interface ServerDeps {
   openSession: (sessionId: string) => DB; // 读侧句柄(每会话一文件；测试可注入内存库)
+  listSessions: () => SessionSummary[]; // 会话列表(主页继续上次/最近)
 }
 
 export function createApp(deps: ServerDeps): Hono {
   const app = new Hono();
+
+  // 会话列表(主页继续上次 / 最近 Session)
+  app.get("/sessions", (c) => c.json({ sessions: deps.listSessions() }));
 
   // 首屏 / 重连：全量呈现快照(接口页 §2)
   app.get("/sessions/:id/presentation", (c) => {
@@ -37,6 +42,7 @@ export function startServer(port: number): void {
       initSchema(db);
       return db;
     },
+    listSessions: () => listSessionSummaries(dir),
   });
   serve({ fetch: app.fetch, port });
   console.log(`[orchestrator] 只读 REST 监听 :${port}`);

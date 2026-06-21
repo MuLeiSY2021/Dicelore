@@ -4,5 +4,8 @@ __pycache__/
 *.egg-info/
 node_modules/
 dist/
+*.db
+*.db-shm
+*.db-wal
 .superpowers/
 .harness/
