@@ -1,6 +1,7 @@
 import { readdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { metaGet, openSession, sessionDbPath } from "./session/resolve.js";
+import { runInit } from "./adapter/init.js";
 
 const [cmd, arg] = process.argv.slice(2);
 
@@ -26,6 +27,12 @@ switch (cmd) {
     console.log(`会话 ${arg}: 团本=${metaGet(db, "team_id") ?? "(未灌注)"} sheets=${sheets} events=${events}`);
     break;
   }
+  case "init": {
+    const session = arg ?? "default";
+    runInit({ projectDir: process.cwd(), session });
+    console.log(`已在 ${process.cwd()} 写入 .claude/(MCP + 三 hook + skills),会话=${session}`);
+    break;
+  }
   default:
-    console.log("命令: new <name> | list | inspect <name>");
+    console.log("命令: new <name> | list | inspect <name> | init [session]");
 }
