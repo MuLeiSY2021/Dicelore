@@ -31,6 +31,7 @@ describe("buildSnapshot", () => {
     expect(snap.choices).toBeNull();
     expect(snap.seq).toBe(0);
     expect(snap.narrativeCursor).toBe(0);
+    expect(snap.pendingRoll).toBeNull();
   });
 
   it("可见 sheet cell 按 entity 分组进 sheets", () => {

@@ -41,6 +41,7 @@ export function buildSnapshot(db: DB, sessionId: string): PresentationSnapshot {
     mechanics: model.mechanicalEcho.map((e) => ({ seq: e.seq, kind: e.kind, text: e.text })),
     choices,
     narrativeCursor: narrativeCursor(db),
+    pendingRoll: null, // Phase 1：首屏不投影待掷(实时 roll_staged 经 WS;重启恢复见 recovery.ts)
   };
 }
 
