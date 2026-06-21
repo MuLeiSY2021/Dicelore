@@ -2,6 +2,16 @@
   "name": "dicelore",
   "version": "0.0.0",
   "private": true,
+  "license": "AGPL-3.0-or-later",
+  "author": "MuLeiSY2021 <mulei_sy@qq.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MuLeiSY2021/Dicelore.git"
+  },
+  "homepage": "https://github.com/MuLeiSY2021/Dicelore",
+  "bugs": {
+    "url": "https://github.com/MuLeiSY2021/Dicelore/issues"
+  },
   "engines": {
     "node": ">=20"
   },

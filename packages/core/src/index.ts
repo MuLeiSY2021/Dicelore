@@ -1,3 +1,12 @@
+// Copyright (C) 2026 MuLeiSY2021
+//
+// This file is part of Dicelore.
+//
+// Dicelore is free software: you can redistribute it and/or modify it under
+// the terms of the GNU Affero General Public License as published by the Free
+// Software Foundation, either version 3 of the License, or (at your option)
+// any later version. See <https://www.gnu.org/licenses/>.
+
 // @dicelore/core 公共面（additive；引擎纯逻辑反向零 import 本文件）。
 export { openDb, initSchema, type DB } from "./store/db.js";
 export {

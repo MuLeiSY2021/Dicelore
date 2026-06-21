@@ -1,3 +1,12 @@
+// Copyright (C) 2026 MuLeiSY2021
+//
+// This file is part of Dicelore.
+//
+// Dicelore is free software: you can redistribute it and/or modify it under
+// the terms of the GNU Affero General Public License as published by the Free
+// Software Foundation, either version 3 of the License, or (at your option)
+// any later version. See <https://www.gnu.org/licenses/>.
+
 // eval/grade.ts — 对一局已捕获的会话评分（player-view + 机械断言）。立即可跑：
 //   npx tsx eval/grade.ts <session.db> [--transcript <cc-transcript.jsonl>] [--scenario <id>]
 // 纯确定性、零 LLM；语义/对标真人语料的定性评测见 eval/grader.md（另起 grader）。

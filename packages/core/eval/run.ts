@@ -1,3 +1,12 @@
+// Copyright (C) 2026 MuLeiSY2021
+//
+// This file is part of Dicelore.
+//
+// Dicelore is free software: you can redistribute it and/or modify it under
+// the terms of the GNU Affero General Public License as published by the Free
+// Software Foundation, either version 3 of the License, or (at your option)
+// any later version. See <https://www.gnu.org/licenses/>.
+
 // eval/run.ts — 准备一个 eval 场景的可跑会话：灌种子(rules/sheets/tone) + dicelore init 项目。
 // 用法：
 //   npx tsx eval/run.ts <scenario-id> --sessions-dir <dir> [--baseline]

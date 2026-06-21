@@ -1,3 +1,12 @@
+// Copyright (C) 2026 MuLeiSY2021
+//
+// This file is part of Dicelore.
+//
+// Dicelore is free software: you can redistribute it and/or modify it under
+// the terms of the GNU Affero General Public License as published by the Free
+// Software Foundation, either version 3 of the License, or (at your option)
+// any later version. See <https://www.gnu.org/licenses/>.
+
 // 内置极小「结构触发 → terse 提醒」表(spec §5);走流③、只回 AI、L1 底线。
 // 富措辞归 Skills 包(L2),本表只 terse 底线。
 export function remindersFor(name: string, out: any, input: any): string[] {

@@ -64,3 +64,19 @@ npm run dicelore -- new <团名>   # CLI：建 / 开一局会话
 ## 状态
 
 开发中——内层能力库（骰子引擎、expr 求值、四业务域 store、FTS 检索）已在 `main`；MCP 工具面、Skills 包、adapter 等组件按 wiki 推进。
+
+## 许可证
+
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
+
+Dicelore 采用 **GNU Affero 通用公共许可证 v3.0 或更高版本（AGPL-3.0-or-later）** 开源——见 [LICENSE](LICENSE)。
+
+> Copyright (C) 2026 MuLeiSY2021
+
+AGPL 的要点：任何人都可以自由使用、修改、分发；**但只要你修改了 Dicelore 并通过网络向用户提供服务（例如架设在线跑团站点），你就必须把对应的完整源码一并公开。**
+
+**双授权 / 商业授权**：上述 AGPL 条款约束的是社区使用者，**不约束版权持有人**。如果你希望在闭源 / 专有产品中使用 Dicelore 而不承担 AGPL 的开源义务，可联系 **MuLeiSY2021 <mulei_sy@qq.com>** 洽谈单独的商业授权。
+
+## 贡献
+
+欢迎贡献！提交 PR 即表示你同意：你的贡献将以与项目相同的 **AGPL-3.0-or-later** 授权并入。开发流程与约定见 [CONTRIBUTING.md](CONTRIBUTING.md)。
