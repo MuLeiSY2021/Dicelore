@@ -1,6 +1,6 @@
 # MCP 工具面（组件2）
 
-> **本页职责**：定"外层 MCP 工具面"的详细设计——裁决工具（resolver 三件）+ 数据工具 + 可见性工具 + `narrate` 的**入参/出参 schema（Zod）**、补刀形态、内层原子→外层工具的组合映射。这是 L1 塑形的焊接位。
+> **本页职责**：定"外层 MCP 工具面"的详细设计——裁决工具（resolver 族：choice + outcome/contest 各明暗两版）+ 数据工具 + 可见性工具 + `narrate` 的**入参/出参 schema（Zod）**、补刀形态、内层原子→外层工具的组合映射。这是 L1 塑形的焊接位。
 > **上游依赖**：[总体架构 §2 两层工具 / §3 数据工具 / §3.1 可见性 / §4 裁决 / §4.1 narrate / §6 一轮+三流](../03-架构/总体架构.md)；[技术选型 §1 Zod / §4 stdio](../03-架构/技术选型.md)；[02 §2 四业务域+要点5 / §3 行动层](../02-领域模型/核心概念.md)；[ADR-0007 状态骰下沉 / 0009 narrate 升格 / 0010 可见性](../05-决策记录-ADR/)；求值与存储语义 → [内层能力库](内层能力库.md)。
 > **状态**：🟢 已成型（2026-06-03 brainstorming；R1-R3 上游落地后解冻填充）。
 
@@ -12,7 +12,7 @@
 - **expr 全程是字符串、MCP 不解析**（[内层 §3.1](内层能力库.md)、[ADR](../05-决策记录-ADR/)）：凡 `expr` 字段都是 `"1d20 + {张三.力量}"` 这样的串，MCP 原样透传给内层求值器，本层不拆。
 - **AI 只给引用、不给真实数值**（铁律，[03 §4](../03-架构/总体架构.md)）：靠 expr 的 `{实体.属性}` 约定 + 内层引擎取真值；**schema 不强卡**（自由串拦不住硬编数字），降级为 L2 教 + L3 账本审计（与状态骰下沉同构，[ADR-0007](../05-决策记录-ADR/)）。
 - **通用出参信封（成功路径）**：多数工具回 `{ ...本工具结果, event_id?, reminders? }`。`event_id` = 该操作落的 event 行；`reminders` = 补刀（§5）。
-- **一轮时序**（[03 §6](../03-架构/总体架构.md)）：工具**轮内可多次、任意顺序**调用；`resolve_choice` 是**暂存**（回合末经 Stop hook 物化）、`narrate` 是**散文 stream**，其余即时返回即时生效。
+- **一轮时序**（[03 §6](../03-架构/总体架构.md)）：工具**轮内可多次、任意顺序**调用；`resolve_choice` 是**暂存**（回合末经 Stop hook 物化）、`narrate` 是**散文 stream**、`resolve_*_open`（明骰）是**回合内阻塞**（玩家点击触发掷骰、结果作返回值回合内返回，§1.4/§1.5），其余即时返回即时生效。
 - **三流归属**：resolver / `sheet_update` 的**结构化结果回 AI**（流③，本页 schema 即流③形状）；玩家看到的机械回显 + 菜单由**输出层**读 store/event 渲染（流②，非本页）。
 - **接口契约（本页定骨架，实现期补全文案）**：
   - **out ＝ MCP `outputSchema`**：各工具 out 形状即注册期 `outputSchema`，经 `structuredContent` 回 AI（流③），**不塞进 `content[].text` 当散文**。
@@ -26,7 +26,9 @@
 
 ## 1. 裁决工具（resolver）schema
 
-承接 [02 §3](../02-领域模型/核心概念.md)、[03 §4](../03-架构/总体架构.md) 与 [resolver 二轴表](TODO.md)。三个独立裁决工具——共性：**随机/取真值全在引擎内执行，AI 给不出也改不了真实结果**（anti-F1/F2），且**各落一条"裁决记录"event 供 L3 比对叙述**。
+承接 [02 §3](../02-领域模型/核心概念.md)、[03 §4](../03-架构/总体架构.md) 与 [resolver 二轴表](TODO.md)。独立裁决工具——共性：**随机/取真值全在引擎内执行，AI 给不出也改不了真实结果**（anti-F1/F2），且**各落一条"裁决记录"event 供 L3 比对叙述**。
+
+> **明/暗 L1 名分流**（[玩家闸控明骰设计 §1/§2](../../superpowers/specs/2026-06-21-player-gated-roll-design.md)、承接 [03 §2 名分流 / §4 resolver 二轴](../03-架构/总体架构.md)）：掷骰类 resolver 按**「掷骰动作归谁」**拆成不同工具名——**不给 `resolve_*` 加 `gated`/`visible` 布尔参，而是拆成 `_hidden`（暗骰=引擎自动掷）/ `_open`（明骰=玩家闸控掷、阻塞式）两组名**，逼 GM 在调用点显式回答「这一掷是玩家的还是 GM 的」、不留布尔默认值偷渡。两组共享同一套入参与点数权威（恒引擎，anti-F1 不破），只差「谁触发掷骰 + 透明度」一轴。`resolve_choice`（玩家选 label）与明骰同属「玩家面向交互式 resolver」族，一个选、一个掷，并列、不拆名。
 
 ### 1.1 `resolve_choice`（玩家选 label；暂存、回合末物化）
 
@@ -47,7 +49,9 @@
 - **玩家选择怎么回收**＝模式/adapter 层（聊天/转轮/投票），**非本页**（[adapter](adapter与L3审计.md)）；本页只负责到"暂存 + 物化信号"。
 - **非终局轮回合末必须留有暂存 choice**，否则 L3 判违规（[03 §5/§6](../03-架构/总体架构.md)）。
 
-### 1.2 `resolve_outcome`（随机选 label：选项骰/档位）
+### 1.2 `resolve_outcome_hidden`（暗骰=引擎自动掷；随机选 label：选项骰/档位）
+
+> **暗骰**：引擎在调用时**自动掷**、同步回 label，GM 替玩家开骰（`_hidden` 指**引擎自动掷、非结果隐藏**——结果可见性照旧由 `visible` 控制）。明骰对照版见 §1.4。**旧名 `resolve_outcome` 已重命名为本名**（见 §1.6 实现期注）。
 
 ```ts
 // in
@@ -68,7 +72,9 @@
 - `die` 是单骰串、不卷入 expr 文法（只 resolver_contest / sheet_update 用 expr）。
 - **三档结果（PbtA 对齐，[ADR-0016](../05-决策记录-ADR/README.md)）**：`bands` 是团本/AI 定义"三档结果"的落点——典型应是**完全成功 / 部分成功（成功但有代价）/ 失败（有后果）**而非二元成败，"零代价完全得手"是窄档、非默认。每档 `consequence` 即该档的 fail-forward 后果（[Skills 包 §3](Skills包.md)）。
 
-### 1.3 `resolve_contest`（随机选 verdict：对抗骰）
+### 1.3 `resolve_contest_hidden`（暗骰=引擎自动掷；随机选 verdict：对抗骰）
+
+> **暗骰**：引擎在调用时**自动掷**两边、同步回 verdict。明骰对照版见 §1.5。**旧名 `resolve_contest` 已重命名为本名**（见 §1.6 实现期注）。
 
 ```ts
 // in
@@ -87,6 +93,58 @@
 ```
 
 - 两边都是**完整 expr 串**（骰子+引用+常数）；内层求值器各自取真值+掷+求和→比大小，回**账本**（每项 `rolled/ref/int` 标注，[内层 §3.1](内层能力库.md)）。DC 不是独立 judge，是一边为常数。
+
+### 1.4 `resolve_outcome_open`（明骰=玩家闸控掷、阻塞式；随机选 label）
+
+> **明骰**：玩家在客户端**点击触发**掷骰、亮 DC/档位、见证成败（BG3 式）；本调用**阻塞**、结果作为工具返回值在**同一 GM 回合内**返回（仿 AskUserQuestion，[明骰设计 §3 阻塞机制](../../superpowers/specs/2026-06-21-player-gated-roll-design.md)）。**点数仍由引擎在点击时计算**（anti-F1 不破，§9）；玩家只提供「我掷了」这一动作，值由引擎出。
+
+```ts
+// in —— 同 resolve_outcome_hidden（§1.2）
+{
+  context: z.string(),
+  die: z.string(),
+  bands: z.array(z.object({
+    label: z.string(),
+    min: z.number(), max: z.number(),
+    consequence: z.string(),
+  })).min(1),
+}
+// out —— 阻塞返回，结构同暗骰 + 待掷语义
+{ awaiting: "player_roll", roll: z.number(), die, band: {label, consequence}, event_id }
+```
+
+- **阻塞语义**（[明骰设计 §3](../../superpowers/specs/2026-06-21-player-gated-roll-design.md)）：handler ① 持久化 `pending_roll`（规格 `die`/`bands`，**无结果**，[内层能力库](内层能力库.md)）→ ② 经后端通知前端「待掷」→ ③ `await awaitPlayerRoll(eventId)` → ④ 玩家点击 → ⑤ core `commitPendingRoll` 此刻掷 + 写 `kind=verdict` event（含点数、命中档、`visible=1`）→ ⑥ **回合内返回结果给 GM**。`awaiting:"player_roll"` 标记本结果经玩家闸控产出。
+- **裸 CC 降级**：无前端可阻塞 → 当场立即 `commitPendingRoll` 掷、直接返回（不卡死，结果仍回合内返回）。
+- 入参 `die`/`bands` 语义与 §1.2 完全相同（含三档结果 PbtA 对齐、暴击是档位一档）；明骰只改「谁触发 + 阻塞返回 + 透明度」，不改点数与档位规则。
+
+### 1.5 `resolve_contest_open`（明骰=玩家闸控掷、阻塞式；随机选 verdict）
+
+> **明骰**：玩家点击触发对抗掷、亮「你的一边 expr vs DC」与点数（BG3 式）；本调用**阻塞**、结果回合内作返回值回给 GM。点数恒引擎算（anti-F1，§9）。
+
+```ts
+// in —— 同 resolve_contest_hidden（§1.3）
+{
+  context: z.string(),
+  a: z.object({ name: z.string(), expr: z.string() }),
+  b: z.object({ name: z.string(), expr: z.string() }),
+}
+// out —— 阻塞返回，结构同暗骰 + 待掷语义
+{
+  awaiting: "player_roll",
+  a: { rolls: number[], refs: {…取到的真值}, total: number },
+  b: { … },
+  winner: "a" | "b" | "tie",
+  event_id,
+}
+```
+
+- **阻塞语义**同 §1.4：`pending_roll` 落规格（`a`/`b` expr，无结果）→ 通知前端 → `await awaitPlayerRoll` → 玩家点击 → core 此刻 `commitPendingRoll` 求值两边 + 写 verdict event（账本、`visible=1`）→ 回合内返回。`awaiting:"player_roll"` 同义。
+- **裸 CC 降级**同 §1.4（当场立即掷、直接返回）。
+- 入参 `a`/`b` 语义与 §1.3 完全相同（完整 expr 串、DC＝一边常数、回账本）；明骰只改触发权与阻塞返回。
+
+### 1.6 实现期注：现有 core 用旧名
+
+> **本页记目标态**。现有 core 代码仍用旧名 `resolve_outcome` / `resolve_contest`（即本页 §1.2/§1.3 的暗骰）；**重命名为 `_hidden` + 新增 `_open` 明骰属实现期**（pre-1.0，为消歧值得改）。`_open` 的 `pending_roll` 槽 / `commitPendingRoll` / `awaitPlayerRoll` 接缝落点见 [明骰设计 §3/§10 分线](../../superpowers/specs/2026-06-21-player-gated-roll-design.md)（core 侧定接口，阻塞/WS 桥接归组件7 线）。
 
 ---
 
@@ -232,7 +290,7 @@ narrate: {
 
 承接 [03 §2/§4.1/§5](../03-架构/总体架构.md)（L1/L2 混合）。
 
-- **挂载点**：塑形相关工具的出参带可选 `reminders: string[]`（走流③、**只回 AI**、是反讨好提醒，不进玩家输出层）。承载工具：`resolve_outcome`/`resolve_contest`（掷出坏结果时）、`sheet_update`（账本异常时）、`resolve_choice`（后果已锁时）。**`narrate` 不挂 reminder**（散文通道、无客观结构触发位）。
+- **挂载点**：塑形相关工具的出参带可选 `reminders: string[]`（走流③、**只回 AI**、是反讨好提醒，不进玩家输出层）。承载工具：`resolve_outcome_hidden`/`resolve_outcome_open`/`resolve_contest_hidden`/`resolve_contest_open`（掷出坏结果时）、`sheet_update`（账本异常时）、`resolve_choice`（后果已锁时）。**`narrate` 不挂 reminder**（散文通道、无客观结构触发位）。
 - **填充（混合）**：MCP server 内置一张**极小的"结构触发 → 短提醒"表**作 L1 底线（如命中失败档 → "尊重结果，别软着陆"；后果已锁 → "后续叙述须与已锁后果一致"）；本字段**只载这张内置 terse 表**。**丰富措辞归 [Skills 包](Skills包.md)（L2）**，由 AI 内化为 doctrine 后体现在**自身输出**——**v1 不在运行时把 L2 富文本拼进本字段**（详 [Skills 包 §5](Skills包.md)）。
 - 本页只定**字段 + 触发位**；具体**措辞**与触发表条目 → [Skills 包](Skills包.md)。
 
@@ -258,8 +316,10 @@ game_end: { reason: z.string(), outcome?: z.string() } → { ended: true, event_
 | 外层工具（`dicelore_` 前缀） | 调用的内层原子 | 落 event | 备注 |
 |---|---|---|---|
 | `resolve_choice` | 会话态暂存（无引擎） | 回合末物化时落 | 暂存、回合末 Stop hook 物化 |
-| `resolve_outcome` | 骰子引擎 `rollDice`+`rangeMap` | verdict | 选项骰 |
-| `resolve_contest` | 求值器 `evalExpr`×2 + 比大小 | verdict | 对抗骰；DC=常数 expr |
+| `resolve_outcome_hidden` | 骰子引擎 `rollDice`+`rangeMap` | verdict | 暗骰：选项骰、引擎自动掷 |
+| `resolve_outcome_open` | 同上 + `pending_roll`/`commitPendingRoll`/`awaitPlayerRoll` | verdict | 明骰：玩家闸控掷、阻塞回合内返回 |
+| `resolve_contest_hidden` | 求值器 `evalExpr`×2 + 比大小 | verdict | 暗骰：对抗骰、引擎自动掷；DC=常数 expr |
+| `resolve_contest_open` | 同上 + `pending_roll`/`commitPendingRoll`/`awaitPlayerRoll` | verdict | 明骰：玩家闸控掷、阻塞回合内返回 |
 | `sheet_get`/`sheet_list` | store 读 | — | 含 visible 全貌回 AI |
 | `sheet_update` | `applyMutations`（带骰调引擎） | mutation | 批量原子、状态骰下沉 |
 | `event_append`/`event_recall` | event store + FTS | note/… | — |
@@ -286,7 +346,8 @@ game_end: { reason: z.string(), outcome?: z.string() } → { ended: true, event_
 | `sheet_update` | false | false | `=` 幂等 / `+`/`-` 非幂等 |
 | `event_append` | false | false | false（每调用新行） |
 | `narrate` | false | false | false（每调用新行） |
-| `resolve_outcome` / `resolve_contest` | false | false | false（含随机） |
+| `resolve_outcome_hidden` / `resolve_contest_hidden` | false | false | false（含随机） |
+| `resolve_outcome_open` / `resolve_contest_open` | false | false | false（含随机；阻塞玩家闸控掷） |
 | `resolve_choice` | false | false | ✅（暂存、末次为准） |
 | `sheet_show` / `world_show` | false | false | ✅ |
 | `reveal_once` | false | false | false（每次新 reveal） |

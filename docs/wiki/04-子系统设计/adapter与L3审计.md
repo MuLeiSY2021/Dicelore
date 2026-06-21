@@ -221,6 +221,46 @@ CC 的对话记录（transcript jsonl）本身是 **UUID 父子链树**（/rewin
 
 ---
 
+## 9. 明骰与 Stop / 降级 / 恢复（[玩家闸控明骰设计](../../superpowers/specs/2026-06-21-player-gated-roll-design.md)）
+
+[玩家闸控明骰设计 §3/§4/§5/§10](../../superpowers/specs/2026-06-21-player-gated-roll-design.md) 把「掷骰这个动作的归属」交还玩家——`resolve_*_open`（明骰）是**阻塞式** MCP 调用（仿 AskUserQuestion），玩家在客户端点击触发、亮 DC、见证成败；点数仍恒由 core 在点击时计算（anti-F1 不破）。本节只落它**对本页 adapter / hook 栈的影响**：哪些走 Stop、哪些降级、哪些归组件7——其余（阻塞机制、WS 桥接、`pending_roll` 槽 schema、契约）见对应上游页，本页不重述。
+
+### 9.1 明骰 happy path 不经 Stop 物化（与 choice 物化正交）
+
+`resolve_*_open` 调用本身**阻塞**，结果作为**工具返回值**在**同一 GM 回合内**回给 GM（[设计 §3](../../superpowers/specs/2026-06-21-player-gated-roll-design.md)）——玩家点击 → core 此刻 `commitPendingRoll` 掷 + 写 `kind=verdict` event（`visible=1`）→ await resolve → 工具回值。**整条链在回合内闭合，不跨回合、不碰 Stop hook**。
+
+对照 §3.3 ① 的 choice 物化：`resolve_choice` 是**跨回合**交互（GM 给选项 → 回合结束 → Stop 读 `pending_choice` 槽**物化**成 `kind=choice` event → 下轮玩家 pick 作输入）。明骰的 verdict event 由 `commitPendingRoll` **在回合内直接落库**，无需 Stop 代为物化。两者并列于「玩家面向交互式 resolver」族，只是**物化时机不同**：choice 经 Stop、明骰在回合内。
+
+故 Stop hook 的职责**完全不变**——§3.3 的物化 choice / L3 审计（§4）/ 写快照（§8）照旧跑，不感知明骰的存在；明骰落的 `kind=verdict` event 与暗骰的同形，§4 的机械比对（F1 掷骰绕过率等）照样把它当本轮 event 区间里的普通 verdict 计入，无特例。
+
+### 9.2 裸 CC 降级：无 `awaitPlayerRoll` 能力 → 当场立即 commit
+
+`awaitPlayerRoll(eventId)` 是 orchestrator（组件7）注入 handler 的**接缝**（core 只定接口）。在**裸 Claude Code**（无 orchestrator、无可阻塞的前端）下该能力缺失——此时 `resolve_*_open` handler **当场立即 `commitPendingRoll` 掷、直接返回，不阻塞**（[设计 §3/§4](../../superpowers/specs/2026-06-21-player-gated-roll-design.md)）。同 §6「`narrate` v1 直用、绕过靠兜底」、同隔壁线「notify-URL 未配 = no-op」的精神：**能力在则走桥接，能力缺则就地退化、绝不卡死**。
+
+降级路下明骰退化为「引擎即刻掷、回合内返回」，与暗骰行为趋同（无按钮、无 BG3 动效、无人机往返），但点数仍由 core 计算——anti-F1 不因降级破。这一路是 core 本线可单测的部分（`commitPendingRoll` 纯函数、RNG 注入；见 [内层能力库 `pending_roll`](内层能力库.md)）。
+
+### 9.3 宕机恢复：`pending_roll` 落库是真相源，重驱归组件7
+
+后端在 `await awaitPlayerRoll` 中崩溃时，阻塞调用 + GM 回合一并丢失（[设计 §5](../../superpowers/specs/2026-06-21-player-gated-roll-design.md)）。恢复**不靠重放阻塞调用**，而是退化成「**结果作输入重驱 GM**」：重启读到 `pending_roll` status=`awaiting` → 前端重连重弹掷骰卡 → 玩家掷 → 写 verdict → 把结果**作下轮输入喂 GM**（阻塞返回路退化成异步喂）。
+
+**分线裁定**：
+
+- **重驱 GM 的实现归组件7 线**——orchestrator 持有 Agent SDK 会话，恢复路的「拿 verdict 当输入再驱 GM」是它的活，**不在本页 adapter（Claude Code TUI 接线层）职责内**。
+- **core / adapter 侧只保证两条**：① `pending_roll` 持久落库（真相源，[内层能力库](内层能力库.md)）；② `commitPendingRoll` **幂等**（已 `committed` 不重掷）。有这两条，verdict event 总能补达，结果不丢。
+
+### 9.4 明确不在本页（本线）范围
+
+下列均属**组件7 线**，本页（Claude Code TUI adapter）不落、只锚位置：
+
+- 明骰的**阻塞机制 / WS 桥接**（`awaitPlayerRoll` 的实际实现、`roll_staged` / `roll_committed` 推送）；
+- `POST /sessions/{id}/roll` 端点；
+- BG3 掷骰卡 UI；
+- 宕机恢复的「重驱 GM」编排。
+
+本页 hook 栈对明骰的全部牵涉，仅 §9.1 的「Stop 不受影响」+ §9.2 的「裸 CC 降级即刻 commit」两条；其余穿透到组件7 与 [玩家客户端-接口](玩家客户端-接口.md) / [内层能力库 `pending_roll`](内层能力库.md)。
+
+---
+
 - 工具 schema、补刀 `reminders` 挂载点 → [MCP 工具面](MCP工具面.md)；教条 / Moves / Principles 内容 → [Skills 包](Skills包.md)
 - event/watcher/`pending_choice` 的**表 schema 与求值语义** → [内层能力库](内层能力库.md)（本页只定 hook 怎么读写它们）
 - 确切的 Claude Code hook stdin 字段名 / JSON 决策格式 → 实现期官方文档核实（本页定映射与意图）
