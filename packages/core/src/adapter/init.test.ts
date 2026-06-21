@@ -8,11 +8,19 @@ import { runInit } from "./init.js";
 function tmpProject() { return mkdtempSync(join(tmpdir(), "dl-init-")); }
 
 describe("dicelore init", () => {
-  it("写 settings.json(注册 MCP + 三 hook 绝对路径)", () => {
+  it("写 .mcp.json(项目根,stdio dicelore + env)", () => {
+    const dir = tmpProject();
+    runInit({ projectDir: dir, session: "修仙团" });
+    const m = JSON.parse(readFileSync(join(dir, ".mcp.json"), "utf8"));
+    expect(m.mcpServers.dicelore.type).toBe("stdio");
+    expect(m.mcpServers.dicelore.env.DICELORE_SESSION).toBe("修仙团");
+  });
+
+  it("写 settings.json(三 hook 绝对路径,不含 mcpServers)", () => {
     const dir = tmpProject();
     runInit({ projectDir: dir, session: "修仙团" });
     const s = JSON.parse(readFileSync(join(dir, ".claude", "settings.json"), "utf8"));
-    expect(s.mcpServers.dicelore.env.DICELORE_SESSION).toBe("修仙团");
+    expect(s.mcpServers).toBeUndefined();
     const stopArgs: string[] = s.hooks.Stop[0].hooks[0].args;
     expect(stopArgs[0]).toBe("--import");
     expect(stopArgs[2].endsWith("turn-end.ts")).toBe(true);

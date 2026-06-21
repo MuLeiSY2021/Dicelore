@@ -1,6 +1,6 @@
 // packages/core/src/adapter/templates.test.ts
 import { describe, it, expect } from "vitest";
-import { claudeMdPointer, settingsJson } from "./templates.js";
+import { claudeMdPointer, settingsJson, mcpJson } from "./templates.js";
 
 describe("init 模板", () => {
   it("CLAUDE.md 指针含诚实仲裁者 + consult gm-core", () => {
@@ -9,9 +9,17 @@ describe("init 模板", () => {
     expect(md).toContain("dicelore-gm-core");
   });
 
-  it("settings.json 注册 dicelore MCP + 三 hook、exec form node、带 tsx loader", () => {
-    const s = settingsJson({ session: "修仙团", hooksDir: "/abs/hooks" }) as any;
-    expect(s.mcpServers.dicelore.env.DICELORE_SESSION).toBe("修仙团");
+  it(".mcp.json 注册 dicelore(stdio + npx dicelore mcp + env)", () => {
+    const m = mcpJson({ session: "修仙团" }) as any;
+    expect(m.mcpServers.dicelore.type).toBe("stdio");
+    expect(m.mcpServers.dicelore.command).toBe("npx");
+    expect(m.mcpServers.dicelore.args).toEqual(["dicelore", "mcp"]);
+    expect(m.mcpServers.dicelore.env.DICELORE_SESSION).toBe("修仙团");
+  });
+
+  it("settings.json 只配三 hook(exec form node + tsx loader)、不含 mcpServers", () => {
+    const s = settingsJson({ hooksDir: "/abs/hooks" }) as any;
+    expect(s.mcpServers).toBeUndefined(); // MCP 归 .mcp.json,CC 不从 settings 读
     expect(Object.keys(s.hooks).sort()).toEqual(["SessionStart", "Stop", "UserPromptSubmit"].sort());
     const stop = s.hooks.Stop[0].hooks[0];
     expect(stop.command).toBe("node");

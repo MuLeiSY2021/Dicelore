@@ -2,7 +2,7 @@
 import { cpSync, mkdirSync, writeFileSync, appendFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { claudeMdPointer, settingsJson } from "./templates.js";
+import { claudeMdPointer, settingsJson, mcpJson } from "./templates.js";
 
 // 包根 = src/adapter/ 上两级。skills 真源在 <pkg>/skills,hook 入口在 <pkg>/src/adapter/hooks。
 const ADAPTER_DIR = dirname(fileURLToPath(import.meta.url));
@@ -17,8 +17,11 @@ export function runInit(opts: { projectDir: string; session: string }): void {
   const claudeDir = join(projectDir, ".claude");
   mkdirSync(claudeDir, { recursive: true });
 
-  // settings.json:hook 用包内 hooks 绝对路径(node --import tsx,见 templates)。
-  const settings = settingsJson({ session, hooksDir: HOOKS_SRC });
+  // .mcp.json:项目级 MCP server 归项目根(CC 不从 settings.json 读 mcpServers)。
+  writeFileSync(join(projectDir, ".mcp.json"), JSON.stringify(mcpJson({ session }), null, 2) + "\n");
+
+  // settings.json:只配三 hook(用包内 hooks 绝对路径,node --import tsx,见 templates)。
+  const settings = settingsJson({ hooksDir: HOOKS_SRC });
   writeFileSync(join(claudeDir, "settings.json"), JSON.stringify(settings, null, 2) + "\n");
 
   // skills:默认全装 gm-core + 全部四 flow(留 manifest 过滤接口位:将来按 opts.flows 子集)。

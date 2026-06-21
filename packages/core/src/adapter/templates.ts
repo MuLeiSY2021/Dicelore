@@ -17,12 +17,25 @@ function hookCmd(hooksDir: string, name: string) {
   return { type: "command", command: "node", args: ["--import", "tsx", join(hooksDir, `${name}.ts`)] };
 }
 
-export function settingsJson(opts: { session: string; hooksDir: string }): object {
-  const { session, hooksDir } = opts;
+// 项目级 MCP server 归项目根 .mcp.json(CC 不从 .claude/settings.json 读 mcpServers)。
+// command=npx dicelore mcp 是已发布包的预期形态;首启会话需用户批准项目级 server。
+export function mcpJson(opts: { session: string }): object {
   return {
     mcpServers: {
-      dicelore: { command: "npx", args: ["dicelore", "mcp"], env: { DICELORE_SESSION: session } },
+      dicelore: {
+        type: "stdio",
+        command: "npx",
+        args: ["dicelore", "mcp"],
+        env: { DICELORE_SESSION: opts.session },
+      },
     },
+  };
+}
+
+// settings.json 只配 hooks(MCP 归 mcpJson / .mcp.json)。
+export function settingsJson(opts: { hooksDir: string }): object {
+  const { hooksDir } = opts;
+  return {
     hooks: {
       SessionStart: [{ hooks: [hookCmd(hooksDir, "session-start")] }],
       UserPromptSubmit: [{ hooks: [hookCmd(hooksDir, "turn-start")] }],

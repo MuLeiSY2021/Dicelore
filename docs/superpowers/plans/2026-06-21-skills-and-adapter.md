@@ -8,6 +8,8 @@
 
 **Tech Stack:** TypeScript(ESM)、better-sqlite3、vitest、tsx、@modelcontextprotocol/sdk(已注册)。无构建步骤(tsx 直跑)。
 
+> **实现期修正(2026-06-21,真实 CC harness 核实)**:Task 3/8 的 `settingsJson` 原产 `{mcpServers, hooks}`、init 把 MCP 写进 `.claude/settings.json`——**CC 不从 settings.json 读 mcpServers**(项目级 MCP 只认项目根 `.mcp.json`)。已改:`templates.ts` 拆出 `mcpJson({session})`(`type:"stdio"` + npx dicelore mcp + env),`settingsJson({hooksDir})` 只产 hooks;`init.ts` 额外写项目根 `.mcp.json`。测试相应更新(下方 Task 3/8 代码块为修正前的历史快照,以 spec 的「实现期修正」节 + 仓库现状为准)。
+
 ## Global Constraints
 
 - 所有新代码落 `packages/core/`;`src/…` = `packages/core/src/…`,`skills/…` = `packages/core/skills/…`。命令在 `packages/core/` 下跑,或经 root 委托(`npm test`/`npm run dicelore`)。
