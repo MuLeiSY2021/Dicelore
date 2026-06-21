@@ -146,6 +146,17 @@
 
 **留未来**：明骰措辞 eval-loop 终稿；多人安价「谁来点这一掷」。
 
+## Skills eval-loop（gm-core 定向优化）— 🟢 工装已落源码（2026-06-21），整页见 [Skills-eval.md](Skills-eval.md)
+
+**已落**：
+- [x] **玩家视图基准** `buildPlayerView`（`src/present/playerView.ts`）= narrate+reveal 流 + 面板 = 评分基准 + 组件7 渲染契约 mock。
+- [x] **机械断言地板** `src/eval/assertions.ts`（narrate 泄漏 / 漏 narrate / 工具画像含明暗骰计数，纯函数单测）+ 复用 `l3.auditTurn`。
+- [x] **真人语料当黄金标准**：4 场景（兽人/抽卡/恶龙/探索压价）各带 `reference` 指向 [`docs/research/scraped`](../../research/scraped/) 桥段；`eval/grader.md` 定参考式定性评测（对标真人 GM、产 skill_fix_hints、反过拟合）。
+- [x] **工装**：`eval/run.ts`（场景就绪:灌种子+init+本地tsx MCP重写+with/baseline）、`eval/grade.ts`（对捕获会话评分,立即可跑）。
+- [x] **底座零碰组件7**：裸 CC harness（组件2 MCP+组件4 hook）;narrate 泄漏靠 playerView mock 渲染契约,不必等组件7。
+
+**留**：headless `claude -p` 多回合驱动确切 flag（实现期核实）;gm-core 措辞终稿（跑 loop 迭代）;narrate 泄漏措辞与组件7 渲染契约对齐后收口。
+
 ## 跨域 / 上游联动
 
 - 被动 rule 召回 = hook 系（回合开始 UserPromptSubmit）→ 见 [03 TODO](../03-架构/TODO.md) A；**watcher 到期已从 hook 解绑、改 `sheet_update` 就地触发**（[ADR-0013](../05-决策记录-ADR/README.md)）。
