@@ -35,3 +35,12 @@ it("snapshot 为 null 时给空提示", () => {
   render(<PresentationStage snapshot={null} />);
   expect(screen.getByText(/暂无/)).toBeInTheDocument();
 });
+
+it("snapshot 非 null 但内容全空时也给空提示(避免空白困惑)", () => {
+  const empty: PresentationSnapshot = {
+    protocol: "dicelore.client/1", sessionId: "demo", seq: 0,
+    sheets: [], mechanics: [], choices: null, narrativeCursor: 0,
+  };
+  render(<PresentationStage snapshot={empty} />);
+  expect(screen.getByText(/暂无/)).toBeInTheDocument();
+});
