@@ -10,7 +10,7 @@
 import { describe, it, expect } from "vitest";
 import { runTurn } from "./turnLoop.js";
 import { FakeDiceGm } from "../dice/FakeDiceGm.js";
-import { WsHub } from "./ws.js";
+import { WsHub } from "../pkg/wsHub.js";
 import { openDb, initSchema } from "@dicelore/core";
 
 function capture() {

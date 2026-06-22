@@ -8,7 +8,7 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import { describe, it, expect } from "vitest";
-import { WsHub } from "./ws.js";
+import { WsHub } from "./wsHub.js";
 import { CLIENT_PROTOCOL, type StreamMessage } from "@dicelore/shared";
 
 function fakeWs() { const sent: string[] = []; return { sent, send: (d: string) => sent.push(d), readyState: 1 }; }

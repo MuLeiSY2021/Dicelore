@@ -10,7 +10,7 @@
 import type { DB } from "@dicelore/core";
 import { CLIENT_PROTOCOL, type StreamMessage } from "@dicelore/shared";
 import type { Agent, TurnInput } from "../pkg/agent.js";
-import type { WsHub } from "./ws.js";
+import type { WsHub } from "../pkg/wsHub.js";
 
 export interface TurnEndResult {
   choices?: { eventId: number; options: { index: number; label: string; consequence: string }[] };

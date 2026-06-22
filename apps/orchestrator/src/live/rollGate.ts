@@ -9,7 +9,7 @@
 
 import { getPendingRoll, type DB, type RollGate, type PendingRollRow } from "@dicelore/core";
 import { CLIENT_PROTOCOL, type PendingRoll, type StreamMessage } from "@dicelore/shared";
-import type { WsHub } from "./ws.js";
+import type { WsHub } from "../pkg/wsHub.js";
 
 // core PendingRollRow.spec → 线上 PendingRoll(只含规格,无结果)。
 function toPendingRoll(row: PendingRollRow): PendingRoll {

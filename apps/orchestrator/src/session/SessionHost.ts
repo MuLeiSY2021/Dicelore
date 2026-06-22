@@ -9,7 +9,7 @@
 
 import { openDb, initSchema, createMcpServer, buildPresentationModel, runTurnEnd, type DB, type CanonWriteEvent } from "@dicelore/core";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { WsHub, type WsLike } from "../live/ws.js";
+import { WsHub, type WsLike } from "../pkg/wsHub.js";
 import { PlayerRollGate } from "../live/rollGate.js";
 import { mapCanonWrite } from "../live/notify.js";
 import { runTurn, type TurnEndResult } from "../live/turnLoop.js";
