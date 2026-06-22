@@ -12,7 +12,7 @@ import { describe, it, expect } from "vitest";
 import { openDb, initSchema } from "../../store/db.js";
 import { stateGet, stateSet } from "../../store/state.js";
 import { worldDocUpsert } from "../../store/world.js";
-import { eventSince } from "../../store/event.js";
+import { logSince } from "../../store/log.js";
 import { metaGet } from "../../session/resolve.js";
 import { ioTools } from "./io.js";
 import { DiceloreError } from "../../errors.js";
@@ -28,7 +28,7 @@ describe("io handlers", () => {
     expect(out.ok).toBe(true);
     expect(out.shown).toEqual(["秘密"]);
     expect(stateGet(db, "张三", "秘密")?.visible).toBe(1);
-    expect(eventSince(db, 0).some((e) => e.kind === "note")).toBe(true);
+    expect(logSince(db, 0).some((e) => e.kind === "note")).toBe(true);
   });
 
   it("world_show(doc):按名解析 rowid 翻 visible", () => {
@@ -45,7 +45,7 @@ describe("io handlers", () => {
     stateSet(db, "门", "状态", "上锁", 0);
     const out = byName("reveal_once").handler(db, { sheet: { entity: "门", attr: "状态" } });
     expect(typeof out.event_id).toBe("number");
-    const reveals = eventSince(db, 0).filter((e) => e.kind === "reveal");
+    const reveals = logSince(db, 0).filter((e) => e.kind === "reveal");
     expect(reveals).toHaveLength(1);
     expect(reveals[0].visible).toBe(1);
     expect(stateGet(db, "门", "状态")?.visible).toBe(0); // 不碰底层 visible
@@ -55,7 +55,7 @@ describe("io handlers", () => {
     const db = freshDb();
     const out = byName("narrate").handler(db, { text: "暮色漫过城墙", tags: ["黄昏"] });
     expect(typeof out.event_id).toBe("number");
-    const evs = eventSince(db, 0).filter((e) => e.kind === "narrate");
+    const evs = logSince(db, 0).filter((e) => e.kind === "narrate");
     expect(evs).toHaveLength(1);
     expect(evs[0].visible).toBe(1);
   });
@@ -68,7 +68,7 @@ describe("io handlers", () => {
     const meta = JSON.parse(metaGet(db, "ended")!);
     expect(meta.reason).toBe("队伍全灭");
     expect(meta.seq).toBe(out.event_id);
-    expect(eventSince(db, 0).filter((e) => e.kind === "note")).toHaveLength(1);
+    expect(logSince(db, 0).filter((e) => e.kind === "note")).toHaveLength(1);
   });
 
   it("下沉校验:形状违例抛 DiceloreError(原 schema refine)", () => {

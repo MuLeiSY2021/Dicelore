@@ -10,7 +10,7 @@
 import { beforeEach, describe, expect, it, test } from "vitest";
 import { initSchema, openDb, type DB } from "./db.js";
 import { stateGet, stateSet } from "./state.js";
-import { eventSince } from "./event.js";
+import { logSince } from "./log.js";
 import { worldDocUpsert, worldPoolAdd } from "./world.js";
 import { revealOnce, sheetShow, worldShow } from "./visibility.js";
 import { DiceloreError } from "../errors.js";
@@ -23,7 +23,7 @@ describe("sheetShow", () => {
     stateSet(db, "张三", "HP", "30", 0);
     sheetShow(db, "张三", "HP");
     expect(stateGet(db, "张三", "HP")!.visible).toBe(1);
-    const note = eventSince(db, 0).find((e) => e.kind === "note");
+    const note = logSince(db, 0).find((e) => e.kind === "note");
     expect(note!.visible).toBe(0);
   });
   test("暗值 visible=2 焊死,attr 级 show 不揭", () => {
@@ -42,14 +42,14 @@ describe("worldShow", () => {
     const rowid = worldDocUpsert(db, { name: "青云门", content: "正道大派" });
     worldShow(db, "world_doc", rowid);
     expect(db.prepare("SELECT visible FROM world_doc WHERE rowid=?").get(rowid)).toMatchObject({ visible: 1 });
-    expect(eventSince(db, 0).some((e) => e.kind === "note" && e.visible === 0)).toBe(true);
+    expect(logSince(db, 0).some((e) => e.kind === "note" && e.visible === 0)).toBe(true);
   });
 
   test("置 world_pool.visible=1 + 审计", () => {
     const rowid = worldPoolAdd(db, { pool: "npc", row: { name: "老李", job: "铁匠" } });
     worldShow(db, "world_pool", rowid);
     expect(db.prepare("SELECT visible FROM world_pool WHERE rowid=?").get(rowid)).toMatchObject({ visible: 1 });
-    expect(eventSince(db, 0).some((e) => e.kind === "note" && e.visible === 0)).toBe(true);
+    expect(logSince(db, 0).some((e) => e.kind === "note" && e.visible === 0)).toBe(true);
   });
 });
 
@@ -57,7 +57,7 @@ describe("revealOnce", () => {
   test("sheet:append kind=reveal 可见 event 存冻结值,不碰目标 visible", () => {
     stateSet(db, "张三", "真名", "赵四", 0);
     const seq = revealOnce(db, { kind: "sheet", entity: "张三", attr: "真名" });
-    const ev = eventSince(db, 0).find((e) => e.seq === seq)!;
+    const ev = logSince(db, 0).find((e) => e.seq === seq)!;
     expect(ev.kind).toBe("reveal");
     expect(ev.visible).toBe(1);
     expect(JSON.parse(ev.data_json!)).toMatchObject({ kind: "sheet", entity: "张三", attr: "真名", value: "赵四" });

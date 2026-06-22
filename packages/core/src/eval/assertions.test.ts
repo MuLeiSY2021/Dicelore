@@ -8,10 +8,10 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import { describe, it, expect } from "vitest";
-import type { EventRow } from "../store/event.js";
+import type { LogRow } from "../store/log.js";
 import { narrateLeak, missingNarrate, toolStats } from "./assertions.js";
 
-function ev(kind: EventRow["kind"], content: string, data?: unknown): EventRow {
+function ev(kind: LogRow["kind"], content: string, data?: unknown): LogRow {
   return {
     seq: 0, content, kind,
     data_json: data ? JSON.stringify(data) : null,
@@ -56,7 +56,7 @@ describe("missingNarrate（漏 narrate）", () => {
 
 describe("toolStats（工具使用画像，供报告 + grader）", () => {
   it("按 kind 计数 + 明暗骰区分（verdict.data_json.gated）", () => {
-    const events: EventRow[] = [
+    const events: LogRow[] = [
       ev("narrate", "x"),
       ev("verdict", "命中", { gated: true }),   // 明骰
       ev("verdict", "暗检定", { gated: false }), // 暗骰

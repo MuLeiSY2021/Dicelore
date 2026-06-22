@@ -8,7 +8,7 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import type { DB } from "../../store/db.js";
-import { eventAppend, eventRecall, type EventRow } from "../../store/event.js";
+import { logAppend, logRecall, type LogRow } from "../../store/log.js";
 import { watcherSet, watcherList, type WatcherRow } from "../../store/watcher.js";
 import { truncateText } from "../../store/truncate.js";
 import type { ToolDef } from "../tooldef.js";
@@ -27,7 +27,7 @@ function appendHandler(
   db: DB,
   input: { content?: string; kind: any; data_json?: unknown; tags?: string[]; visible?: 0 | 1 },
 ) {
-  const event_id = eventAppend(db, {
+  const event_id = logAppend(db, {
     content: input.content,
     kind: input.kind,
     data_json: input.data_json,
@@ -38,8 +38,8 @@ function appendHandler(
 }
 
 function recallHandler(db: DB, input: { query: string; k: number }) {
-  const rows = eventRecall(db, input.query, { limit: input.k });
-  const events = rows.map((e: EventRow) => ({
+  const rows = logRecall(db, input.query, { limit: input.k });
+  const events = rows.map((e: LogRow) => ({
     seq: e.seq,
     kind: e.kind,
     content: e.content,

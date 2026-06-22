@@ -8,7 +8,7 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import type { DB } from "./db.js";
-import { eventAppend } from "./event.js";
+import { logAppend } from "./log.js";
 
 export interface ChoiceOption {
   label: string;
@@ -39,7 +39,7 @@ export function getPendingChoice(
 export function materializePendingChoice(db: DB): number | undefined {
   const pc = getPendingChoice(db);
   if (!pc) return undefined;
-  const seq = eventAppend(db, {
+  const seq = logAppend(db, {
     kind: "choice",
     visible: 1,
     content: pc.prompt,

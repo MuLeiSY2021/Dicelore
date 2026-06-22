@@ -9,7 +9,7 @@
 
 import { evalPredicate } from "../expr/predicate.js";
 import type { EvalCtx } from "../expr/evaluate.js";
-import { eventAppend } from "./event.js";
+import { logAppend } from "./log.js";
 import type { DB } from "./db.js";
 
 export interface WatcherRow {
@@ -43,7 +43,7 @@ export function recomputeWatchers(db: DB, ctx: EvalCtx): { id: number; payload: 
   for (const w of watcherList(db)) {
     const cond = evalPredicate(w.condition, ctx);
     if (w.armed === 1 && cond) {
-      const seq = eventAppend(db, { kind: "watcher_fired", content: w.payload, data_json: { watcher_id: w.id } });
+      const seq = logAppend(db, { kind: "watcher_fired", content: w.payload, data_json: { watcher_id: w.id } });
       if (w.mode === "once") {
         db.prepare("UPDATE watcher SET armed=0, last_fired_seq=?, status='fired' WHERE id=?").run(seq, w.id);
       } else {

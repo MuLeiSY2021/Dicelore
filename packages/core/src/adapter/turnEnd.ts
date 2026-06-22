@@ -9,7 +9,7 @@
 
 // packages/core/src/adapter/turnEnd.ts
 import type { DB } from "../store/db.js";
-import { eventSince, eventAppend } from "../store/event.js";
+import { logSince, logAppend } from "../store/log.js";
 import { getPendingChoice, materializePendingChoice } from "../store/choice.js";
 import { metaGet } from "../session/resolve.js";
 import { auditTurn } from "./l3.js";
@@ -19,7 +19,7 @@ export function runTurnEnd(
   args: { transcriptHasText: boolean; stopHookActive: boolean },
 ): { block?: { reason: string } } {
   const turnStartSeq = Number(metaGet(db, "turn_start_seq") ?? "0");
-  const events = eventSince(db, turnStartSeq);
+  const events = logSince(db, turnStartSeq);
   const pc = getPendingChoice(db);
   const pendingChoiceEmpty = !pc || pc.status !== "staged";
   const hasGameEnd = events.some((e) => e.kind === "note" && (e.content ?? "").includes("game_end"));
@@ -35,7 +35,7 @@ export function runTurnEnd(
   // ① 物化暂存 choice(若 staged)。
   if (pc && pc.status === "staged") materializePendingChoice(db);
   // ② 档B note 落 event(visible=0,喂 eval-loop)。
-  for (const n of result.notes) eventAppend(db, { kind: "note", visible: 0, content: n.content });
+  for (const n of result.notes) logAppend(db, { kind: "note", visible: 0, content: n.content });
   // ③ TODO(快照线): checkpoint(db, transcriptHead) —— 待并行 core 快照线落地接(adapter §8 ③)。
 
   return result.block ? { block: result.block } : {};

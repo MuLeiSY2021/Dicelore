@@ -10,7 +10,7 @@
 import { beforeEach, describe, expect, test } from "vitest";
 import { initSchema, openDb, type DB } from "./db.js";
 import { recomputeWatchers, watcherList, watcherSet } from "./watcher.js";
-import { eventSince } from "./event.js";
+import { logSince } from "./log.js";
 
 let db: DB;
 beforeEach(() => { db = openDb(":memory:"); initSchema(db); });
@@ -22,7 +22,7 @@ describe("watcher", () => {
     watcherSet(db, { condition: "{张三.HP} < 30", payload: "濒死!" });
     const fired = recomputeWatchers(db, ctxWith(20));
     expect(fired).toEqual([{ id: 1, payload: "濒死!" }]);
-    expect(eventSince(db, 0).some((r) => r.kind === "watcher_fired")).toBe(true);
+    expect(logSince(db, 0).some((r) => r.kind === "watcher_fired")).toBe(true);
     // 再次重算(仍满足)不重复触发(edge)
     expect(recomputeWatchers(db, ctxWith(20))).toEqual([]);
   });

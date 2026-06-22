@@ -9,7 +9,7 @@
 
 import type { DB } from "../store/db.js";
 import type { Rng } from "../dice/index.js";
-import { eventAppend, eventSince } from "../store/event.js";
+import { logAppend, logSince } from "../store/log.js";
 import { getPendingRoll, markRollCommitted } from "../store/pendingRoll.js";
 import { resolveOutcome } from "./outcome.js";
 import { resolveContest } from "./contest.js";
@@ -29,7 +29,7 @@ export function commitPendingRoll(db: DB, eventId: number, rng?: Rng): RollResul
   const spec = pr.spec as any;
   if (pr.shape === "outcome") {
     const r = resolveOutcome(spec.die, spec.bands, rng);
-    const verdictSeq = eventAppend(db, {
+    const verdictSeq = logAppend(db, {
       kind: "verdict", visible: 1, content: spec.context,
       data_json: { context: spec.context, die: r.die, roll: r.roll, band: r.band, gated: true },
     });
@@ -40,7 +40,7 @@ export function commitPendingRoll(db: DB, eventId: number, rng?: Rng): RollResul
     const rolls = (s: typeof r.a) => s.ledger.terms.flatMap((t) => t.rolls ?? []);
     const a = { name: r.a.name, total: r.a.ledger.total, rolls: rolls(r.a) };
     const b = { name: r.b.name, total: r.b.ledger.total, rolls: rolls(r.b) };
-    const verdictSeq = eventAppend(db, {
+    const verdictSeq = logAppend(db, {
       kind: "verdict", visible: 1, content: spec.context,
       data_json: { context: spec.context, a: r.a, b: r.b, winner: r.winner, gated: true },
     });
@@ -51,7 +51,7 @@ export function commitPendingRoll(db: DB, eventId: number, rng?: Rng): RollResul
 
 // 据已落 verdict event 重建 RollResult(幂等路)。
 function rebuild(db: DB, eventId: number, shape: "outcome" | "contest", verdictSeq: number): RollResult {
-  const ev = eventSince(db, verdictSeq - 1).find((e) => e.seq === verdictSeq);
+  const ev = logSince(db, verdictSeq - 1).find((e) => e.seq === verdictSeq);
   if (!ev || !ev.data_json) throw new DiceloreError("ENTITY_NOT_FOUND", `commitPendingRoll: verdict#${verdictSeq} 缺失`);
   const d = JSON.parse(ev.data_json);
   if (shape === "outcome") {

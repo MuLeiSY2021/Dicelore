@@ -9,7 +9,7 @@
 
 import { describe, it, expect } from "vitest";
 import { openDb, initSchema } from "../store/db.js";
-import { eventAppend } from "../store/event.js";
+import { logAppend } from "../store/log.js";
 import { stateSet } from "../store/state.js";
 import { sheetShow, revealOnce } from "../store/visibility.js";
 import { buildPlayerView } from "./playerView.js";
@@ -23,9 +23,9 @@ function freshDb() {
 describe("buildPlayerView", () => {
   it("narration = 可见 narrate + reveal,按 seq 排;不含 verdict/mutation/note", () => {
     const db = freshDb();
-    eventAppend(db, { kind: "narrate", content: "雨下了三天。" }); // seq1 可见
-    eventAppend(db, { kind: "verdict", content: "命中" }); // seq2 → 进面板不进 narration
-    eventAppend(db, { kind: "note", content: "伏笔", visible: 0 }); // seq3 隐,不进
+    logAppend(db, { kind: "narrate", content: "雨下了三天。" }); // seq1 可见
+    logAppend(db, { kind: "verdict", content: "命中" }); // seq2 → 进面板不进 narration
+    logAppend(db, { kind: "note", content: "伏笔", visible: 0 }); // seq3 隐,不进
     stateSet(db, "玩家", "HP", "30");
     revealOnce(db, { kind: "sheet", entity: "玩家", attr: "HP" }); // seq4 reveal 可见
     const pv = buildPlayerView(db);
@@ -36,8 +36,8 @@ describe("buildPlayerView", () => {
 
   it("隐藏的 narrate(visible=0)不进 narration", () => {
     const db = freshDb();
-    eventAppend(db, { kind: "narrate", content: "公开剧情" }); // 默认 visible=1
-    eventAppend(db, { kind: "narrate", content: "GM 私货", visible: 0 });
+    logAppend(db, { kind: "narrate", content: "公开剧情" }); // 默认 visible=1
+    logAppend(db, { kind: "narrate", content: "GM 私货", visible: 0 });
     const pv = buildPlayerView(db);
     expect(pv.narration).toHaveLength(1);
     expect(pv.narration[0].text).toBe("公开剧情");
@@ -55,9 +55,9 @@ describe("buildPlayerView", () => {
 
   it("sinceSeq 圈定本轮 narration 与面板机械回显", () => {
     const db = freshDb();
-    eventAppend(db, { kind: "narrate", content: "旧轮" }); // seq1
+    logAppend(db, { kind: "narrate", content: "旧轮" }); // seq1
     const cut = (db.prepare("SELECT MAX(seq) s FROM log").get() as { s: number }).s;
-    eventAppend(db, { kind: "narrate", content: "本轮" }); // seq2
+    logAppend(db, { kind: "narrate", content: "本轮" }); // seq2
     const pv = buildPlayerView(db, { sinceSeq: cut });
     expect(pv.narration.map((n) => n.text)).toEqual(["本轮"]);
   });

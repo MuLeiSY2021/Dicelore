@@ -12,7 +12,7 @@
 // 纯确定性、零 LLM；语义/对标真人语料的定性评测见 eval/grader.md（另起 grader）。
 import { readFileSync } from "node:fs";
 import { openDb } from "../src/store/db.js";
-import { eventSince } from "../src/store/event.js";
+import { logSince } from "../src/store/log.js";
 import { buildPlayerView } from "../src/present/playerView.js";
 import { narrateLeak, missingNarrate, toolStats } from "../src/eval/assertions.js";
 
@@ -27,7 +27,7 @@ const sIdx = process.argv.indexOf("--scenario");
 const scenarioId = sIdx > 0 ? process.argv[sIdx + 1] : undefined;
 
 const db = openDb(dbPath);
-const events = eventSince(db, 0);
+const events = logSince(db, 0);
 const pv = buildPlayerView(db);
 const stats = toolStats(events);
 

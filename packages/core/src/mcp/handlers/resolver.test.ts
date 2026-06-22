@@ -11,7 +11,7 @@
 import { describe, it, expect } from "vitest";
 import { openDb, initSchema } from "../../store/db.js";
 import { stateSet } from "../../store/state.js";
-import { eventSince } from "../../store/event.js";
+import { logSince } from "../../store/log.js";
 import { getPendingChoice } from "../../store/choice.js";
 import { setRollGate } from "../rollGate.js";
 import { resolverTools } from "./resolver.js";
@@ -30,7 +30,7 @@ describe("resolver handlers", () => {
     const out = byName("resolve_choice").handler(db, { prompt: "怎么走?", options: opts });
     expect(out).toEqual({ staged: true, options: opts });
     expect(getPendingChoice(db)?.prompt).toBe("怎么走?");
-    expect(eventSince(db, 0)).toHaveLength(0); // 不落 event
+    expect(logSince(db, 0)).toHaveLength(0); // 不落 event
   });
 
   it("resolve_outcome_hidden:掷骰命中档位 + 落 kind=verdict event", () => {
@@ -47,7 +47,7 @@ describe("resolver handlers", () => {
     expect(out.roll).toBeLessThanOrEqual(100);
     expect(["失败", "成功"]).toContain(out.band.label);
     expect(typeof out.event_id).toBe("number");
-    const verdicts = eventSince(db, 0).filter((e) => e.kind === "verdict");
+    const verdicts = logSince(db, 0).filter((e) => e.kind === "verdict");
     expect(verdicts).toHaveLength(1);
   });
 
@@ -63,7 +63,7 @@ describe("resolver handlers", () => {
     expect(out.a.total).toBe(18);
     expect(out.b.total).toBe(10);
     expect(typeof out.event_id).toBe("number");
-    expect(eventSince(db, 0).filter((e) => e.kind === "verdict")).toHaveLength(1);
+    expect(logSince(db, 0).filter((e) => e.kind === "verdict")).toHaveLength(1);
   });
 
   it("in schema .strict():多余字段报错", () => {
@@ -82,7 +82,7 @@ describe("明骰 *_open", () => {
     expect(out.awaiting).toBe("player_roll");
     expect(typeof out.roll).toBe("number");
     expect(out.band.label).toMatch(/碰壁|顺/);
-    expect(eventSince(db, 0).filter((e) => e.kind === "verdict")).toHaveLength(1);
+    expect(logSince(db, 0).filter((e) => e.kind === "verdict")).toHaveLength(1);
   });
 
   it("resolve_contest_open:无 gate → winner 产出 + 落 verdict", async () => {

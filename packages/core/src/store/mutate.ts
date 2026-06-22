@@ -11,7 +11,7 @@ import type { Rng } from "../dice/index.js";
 import { evalExpr, type RefGetter } from "../expr/evaluate.js";
 import type { DB } from "./db.js";
 import { stateGet, stateSet } from "./state.js";
-import { eventAppend } from "./event.js";
+import { logAppend } from "./log.js";
 import { recomputeWatchers } from "./watcher.js";
 import { DiceloreError } from "../errors.js";
 
@@ -103,7 +103,7 @@ export function applyMutations(
         new: String(nextNum),
       });
     }
-    const event_id = eventAppend(db, { kind: "mutation", data_json: { entity, applied } });
+    const event_id = logAppend(db, { kind: "mutation", data_json: { entity, applied } });
     const fired_watchers = recomputeWatchers(db, ctx);
     return { entity, applied, fired_watchers, event_id };
   });

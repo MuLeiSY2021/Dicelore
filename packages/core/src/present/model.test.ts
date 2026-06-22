@@ -9,7 +9,7 @@
 
 import { describe, it, expect } from "vitest";
 import { openDb, initSchema } from "../store/db.js";
-import { eventAppend } from "../store/event.js";
+import { logAppend } from "../store/log.js";
 import { stateSet } from "../store/state.js";
 import { sheetShow } from "../store/visibility.js";
 import { stagePendingChoice, materializePendingChoice } from "../store/choice.js";
@@ -36,11 +36,11 @@ describe("buildPresentationModel", () => {
 
   it("mechanicalEcho 取本轮 verdict/mutation/watcher_fired(按 turnStartSeq 圈区间)", () => {
     const db = freshDb();
-    eventAppend(db, { kind: "narrate", content: "旧轮" });        // seq1,非机械类
+    logAppend(db, { kind: "narrate", content: "旧轮" });        // seq1,非机械类
     const cut = (db.prepare("SELECT MAX(seq) s FROM log").get() as { s: number }).s;
-    eventAppend(db, { kind: "verdict", content: "命中", data_json: { winner: "a" } }); // seq2
-    eventAppend(db, { kind: "narrate", content: "色彩" });        // seq3,不进 echo
-    eventAppend(db, { kind: "mutation", content: "金钱 +3d100=74 → 77" }); // seq4
+    logAppend(db, { kind: "verdict", content: "命中", data_json: { winner: "a" } }); // seq2
+    logAppend(db, { kind: "narrate", content: "色彩" });        // seq3,不进 echo
+    logAppend(db, { kind: "mutation", content: "金钱 +3d100=74 → 77" }); // seq4
     const m = buildPresentationModel(db, { turnStartSeq: cut });
     expect(m.mechanicalEcho.map((e) => e.kind)).toEqual(["verdict", "mutation"]);
     expect(m.mechanicalEcho[1].text).toBe("金钱 +3d100=74 → 77");

@@ -10,7 +10,7 @@
 // src/mcp/handlers/event.test.ts
 import { describe, it, expect } from "vitest";
 import { openDb, initSchema } from "../../store/db.js";
-import { eventSince } from "../../store/event.js";
+import { logSince } from "../../store/log.js";
 import { watcherList } from "../../store/watcher.js";
 import { eventTools } from "./event.js";
 
@@ -24,7 +24,7 @@ describe("event handlers", () => {
       content: "夜里下起暴雨", kind: "note", tags: ["天气", "夜"],
     });
     expect(typeof out.event_id).toBe("number");
-    expect(eventSince(db, 0)).toHaveLength(1);
+    expect(logSince(db, 0)).toHaveLength(1);
   });
 
   it("event_recall:FTS 召回独有词", () => {

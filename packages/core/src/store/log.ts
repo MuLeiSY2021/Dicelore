@@ -10,11 +10,11 @@
 import type { DB } from "./db.js";
 import { escapeLike, ftsIndex, ftsSearch } from "./fts.js";
 
-export type EventKind = "narrate" | "verdict" | "mutation" | "note" | "watcher_fired" | "reveal" | "choice";
+export type LogKind = "narrate" | "verdict" | "mutation" | "note" | "watcher_fired" | "reveal" | "choice";
 
-export interface EventInput {
+export interface LogInput {
   content?: string;
-  kind: EventKind;
+  kind: LogKind;
   data_json?: unknown;
   tags?: string;
   visible?: number;
@@ -22,10 +22,10 @@ export interface EventInput {
   is_moment?: number;
 }
 
-export interface EventRow {
+export interface LogRow {
   seq: number;
   content: string | null;
-  kind: EventKind;
+  kind: LogKind;
   data_json: string | null;
   tags: string | null;
   visible: number;
@@ -34,11 +34,11 @@ export interface EventRow {
   created_at: string;
 }
 
-function defaultVisible(kind: EventKind): number {
+function defaultVisible(kind: LogKind): number {
   return kind === "note" ? 0 : 1;
 }
 
-export function eventAppend(db: DB, ev: EventInput): number {
+export function logAppend(db: DB, ev: LogInput): number {
   const visible = ev.visible ?? defaultVisible(ev.kind);
   const info = db
     .prepare(
@@ -58,12 +58,12 @@ export function eventAppend(db: DB, ev: EventInput): number {
   return seq;
 }
 
-export function eventSince(db: DB, sinceSeq: number): EventRow[] {
-  return db.prepare("SELECT * FROM log WHERE seq > ? ORDER BY seq").all(sinceSeq) as EventRow[];
+export function logSince(db: DB, sinceSeq: number): LogRow[] {
+  return db.prepare("SELECT * FROM log WHERE seq > ? ORDER BY seq").all(sinceSeq) as LogRow[];
 }
 
 // FTS 召回 + tag LIKE 兜底。当前分支 seq 过滤由快照线/adapter 在上层接(§4.5.3),本层返回全量命中。
-export function eventRecall(db: DB, query: string, opts: { limit?: number } = {}): EventRow[] {
+export function logRecall(db: DB, query: string, opts: { limit?: number } = {}): LogRow[] {
   const limit = opts.limit ?? 20;
   const seqs = new Set<number>(ftsSearch(db, "log_fts", query, limit).map((h) => h.rowid));
   const tagRows = db
@@ -73,5 +73,5 @@ export function eventRecall(db: DB, query: string, opts: { limit?: number } = {}
   if (seqs.size === 0) return [];
   const ids = [...seqs];
   const placeholders = ids.map(() => "?").join(",");
-  return db.prepare(`SELECT * FROM log WHERE seq IN (${placeholders}) ORDER BY seq`).all(...ids) as EventRow[];
+  return db.prepare(`SELECT * FROM log WHERE seq IN (${placeholders}) ORDER BY seq`).all(...ids) as LogRow[];
 }

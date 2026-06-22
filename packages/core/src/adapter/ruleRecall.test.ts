@@ -11,7 +11,7 @@
 import { describe, it, expect } from "vitest";
 import { openDb, initSchema } from "../store/db.js";
 import { ruleUpsert } from "../store/rule.js";
-import { eventAppend } from "../store/event.js";
+import { logAppend } from "../store/log.js";
 import { metaGet } from "../session/resolve.js";
 import { recallRules, recordTurnStart } from "./ruleRecall.js";
 
@@ -34,7 +34,7 @@ describe("rule 召回", () => {
 describe("turn_start_seq 记录", () => {
   it("写当前 MAX(seq)", () => {
     const db = freshDb();
-    eventAppend(db, { kind: "narrate", content: "x" }); // seq1
+    logAppend(db, { kind: "narrate", content: "x" }); // seq1
     const s = recordTurnStart(db);
     expect(s).toBe(1);
     expect(metaGet(db, "turn_start_seq")).toBe("1");

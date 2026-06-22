@@ -9,7 +9,7 @@
 
 import { describe, it, expect } from "vitest";
 import { openDb, initSchema } from "./db.js";
-import { eventSince } from "./event.js";
+import { logSince } from "./log.js";
 import { stagePendingChoice, getPendingChoice, materializePendingChoice } from "./choice.js";
 
 function freshDb() {
@@ -46,7 +46,7 @@ describe("pending_choice 槽", () => {
     stagePendingChoice(db, "怎么走?", opts);
     const seq = materializePendingChoice(db);
     expect(typeof seq).toBe("number");
-    const evs = eventSince(db, 0).filter((e) => e.kind === "choice");
+    const evs = logSince(db, 0).filter((e) => e.kind === "choice");
     expect(evs).toHaveLength(1);
     expect(evs[0].visible).toBe(1);
     expect(getPendingChoice(db)?.status).toBe("materialized");

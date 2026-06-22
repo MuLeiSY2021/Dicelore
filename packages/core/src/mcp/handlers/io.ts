@@ -11,7 +11,7 @@
 import type { DB } from "../../store/db.js";
 import { sheetShow, worldShow, revealOnce } from "../../store/visibility.js";
 import { worldDocGet } from "../../store/world.js";
-import { eventAppend } from "../../store/event.js";
+import { logAppend } from "../../store/log.js";
 import { metaSet } from "../../session/resolve.js";
 import { DiceloreError } from "../../errors.js";
 import type { ToolDef } from "../tooldef.js";
@@ -61,7 +61,7 @@ function revealOnceHandler(db: DB, input: { sheet?: { entity: string; attr: stri
 }
 
 function narrateHandler(db: DB, input: { text: string; tags?: string[] }) {
-  const event_id = eventAppend(db, {
+  const event_id = logAppend(db, {
     kind: "narrate",
     content: input.text,
     tags: input.tags?.length ? input.tags.join(" ") : undefined,
@@ -70,7 +70,7 @@ function narrateHandler(db: DB, input: { text: string; tags?: string[] }) {
 }
 
 function gameEndHandler(db: DB, input: { reason: string; outcome?: string }) {
-  const event_id = eventAppend(db, {
+  const event_id = logAppend(db, {
     kind: "note",
     visible: 0,
     data_json: { reason: input.reason, outcome: input.outcome },

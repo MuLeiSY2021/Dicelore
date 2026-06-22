@@ -12,7 +12,7 @@ import type { DB } from "../../store/db.js";
 import { stagePendingChoice } from "../../store/choice.js";
 import { resolveOutcome } from "../../resolve/outcome.js";
 import { resolveContest } from "../../resolve/contest.js";
-import { eventAppend } from "../../store/event.js";
+import { logAppend } from "../../store/log.js";
 import { stagePendingRoll } from "../../store/pendingRoll.js";
 import { commitPendingRoll } from "../../resolve/commitRoll.js";
 import { getRollGate } from "../rollGate.js";
@@ -37,7 +37,7 @@ function choiceHandler(db: DB, input: { prompt: string; options: { label: string
 
 function outcomeHandler(db: DB, input: { context: string; die: string; bands: any[] }) {
   const r = resolveOutcome(input.die, input.bands);
-  const event_id = eventAppend(db, {
+  const event_id = logAppend(db, {
     kind: "verdict",
     content: input.context,
     data_json: { context: input.context, die: r.die, roll: r.roll, band: r.band },
@@ -48,7 +48,7 @@ function outcomeHandler(db: DB, input: { context: string; die: string; bands: an
 function contestHandler(db: DB, input: { context: string; a: any; b: any }) {
   const r = resolveContest(db, input.a, input.b);
   const rolls = (s: typeof r.a) => s.ledger.terms.flatMap((t) => t.rolls ?? []);
-  const event_id = eventAppend(db, {
+  const event_id = logAppend(db, {
     kind: "verdict",
     content: input.context,
     data_json: { context: input.context, a: r.a, b: r.b, winner: r.winner },

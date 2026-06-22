@@ -11,7 +11,7 @@
 import { describe, it, expect } from "vitest";
 import { openDb, initSchema } from "../../store/db.js";
 import { stateGet, stateSet } from "../../store/state.js";
-import { eventSince } from "../../store/event.js";
+import { logSince } from "../../store/log.js";
 import { sheetTools } from "./sheet.js";
 
 function freshDb() { const db = openDb(":memory:"); initSchema(db); return db; }
@@ -48,7 +48,7 @@ describe("sheet handlers", () => {
     expect(out.applied[0].new).toBe("25");
     expect(typeof out.event_id).toBe("number");
     expect(stateGet(db, "张三", "HP")?.value).toBe("25");
-    expect(eventSince(db, 0).filter((e) => e.kind === "mutation")).toHaveLength(1);
+    expect(logSince(db, 0).filter((e) => e.kind === "mutation")).toHaveLength(1);
   });
 
   it("sheet_update:非数值算术抛 NOT_NUMERIC(整批回滚由内层保证)", () => {

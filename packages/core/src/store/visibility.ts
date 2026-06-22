@@ -9,12 +9,12 @@
 
 import type { DB } from "./db.js";
 import { stateGet, stateSet } from "./state.js";
-import { eventAppend } from "./event.js";
+import { logAppend } from "./log.js";
 import { DiceloreError } from "../errors.js";
 
 // 可见性变更审计:kind=note、visible=0(对玩家隐),供 L3 / 回看(§4.2)。
 function auditNote(db: DB, content: string): void {
-  eventAppend(db, { kind: "note", content, visible: 0 });
+  logAppend(db, { kind: "note", content, visible: 0 });
 }
 
 // attr 级:指定 cell 置 1(暗值 visible=2 焊死,不揭);entity 级(省 attr):写长效策略 cell __show_all。
@@ -43,7 +43,7 @@ export function revealOnce(db: DB, target: RevealTarget): number {
   if (target.kind === "sheet") {
     const cell = stateGet(db, target.entity, target.attr);
     if (!cell) throw new DiceloreError("ENTITY_NOT_FOUND", `revealOnce: sheet cell 不存在 ${target.entity}.${target.attr}`);
-    return eventAppend(db, {
+    return logAppend(db, {
       kind: "reveal",
       visible: 1,
       content: `${target.entity}.${target.attr} = ${cell.value}`,
@@ -54,7 +54,7 @@ export function revealOnce(db: DB, target: RevealTarget): number {
     | { name: string; content: string }
     | undefined;
   if (!doc) throw new DiceloreError("ENTITY_NOT_FOUND", `revealOnce: world_doc#${target.rowid} 不存在`);
-  return eventAppend(db, {
+  return logAppend(db, {
     kind: "reveal",
     visible: 1,
     content: doc.content,

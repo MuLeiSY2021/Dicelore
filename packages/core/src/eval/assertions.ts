@@ -7,7 +7,7 @@
 // Software Foundation, either version 3 of the License, or (at your option)
 // any later version. See <https://www.gnu.org/licenses/>.
 
-import type { EventRow } from "../store/event.js";
+import type { LogRow } from "../store/log.js";
 
 // eval 机械断言地板（客观、确定性、零 LLM）。语义判断（软着陆、明暗骰选对、与真人 GM 质量差距）
 // 归带语料参考的 grader（见 eval/grader.md），不在此。本模块只判能机械确证的：
@@ -54,7 +54,7 @@ export interface ToolStats {
 }
 
 // 工具使用画像：供报告 + grader 参考（不直接判分）。
-export function toolStats(events: EventRow[]): ToolStats {
+export function toolStats(events: LogRow[]): ToolStats {
   const s: ToolStats = { narrate: 0, reveal: 0, choice: 0, mutation: 0, watcherFired: 0, note: 0, verdictGated: 0, verdictAuto: 0 };
   for (const e of events) {
     switch (e.kind) {

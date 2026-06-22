@@ -12,7 +12,7 @@ import { initSchema, openDb, type DB } from "./db.js";
 import { stateGet, stateSet } from "./state.js";
 import { applyMutations } from "./mutate.js";
 import { watcherSet } from "./watcher.js";
-import { eventSince } from "./event.js";
+import { logSince } from "./log.js";
 import { DiceloreError } from "../errors.js";
 
 let db: DB;
@@ -54,7 +54,7 @@ describe("applyMutations", () => {
       { attr: "状态", op: "-", expr: "1" },
     ])).toThrow();
     expect(stateGet(db, "张三", "HP")).toBeUndefined(); // 回滚:第一项也没写进
-    expect(eventSince(db, 0)).toHaveLength(0); // event 也在事务内,一并回滚
+    expect(logSince(db, 0)).toHaveLength(0); // event 也在事务内,一并回滚
   });
   test("{ref}*N 不被误判为词条,推回值表达式后因不支持 * 报错", () => {
     expect(() => applyMutations(db, "张三", [{ attr: "库存", op: "+", expr: "{李四.数量}*2" }])).toThrow();
@@ -64,7 +64,7 @@ describe("applyMutations", () => {
     watcherSet(db, { condition: "{张三.HP} < 10", payload: "濒死" });
     const r = applyMutations(db, "张三", [{ attr: "HP", op: "=", expr: "5" }]);
     expect(r.fired_watchers).toEqual([{ id: 1, payload: "濒死" }]);
-    expect(eventSince(db, 0).some((e) => e.kind === "mutation")).toBe(true);
+    expect(logSince(db, 0).some((e) => e.kind === "mutation")).toBe(true);
   });
 });
 

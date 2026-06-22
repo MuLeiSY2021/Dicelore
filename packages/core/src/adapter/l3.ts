@@ -8,10 +8,10 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 // packages/core/src/adapter/l3.ts
-import type { EventRow } from "../store/event.js";
+import type { LogRow } from "../store/log.js";
 
 export interface L3Input {
-  events: EventRow[];
+  events: LogRow[];
   transcriptHasText: boolean;
   pendingChoiceEmpty: boolean;
   hasGameEnd: boolean;
