@@ -10,7 +10,7 @@
 import { beforeEach, describe, expect, test } from "vitest";
 import { initSchema, openDb, type DB } from "./db.js";
 import {
-  worldDocGet, worldDocSearch, worldDocUpsert,
+  loreGet, loreSearch, loreUpsert,
   worldPoolAdd, worldRegister, worldSample,
 } from "./world.js";
 
@@ -20,34 +20,34 @@ beforeEach(() => {
   initSchema(db);
 });
 
-describe("world_doc", () => {
+describe("lore", () => {
   test("upsert 后 get", () => {
-    worldDocUpsert(db, { name: "青云门", content: "正道大派,坐落青云山", category: "门派" });
-    expect(worldDocGet(db, "青云门")).toMatchObject({ name: "青云门", content: "正道大派,坐落青云山", category: "门派", visible: 0 });
+    loreUpsert(db, { name: "青云门", content: "正道大派,坐落青云山", category: "门派" });
+    expect(loreGet(db, "青云门")).toMatchObject({ name: "青云门", content: "正道大派,坐落青云山", category: "门派", visible: 0 });
   });
   test("同名 upsert 覆盖内容(不新增行)", () => {
-    worldDocUpsert(db, { name: "青云门", content: "旧设定" });
-    worldDocUpsert(db, { name: "青云门", content: "新设定" });
-    expect(worldDocGet(db, "青云门")!.content).toBe("新设定");
-    expect(db.prepare("SELECT COUNT(*) c FROM world_doc").get()).toMatchObject({ c: 1 });
+    loreUpsert(db, { name: "青云门", content: "旧设定" });
+    loreUpsert(db, { name: "青云门", content: "新设定" });
+    expect(loreGet(db, "青云门")!.content).toBe("新设定");
+    expect(db.prepare("SELECT COUNT(*) c FROM lore").get()).toMatchObject({ c: 1 });
   });
   test("FTS 搜索命中(含按 name 召回)", () => {
-    worldDocUpsert(db, { name: "青云门", content: "正道大派" });
-    worldDocUpsert(db, { name: "魔教", content: "邪道势力" });
-    expect(worldDocSearch(db, "正道").map((d) => d.name)).toEqual(["青云门"]);
-    expect(worldDocSearch(db, "魔教").map((d) => d.name)).toEqual(["魔教"]);
+    loreUpsert(db, { name: "青云门", content: "正道大派" });
+    loreUpsert(db, { name: "魔教", content: "邪道势力" });
+    expect(loreSearch(db, "正道").map((d) => d.name)).toEqual(["青云门"]);
+    expect(loreSearch(db, "魔教").map((d) => d.name)).toEqual(["魔教"]);
   });
   test("FTS 覆盖 tags(§5 tag 兜底召回)", () => {
-    worldDocUpsert(db, { name: "青云门", content: "正道大派", tags: "仙侠,门派" });
-    expect(worldDocSearch(db, "仙侠").map((d) => d.name)).toEqual(["青云门"]);
+    loreUpsert(db, { name: "青云门", content: "正道大派", tags: "仙侠,门派" });
+    expect(loreSearch(db, "仙侠").map((d) => d.name)).toEqual(["青云门"]);
   });
   test("重 upsert 后旧内容搜不到(reindex)", () => {
     // jieba: "剑冢古地" → ["剑冢","古","地"]  /  "天山雪莲" → ["天山","雪莲"]
     // 两版本无共享词根,确保 DELETE+INSERT 已物理替换影子行
-    worldDocUpsert(db, { name: "青云门", content: "剑冢古地" });
-    worldDocUpsert(db, { name: "青云门", content: "天山雪莲" });
-    expect(worldDocSearch(db, "剑冢")).toEqual([]);
-    expect(worldDocSearch(db, "天山").map((d) => d.name)).toEqual(["青云门"]);
+    loreUpsert(db, { name: "青云门", content: "剑冢古地" });
+    loreUpsert(db, { name: "青云门", content: "天山雪莲" });
+    expect(loreSearch(db, "剑冢")).toEqual([]);
+    expect(loreSearch(db, "天山").map((d) => d.name)).toEqual(["青云门"]);
   });
 });
 

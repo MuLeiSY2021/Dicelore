@@ -48,7 +48,7 @@ export function initSchema(db: DB): void {
       mode TEXT NOT NULL DEFAULT 'once', armed INTEGER NOT NULL DEFAULT 1,
       last_fired_seq INTEGER, status TEXT NOT NULL DEFAULT 'active'
     );
-    CREATE TABLE IF NOT EXISTS world_doc (
+    CREATE TABLE IF NOT EXISTS lore (
       name TEXT, content TEXT, category TEXT, tags TEXT, visible INTEGER NOT NULL DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS world_pool (

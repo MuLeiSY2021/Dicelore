@@ -13,7 +13,7 @@ const { openSession, metaSet } = await import("../../src/session/resolve.js");
 const { ruleUpsert } = await import("../../src/store/rule.js");
 const { stateSet } = await import("../../src/store/state.js");
 const { sheetShow } = await import("../../src/store/visibility.js");
-const { worldDocUpsert, worldPoolAdd } = await import("../../src/store/world.js");
+const { loreUpsert, worldPoolAdd } = await import("../../src/store/world.js");
 const { watcherSet } = await import("../../src/store/watcher.js");
 
 const { db, path } = openSession();
@@ -64,18 +64,18 @@ stateSet(db, "嘉比里拉", "信任玩家", "10");        // 暗值
 stateSet(db, "世界", "狩猎声望", "0", 1);          // 公开：玩家在部落的声望
 stateSet(db, "世界", "精灵复仇进度", "0");          // 暗值 Clock：精灵察觉兽人猎场→集结→讨伐
 
-// ── world_doc（散文底料；NPC 人设；伏笔）────────────────────────────────
-worldDocUpsert(db, { name: "设定·兽人部落", visible: 1, category: "设定", content:
+// ── lore（散文底料；NPC 人设；伏笔）────────────────────────────────
+loreUpsert(db, { name: "设定·兽人部落", visible: 1, category: "设定", content:
   "灰齿部落据守一片夹在黑森林与草原之间的山谷。兽人好战、物质至上，靠掠夺与狩猎为生。与森林深处的精灵世仇已绵延数百年。" });
-worldDocUpsert(db, { name: "NPC·老大", category: "npc", tags: "首领 灰齿", content:
+loreUpsert(db, { name: "NPC·老大", category: "npc", tags: "首领 灰齿", content:
   "灰齿部落首领，力量最强的战士，掌管资源分配与战略。表面粗暴爱用拳头说话，但年轻时曾在一个大军阀手下做过小弟，懂得政治与人心——这一面他从不示人。" });
-worldDocUpsert(db, { name: "NPC·大萨满", category: "npc", tags: "祭司 神谕", content:
+loreUpsert(db, { name: "NPC·大萨满", category: "npc", tags: "祭司 神谕", content:
   "灰齿部落祭司，掌握神话逻辑与诅咒知识。与老大明争暗斗却始终稳坐——他换过好几任老大都没被推翻，根基深不可测。" });
-worldDocUpsert(db, { name: "NPC·嘉比里拉", category: "npc", tags: "精灵 俘虏 伏笔", content:
+loreUpsert(db, { name: "NPC·嘉比里拉", category: "npc", tags: "精灵 俘虏 伏笔", content:
   "一名被俘的高等精灵，看上去只是个温顺的奴隶。但她似乎知道关于诅咒的秘密，会在私下劝说能听懂她的兽人去『打破生殖隔离』——她真正想要什么、背后是否有势力，尚不清楚。" });
-worldDocUpsert(db, { name: "伏笔·铁盒子", category: "伏笔", tags: "嘉比里拉 神秘", content:
+loreUpsert(db, { name: "伏笔·铁盒子", category: "伏笔", tags: "嘉比里拉 神秘", content:
   "嘉比里拉提到过：黑森林某处埋着一只古老的金属匣子，她声称那里面装着『能改变兽人命运的东西』。匣中何物，她不肯说。" });
-worldDocUpsert(db, { name: "传说·诅咒", category: "传说", tags: "诅咒 精灵 女神", content:
+loreUpsert(db, { name: "传说·诅咒", category: "传说", tags: "诅咒 精灵 女神", content:
   "兽人萨满世代传诵：兽人女神是大神强占精灵母神所生，精灵的诅咒让两族永不能杂交。但传说也说，若有兽人能让一个精灵『心甘情愿』，诅咒或可松动——没人当真过。" });
 
 // ── 卡池 / 随机表（worldPoolAdd，整行 row_json）──────────────────────────

@@ -28,7 +28,7 @@ export function sheetShow(db: DB, entity: string, attr?: string): void {
   auditNote(db, `揭示:${entity}.${attr}`);
 }
 
-export function worldShow(db: DB, table: "world_doc" | "world_pool", rowid: number): void {
+export function worldShow(db: DB, table: "lore" | "world_pool", rowid: number): void {
   // table 是字面量联合类型(非用户自由输入)→ 插值安全。
   db.prepare(`UPDATE ${table} SET visible=1 WHERE rowid=?`).run(rowid);
   auditNote(db, `揭示:${table}#${rowid}`);
@@ -36,7 +36,7 @@ export function worldShow(db: DB, table: "world_doc" | "world_pool", rowid: numb
 
 export type RevealTarget =
   | { kind: "sheet"; entity: string; attr: string }
-  | { kind: "world_doc"; rowid: number };
+  | { kind: "lore"; rowid: number };
 
 // reveal_once:append 一条 kind=reveal 的可见 event,内容=目标此刻冻结副本;不碰目标自身 visible(底层仍隐)。
 export function revealOnce(db: DB, target: RevealTarget): number {
@@ -50,14 +50,14 @@ export function revealOnce(db: DB, target: RevealTarget): number {
       data_json: { kind: "sheet", entity: target.entity, attr: target.attr, value: cell.value },
     });
   }
-  const doc = db.prepare("SELECT name, content FROM world_doc WHERE rowid=?").get(target.rowid) as
+  const doc = db.prepare("SELECT name, content FROM lore WHERE rowid=?").get(target.rowid) as
     | { name: string; content: string }
     | undefined;
-  if (!doc) throw new DiceloreError("ENTITY_NOT_FOUND", `revealOnce: world_doc#${target.rowid} 不存在`);
+  if (!doc) throw new DiceloreError("ENTITY_NOT_FOUND", `revealOnce: lore#${target.rowid} 不存在`);
   return logAppend(db, {
     kind: "reveal",
     visible: 1,
     content: doc.content,
-    data_json: { kind: "world_doc", rowid: target.rowid, name: doc.name, content: doc.content },
+    data_json: { kind: "lore", rowid: target.rowid, name: doc.name, content: doc.content },
   });
 }

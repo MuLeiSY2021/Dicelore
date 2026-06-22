@@ -11,7 +11,7 @@ import type { Rng } from "../dice/index.js";
 import type { DB } from "./db.js";
 import { ftsIndex, ftsSearch } from "./fts.js";
 
-export interface WorldDoc {
+export interface Lore {
   rowid: number;
   name: string;
   content: string;
@@ -21,37 +21,37 @@ export interface WorldDoc {
 }
 
 // 按 name 寻址(灌注不重名;AI/作者再写同名 = 覆盖)。name 无 UNIQUE 约束,代码层保证。
-export function worldDocUpsert(
+export function loreUpsert(
   db: DB,
   d: { name: string; content: string; category?: string; tags?: string; visible?: number },
 ): number {
-  const existing = db.prepare("SELECT rowid FROM world_doc WHERE name=?").get(d.name) as { rowid: number } | undefined;
+  const existing = db.prepare("SELECT rowid FROM lore WHERE name=?").get(d.name) as { rowid: number } | undefined;
   let rowid: number;
   if (existing) {
     rowid = existing.rowid;
-    db.prepare("UPDATE world_doc SET content=?, category=?, tags=?, visible=? WHERE rowid=?").run(
+    db.prepare("UPDATE lore SET content=?, category=?, tags=?, visible=? WHERE rowid=?").run(
       d.content, d.category ?? null, d.tags ?? null, d.visible ?? 0, rowid,
     );
   } else {
     const info = db
-      .prepare("INSERT INTO world_doc (name, content, category, tags, visible) VALUES (?, ?, ?, ?, ?)")
+      .prepare("INSERT INTO lore (name, content, category, tags, visible) VALUES (?, ?, ?, ?, ?)")
       .run(d.name, d.content, d.category ?? null, d.tags ?? null, d.visible ?? 0);
     rowid = Number(info.lastInsertRowid);
   }
-  ftsIndex(db, "world_doc_fts", rowid, `${d.name}\n${d.content}${d.tags ? "\n" + d.tags : ""}`);
+  ftsIndex(db, "lore_fts", rowid, `${d.name}\n${d.content}${d.tags ? "\n" + d.tags : ""}`);
   return rowid;
 }
 
-export function worldDocGet(db: DB, name: string): WorldDoc | undefined {
+export function loreGet(db: DB, name: string): Lore | undefined {
   return db
-    .prepare("SELECT rowid, name, content, category, tags, visible FROM world_doc WHERE name=? LIMIT 1")
-    .get(name) as WorldDoc | undefined;
+    .prepare("SELECT rowid, name, content, category, tags, visible FROM lore WHERE name=? LIMIT 1")
+    .get(name) as Lore | undefined;
 }
 
-export function worldDocSearch(db: DB, query: string, limit = 20): WorldDoc[] {
-  const hits = ftsSearch(db, "world_doc_fts", query, limit);
-  const stmt = db.prepare("SELECT rowid, name, content, category, tags, visible FROM world_doc WHERE rowid=?");
-  return hits.map((h) => stmt.get(h.rowid) as WorldDoc | undefined).filter((r): r is WorldDoc => r !== undefined);
+export function loreSearch(db: DB, query: string, limit = 20): Lore[] {
+  const hits = ftsSearch(db, "lore_fts", query, limit);
+  const stmt = db.prepare("SELECT rowid, name, content, category, tags, visible FROM lore WHERE rowid=?");
+  return hits.map((h) => stmt.get(h.rowid) as Lore | undefined).filter((r): r is Lore => r !== undefined);
 }
 
 export interface PoolAdd {

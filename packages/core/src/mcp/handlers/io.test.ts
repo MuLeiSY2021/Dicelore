@@ -11,7 +11,7 @@
 import { describe, it, expect } from "vitest";
 import { openDb, initSchema } from "../../store/db.js";
 import { stateGet, stateSet } from "../../store/state.js";
-import { worldDocUpsert } from "../../store/world.js";
+import { loreUpsert } from "../../store/world.js";
 import { logSince } from "../../store/log.js";
 import { metaGet } from "../../session/resolve.js";
 import { ioTools } from "./io.js";
@@ -33,10 +33,10 @@ describe("io handlers", () => {
 
   it("world_show(doc):按名解析 rowid 翻 visible", () => {
     const db = freshDb();
-    const rowid = worldDocUpsert(db, { name: "密道", content: "通往地窖", visible: 0 });
+    const rowid = loreUpsert(db, { name: "密道", content: "通往地窖", visible: 0 });
     const out = byName("world_show").handler(db, { doc: "密道" });
     expect(out.ok).toBe(true);
-    const row = db.prepare("SELECT visible FROM world_doc WHERE rowid=?").get(rowid) as { visible: number };
+    const row = db.prepare("SELECT visible FROM lore WHERE rowid=?").get(rowid) as { visible: number };
     expect(row.visible).toBe(1);
   });
 

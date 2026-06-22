@@ -9,7 +9,7 @@
 
 // src/mcp/handlers/world.ts
 import type { DB } from "../../store/db.js";
-import { worldDocSearch, worldSample, worldRegister, worldDocUpsert, type WorldDoc } from "../../store/world.js";
+import { loreSearch, worldSample, worldRegister, loreUpsert, type Lore } from "../../store/world.js";
 import { ruleSearch, type RuleDoc } from "../../store/rule.js";
 import { truncateText } from "../../store/truncate.js";
 import { DiceloreError } from "../../errors.js";
@@ -20,9 +20,9 @@ import {
 } from "../schemas/world.js";
 
 function searchHandler(db: DB, input: { query: string; k: number; category?: string }) {
-  let docs = worldDocSearch(db, input.query, input.k);
+  let docs = loreSearch(db, input.query, input.k);
   if (input.category) docs = docs.filter((d) => d.category === input.category);
-  const mapped = docs.map((d: WorldDoc) => ({ rowid: d.rowid, name: d.name, content: d.content, category: d.category, visible: d.visible }));
+  const mapped = docs.map((d: Lore) => ({ rowid: d.rowid, name: d.name, content: d.content, category: d.category, visible: d.visible }));
   const { truncated } = truncateText(JSON.stringify(mapped));
   return { docs: mapped, truncated };
 }
@@ -42,7 +42,7 @@ function registerHandler(
   }
   let rowid: number;
   if (input.target === "doc") {
-    rowid = worldDocUpsert(db, { ...input.doc, visible: input.visible });
+    rowid = loreUpsert(db, { ...input.doc, visible: input.visible });
   } else {
     rowid = worldRegister(db, { pool: input.pool.pool, row: input.pool.row, weight: input.pool.weight, visible: input.visible });
   }

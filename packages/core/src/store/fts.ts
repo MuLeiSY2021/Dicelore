@@ -53,7 +53,7 @@ export function buildFtsQuery(query: string, mode: FtsMode = ftsMode()): FtsQuer
   return { match, like: null };
 }
 
-export const FTS_TABLES = ["log_fts", "world_doc_fts", "rule_doc_fts"] as const;
+export const FTS_TABLES = ["log_fts", "lore_fts", "rule_doc_fts"] as const;
 
 export type FtsDB = Database.Database;
 

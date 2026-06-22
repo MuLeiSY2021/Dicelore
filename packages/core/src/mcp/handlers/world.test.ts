@@ -10,7 +10,7 @@
 // src/mcp/handlers/world.test.ts
 import { describe, it, expect } from "vitest";
 import { openDb, initSchema } from "../../store/db.js";
-import { worldDocGet } from "../../store/world.js";
+import { loreGet } from "../../store/world.js";
 import { ruleUpsert } from "../../store/rule.js";
 import { worldTools } from "./world.js";
 import { DiceloreError } from "../../errors.js";
@@ -27,7 +27,7 @@ describe("world/rule handlers", () => {
       visible: 0,
     });
     expect(reg.ok).toBe(true);
-    expect(worldDocGet(db, "黯礁港")?.content).toContain("走私者");
+    expect(loreGet(db, "黯礁港")?.content).toContain("走私者");
     const found = byName("world_search").handler(db, { query: "走私者", k: 8 });
     expect(found.docs.some((d: any) => d.name === "黯礁港")).toBe(true);
     expect(found.truncated).toBe(false);
@@ -42,7 +42,7 @@ describe("world/rule handlers", () => {
     const hit = found.docs.find((d: any) => d.name === "黯礁港");
     expect(hit).toBeDefined();
     expect(typeof (hit as any).rowid).toBe("number");
-    expect((hit as any).rowid).toBe(worldDocGet(db, "黯礁港")!.rowid);
+    expect((hit as any).rowid).toBe(loreGet(db, "黯礁港")!.rowid);
   });
 
   it("world_register(pool)+world_sample:抽样回 rows", () => {
