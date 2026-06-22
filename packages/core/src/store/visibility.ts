@@ -8,7 +8,7 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import type { DB } from "./db.js";
-import { sheetGet, sheetSetRaw } from "./sheet.js";
+import { stateGet, stateSet } from "./state.js";
 import { eventAppend } from "./event.js";
 import { DiceloreError } from "../errors.js";
 
@@ -20,11 +20,11 @@ function auditNote(db: DB, content: string): void {
 // attr 级:指定 cell 置 1(暗值 visible=2 焊死,不揭);entity 级(省 attr):写长效策略 cell __show_all。
 export function sheetShow(db: DB, entity: string, attr?: string): void {
   if (attr === undefined) {
-    sheetSetRaw(db, entity, "__show_all", "1");
+    stateSet(db, entity, "__show_all", "1");
     auditNote(db, `揭示:${entity} 全卡(__show_all)`);
     return;
   }
-  db.prepare("UPDATE sheet SET visible=1 WHERE entity=? AND attr=? AND visible!=2").run(entity, attr);
+  db.prepare("UPDATE state SET visible=1 WHERE entity=? AND attr=? AND visible!=2").run(entity, attr);
   auditNote(db, `揭示:${entity}.${attr}`);
 }
 
@@ -41,7 +41,7 @@ export type RevealTarget =
 // reveal_once:append 一条 kind=reveal 的可见 event,内容=目标此刻冻结副本;不碰目标自身 visible(底层仍隐)。
 export function revealOnce(db: DB, target: RevealTarget): number {
   if (target.kind === "sheet") {
-    const cell = sheetGet(db, target.entity, target.attr);
+    const cell = stateGet(db, target.entity, target.attr);
     if (!cell) throw new DiceloreError("ENTITY_NOT_FOUND", `revealOnce: sheet cell 不存在 ${target.entity}.${target.attr}`);
     return eventAppend(db, {
       kind: "reveal",

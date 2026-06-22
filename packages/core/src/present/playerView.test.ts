@@ -10,7 +10,7 @@
 import { describe, it, expect } from "vitest";
 import { openDb, initSchema } from "../store/db.js";
 import { eventAppend } from "../store/event.js";
-import { sheetSetRaw } from "../store/sheet.js";
+import { stateSet } from "../store/state.js";
 import { sheetShow, revealOnce } from "../store/visibility.js";
 import { buildPlayerView } from "./playerView.js";
 
@@ -26,7 +26,7 @@ describe("buildPlayerView", () => {
     eventAppend(db, { kind: "narrate", content: "雨下了三天。" }); // seq1 可见
     eventAppend(db, { kind: "verdict", content: "命中" }); // seq2 → 进面板不进 narration
     eventAppend(db, { kind: "note", content: "伏笔", visible: 0 }); // seq3 隐,不进
-    sheetSetRaw(db, "玩家", "HP", "30");
+    stateSet(db, "玩家", "HP", "30");
     revealOnce(db, { kind: "sheet", entity: "玩家", attr: "HP" }); // seq4 reveal 可见
     const pv = buildPlayerView(db);
     expect(pv.narration.map((n) => n.kind)).toEqual(["narrate", "reveal"]);
@@ -45,8 +45,8 @@ describe("buildPlayerView", () => {
 
   it("panel = buildPresentationModel:可见 cell 进状态菜单", () => {
     const db = freshDb();
-    sheetSetRaw(db, "玩家", "金币", "50", 1); // 可见
-    sheetSetRaw(db, "玩家", "暗值", "9", 2); // 强制隐
+    stateSet(db, "玩家", "金币", "50", 1); // 可见
+    stateSet(db, "玩家", "暗值", "9", 2); // 强制隐
     const pv = buildPlayerView(db);
     const keys = pv.panel.statusMenu.map((c) => `${c.entity}.${c.attr}`);
     expect(keys).toContain("玩家.金币");

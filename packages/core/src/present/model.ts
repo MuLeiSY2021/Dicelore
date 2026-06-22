@@ -24,11 +24,11 @@ const ECHO_KINDS = ["verdict", "mutation", "watcher_fired"] as const;
 // __show_all 标记 cell 本身不进菜单。
 function statusMenu(db: DB): VisibleCell[] {
   return db.prepare(
-    `SELECT entity, attr, value FROM sheet
+    `SELECT entity, attr, value FROM state
       WHERE attr != '__show_all'
         AND ( visible = 1
               OR ( visible != 2
-                   AND entity IN (SELECT entity FROM sheet WHERE attr='__show_all' AND value='1') ) )
+                   AND entity IN (SELECT entity FROM state WHERE attr='__show_all' AND value='1') ) )
       ORDER BY entity, attr`,
   ).all() as VisibleCell[];
 }

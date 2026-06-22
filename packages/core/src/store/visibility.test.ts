@@ -9,7 +9,7 @@
 
 import { beforeEach, describe, expect, it, test } from "vitest";
 import { initSchema, openDb, type DB } from "./db.js";
-import { sheetGet, sheetSetRaw } from "./sheet.js";
+import { stateGet, stateSet } from "./state.js";
 import { eventSince } from "./event.js";
 import { worldDocUpsert, worldPoolAdd } from "./world.js";
 import { revealOnce, sheetShow, worldShow } from "./visibility.js";
@@ -20,20 +20,20 @@ beforeEach(() => { db = openDb(":memory:"); initSchema(db); });
 
 describe("sheetShow", () => {
   test("attr 级置 visible=1 + 审计 note(对玩家隐)", () => {
-    sheetSetRaw(db, "张三", "HP", "30", 0);
+    stateSet(db, "张三", "HP", "30", 0);
     sheetShow(db, "张三", "HP");
-    expect(sheetGet(db, "张三", "HP")!.visible).toBe(1);
+    expect(stateGet(db, "张三", "HP")!.visible).toBe(1);
     const note = eventSince(db, 0).find((e) => e.kind === "note");
     expect(note!.visible).toBe(0);
   });
   test("暗值 visible=2 焊死,attr 级 show 不揭", () => {
-    sheetSetRaw(db, "张三", "底牌", "杀招", 2);
+    stateSet(db, "张三", "底牌", "杀招", 2);
     sheetShow(db, "张三", "底牌");
-    expect(sheetGet(db, "张三", "底牌")!.visible).toBe(2);
+    expect(stateGet(db, "张三", "底牌")!.visible).toBe(2);
   });
   test("entity 级写 __show_all 策略 cell", () => {
     sheetShow(db, "张三");
-    expect(sheetGet(db, "张三", "__show_all")!.value).toBe("1");
+    expect(stateGet(db, "张三", "__show_all")!.value).toBe("1");
   });
 });
 
@@ -55,14 +55,14 @@ describe("worldShow", () => {
 
 describe("revealOnce", () => {
   test("sheet:append kind=reveal 可见 event 存冻结值,不碰目标 visible", () => {
-    sheetSetRaw(db, "张三", "真名", "赵四", 0);
+    stateSet(db, "张三", "真名", "赵四", 0);
     const seq = revealOnce(db, { kind: "sheet", entity: "张三", attr: "真名" });
     const ev = eventSince(db, 0).find((e) => e.seq === seq)!;
     expect(ev.kind).toBe("reveal");
     expect(ev.visible).toBe(1);
     expect(JSON.parse(ev.data_json!)).toMatchObject({ kind: "sheet", entity: "张三", attr: "真名", value: "赵四" });
     // 目标底层仍隐
-    expect(sheetGet(db, "张三", "真名")!.visible).toBe(0);
+    expect(stateGet(db, "张三", "真名")!.visible).toBe(0);
   });
 });
 

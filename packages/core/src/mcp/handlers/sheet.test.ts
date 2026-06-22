@@ -11,6 +11,7 @@
 import { describe, it, expect } from "vitest";
 import { openDb, initSchema } from "../../store/db.js";
 import { sheetSetRaw, sheetGet } from "../../store/sheet.js";
+import { stateGet, stateSet } from "../../store/state.js";
 import { eventSince } from "../../store/event.js";
 import { sheetTools } from "./sheet.js";
 
@@ -39,7 +40,7 @@ describe("sheet handlers", () => {
 
   it("sheet_update:落 mutation event 透传 event_id + applied 账本", () => {
     const db = freshDb();
-    sheetSetRaw(db, "张三", "HP", "30");
+    stateSet(db, "张三", "HP", "30");
     const out = byName("sheet_update").handler(db, {
       entity: "张三",
       mutations: [{ attr: "HP", op: "-", expr: "5" }],
@@ -47,13 +48,13 @@ describe("sheet handlers", () => {
     expect(out.entity).toBe("张三");
     expect(out.applied[0].new).toBe("25");
     expect(typeof out.event_id).toBe("number");
-    expect(sheetGet(db, "张三", "HP")?.value).toBe("25");
+    expect(stateGet(db, "张三", "HP")?.value).toBe("25");
     expect(eventSince(db, 0).filter((e) => e.kind === "mutation")).toHaveLength(1);
   });
 
   it("sheet_update:非数值算术抛 NOT_NUMERIC(整批回滚由内层保证)", () => {
     const db = freshDb();
-    sheetSetRaw(db, "张三", "名", "李四");
+    stateSet(db, "张三", "名", "李四");
     expect(() => byName("sheet_update").handler(db, {
       entity: "张三",
       mutations: [{ attr: "名", op: "+", expr: "1" }],

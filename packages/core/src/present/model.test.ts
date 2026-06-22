@@ -10,7 +10,7 @@
 import { describe, it, expect } from "vitest";
 import { openDb, initSchema } from "../store/db.js";
 import { eventAppend } from "../store/event.js";
-import { sheetSetRaw } from "../store/sheet.js";
+import { stateSet } from "../store/state.js";
 import { sheetShow } from "../store/visibility.js";
 import { stagePendingChoice, materializePendingChoice } from "../store/choice.js";
 import { buildPresentationModel } from "./model.js";
@@ -24,10 +24,10 @@ function freshDb() {
 describe("buildPresentationModel", () => {
   it("statusMenu 只含可见 cell:visible=1 或 __show_all 且 visible≠2", () => {
     const db = freshDb();
-    sheetSetRaw(db, "张三", "HP", "30");          // 默认 visible=0,隐
-    sheetSetRaw(db, "张三", "金币", "100", 1);     // 显式可见
-    sheetSetRaw(db, "李四", "AC", "15");          // 隐
-    sheetSetRaw(db, "李四", "暗值", "9", 2);       // 强制隐
+    stateSet(db, "张三", "HP", "30");          // 默认 visible=0,隐
+    stateSet(db, "张三", "金币", "100", 1);     // 显式可见
+    stateSet(db, "李四", "AC", "15");          // 隐
+    stateSet(db, "李四", "暗值", "9", 2);       // 强制隐
     sheetShow(db, "李四");                        // __show_all → 暴露 李四 非暗值 cell
     const m = buildPresentationModel(db);
     const keys = m.statusMenu.map((c) => `${c.entity}.${c.attr}`).sort();

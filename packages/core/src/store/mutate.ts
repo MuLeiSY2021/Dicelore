@@ -10,7 +10,7 @@
 import type { Rng } from "../dice/index.js";
 import { evalExpr, type RefGetter } from "../expr/evaluate.js";
 import type { DB } from "./db.js";
-import { sheetGet, sheetSetRaw } from "./sheet.js";
+import { stateGet, stateSet } from "./state.js";
 import { eventAppend } from "./event.js";
 import { recomputeWatchers } from "./watcher.js";
 import { DiceloreError } from "../errors.js";
@@ -57,7 +57,7 @@ export function applyMutations(
   mutations: Mutation[],
   opts?: { rng?: Rng },
 ): MutationResult {
-  const getRef: RefGetter = (e, a) => sheetGet(db, e, a)?.value;
+  const getRef: RefGetter = (e, a) => stateGet(db, e, a)?.value;
   const ctx = { rng: opts?.rng, getRef };
 
   const txn = db.transaction(() => {
@@ -68,17 +68,17 @@ export function applyMutations(
       // 词条分支:集合增减 / 赋文本
       if (member && (m.op === "+" || m.op === "-")) {
         const cellAttr = `${m.attr}:${member.name}`;
-        const old = sheetGet(db, entity, cellAttr)?.value ?? null;
+        const old = stateGet(db, entity, cellAttr)?.value ?? null;
         const oldN = old === null ? 0 : toNum(old, cellAttr);
         const next = oldN + (m.op === "+" ? member.qty : -member.qty);
-        if (next <= 0) db.prepare("DELETE FROM sheet WHERE entity=? AND attr=?").run(entity, cellAttr);
-        else sheetSetRaw(db, entity, cellAttr, String(next));
+        if (next <= 0) db.prepare("DELETE FROM state WHERE entity=? AND attr=?").run(entity, cellAttr);
+        else stateSet(db, entity, cellAttr, String(next));
         applied.push({ attr: cellAttr, op: m.op, expr: m.expr, kind: "set", old, delta: m.op === "+" ? member.qty : -member.qty, new: String(Math.max(next, 0)) });
         continue;
       }
       if (member && m.op === "=") {
-        const old = sheetGet(db, entity, m.attr)?.value ?? null;
-        sheetSetRaw(db, entity, m.attr, member.name);
+        const old = stateGet(db, entity, m.attr)?.value ?? null;
+        stateSet(db, entity, m.attr, member.name);
         applied.push({ attr: m.attr, op: m.op, expr: m.expr, kind: "set", old, new: member.name });
         continue;
       }
@@ -86,7 +86,7 @@ export function applyMutations(
       // 值表达式分支:标量算术 / 赋数
       const led = evalExpr(m.expr, ctx);
       const hasDice = led.terms.some((t) => t.kind === "dice");
-      const old = sheetGet(db, entity, m.attr)?.value ?? null;
+      const old = stateGet(db, entity, m.attr)?.value ?? null;
       let nextNum: number;
       if (m.op === "=") {
         nextNum = led.total;
@@ -94,7 +94,7 @@ export function applyMutations(
         const oldN = old === null ? 0 : toNum(old, m.attr);
         nextNum = oldN + (m.op === "+" ? led.total : -led.total);
       }
-      sheetSetRaw(db, entity, m.attr, String(nextNum));
+      stateSet(db, entity, m.attr, String(nextNum));
       applied.push({
         attr: m.attr, op: m.op, expr: m.expr,
         kind: hasDice ? "rolled" : "set",

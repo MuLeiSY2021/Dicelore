@@ -10,7 +10,7 @@
 // src/mcp/handlers/io.test.ts
 import { describe, it, expect } from "vitest";
 import { openDb, initSchema } from "../../store/db.js";
-import { sheetSetRaw, sheetGet } from "../../store/sheet.js";
+import { stateGet, stateSet } from "../../store/state.js";
 import { worldDocUpsert } from "../../store/world.js";
 import { eventSince } from "../../store/event.js";
 import { metaGet } from "../../session/resolve.js";
@@ -23,11 +23,11 @@ const byName = (n: string) => ioTools.find((t) => t.name === n)!;
 describe("io handlers", () => {
   it("sheet_show(attrs):翻 visible=1 + 落审计 note", () => {
     const db = freshDb();
-    sheetSetRaw(db, "张三", "秘密", "卧底", 0);
+    stateSet(db, "张三", "秘密", "卧底", 0);
     const out = byName("sheet_show").handler(db, { entity: "张三", attrs: ["秘密"] });
     expect(out.ok).toBe(true);
     expect(out.shown).toEqual(["秘密"]);
-    expect(sheetGet(db, "张三", "秘密")?.visible).toBe(1);
+    expect(stateGet(db, "张三", "秘密")?.visible).toBe(1);
     expect(eventSince(db, 0).some((e) => e.kind === "note")).toBe(true);
   });
 
@@ -42,13 +42,13 @@ describe("io handlers", () => {
 
   it("reveal_once(sheet):append kind=reveal 可见 event", () => {
     const db = freshDb();
-    sheetSetRaw(db, "门", "状态", "上锁", 0);
+    stateSet(db, "门", "状态", "上锁", 0);
     const out = byName("reveal_once").handler(db, { sheet: { entity: "门", attr: "状态" } });
     expect(typeof out.event_id).toBe("number");
     const reveals = eventSince(db, 0).filter((e) => e.kind === "reveal");
     expect(reveals).toHaveLength(1);
     expect(reveals[0].visible).toBe(1);
-    expect(sheetGet(db, "门", "状态")?.visible).toBe(0); // 不碰底层 visible
+    expect(stateGet(db, "门", "状态")?.visible).toBe(0); // 不碰底层 visible
   });
 
   it("narrate:落 kind=narrate visible=1 event", () => {
