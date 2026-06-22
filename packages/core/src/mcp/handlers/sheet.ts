@@ -9,7 +9,7 @@
 
 // src/mcp/handlers/sheet.ts
 import type { DB } from "../../store/db.js";
-import { sheetGet, sheetList } from "../../store/sheet.js";
+import { stateGet, stateList } from "../../store/state.js";
 import { applyMutations } from "../../store/mutate.js";
 import { truncateText } from "../../store/truncate.js";
 import type { ToolDef } from "../tooldef.js";
@@ -23,12 +23,12 @@ import {
 } from "../schemas/sheet.js";
 
 function getHandler(db: DB, input: { entity: string; attr: string }) {
-  const cell = sheetGet(db, input.entity, input.attr);
+  const cell = stateGet(db, input.entity, input.attr);
   return cell ? { value: cell.value, visible: cell.visible } : { value: null, visible: 0 };
 }
 
 function listHandler(db: DB, input: { entity: string; prefix?: string; limit: number; offset: number }) {
-  const all = sheetList(db, `${input.entity}.${input.prefix ?? ""}`);
+  const all = stateList(db, `${input.entity}.${input.prefix ?? ""}`);
   const page = all.slice(input.offset, input.offset + input.limit);
   const has_more = input.offset + input.limit < all.length;
   const cells = page.map((c) => ({ attr: c.attr, value: c.value, visible: c.visible }));

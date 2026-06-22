@@ -10,7 +10,6 @@
 // src/mcp/handlers/sheet.test.ts
 import { describe, it, expect } from "vitest";
 import { openDb, initSchema } from "../../store/db.js";
-import { sheetSetRaw, sheetGet } from "../../store/sheet.js";
 import { stateGet, stateSet } from "../../store/state.js";
 import { eventSince } from "../../store/event.js";
 import { sheetTools } from "./sheet.js";
@@ -21,16 +20,16 @@ const byName = (n: string) => sheetTools.find((t) => t.name === n)!;
 describe("sheet handlers", () => {
   it("sheet_get:命中返回 value+visible;缺失返回 {value:null,visible:0}", () => {
     const db = freshDb();
-    sheetSetRaw(db, "张三", "HP", "30", 1);
+    stateSet(db, "张三", "HP", "30", 1);
     expect(byName("sheet_get").handler(db, { entity: "张三", attr: "HP" })).toEqual({ value: "30", visible: 1 });
     expect(byName("sheet_get").handler(db, { entity: "张三", attr: "无" })).toEqual({ value: null, visible: 0 });
   });
 
   it("sheet_list:前缀扫 + 分页字段", () => {
     const db = freshDb();
-    sheetSetRaw(db, "张三", "库存:剑", "1");
-    sheetSetRaw(db, "张三", "库存:盾", "1");
-    sheetSetRaw(db, "张三", "库存:药", "3");
+    stateSet(db, "张三", "库存:剑", "1");
+    stateSet(db, "张三", "库存:盾", "1");
+    stateSet(db, "张三", "库存:药", "3");
     const out = byName("sheet_list").handler(db, { entity: "张三", prefix: "库存:", limit: 2, offset: 0 });
     expect(out.cells).toHaveLength(2);
     expect(out.has_more).toBe(true);
