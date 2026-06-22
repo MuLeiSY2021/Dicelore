@@ -62,26 +62,26 @@ export interface PoolAdd {
   visible?: number;
 }
 
-export function worldPoolAdd(db: DB, a: PoolAdd): number {
+export function poolAdd(db: DB, a: PoolAdd): number {
   const info = db
-    .prepare("INSERT INTO world_pool (pool, row_json, weight, source, visible) VALUES (?, ?, ?, ?, ?)")
+    .prepare("INSERT INTO pool (pool, row_json, weight, source, visible) VALUES (?, ?, ?, ?, ?)")
     .run(a.pool, JSON.stringify(a.row), a.weight ?? 1, a.source ?? "author", a.visible ?? 0);
   return Number(info.lastInsertRowid);
 }
 
 // 运行期 AI 现编(§4.3:source 是 author/ai 迁移钩子)。必经 store → 快照可覆盖。
 export function worldRegister(db: DB, a: Omit<PoolAdd, "source">): number {
-  return worldPoolAdd(db, { ...a, source: "ai" });
+  return poolAdd(db, { ...a, source: "ai" });
 }
 
-export function worldSample(
+export function poolSample(
   db: DB,
   pool: string,
   n: number,
   opts: { filter?: Record<string, string | number>; rng?: Rng } = {},
 ): Record<string, unknown>[] {
   const rng = opts.rng ?? Math.random;
-  let sql = "SELECT weight, row_json FROM world_pool WHERE pool=?";
+  let sql = "SELECT weight, row_json FROM pool WHERE pool=?";
   const args: (string | number)[] = [pool];
   if (opts.filter) {
     for (const [k, v] of Object.entries(opts.filter)) {

@@ -11,7 +11,7 @@ import { beforeEach, describe, expect, test } from "vitest";
 import { initSchema, openDb, type DB } from "./db.js";
 import {
   loreGet, loreSearch, loreUpsert,
-  worldPoolAdd, worldRegister, worldSample,
+  poolAdd, worldRegister, poolSample,
 } from "./world.js";
 
 let db: DB;
@@ -51,43 +51,43 @@ describe("lore", () => {
   });
 });
 
-describe("world_pool", () => {
+describe("pool", () => {
   test("整行存 row_json 不拍平,抽样返回结构对象", () => {
-    worldPoolAdd(db, { pool: "掉落", row: { 名称: "铁剑", 稀有度: "普通", 属性: { 攻击: 5 } } });
-    const out = worldSample(db, "掉落", 1, { rng: () => 0 });
+    poolAdd(db, { pool: "掉落", row: { 名称: "铁剑", 稀有度: "普通", 属性: { 攻击: 5 } } });
+    const out = poolSample(db, "掉落", 1, { rng: () => 0 });
     expect(out[0]).toEqual({ 名称: "铁剑", 稀有度: "普通", 属性: { 攻击: 5 } });
   });
   test("加权抽样确定性(rng 注入)", () => {
-    worldPoolAdd(db, { pool: "p", row: { n: "A" }, weight: 1 });
-    worldPoolAdd(db, { pool: "p", row: { n: "B" }, weight: 1 });
-    worldPoolAdd(db, { pool: "p", row: { n: "C" }, weight: 2 }); // total=4
-    expect(worldSample(db, "p", 1, { rng: () => 0 })[0]).toEqual({ n: "A" });
-    expect(worldSample(db, "p", 1, { rng: () => 0.99 })[0]).toEqual({ n: "C" });
+    poolAdd(db, { pool: "p", row: { n: "A" }, weight: 1 });
+    poolAdd(db, { pool: "p", row: { n: "B" }, weight: 1 });
+    poolAdd(db, { pool: "p", row: { n: "C" }, weight: 2 }); // total=4
+    expect(poolSample(db, "p", 1, { rng: () => 0 })[0]).toEqual({ n: "A" });
+    expect(poolSample(db, "p", 1, { rng: () => 0.99 })[0]).toEqual({ n: "C" });
   });
   test("左边界归属锁定:>= 确保边界点落在左边界元素", () => {
-    worldPoolAdd(db, { pool: "p", row: { n: "A" }, weight: 1 });
-    worldPoolAdd(db, { pool: "p", row: { n: "B" }, weight: 1 });
-    worldPoolAdd(db, { pool: "p", row: { n: "C" }, weight: 2 }); // total=4: A[0,1) B[1,2) C[2,4)
-    expect(worldSample(db, "p", 1, { rng: () => 0.25 })[0]).toEqual({ n: "B" }); // x=1.0 → B 左边界
-    expect(worldSample(db, "p", 1, { rng: () => 0.5 })[0]).toEqual({ n: "C" }); // x=2.0 → C 左边界
+    poolAdd(db, { pool: "p", row: { n: "A" }, weight: 1 });
+    poolAdd(db, { pool: "p", row: { n: "B" }, weight: 1 });
+    poolAdd(db, { pool: "p", row: { n: "C" }, weight: 2 }); // total=4: A[0,1) B[1,2) C[2,4)
+    expect(poolSample(db, "p", 1, { rng: () => 0.25 })[0]).toEqual({ n: "B" }); // x=1.0 → B 左边界
+    expect(poolSample(db, "p", 1, { rng: () => 0.5 })[0]).toEqual({ n: "C" }); // x=2.0 → C 左边界
   });
   test("无放回:抽 n 个不重复", () => {
-    worldPoolAdd(db, { pool: "p", row: { n: "A" } });
-    worldPoolAdd(db, { pool: "p", row: { n: "B" } });
-    worldPoolAdd(db, { pool: "p", row: { n: "C" } });
+    poolAdd(db, { pool: "p", row: { n: "A" } });
+    poolAdd(db, { pool: "p", row: { n: "B" } });
+    poolAdd(db, { pool: "p", row: { n: "C" } });
     const seq = [0, 0, 0];
     let i = 0;
-    const got = worldSample(db, "p", 3, { rng: () => seq[i++] });
+    const got = poolSample(db, "p", 3, { rng: () => seq[i++] });
     expect(got.map((r) => r.n).sort()).toEqual(["A", "B", "C"]);
   });
   test("n 超过池大小返回全部", () => {
-    worldPoolAdd(db, { pool: "p", row: { n: "A" } });
-    expect(worldSample(db, "p", 5, { rng: () => 0 })).toHaveLength(1);
+    poolAdd(db, { pool: "p", row: { n: "A" } });
+    expect(poolSample(db, "p", 5, { rng: () => 0 })).toHaveLength(1);
   });
   test("filter 按 json_extract 列过滤", () => {
-    worldPoolAdd(db, { pool: "掉落", row: { 名称: "铁剑", 类型: "武器" } });
-    worldPoolAdd(db, { pool: "掉落", row: { 名称: "丹药", 类型: "消耗" } });
-    const out = worldSample(db, "掉落", 5, { filter: { 类型: "武器" }, rng: () => 0 });
+    poolAdd(db, { pool: "掉落", row: { 名称: "铁剑", 类型: "武器" } });
+    poolAdd(db, { pool: "掉落", row: { 名称: "丹药", 类型: "消耗" } });
+    const out = poolSample(db, "掉落", 5, { filter: { 类型: "武器" }, rng: () => 0 });
     expect(out.map((r) => r.名称)).toEqual(["铁剑"]);
   });
 });
@@ -95,7 +95,7 @@ describe("world_pool", () => {
 describe("world_register", () => {
   test("AI 现编写入 source=ai", () => {
     const id = worldRegister(db, { pool: "随机事件", row: { 事件: "遇袭" } });
-    const row = db.prepare("SELECT source FROM world_pool WHERE rowid=?").get(id) as { source: string };
+    const row = db.prepare("SELECT source FROM pool WHERE rowid=?").get(id) as { source: string };
     expect(row.source).toBe("ai");
   });
 });

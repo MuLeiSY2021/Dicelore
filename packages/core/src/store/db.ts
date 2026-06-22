@@ -51,11 +51,11 @@ export function initSchema(db: DB): void {
     CREATE TABLE IF NOT EXISTS lore (
       name TEXT, content TEXT, category TEXT, tags TEXT, visible INTEGER NOT NULL DEFAULT 0
     );
-    CREATE TABLE IF NOT EXISTS world_pool (
+    CREATE TABLE IF NOT EXISTS pool (
       pool TEXT, row_json TEXT, weight REAL NOT NULL DEFAULT 1, source TEXT NOT NULL DEFAULT 'author',
       visible INTEGER NOT NULL DEFAULT 0
     );
-    CREATE TABLE IF NOT EXISTS rule_doc (
+    CREATE TABLE IF NOT EXISTS rule (
       name TEXT, content TEXT, category TEXT, version INTEGER NOT NULL DEFAULT 1
     );
     CREATE TABLE IF NOT EXISTS session_meta ( key TEXT PRIMARY KEY, value TEXT );

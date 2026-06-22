@@ -28,7 +28,7 @@ export function sheetShow(db: DB, entity: string, attr?: string): void {
   auditNote(db, `揭示:${entity}.${attr}`);
 }
 
-export function worldShow(db: DB, table: "lore" | "world_pool", rowid: number): void {
+export function worldShow(db: DB, table: "lore" | "pool", rowid: number): void {
   // table 是字面量联合类型(非用户自由输入)→ 插值安全。
   db.prepare(`UPDATE ${table} SET visible=1 WHERE rowid=?`).run(rowid);
   auditNote(db, `揭示:${table}#${rowid}`);
