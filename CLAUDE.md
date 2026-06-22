@@ -50,6 +50,8 @@
 3. **plan → DAG**：把任务拆成依赖图，无依赖的并发派 subagent（`subagent-driven-development` / `dispatching-parallel-agents`），按波次推进。
 4. 执行完 → 回到「问题生命周期 ③」：沉淀 wiki + 删 superpowers spec/plan + 关总账条目 + 删对应 todo。
 
+> **并行隔离（硬性）**：多条线 / 多 agent 并行干活时，**每条线开自己的 git worktree**（`using-git-worktrees` / `EnterWorktree`），别都挤在主工作目录。否则各线的未提交改动在同一工作树里互相串味、提交得逐文件 scoped add 才不带错、对账极痛（教训：组件7 线与数据层线同目录交错跑过一次）。同一条 `subagent-driven-development` 链内的串行 subagent 共用一个工作树即可（它们不并发）；要隔离的是**并行的线 / 会话**。
+
 ---
 
 ## 几条硬规矩（沿用 wiki [README](docs/wiki/README.md) 的「缜密」三规）
