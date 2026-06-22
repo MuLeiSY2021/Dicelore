@@ -13,7 +13,7 @@ const { openSession, metaSet } = await import("../../src/session/resolve.js");
 const { ruleUpsert } = await import("../../src/store/rule.js");
 const { stateSet } = await import("../../src/store/state.js");
 const { sheetShow } = await import("../../src/store/visibility.js");
-const { loreUpsert, worldPoolAdd } = await import("../../src/store/world.js");
+const { loreUpsert, poolAdd } = await import("../../src/store/world.js");
 const { watcherSet } = await import("../../src/store/watcher.js");
 
 const { db, path } = openSession();
@@ -78,7 +78,7 @@ loreUpsert(db, { name: "伏笔·铁盒子", category: "伏笔", tags: "嘉比里
 loreUpsert(db, { name: "传说·诅咒", category: "传说", tags: "诅咒 精灵 女神", content:
   "兽人萨满世代传诵：兽人女神是大神强占精灵母神所生，精灵的诅咒让两族永不能杂交。但传说也说，若有兽人能让一个精灵『心甘情愿』，诅咒或可松动——没人当真过。" });
 
-// ── 卡池 / 随机表（worldPoolAdd，整行 row_json）──────────────────────────
+// ── 卡池 / 随机表（poolAdd，整行 row_json）──────────────────────────
 // 首次狩猎遭遇表（d10，按真串）
 const huntRows: { 名称: string; AC: number; HP: number; 金价: number; 备注: string }[] = [
   { 名称: "兔子", AC: 8, HP: 3, 金价: 1, 备注: "小猎物，几乎无威胁" },
@@ -88,23 +88,23 @@ const huntRows: { 名称: string; AC: number; HP: number; 金价: number; 备注
   { 名称: "地精群", AC: 13, HP: 10, 金价: 15, 备注: "3-5 只，可抓奴隶" },
   { 名称: "枭熊", AC: 19, HP: 32, 金价: 35, 备注: "凶兽，战名好材料" },
 ];
-for (const r of huntRows) worldPoolAdd(db, { pool: "狩猎遭遇", row: r, weight: r.名称 === "兔子" ? 2 : 1 });
+for (const r of huntRows) poolAdd(db, { pool: "狩猎遭遇", row: r, weight: r.名称 === "兔子" ? 2 : 1 });
 
 // 精灵类型表（d6）
-worldPoolAdd(db, { pool: "精灵类型", row: { 类型: "黑皮精灵", 倾向: "敌意强、好战" }, weight: 3 });
-worldPoolAdd(db, { pool: "精灵类型", row: { 类型: "木精灵", 倾向: "戒备但可谈" }, weight: 3 });
+poolAdd(db, { pool: "精灵类型", row: { 类型: "黑皮精灵", 倾向: "敌意强、好战" }, weight: 3 });
+poolAdd(db, { pool: "精灵类型", row: { 类型: "木精灵", 倾向: "戒备但可谈" }, weight: 3 });
 
 // 回程遭遇表
-worldPoolAdd(db, { pool: "回程遭遇", row: { 事件: "平安无事" }, weight: 5 });
-worldPoolAdd(db, { pool: "回程遭遇", row: { 事件: "狼群循血味而来" }, weight: 3 });
-worldPoolAdd(db, { pool: "回程遭遇", row: { 事件: "游荡地精" }, weight: 1 });
-worldPoolAdd(db, { pool: "回程遭遇", row: { 事件: "敌对精灵小队" }, weight: 1 });
+poolAdd(db, { pool: "回程遭遇", row: { 事件: "平安无事" }, weight: 5 });
+poolAdd(db, { pool: "回程遭遇", row: { 事件: "狼群循血味而来" }, weight: 3 });
+poolAdd(db, { pool: "回程遭遇", row: { 事件: "游荡地精" }, weight: 1 });
+poolAdd(db, { pool: "回程遭遇", row: { 事件: "敌对精灵小队" }, weight: 1 });
 
 // 战利品/掉落表
-worldPoolAdd(db, { pool: "战利品", row: { 物品: "粗制标枪", 价值: 5 } });
-worldPoolAdd(db, { pool: "战利品", row: { 物品: "兽皮", 价值: 3 } });
-worldPoolAdd(db, { pool: "战利品", row: { 物品: "链甲残片", 价值: 12 } });
-worldPoolAdd(db, { pool: "战利品", row: { 物品: "蘑菇米", 价值: 2 } });
+poolAdd(db, { pool: "战利品", row: { 物品: "粗制标枪", 价值: 5 } });
+poolAdd(db, { pool: "战利品", row: { 物品: "兽皮", 价值: 3 } });
+poolAdd(db, { pool: "战利品", row: { 物品: "链甲残片", 价值: 12 } });
+poolAdd(db, { pool: "战利品", row: { 物品: "蘑菇米", 价值: 2 } });
 
 // ── Front / watcher（预声明威胁线，钟值越线触发凶兆）──────────────────────
 // Front 1：精灵复仇（Clock = 世界.精灵复仇进度，0→8）

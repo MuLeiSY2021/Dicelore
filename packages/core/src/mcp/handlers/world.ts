@@ -9,8 +9,8 @@
 
 // src/mcp/handlers/world.ts
 import type { DB } from "../../store/db.js";
-import { loreSearch, worldSample, worldRegister, loreUpsert, type Lore } from "../../store/world.js";
-import { ruleSearch, type RuleDoc } from "../../store/rule.js";
+import { loreSearch, poolSample, worldRegister, loreUpsert, type Lore } from "../../store/world.js";
+import { ruleSearch, type Rule } from "../../store/rule.js";
 import { truncateText } from "../../store/truncate.js";
 import { DiceloreError } from "../../errors.js";
 import type { ToolDef } from "../tooldef.js";
@@ -28,7 +28,7 @@ function searchHandler(db: DB, input: { query: string; k: number; category?: str
 }
 
 function sampleHandler(db: DB, input: { pool: string; n: number; filter?: Record<string, string | number> }) {
-  const rows = worldSample(db, input.pool, input.n, { filter: input.filter });
+  const rows = poolSample(db, input.pool, input.n, { filter: input.filter });
   return { rows };
 }
 
@@ -50,7 +50,7 @@ function registerHandler(
 }
 
 function ruleHandler(db: DB, input: { query: string; k: number }) {
-  const rules = ruleSearch(db, input.query, input.k).map((r: RuleDoc) => ({ name: r.name, content: r.content, version: r.version }));
+  const rules = ruleSearch(db, input.query, input.k).map((r: Rule) => ({ name: r.name, content: r.content, version: r.version }));
   const { truncated } = truncateText(JSON.stringify(rules));
   return { rules, truncated };
 }

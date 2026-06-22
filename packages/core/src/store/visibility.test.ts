@@ -11,7 +11,7 @@ import { beforeEach, describe, expect, it, test } from "vitest";
 import { initSchema, openDb, type DB } from "./db.js";
 import { stateGet, stateSet } from "./state.js";
 import { logSince } from "./log.js";
-import { loreUpsert, worldPoolAdd } from "./world.js";
+import { loreUpsert, poolAdd } from "./world.js";
 import { revealOnce, sheetShow, worldShow } from "./visibility.js";
 import { DiceloreError } from "../errors.js";
 
@@ -45,10 +45,10 @@ describe("worldShow", () => {
     expect(logSince(db, 0).some((e) => e.kind === "note" && e.visible === 0)).toBe(true);
   });
 
-  test("置 world_pool.visible=1 + 审计", () => {
-    const rowid = worldPoolAdd(db, { pool: "npc", row: { name: "老李", job: "铁匠" } });
-    worldShow(db, "world_pool", rowid);
-    expect(db.prepare("SELECT visible FROM world_pool WHERE rowid=?").get(rowid)).toMatchObject({ visible: 1 });
+  test("置 pool.visible=1 + 审计", () => {
+    const rowid = poolAdd(db, { pool: "npc", row: { name: "老李", job: "铁匠" } });
+    worldShow(db, "pool", rowid);
+    expect(db.prepare("SELECT visible FROM pool WHERE rowid=?").get(rowid)).toMatchObject({ visible: 1 });
     expect(logSince(db, 0).some((e) => e.kind === "note" && e.visible === 0)).toBe(true);
   });
 });

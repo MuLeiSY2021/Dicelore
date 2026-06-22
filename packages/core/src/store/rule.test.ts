@@ -14,7 +14,7 @@ import { ruleGet, ruleSearch, ruleUpsert } from "./rule.js";
 let db: DB;
 beforeEach(() => { db = openDb(":memory:"); initSchema(db); });
 
-describe("rule_doc", () => {
+describe("rule", () => {
   test("首次 upsert version=1", () => {
     ruleUpsert(db, { name: "失败硬着陆", content: "判定失败必有代价", category: "裁决" });
     expect(ruleGet(db, "失败硬着陆")).toMatchObject({ name: "失败硬着陆", content: "判定失败必有代价", version: 1 });
@@ -23,7 +23,7 @@ describe("rule_doc", () => {
     ruleUpsert(db, { name: "失败硬着陆", content: "v1 内容" });
     ruleUpsert(db, { name: "失败硬着陆", content: "v2 内容" });
     expect(ruleGet(db, "失败硬着陆")).toMatchObject({ content: "v2 内容", version: 2 });
-    expect(db.prepare("SELECT COUNT(*) c FROM rule_doc").get()).toMatchObject({ c: 1 });
+    expect(db.prepare("SELECT COUNT(*) c FROM rule").get()).toMatchObject({ c: 1 });
   });
   test("FTS 检索(整段召回)", () => {
     ruleUpsert(db, { name: "失败硬着陆", content: "判定失败必有代价" });
