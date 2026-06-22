@@ -22,11 +22,6 @@ export function openDb(path: string): DB {
 // 幂等建表。event 在本 plan 是普通表(全文检索归 Plan 2)。
 export function initSchema(db: DB): void {
   db.exec(`
-    CREATE TABLE IF NOT EXISTS sheet (
-      entity TEXT NOT NULL, attr TEXT NOT NULL, value TEXT NOT NULL,
-      visible INTEGER NOT NULL DEFAULT 0,
-      PRIMARY KEY (entity, attr)
-    );
     CREATE TABLE IF NOT EXISTS state (
       entity TEXT NOT NULL,
       attr TEXT NOT NULL,
