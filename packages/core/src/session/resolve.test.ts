@@ -29,8 +29,8 @@ describe("session", () => {
     expect(metaGet(s.db, "created_at")).toBeTruthy();
   });
   test("不存在即建、再开同名复用", () => {
-    openSession("团A").db.prepare("INSERT INTO sheet VALUES ('x','y','1',0)").run();
+    openSession("团A").db.prepare("INSERT INTO state(entity,attr,value,visible) VALUES ('x','y','1',0)").run();
     const again = openSession("团A");
-    expect(again.db.prepare("SELECT value FROM sheet WHERE entity='x'").get()).toMatchObject({ value: "1" });
+    expect(again.db.prepare("SELECT value FROM state WHERE entity='x'").get()).toMatchObject({ value: "1" });
   });
 });

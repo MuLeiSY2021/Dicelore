@@ -10,7 +10,7 @@
 // src/mcp/handlers/resolver.test.ts
 import { describe, it, expect } from "vitest";
 import { openDb, initSchema } from "../../store/db.js";
-import { sheetSetRaw } from "../../store/sheet.js";
+import { stateSet } from "../../store/state.js";
 import { eventSince } from "../../store/event.js";
 import { getPendingChoice } from "../../store/choice.js";
 import { setRollGate } from "../rollGate.js";
@@ -53,7 +53,7 @@ describe("resolver handlers", () => {
 
   it("resolve_contest_hidden:取真值比大小 + 落 verdict;winner 正确", () => {
     const db = freshDb();
-    sheetSetRaw(db, "张三", "力量", "18");
+    stateSet(db, "张三", "力量", "18");
     const out = byName("resolve_contest_hidden").handler(db, {
       context: "掰手腕",
       a: { name: "张三", expr: "{张三.力量}" },

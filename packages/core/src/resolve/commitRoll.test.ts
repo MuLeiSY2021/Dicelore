@@ -10,7 +10,7 @@
 import { describe, it, expect } from "vitest";
 import { openDb, initSchema } from "../store/db.js";
 import { eventSince } from "../store/event.js";
-import { sheetSetRaw } from "../store/sheet.js";
+import { stateSet } from "../store/state.js";
 import { stagePendingRoll, getPendingRoll } from "../store/pendingRoll.js";
 import { commitPendingRoll } from "./commitRoll.js";
 
@@ -34,7 +34,7 @@ describe("commitPendingRoll", () => {
 
   it("contest:取真值比大小 + winner + 写 verdict", () => {
     const db = freshDb();
-    sheetSetRaw(db, "你", "说服", "5");
+    stateSet(db, "你", "说服", "5");
     const id = stagePendingRoll(db, { shape: "contest", spec: { context: "压价", a: { name: "你", expr: "1d20+{你.说服}" }, b: { name: "罗纳", expr: "15" } } });
     const r = commitPendingRoll(db, id, seq([0.95])); // a: floor(0.95*20)+1=20 +5=25 vs b 15 → a 胜
     expect(r.shape).toBe("contest");

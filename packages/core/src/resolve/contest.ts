@@ -8,7 +8,7 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import { evalExpr, type ExprLedger, type RefGetter } from "../expr/evaluate.js";
-import { sheetGet } from "../store/sheet.js";
+import { stateGet } from "../store/state.js";
 import type { DB } from "../store/db.js";
 import type { Rng } from "../dice/index.js";
 
@@ -28,7 +28,7 @@ export function resolveContest(
   b: { name: string; expr: string },
   rng?: Rng,
 ): ContestResult {
-  const getRef: RefGetter = (e, attr) => sheetGet(db, e, attr)?.value; // 与 applyMutations 同构
+  const getRef: RefGetter = (e, attr) => stateGet(db, e, attr)?.value; // 与 applyMutations 同构
   const ctx = { rng, getRef };
   const la = evalExpr(a.expr, ctx); // 求值失败透传 DiceloreError
   const lb = evalExpr(b.expr, ctx);

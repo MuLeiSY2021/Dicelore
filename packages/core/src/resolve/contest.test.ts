@@ -9,7 +9,7 @@
 
 import { describe, it, expect } from "vitest";
 import { openDb, initSchema } from "../store/db.js";
-import { sheetSetRaw } from "../store/sheet.js";
+import { stateSet } from "../store/state.js";
 import { resolveContest } from "./contest.js";
 import { DiceloreError } from "../errors.js";
 
@@ -22,7 +22,7 @@ function freshDb() {
 describe("resolveContest", () => {
   it("取 sheet 真值比大小 → winner a", () => {
     const db = freshDb();
-    sheetSetRaw(db, "张三", "力量", "15");
+    stateSet(db, "张三", "力量", "15");
     const r = resolveContest(db, { name: "张三", expr: "{张三.力量}" }, { name: "DC", expr: "10" });
     expect(r.a.ledger.total).toBe(15);
     expect(r.b.ledger.total).toBe(10);

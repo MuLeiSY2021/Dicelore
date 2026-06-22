@@ -42,7 +42,7 @@ process.env.DICELORE_SESSION = `eval-${scenario.id}${baseline ? "-baseline" : ""
 
 const { openSession, metaSet } = await import("../src/session/resolve.js");
 const { ruleUpsert } = await import("../src/store/rule.js");
-const { sheetSetRaw } = await import("../src/store/sheet.js");
+const { stateSet } = await import("../src/store/state.js");
 const { sheetShow } = await import("../src/store/visibility.js");
 const { runInit } = await import("../src/adapter/init.js");
 
@@ -51,7 +51,7 @@ const { db, path: dbPath } = openSession();
 if (scenario.seed.tone) metaSet(db, "tone", scenario.seed.tone);
 for (const r of scenario.seed.rules ?? []) ruleUpsert(db, { name: r.name, content: r.content });
 for (const s of scenario.seed.sheets ?? []) {
-  sheetSetRaw(db, s.entity, s.attr, s.value);
+  stateSet(db, s.entity, s.attr, s.value);
   if (s.show) sheetShow(db, s.entity);
 }
 

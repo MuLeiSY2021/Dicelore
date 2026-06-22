@@ -11,7 +11,7 @@ process.env.DICELORE_SESSION = "orc";
 
 const { openSession, metaSet } = await import("../../src/session/resolve.js");
 const { ruleUpsert } = await import("../../src/store/rule.js");
-const { sheetSetRaw } = await import("../../src/store/sheet.js");
+const { stateSet } = await import("../../src/store/state.js");
 const { sheetShow } = await import("../../src/store/visibility.js");
 const { worldDocUpsert, worldPoolAdd } = await import("../../src/store/world.js");
 const { watcherSet } = await import("../../src/store/watcher.js");
@@ -35,34 +35,34 @@ ruleUpsert(db, { name: "成人礼", content:
 
 // ── sheets（开局状态；NPC 关键卡含「表演层(show) vs 真实层(hidden)」双值以压测 B5）──
 // 玩家主角卡（六维由开局明骰生成，先占位）
-sheetSetRaw(db, "玩家", "名字", "格罗姆");
-sheetSetRaw(db, "玩家", "HP", "15");
-sheetSetRaw(db, "玩家", "HP上限", "15");
-sheetSetRaw(db, "玩家", "EXP", "0");
-sheetSetRaw(db, "玩家", "金币", "0");
-sheetSetRaw(db, "玩家", "战名", "（未取得）");
+stateSet(db, "玩家", "名字", "格罗姆");
+stateSet(db, "玩家", "HP", "15");
+stateSet(db, "玩家", "HP上限", "15");
+stateSet(db, "玩家", "EXP", "0");
+stateSet(db, "玩家", "金币", "0");
+stateSet(db, "玩家", "战名", "（未取得）");
 sheetShow(db, "玩家"); // 开局公开玩家自己人物卡
 
 // 老大（部落首领）：表演层=粗暴威慑（公开），真实层=政治精明/算计（暗值）
-sheetSetRaw(db, "老大", "HP", "60", 1);
-sheetSetRaw(db, "老大", "威慑", "9", 1);            // 表演层：公开的霸气
-sheetSetRaw(db, "老大", "真实算计", "8");            // 真实层：暗值，懂权术、在大军阀手下做过小弟
-sheetSetRaw(db, "老大", "对玩家评估", "30");          // 暗值：把玩家当潜在威胁还是资产（0-100）
+stateSet(db, "老大", "HP", "60", 1);
+stateSet(db, "老大", "威慑", "9", 1);            // 表演层：公开的霸气
+stateSet(db, "老大", "真实算计", "8");            // 真实层：暗值，懂权术、在大军阀手下做过小弟
+stateSet(db, "老大", "对玩家评估", "30");          // 暗值：把玩家当潜在威胁还是资产（0-100）
 
 // 大萨满：表演层=神谕权威，真实层=隐藏权力基础（换过多任老大仍未倒）
-sheetSetRaw(db, "大萨满", "神谕权威", "8", 1);
-sheetSetRaw(db, "大萨满", "真实根基", "9");           // 暗值
-sheetSetRaw(db, "大萨满", "对玩家态度", "50");        // 暗值
+stateSet(db, "大萨满", "神谕权威", "8", 1);
+stateSet(db, "大萨满", "真实根基", "9");           // 暗值
+stateSet(db, "大萨满", "对玩家态度", "50");        // 暗值
 
 // 嘉比里拉（高等精灵俘虏）：表演层=顺从奴隶，真实层=隐藏议程（劝诱破坏诅咒，背后有势力？）
-sheetSetRaw(db, "嘉比里拉", "顺从度", "70", 1);        // 表演层：看着很乖
-sheetSetRaw(db, "嘉比里拉", "真实议程", "诱导主角打破生殖隔离");  // 真实层：暗值（文本）
-sheetSetRaw(db, "嘉比里拉", "诱导进度", "0");          // 暗值：劝诱主角的推进度（事件驱动，0-8）
-sheetSetRaw(db, "嘉比里拉", "信任玩家", "10");        // 暗值
+stateSet(db, "嘉比里拉", "顺从度", "70", 1);        // 表演层：看着很乖
+stateSet(db, "嘉比里拉", "真实议程", "诱导主角打破生殖隔离");  // 真实层：暗值（文本）
+stateSet(db, "嘉比里拉", "诱导进度", "0");          // 暗值：劝诱主角的推进度（事件驱动，0-8）
+stateSet(db, "嘉比里拉", "信任玩家", "10");        // 暗值
 
 // 世界钟（Front 的 Clock）
-sheetSetRaw(db, "世界", "狩猎声望", "0", 1);          // 公开：玩家在部落的声望
-sheetSetRaw(db, "世界", "精灵复仇进度", "0");          // 暗值 Clock：精灵察觉兽人猎场→集结→讨伐
+stateSet(db, "世界", "狩猎声望", "0", 1);          // 公开：玩家在部落的声望
+stateSet(db, "世界", "精灵复仇进度", "0");          // 暗值 Clock：精灵察觉兽人猎场→集结→讨伐
 
 // ── world_doc（散文底料；NPC 人设；伏笔）────────────────────────────────
 worldDocUpsert(db, { name: "设定·兽人部落", visible: 1, category: "设定", content:
