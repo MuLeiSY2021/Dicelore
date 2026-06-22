@@ -33,11 +33,13 @@
    2. 沉淀进 wiki：决策→05-ADR / 设计→04 页 / 概念·架构→02·03 / 达成节点→06-里程碑
    3. 关闭问题总账条目：标 `→ ADR-00xx` 或直接删（别留已解决的占位）
    4. 若来自 todo  → 删掉那份 docs/todo/ 文件
-   5. 若来自 superpowers → 删掉那份 docs/superpowers/ spec/plan
+   5. 若来自 superpowers → 删掉那份 docs/superpowers/ spec/plan。**硬前提：必须先确认其知识已沉淀进 wiki（步骤 2）才能删——沉淀在前、删除在后，缺沉淀不得删。** 多步实现（plan 拆成 P1/P2…多份）只完成一部分时，**整套 spec/plan 留着别删**，直到全部落地 + 沉淀 wiki 才统一清场。
    6. **commit**（问题解决完即提交；若在默认分支 main 上先开分支）
 ```
 
-**口诀**：问题进总账 → 在途进 todo / 草稿进 superpowers → 解决后**验证 → 沉淀进 wiki → 三处清场（总账条目 / todo / superpowers）→ commit**。**别让已完成的东西占位置。**
+> **删 superpowers 草稿的铁律**：plan/spec 是"知识的临时载体"，删它前必须确认知识已搬进 wiki（永久权威）。**没沉淀就删 = 丢知识**。顺序永远是「沉淀 wiki → 才清 superpowers」；半途的多份 plan 一律留到全套完成。
+
+**口诀**：问题进总账 → 在途进 todo / 草稿进 superpowers → 解决后**验证 → 沉淀进 wiki → 三处清场（总账条目 / todo / superpowers）→ commit**。**别让已完成的东西占位置；但没沉淀进 wiki 前，superpowers 草稿不许删。**
 
 ---
 
@@ -48,7 +50,7 @@
 1. `brainstorming`（若需求/方案未定）→ 落 spec。
 2. `writing-plans` → 落 plan（`docs/superpowers/plans/`）。
 3. **plan → DAG**：把任务拆成依赖图，无依赖的并发派 subagent（`subagent-driven-development` / `dispatching-parallel-agents`），按波次推进。
-4. 执行完 → 回到「问题生命周期 ③」：沉淀 wiki + 删 superpowers spec/plan + 关总账条目 + 删对应 todo。
+4. 执行完 → 回到「问题生命周期 ③」：**先沉淀 wiki**，确认后才删 superpowers spec/plan + 关总账条目 + 删对应 todo。**多份 plan 只完成一部分时不删，全套落地 + 沉淀后统一清。**
 
 > **并行隔离（硬性）**：多条线 / 多 agent 并行干活时，**每条线开自己的 git worktree**（`using-git-worktrees` / `EnterWorktree`），别都挤在主工作目录。否则各线的未提交改动在同一工作树里互相串味、提交得逐文件 scoped add 才不带错、对账极痛（教训：组件7 线与数据层线同目录交错跑过一次）。同一条 `subagent-driven-development` 链内的串行 subagent 共用一个工作树即可（它们不并发）；要隔离的是**并行的线 / 会话**。
 
