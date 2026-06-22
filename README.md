@@ -55,7 +55,7 @@ Dicelore is dedicated to serving players who want to play text-adventure games a
 
 ## How to Play
 
-> Currently playable: **solo Anprice** (a dice- and vote-driven collaborative text-adventure).
+> Currently playable: **solo 安价 (anka)** — a forum-style, dice- and vote-driven collaborative text-adventure.
 
 Install Claude Code (compatible with a wide range of models, including domestic Chinese ones) and the `dicelore` CLI, then scaffold a session locally with a single command: the framework enforces dice rolls and option-giving, maintains character sheets and story state, and the AI narrates from the result — no soft landings.
 
