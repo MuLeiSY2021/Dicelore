@@ -1,125 +1,125 @@
+<p align="right"><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a></p>
+
 <p align="center">
   <img src="docs/wiki/04-子系统设计/玩家客户端-视觉草图/dicelore-logo-dark.png" alt="Dicelore" width="440">
 </p>
 
 <p align="center"><strong><em>A rose without thorns is too perfect to be true.</em></strong></p>
 
-> 「虚拟太完美了，像一朵没有味道也没有刺的玫瑰。」
-
-<p align="center">一个 agentic 的文字冒险游戏平台——让 AI 当一个尊重骰子、不讨好玩家的主持人。</p>
+<p align="center">An agentic text-adventure game platform — turning AI into a game master that respects the dice and doesn't pander to players.</p>
 
 ---
 
-## 这是什么 · What is Dicelore?
+## What is Dicelore?
 
-**Dicelore** 是一个可对接多 agent、多 model 的前后端交互界面（开发中），加一套跑团特化的 agent 套件。这套 agent 把 AI 调教成尊重骰子、不一味讨好玩家的游戏主持人：权威游戏状态被锁在 AI 改不动的地方，骰子真正决定成败，让文字冒险游戏重新拥有真实的对抗与后果。
+**Dicelore** is a multi-agent, multi-model front-and-back-end interface (in active development), paired with a TTRPG-specialized agent suite. This agent suite shapes the AI into a game master that truly respects the dice and refuses to pander: authoritative game state is locked away somewhere the AI cannot touch, dice genuinely decide outcomes, and text-adventure games recover their real tension and consequences.
 
-它服务两类人——想**玩**文字冒险游戏的玩家，和想**写**文字冒险剧本的作者。
+It serves two kinds of people — **players** who want to play text-adventure games, and **authors** who want to write them.
 
 ---
 
-## 为什么会有它 · Why
+## Why Dicelore Exists
 
-> 「虚拟太完美了，像一朵没有味道也没有刺的玫瑰。」
+A friend of mine once sighed, 「虚拟太完美了，像一朵没有味道也没有刺的玫瑰。」 — *the virtual is too perfect, like a rose with neither scent nor thorns.*
 
-这句话来自一位朋友，它点出了一个真实的问题：用 AI 玩文字冒险游戏，玩久了往往会腻——因为 AI 太想讨好玩家。它表现为三种失败：
+That remark names a real problem: play text-adventure games with AI long enough and you grow bored — because the AI is too eager to please. The failure shows up in three forms:
 
-- **F1 跳骰**：该掷骰定胜负时，直接编一个对玩家有利的结果；
-- **F2 软着陆**：骰出了坏结果，又偷偷给玩家圆回来；
-- **F3 替玩家做主**：该玩家自己拿主意时，它替你定了。
+- **F1 — Dice-skip**: When the dice should decide the outcome, the AI just writes a result that favors the player.
+- **F2 — Soft landing**: A bad roll comes up, and the AI quietly walks it back.
+- **F3 — Taking the wheel**: When the player should be making a choice, the AI makes it for them.
 
-当玩家知道无论怎么选都不会真的输，风险感随之消失，游戏也就退化成了爽文。
+Once players learn that nothing they do can truly backfire, the sense of risk disappears and the game degrades into pure wish fulfillment.
 
-这不是某一款产品的失误，而是「提示词」这套范式的固有局限：游戏状态保存在 AI 生成的文本里，它可以随时改写，没有什么能拦住它；世界书和规则堆得再多，也无法阻止它在关键时刻手下留情。
+This is not a flaw in any particular product — it is the fundamental limitation of the **prompt-based paradigm**: game state lives inside the AI's own generated text, which it can rewrite at any moment; no amount of world-building or rule-loading can stop it from pulling its punches when it matters most.
 
-Dicelore 的答案是 **agent 架构**——把 AI 关进一个它无法篡改的世界。权威游戏状态外置在 AI 够不到的 SQLite 里，分四个业务域：`sheet`（人物卡 / 库存）、`event`（剧情事件）、`world`（世界设定 / 卡池）、`rule`（版本化只读规则）；掷骰与随机由程序执行，AI 只能引用结果。在此之上用三层约束兜住失败模式：
+Dicelore's answer is an **agentic architecture** — locking the AI inside a world it cannot falsify. Authoritative game state is externalised into a SQLite database the AI cannot reach, organized across four state domains: `sheet` (character sheets / inventory), `event` (story events), `world` (world settings / draw pools), and `rule` (versioned, read-only rules). Dice rolls and randomization are executed by the engine; the AI can only reference the results. Three constraint layers close off the failure modes:
 
-- **L1 工具强制**：掷骰、抽随机、改状态都必须走工具，AI 绕不过去；
-- **L2 塑形教条**：用一套 skill（Agenda → Principles → Moves）教它怎么当好主持人；
-- **L3 审计**：事后抓违规。
+- **L1 — Tool enforcement**: Rolling dice, drawing random results, and mutating state all go through tools. The AI has no way around them.
+- **L2 — Shaping doctrine**: A skill suite (Agenda → Principles → Moves) teaches the AI how to be a good game master.
+- **L3 — Audit**: Post-hoc detection of violations.
 
-| | 提示词范式 | Dicelore（agentic） |
+| | Prompt-based paradigm | Dicelore (agentic) |
 |---|---|---|
-| 状态住在哪 | AI 的输出里 | AI 够不到的 SQLite |
-| 谁掷骰 / 取数 | AI 自己写个数字 | 引擎执行，AI 只给引用 |
-| 加一项能力的代价 | context 变胖、token 上涨 | 多一个工具，context 不涨 |
-| 防跳骰 / 软着陆 | 靠 AI 自觉 | 结构上 AI 拿不到真值 |
+| Where state lives | Inside the AI's output | SQLite, out of the AI's reach |
+| Who rolls / draws | The AI writes a number | The engine executes; AI gets a reference |
+| Cost of adding a capability | Fatter context, rising token count | One more tool; context unchanged |
+| Preventing dice-skips / soft landings | Relies on AI goodwill | Structurally, the AI never sees ground truth |
 
 ---
 
-## 我们的愿景 · Our Vision
+## Our Vision
 
-Dicelore 致力于服务两类人——想玩文字冒险游戏的玩家，以及想编写文字冒险剧本的作者，并为他们提供一个美观、优雅、现代化的界面，同时尽最大可能兼容客制化与社区生态。适配移动端是我们的长期愿景。
-
----
-
-## 怎么玩 · How to play
-
-> 目前可玩**单人安价**（骰子 / 投票驱动的接龙式文字冒险）。
-
-装好 Claude Code（可接各种大模型，含国产）和 `dicelore` CLI，本机一键脚手架即可开始：框架强制掷骰 / 给选项、维护人物卡与剧情状态，AI 据结果叙述、不软着陆。
-
-不依赖 Claude Code、用 Claude Agent SDK 程序化驱动的**全栈玩家客户端**正在开发中——进度见 [里程碑](docs/wiki/06-里程碑与问题/里程碑.md)。
+Dicelore is dedicated to serving players who want to play text-adventure games and authors who want to craft them — providing both with a beautiful, elegant, and modern interface while maximizing compatibility with customization and community ecosystems. Adapting to mobile is our long-term vision.
 
 ---
 
-## 有问题或建议？ · Questions or suggestions?
+## How to Play
 
-设计 wiki 见 [`docs/wiki/`](docs/wiki/)：业务分析 → 领域模型 → 架构 → 子系统设计 → 决策记录（ADR），项目的「是什么 / 为什么 / 怎么设计」都在这里。
+> Currently playable: **solo Anprice** (a dice- and vote-driven collaborative text-adventure).
 
-有问题、建议，或想参与开发？欢迎开 [issue](../../issues)，或读 [CONTRIBUTING.md](CONTRIBUTING.md) 了解开发流程与约定。
+Install Claude Code (compatible with a wide range of models, including domestic Chinese ones) and the `dicelore` CLI, then scaffold a session locally with a single command: the framework enforces dice rolls and option-giving, maintains character sheets and story state, and the AI narrates from the result — no soft landings.
 
----
-
-## 截图 · Screenshots
-
-> 完整独立的 web 玩家客户端（组件7）：VSCode 式可拖拽组件工作区，**「墨金」主题**（深墨绿 + 描金，可换肤 + 明暗双态 + 可选强调色）。下面是设计定稿草图（实现推进中）。
-
-![跑团页](docs/wiki/04-子系统设计/玩家客户端-视觉草图/play.png)
-
-<p align="center"><sub>跑团页 · 左活动轨 · 中央叙事/打字一体 · d10 掷骰 · 右「呈现台」（网格停靠面板）· 圆形 PbtA 倒计时钟</sub></p>
-
-![主页](docs/wiki/04-子系统设计/玩家客户端-视觉草图/home.png)
-
-<p align="center"><sub>主页 · 欢迎页 · <a href="docs/wiki/04-子系统设计/玩家客户端-视觉草图/home.html">可运行草图</a></sub></p>
-
-![团本制作](docs/wiki/04-子系统设计/玩家客户端-视觉草图/build.png)
-
-<p align="center"><sub>团本制作 · 构建台 · <a href="docs/wiki/04-子系统设计/玩家客户端-视觉草图/build.html">可运行草图</a></sub></p>
-
-![配置](docs/wiki/04-子系统设计/玩家客户端-视觉草图/config.png)
-
-<p align="center"><sub>配置 · MCP / 模型 / 主题 · <a href="docs/wiki/04-子系统设计/玩家客户端-视觉草图/config.html">可运行草图</a></sub></p>
-
-<p align="center"><sub>设计语言与四页 IA → <a href="docs/wiki/04-子系统设计/玩家客户端-视觉.md">玩家客户端-视觉</a></sub></p>
+A **full-stack player client** — programmatically driven via the Claude Agent SDK, without any dependency on Claude Code — is under development. Track progress in the [Milestones](docs/wiki/06-里程碑与问题/里程碑.md).
 
 ---
 
-## 安装（进行中） · Installation (Progress)
+## Questions or Suggestions?
 
-> 一键安装的全栈客户端仍在开发中；当前可通过 CLI 跑起来。
+The design wiki lives at [`docs/wiki/`](docs/wiki/): business analysis → domain model → architecture → subsystem design → decision records (ADR). Everything about what Dicelore is, why it works the way it does, and how it is designed is documented there.
+
+Questions, suggestions, or want to contribute? Open an [issue](../../issues), or read [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow and conventions.
+
+---
+
+## Screenshots
+
+> The complete standalone web player client (Component 7): a VSCode-style draggable-component workspace with the **"Ink & Gold" theme** (deep ink-green + gold trim, skinnable, light/dark modes, optional accent color). Below are the finalized design sketches (implementation in progress).
+
+![Play page](docs/wiki/04-子系统设计/玩家客户端-视觉草图/play.png)
+
+<p align="center"><sub>Play page · left activity rail · center narrative/typing combined · d10 dice roll · right "Stage" panel (grid-docked panels) · circular PbtA countdown clock</sub></p>
+
+![Home page](docs/wiki/04-子系统设计/玩家客户端-视觉草图/home.png)
+
+<p align="center"><sub>Home page · welcome screen · <a href="docs/wiki/04-子系统设计/玩家客户端-视觉草图/home.html">runnable sketch</a></sub></p>
+
+![Campaign builder](docs/wiki/04-子系统设计/玩家客户端-视觉草图/build.png)
+
+<p align="center"><sub>Campaign builder · build workbench · <a href="docs/wiki/04-子系统设计/玩家客户端-视觉草图/build.html">runnable sketch</a></sub></p>
+
+![Settings](docs/wiki/04-子系统设计/玩家客户端-视觉草图/config.png)
+
+<p align="center"><sub>Settings · MCP / model / theme · <a href="docs/wiki/04-子系统设计/玩家客户端-视觉草图/config.html">runnable sketch</a></sub></p>
+
+<p align="center"><sub>Design language and four-page IA → <a href="docs/wiki/04-子系统设计/玩家客户端-视觉.md">Player client — visuals</a></sub></p>
+
+---
+
+## Installation (In Progress)
+
+> The one-command full-stack client is still in development; you can run it today through the CLI.
 
 ```bash
-npm install              # 安装依赖
-npm test                 # 运行测试（vitest）
-npm run typecheck        # 类型检查
-npm run dicelore -- new <团名>   # CLI：建 / 开一局会话
+npm install              # install dependencies
+npm test                 # run tests (vitest)
+npm run typecheck        # type check
+npm run dicelore -- new <session-name>   # CLI: create / open a session
 ```
 
-会话存档在平台 app-data 目录下 `dicelore/sessions/<名字>.db`；环境变量 `DICELORE_SESSIONS_DIR` 可覆盖根目录、`DICELORE_SESSION` 指定缺省会话名。
+Sessions are saved under the platform's app-data directory at `dicelore/sessions/<name>.db`. The environment variable `DICELORE_SESSIONS_DIR` overrides the root directory; `DICELORE_SESSION` sets the default session name.
 
-**技术栈**：TypeScript + better-sqlite3（权威状态外置）· MCP（`@modelcontextprotocol/sdk` v1.x + Zod v3，内层能力库包成一组 `dicelore_*` 工具）· FTS5 + jieba 中文全文检索（trigram 零依赖保底）。
+**Tech stack**: TypeScript + better-sqlite3 (authoritative state externalised) · MCP (`@modelcontextprotocol/sdk` v1.x + Zod v3, inner capability library packaged as a set of `dicelore_*` tools) · FTS5 + jieba Chinese full-text search (trigram zero-dependency fallback).
 
 ---
 
-## 许可证与致谢 · License and credits
+## License and Credits
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
 
-Dicelore 采用 **GNU Affero 通用公共许可证 v3.0 或更高版本（AGPL-3.0-or-later）** 开源——见 [LICENSE](LICENSE)。
+Dicelore is released under the **GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later)** — see [LICENSE](LICENSE).
 
 > Copyright (C) 2026 MuLeiSY2021
 
-AGPL 的要点：任何人都可以自由使用、修改、分发；**但只要你修改了 Dicelore 并通过网络向用户提供服务（例如架设在线跑团站点），你就必须把对应的完整源码一并公开。**
+The key points of AGPL: anyone may freely use, modify, and distribute this software; **but if you modify Dicelore and offer it as a networked service to users (e.g., hosting an online game site), you must also release the corresponding complete source code.**
 
-**致谢**：那句「没有刺的玫瑰」来自一位朋友的随口一叹，却成了这个项目的起点。也感谢每一位贡献者——提交 PR 即表示你同意，你的贡献将以同样的 **AGPL-3.0-or-later** 授权并入。
+**Credits**: The "rose without thorns" line came from an offhand remark by a friend — and became the seed of this entire project. Thanks also to every contributor: by submitting a PR you agree that your contribution will be incorporated under the same **AGPL-3.0-or-later** license.
