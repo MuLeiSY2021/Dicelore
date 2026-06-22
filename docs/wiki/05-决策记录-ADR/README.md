@@ -193,6 +193,23 @@
 
 ---
 
+## ADR-0021 运行时数据层 phase-1 改名落地（sheet→state / event→log / world_doc→lore），§2 四域完整重构推迟
+
+- **背景**：[运行时数据层重构 spec（2026-06-21）](../../superpowers/specs/2026-06-21-运行时数据层重构-叙事层-design.md) 定数据层地基重构（主题 A′ store 对齐团本 + 主题 A 叙事脚手架）。其 §12 phase-1 = 三个改名 + 加列；spec §10 要求「落地后出 ADR 回写，遵守单源 / 单向推导」。三个改名已 TDD + 逐任务审查 + opus 全分支终审、ff 落 `main`（45 文件 210 测试 + tsc 0 绿，纯结构重构零行为变化）。
+- **决策**：
+  - **表 / 模块改名**：`sheet`→`state`（加 `kind`(NOT NULL DEFAULT 'world') / `rel_object` / `rel_dim` / `clock_min` / `clock_max` / `clock_mode` 列）、`event`→`log`（加 `is_moment`(DEFAULT 0) 列）、`world_doc`→`lore`；FTS `event_fts`→`log_fts`、`world_doc_fts`→`lore_fts`。`store/{sheet,event}.ts`→`{state,log}.ts`，`world.ts` 内 `worldDoc*`→`lore*`。**部分取代 [ADR-0005](#adr-0005-数据层重构为四业务域部分取代-adr-0003) 的命名**（「一级轴 = 业务域」判断不变，仅 sheet/event/world_doc 改名 + state 加 kind 轴）。
+  - **加列只搭地基、不消费**：kind/rel/clock/is_moment 给安全默认，**本期不实现按 kind 过滤 / 类型化读写 / moment 读取**——属视图层与记忆层（后续）。
+  - **MCP 工具名保留**：`sheet_get/list/update`、`event_append/recall`、`world_search/sample/register/show` 等**工具名与 schema 变量名不变**；只改底层 CRUD **函数名**（`stateGet`/`logAppend`/`loreSearch`）。**AI 工具面收敛为纯业务 / 类型化（`npc_update` 等）+ 删 kind 无关裸工具 → 属 [工具生成层 spec](../../superpowers/specs/2026-06-22-声明式工具生成层-design.md) 及之后**。
+  - **方法**：`sheet→state` 用 expand-contract（新表并存 → 逐消费方指过去 → 删旧）；`event→log` / `world_doc→lore` 用**就地两段改名**（表名先行、标识符后行）——中央共享表（log 被 model/playerView/turnEnd/l3 都读）复制并存会破中间态绿。
+  - **并行隔离**：每条重构线开**独立 git worktree**（已写入 [CLAUDE.md](../../../CLAUDE.md) 执行模型「并行隔离」硬规）——本轮与组件7/orchestrator 线同期，靠 worktree 互不串味。
+  - **§2「四域」完整重构推迟**：四域（sheet/event/world/rule）→ 多表模型（state + kinds / lore / log / rule / pool + 叙事 front/plotline/foreshadow + 记忆 history）的**概念重写等叙事 / 记忆物理表落地后一次做**，避免改名期改一遍、建表期再改一遍（单源 / 别重复改）。本 ADR 仅记改名，[核心概念 §2](../02-领域模型/核心概念.md) 顶部加 forward 指针、暂不重写主体。
+- **后果**：
+  - **step① 剩余（未做）**：新建物理表 `front`(+`front_omen`) / `plotline` / `foreshadow` / `history`（spec §3/§6/§7，叙事脚手架主体）；**待确认补充改名** `rule_doc`→`rule`、`world_pool`→`pool`（spec §3/§9 用新名，§12 phasing 漏列）。
+  - 问题总账 [主题 A′](../06-里程碑与问题/问题总账.md) 的**改名段已落**，叙事脚手架（B6/A）**未结**、条目不全关。
+  - 落 `main`（state 重构更早；`5ef09c9`..`4f560c4` 为 event/world_doc 段）。**被否**：① 全部用 expand-contract（中央共享表 log 破中间态绿）；② 改名期就重写 §2（建表期返工，违单源）；③ 同期改 MCP 工具名（无谓破工具契约，收敛留工具生成层）。
+
+---
+
 ## 待决策（记录但未定，勿当结论引用）
 
 - ~~**注入机制**：guideline 规则是"安装时焊进 skill 本体" vs "运行时 MCP 读取"~~ → **已由 [ADR-0012](#adr-0012-guideline-载体焊进-skill-本体静态-markdown非运行时-mcp-读取) 决议**：焊进 skill 本体（静态 markdown，走 Claude Code skill 装载）。
