@@ -57,3 +57,11 @@ describe("eventRecall (FTS + tag 兜底)", () => {
     expect(hits.map((r) => r.content)).toEqual(["昨夜无事"]);
   });
 });
+
+test("is_moment 默认 0、可设 1", () => {
+  const s0 = eventAppend(db, { kind: "narrate", content: "平淡" });
+  const s1 = eventAppend(db, { kind: "narrate", content: "关键转折", is_moment: 1 });
+  const rows = eventSince(db, 0);
+  expect(rows.find((r) => r.seq === s0)!.is_moment).toBe(0);
+  expect(rows.find((r) => r.seq === s1)!.is_moment).toBe(1);
+});

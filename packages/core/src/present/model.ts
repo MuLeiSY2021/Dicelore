@@ -35,7 +35,7 @@ function statusMenu(db: DB): VisibleCell[] {
 
 function mechanicalEcho(db: DB, turnStartSeq: number): EchoEntry[] {
   const rows = db.prepare(
-    `SELECT seq, kind, content, data_json FROM event
+    `SELECT seq, kind, content, data_json FROM log
       WHERE seq > ? AND kind IN ('verdict','mutation','watcher_fired') AND visible = 1
       ORDER BY seq`,
   ).all(turnStartSeq) as { seq: number; kind: EchoEntry["kind"]; content: string | null; data_json: string | null }[];
@@ -50,7 +50,7 @@ function echoText(content: string | null, dataJson: string | null): string {
 
 function pendingChoice(db: DB): ChoiceView | undefined {
   const row = db.prepare(
-    "SELECT seq, data_json FROM event WHERE kind='choice' ORDER BY seq DESC LIMIT 1",
+    "SELECT seq, data_json FROM log WHERE kind='choice' ORDER BY seq DESC LIMIT 1",
   ).get() as { seq: number; data_json: string | null } | undefined;
   if (!row || !row.data_json) return undefined;
   const d = JSON.parse(row.data_json) as { prompt: string; options: { label: string; consequence: string }[] };
@@ -69,7 +69,7 @@ export function buildPresentationModel(db: DB, opts: { turnStartSeq?: number } =
 // 未给 turnStartSeq:回退到「最近一条机械类 event 之前」近似本轮起点;无则 0(全量)。
 function lastTurnStart(db: DB): number {
   const row = db.prepare(
-    "SELECT MIN(seq) s FROM event WHERE kind IN ('verdict','mutation','watcher_fired')",
+    "SELECT MIN(seq) s FROM log WHERE kind IN ('verdict','mutation','watcher_fired')",
   ).get() as { s: number | null };
   return row.s === null ? 0 : row.s - 1;
 }

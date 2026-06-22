@@ -15,7 +15,7 @@ describe("schema", () => {
     const db = openDb(":memory:");
     initSchema(db);
     const names = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map((r: any) => r.name);
-    for (const t of ["state", "event", "watcher", "world_doc", "world_pool", "rule_doc", "session_meta", "pending_choice"]) {
+    for (const t of ["state", "log", "watcher", "world_doc", "world_pool", "rule_doc", "session_meta", "pending_choice"]) {
       expect(names).toContain(t);
     }
   });
@@ -29,7 +29,7 @@ describe("schema", () => {
     const db = openDb(":memory:");
     initSchema(db);
     const names = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map((r: any) => r.name);
-    for (const t of ["event_fts", "world_doc_fts", "rule_doc_fts"]) {
+    for (const t of ["log_fts", "world_doc_fts", "rule_doc_fts"]) {
       expect(names).toContain(t);
     }
   });

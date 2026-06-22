@@ -13,7 +13,7 @@ import type { EventRow } from "../store/event.js";
 import { auditTurn } from "./l3.js";
 
 function ev(kind: EventRow["kind"], data?: unknown): EventRow {
-  return { seq: 1, content: null, kind, data_json: data ? JSON.stringify(data) : null, tags: null, visible: 1, game_time: null, created_at: "" };
+  return { seq: 1, content: null, kind, data_json: data ? JSON.stringify(data) : null, tags: null, visible: 1, game_time: null, is_moment: 0, created_at: "" };
 }
 const base = { events: [] as EventRow[], transcriptHasText: true, pendingChoiceEmpty: false, hasGameEnd: false, stopHookActive: false };
 

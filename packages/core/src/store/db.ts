@@ -19,7 +19,7 @@ export function openDb(path: string): DB {
   return db;
 }
 
-// 幂等建表。event 在本 plan 是普通表(全文检索归 Plan 2)。
+// 幂等建表。log 在本 plan 是普通表(全文检索归 Plan 2)。
 export function initSchema(db: DB): void {
   db.exec(`
     CREATE TABLE IF NOT EXISTS state (
@@ -35,10 +35,11 @@ export function initSchema(db: DB): void {
       clock_mode TEXT,
       PRIMARY KEY (entity, attr)
     );
-    CREATE TABLE IF NOT EXISTS event (
+    CREATE TABLE IF NOT EXISTS log (
       seq INTEGER PRIMARY KEY AUTOINCREMENT,
       content TEXT, kind TEXT NOT NULL, data_json TEXT, tags TEXT,
       visible INTEGER NOT NULL DEFAULT 1, game_time TEXT,
+      is_moment INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
     CREATE TABLE IF NOT EXISTS watcher (

@@ -19,6 +19,7 @@ export interface EventInput {
   tags?: string;
   visible?: number;
   game_time?: string;
+  is_moment?: number;
 }
 
 export interface EventRow {
@@ -29,6 +30,7 @@ export interface EventRow {
   tags: string | null;
   visible: number;
   game_time: string | null;
+  is_moment: number;
   created_at: string;
 }
 
@@ -40,7 +42,7 @@ export function eventAppend(db: DB, ev: EventInput): number {
   const visible = ev.visible ?? defaultVisible(ev.kind);
   const info = db
     .prepare(
-      "INSERT INTO event (content, kind, data_json, tags, visible, game_time) VALUES (?, ?, ?, ?, ?, ?)",
+      "INSERT INTO log (content, kind, data_json, tags, visible, game_time, is_moment) VALUES (?, ?, ?, ?, ?, ?, ?)",
     )
     .run(
       ev.content ?? null,
@@ -49,26 +51,27 @@ export function eventAppend(db: DB, ev: EventInput): number {
       ev.tags ?? null,
       visible,
       ev.game_time ?? null,
+      ev.is_moment ?? 0,
     );
   const seq = Number(info.lastInsertRowid);
-  if (ev.content && ev.content.trim()) ftsIndex(db, "event_fts", seq, ev.content);
+  if (ev.content && ev.content.trim()) ftsIndex(db, "log_fts", seq, ev.content);
   return seq;
 }
 
 export function eventSince(db: DB, sinceSeq: number): EventRow[] {
-  return db.prepare("SELECT * FROM event WHERE seq > ? ORDER BY seq").all(sinceSeq) as EventRow[];
+  return db.prepare("SELECT * FROM log WHERE seq > ? ORDER BY seq").all(sinceSeq) as EventRow[];
 }
 
 // FTS 召回 + tag LIKE 兜底。当前分支 seq 过滤由快照线/adapter 在上层接(§4.5.3),本层返回全量命中。
 export function eventRecall(db: DB, query: string, opts: { limit?: number } = {}): EventRow[] {
   const limit = opts.limit ?? 20;
-  const seqs = new Set<number>(ftsSearch(db, "event_fts", query, limit).map((h) => h.rowid));
+  const seqs = new Set<number>(ftsSearch(db, "log_fts", query, limit).map((h) => h.rowid));
   const tagRows = db
-    .prepare("SELECT seq FROM event WHERE tags LIKE ? ESCAPE '\\' LIMIT ?")
+    .prepare("SELECT seq FROM log WHERE tags LIKE ? ESCAPE '\\' LIMIT ?")
     .all(`%${escapeLike(query)}%`, limit) as { seq: number }[];
   for (const r of tagRows) seqs.add(r.seq);
   if (seqs.size === 0) return [];
   const ids = [...seqs];
   const placeholders = ids.map(() => "?").join(",");
-  return db.prepare(`SELECT * FROM event WHERE seq IN (${placeholders}) ORDER BY seq`).all(...ids) as EventRow[];
+  return db.prepare(`SELECT * FROM log WHERE seq IN (${placeholders}) ORDER BY seq`).all(...ids) as EventRow[];
 }

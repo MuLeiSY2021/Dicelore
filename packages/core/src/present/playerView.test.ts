@@ -56,7 +56,7 @@ describe("buildPlayerView", () => {
   it("sinceSeq 圈定本轮 narration 与面板机械回显", () => {
     const db = freshDb();
     eventAppend(db, { kind: "narrate", content: "旧轮" }); // seq1
-    const cut = (db.prepare("SELECT MAX(seq) s FROM event").get() as { s: number }).s;
+    const cut = (db.prepare("SELECT MAX(seq) s FROM log").get() as { s: number }).s;
     eventAppend(db, { kind: "narrate", content: "本轮" }); // seq2
     const pv = buildPlayerView(db, { sinceSeq: cut });
     expect(pv.narration.map((n) => n.text)).toEqual(["本轮"]);

@@ -37,7 +37,7 @@ describe("buildPresentationModel", () => {
   it("mechanicalEcho 取本轮 verdict/mutation/watcher_fired(按 turnStartSeq 圈区间)", () => {
     const db = freshDb();
     eventAppend(db, { kind: "narrate", content: "旧轮" });        // seq1,非机械类
-    const cut = (db.prepare("SELECT MAX(seq) s FROM event").get() as { s: number }).s;
+    const cut = (db.prepare("SELECT MAX(seq) s FROM log").get() as { s: number }).s;
     eventAppend(db, { kind: "verdict", content: "命中", data_json: { winner: "a" } }); // seq2
     eventAppend(db, { kind: "narrate", content: "色彩" });        // seq3,不进 echo
     eventAppend(db, { kind: "mutation", content: "金钱 +3d100=74 → 77" }); // seq4

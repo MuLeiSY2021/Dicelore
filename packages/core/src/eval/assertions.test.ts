@@ -15,7 +15,7 @@ function ev(kind: EventRow["kind"], content: string, data?: unknown): EventRow {
   return {
     seq: 0, content, kind,
     data_json: data ? JSON.stringify(data) : null,
-    tags: null, visible: 1, game_time: null, created_at: "",
+    tags: null, visible: 1, game_time: null, is_moment: 0, created_at: "",
   };
 }
 

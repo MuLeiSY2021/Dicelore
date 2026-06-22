@@ -31,7 +31,7 @@ export function buildPlayerView(db: DB, opts: { sinceSeq?: number } = {}): Playe
   const sinceSeq = opts.sinceSeq ?? 0;
   const rows = db
     .prepare(
-      `SELECT seq, kind, content FROM event
+      `SELECT seq, kind, content FROM log
         WHERE seq > ? AND kind IN ('narrate','reveal') AND visible = 1
         ORDER BY seq`,
     )

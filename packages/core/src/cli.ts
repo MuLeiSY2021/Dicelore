@@ -32,7 +32,7 @@ switch (cmd) {
     if (!arg) throw new Error("用法: dicelore inspect <name>");
     const { db } = openSession(arg);
     const stateCnt = (db.prepare("SELECT COUNT(*) c FROM state").get() as { c: number }).c;
-    const events = (db.prepare("SELECT COUNT(*) c FROM event").get() as { c: number }).c;
+    const events = (db.prepare("SELECT COUNT(*) c FROM log").get() as { c: number }).c;
     console.log(`会话 ${arg}: 团本=${metaGet(db, "team_id") ?? "(未灌注)"} stateCnt=${stateCnt} events=${events}`);
     break;
   }
