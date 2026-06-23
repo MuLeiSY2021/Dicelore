@@ -217,6 +217,14 @@
 
 ---
 
+## ADR-0023 后端双路径架构（lore 构建 / dice 跑团，一后端共享底层）
+
+- **背景**：后端原是「只跑团的单路径」（`apps/orchestrator` 全 dice 味）。但 [声明式工具生成层 spec] 确立 lore（构建期）/ dice（运行期）两个 agent、两个时刻；前端有 lore/dice 两条路径，"创建完团本要能直接玩"逼着两路径同处一个后端、共享底层。
+- **决策**：① **一个后端、两条入口路径**，共享底层（存储栈 / 运行单元 / Agent 抽象 / MCP 工厂）；接口留「跨机/多租户」缝，实现先单机（InProcess）。② **`Session`（运行单元）= 一个被路径类型参数化的接口**，隔离=权限=工具面三边合一；`DiceSession`/`LoreSession` 两实现；Agent 按角色命名（`DiceGm`/`LoreBuilder`）；`SessionRegistry<S>` 泛型 path-agnostic。③ **内部 DB-only，文件只在两边界**（上传/导出）。④ **两级存储**：Catalog 集中录（团本定义，UUIDv5(name) 身份）+ per-session 运行库；**版本线性无分支 + commit/tag 两动作**（tag=真发布）。⑤ **接缝 = 团本包，中间隔 import 信任闸门**——dice 开局 checkout→`validatePack` 重验→物化运行库，永不信任来源。⑥ **构建期声明 → 框架编译**：`Draft`→构建 MCP(`dicelore_build_*`)→commit Catalog；与运行时工具编译期不交叉。⑦ **分发 = git 单向投影**（DB 权威，自实现 dep-free git objects，真 git 可读；非双向镜像）。⑧ **多模型**：`stripReasoning` 剥 think 段（DeepSeek-R1/GLM）+ 多 provider 走 `ANTHROPIC_BASE_URL` 兼容代理。⑨ **物理隔离不变量**：路径专属码分目录，结构上杜绝装错。⑩ orchestrator 三分布局 `api/`(边) / `pkg/`(共享) / `dice/`·`lore/`(路径专属)，core 引擎边界不变。
+- **后果**：P1–P6 实现全落 main，「造团本→开局→玩」闭环真服务器验证通过（建团本→import→呈现含导入态→发消息→WS narration→回合收尾）。设计单源 → [04 后端双路径架构](../04-子系统设计/后端双路径架构.md)。**欠账**：真 GM 未接 gm-core 教条（组件3/4）；front/plotline/foreshadow/history 域 import 物化待扩（表已建于叙事层）；tag 平台（托管 registry）= 未来。**被否**：① 两路径强行共用同一 Sandbox 实现而非参数化接口；② 团本构建走系统文件（H1：应走 DB）；③ git 双向镜像（挖深 merge 坑，与线性无分支矛盾）；④ 引 isomorphic-git（避 package-lock 纠缠，自实现够用）。
+
+---
+
 ## 待决策（记录但未定，勿当结论引用）
 
 - ~~**注入机制**：guideline 规则是"安装时焊进 skill 本体" vs "运行时 MCP 读取"~~ → **已由 [ADR-0012](#adr-0012-guideline-载体焊进-skill-本体静态-markdown非运行时-mcp-读取) 决议**：焊进 skill 本体（静态 markdown，走 Claude Code skill 装载）。
