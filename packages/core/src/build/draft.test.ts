@@ -29,7 +29,7 @@ describe("Draft → commit → import 全链", () => {
 
     const run = openDb(":memory:"); initSchema(run);
     const res = importPack(cat, run, r.tuanbenId, r.commitId);
-    expect(res).toEqual({ lore: 1, rules: 1, pools: 2, stateCells: 1, fronts: 0, plotlines: 0, foreshadows: 0, anchors: 0 });
+    expect(res).toMatchObject({ lore: 1, rules: 1, pools: 2, stateCells: 1, fronts: 0, plotlines: 0, foreshadows: 0, anchors: 0 });
     expect(loreGet(run, "黄枫谷")?.content).toBe("江南正道。");
     expect(ruleGet(run, "修炼")?.content).toBe("练气→筑基");
     const cell = run.prepare("SELECT kind, value FROM state WHERE entity='韩立' AND attr='资质'").get() as { kind: string; value: string };

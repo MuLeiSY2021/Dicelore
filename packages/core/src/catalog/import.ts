@@ -21,12 +21,14 @@ import type { CatalogDB } from "./db.js";
 // 团本包 → per-session 运行库的物化映射(对齐 数据层 spec §9)。
 // 包路径约定: lore/<n>.md、rules/<n>.md、pools/<n>.csv、state/<n>.csv、manifest.md
 //   + 叙事域 fronts/<n>.csv、plotlines/<n>.csv、foreshadows/<n>.csv、anchors/<n>.csv。
-const KNOWN_TOP = new Set(["lore", "rules", "pools", "state", "fronts", "plotlines", "foreshadows", "anchors", "manifest.md"]);
+const KNOWN_TOP = new Set(["lore", "rules", "pools", "state", "fronts", "plotlines", "foreshadows", "anchors", "manifest.md", "prologue.md"]);
 
 export interface ImportIssue { level: "error" | "warn"; path: string; msg: string }
 export interface ImportResult {
   lore: number; rules: number; pools: number; stateCells: number;
   fronts: number; plotlines: number; foreshadows: number; anchors: number;
+  prologue?: string;     // 包根 prologue.md 正文(团本开场 prompt;不物化进 store,回传供 session_meta)
+  tuanbenName?: string;  // manifest.md H1(团本名,session_meta 兜底)
 }
 
 function topSeg(path: string): string {
@@ -146,8 +148,12 @@ export function importPack(catalogDB: CatalogDB, runDB: DB, tuanbenId: string, r
           anchorAdd(runDB, { owner_table: r.owner_table, owner_id: r.owner_id, target_table: r.target_table, target_id: r.target_id, role: r.role || undefined });
           res.anchors++;
         }
+      } else if (f.path === "manifest.md") {
+        const m = /^#\s+(.+)$/m.exec(f.content);
+        if (m) res.tuanbenName = m[1].trim();
+      } else if (f.path === "prologue.md") {
+        res.prologue = f.content; // 团本开场 prompt:不物化进 store,回传供 session_meta
       }
-      // manifest.md: 暂只作元信息载体,P5 接入 session_meta 时消费。
     }
   });
   tx();

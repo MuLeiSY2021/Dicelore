@@ -29,12 +29,29 @@ describe("importPack", () => {
     const r = commit(cat, { name: "凡人修仙传", files: PACK, message: "init", createdAt: "2026-01-01" });
     const run = openDb(":memory:"); initSchema(run);
     const res = importPack(cat, run, r.tuanbenId, r.commitId);
-    expect(res).toEqual({ lore: 1, rules: 1, pools: 2, stateCells: 2, fronts: 0, plotlines: 0, foreshadows: 0, anchors: 0 });
+    expect(res).toMatchObject({ lore: 1, rules: 1, pools: 2, stateCells: 2, fronts: 0, plotlines: 0, foreshadows: 0, anchors: 0 });
+    expect(res.tuanbenName).toBe("凡人修仙传"); // manifest H1
     expect(loreGet(run, "黄枫谷")?.content).toBe("黄枫谷乃江南正道。");
     expect(ruleGet(run, "修炼体系")?.content).toBe("练气→筑基→结丹");
     expect((run.prepare("SELECT COUNT(*) n FROM pool").get() as { n: number }).n).toBe(2);
     const cell = run.prepare("SELECT kind, value, visible FROM state WHERE entity='墨大夫' AND attr='好感度'").get() as { kind: string; value: string; visible: number };
     expect(cell).toEqual({ kind: "npc", value: "0", visible: 2 });
+    cat.close(); run.close();
+  });
+
+  it("prologue.md 回传(不物化进 store)", () => {
+    const cat = openCatalog(":memory:");
+    const r = commit(cat, { name: "魔道", files: [
+      { path: "manifest.md", content: "# 魔道" },
+      { path: "prologue.md", content: "夜色如墨,你立于鹰愁涧口。" },
+      { path: "lore/x.md", content: "甲" },
+    ], message: "init", createdAt: "2026-01-01" });
+    const run = openDb(":memory:"); initSchema(run);
+    const res = importPack(cat, run, r.tuanbenId, r.commitId);
+    expect(res.prologue).toBe("夜色如墨,你立于鹰愁涧口。");
+    expect(res.tuanbenName).toBe("魔道");
+    // prologue 不进 lore/store
+    expect((run.prepare("SELECT COUNT(*) n FROM lore").get() as { n: number }).n).toBe(1);
     cat.close(); run.close();
   });
 
