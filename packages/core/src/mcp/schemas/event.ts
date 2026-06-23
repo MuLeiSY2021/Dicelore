@@ -21,7 +21,10 @@ export const eventAppendIn = z
     visible: z.union([z.literal(0), z.literal(1)]).optional(),
   })
   .strict();
-export const eventAppendOut = z.object({ event_id: z.number() });
+export const eventAppendOut = z.object({
+  event_id: z.number(),
+  fired_watchers: z.array(z.object({ id: z.number(), payload: z.string() })).optional(),
+});
 
 export const eventRecallIn = z
   .object({ query: z.string(), k: z.number().int().min(1).max(100).default(8) })

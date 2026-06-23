@@ -190,6 +190,7 @@
   - **② core additive 工厂 + onCanonWrite 写后接缝**：core 加 `createMcpServer(db, deps)`（抽 `main.ts` 的 registerTool 循环；`main.ts` stdio 路径行为不变），在工具处理器**外层包**——工具写规范态成功后回调 `deps.onCanonWrite(evt)`（**不进 `runTool`**，引擎纯逻辑零改动；按实例注入、多 session 安全）。orchestrator 据 `onCanonWrite` 映射 `presentation_delta`（普通写，web refetch 全量对账）/ `roll_committed`（`resolve_*_open` 明骰 verdict）。`deps.rollGate` 经工厂接既有模块级 `setRollGate`（[ADR-0019](#) 的 `awaitPlayerRoll` 接缝）——单人；多 session/多人 per-instance gate 化为未来。详见 [MCP工具面](../04-子系统设计/MCP工具面.md)。
   - **③ GmDriver 抽象**：orchestrator 依赖抽象 `GmDriver`；真实现 `AgentSdkDriver` 包 `@anthropic-ai/claude-agent-sdk` 的 `query()`，测试用脚本化 `FakeGmDriver` → 整个回合循环 / WS / notify / 明骰 gate **全程不烧 LLM 可单测**；真 SDK 跑通另设 `RUN_LIVE=1` opt-in 集成冒烟。Agent SDK 鉴权沿用 env `ANTHROPIC_BASE_URL`/`ANTHROPIC_AUTH_TOKEN`（密钥只读 env、不入库）。
 - **后果**：组件7 实时引擎面 **Phase 1（含单人明骰）实现并合并 `main`**（[玩家客户端 §9.2](../04-子系统设计/玩家客户端.md)），Playwright 端到端实测通过（浏览器发消息 → WS narration 流回）。落 [玩家客户端 §9.2](../04-子系统设计/玩家客户端.md)、[MCP工具面](../04-子系统设计/MCP工具面.md)（工厂 + 接缝）。设计 / 计划：实时引擎面 Phase 1 设计 / 实现计划。**下一阶段**（交接 todo）：多人明骰 per-instance gate 硬化、组件3/4 hook 接入 Agent SDK（Phase 1 用 `turnLoop.runTurnEnd` 物化 choice）、BG3 动效精修、团本制作页（组件5）。**被否**：① stdio 默认挂载（多 session 子进程 sprawl 先到顶、明骰跨进程 gate 须 hack）；② onCanonWrite 写进 `runTool`（破「不改引擎」边界；外层包同样拿得到出参）；③ orchestrator 直接耦合 Agent SDK 不抽 GmDriver（测试须 mock SDK 内部、脆、烧 token）。
+- **对齐注解（2026-06-22，追加式不回改正文）**：本 ADR 的 in-process 决策意味着「缝 A（MCP↔后端）同进程」——据此把下游 [接口页](../04-子系统设计/玩家客户端-接口.md) / [设计页 §6](../04-子系统设计/玩家客户端.md) 对齐：缝 A 落为**进程内 `onCanonWrite` 回调（现役）**，[ADR-0018](#) 的 **HTTP webhook 降为「跨进程/远程/自定义 MCP」的未来形态**（`packages/shared/notify.ts` 契约备而未用）。**阐释「两条缝」**（[接口页 §0](../04-子系统设计/玩家客户端-接口.md)）：需要解耦/远程化/多租户的是**缝 B（后端↔web）**、非缝 A——`@dicelore/shared` 已超前预留 `SessionStatus`/`SessionSummary` 为缝 B 多租户铺路，而缝 B 的会话路由 / 鉴权 / 多实例分片仍属未来（[ADR-0018](#) ③ Web 壳）。本注解不新增决策、只把推导链下游补齐（修 G-debt「缺与实现对齐的接口文档」）。
 
 ---
 
@@ -207,6 +208,12 @@
   - **step① 剩余（未做）**：新建物理表 `front`(+`front_omen`) / `plotline` / `foreshadow` / `history`（spec §3/§6/§7，叙事脚手架主体）；**待确认补充改名** `rule_doc`→`rule`、`world_pool`→`pool`（spec §3/§9 用新名，§12 phasing 漏列）。
   - 问题总账 [主题 A′](../06-里程碑与问题/问题总账.md) 的**改名段已落**，叙事脚手架（B6/A）**未结**、条目不全关。
   - 落 `main`（state 重构更早；`5ef09c9`..`4f560c4` 为 event/world_doc 段）。**被否**：① 全部用 expand-contract（中央共享表 log 破中间态绿）；② 改名期就重写 §2（建表期返工，违单源）；③ 同期改 MCP 工具名（无谓破工具契约，收敛留工具生成层）。
+
+## ADR-0022 定位对齐：从「agentic 时代的角色扮演宿主」到「前后端交互界面（开发中）+ 跑团特化 agent 套件」
+
+- **背景**：ADR-0022 初稿把定位升维为「agentic 时代的角色扮演宿主」，核心命题收敛为「把对抗（刺）装回虚拟体验」。进一步梳理后，发现这个定位仍不够精确：它没有区分**界面/平台层**（通用、可接任意 agent / model）与**跑团 agent 套件**（机制特化、有取舍）这两层。原表述「角色扮演宿主」易被误读为只面向角色扮演品类，且对「平台通用性」与「套件特化性」的关系不清晰。
+- **决策**：① 定位调整为「**可对接多 agent、多 model 的前后端交互界面（开发中）+ 跑团特化的 agent 套件**」；② 使命重述为「服务想**玩**文字冒险游戏的玩家和想**写**文字冒险剧本的作者」；③ **品类边界重述为套件取舍而非产品级拒绝**——跑团套件的强制掷骰 / 外置状态在纯陪伴场景里是负担（套件特化取舍），但界面 / 平台层通用、不把陪伴列为产品级非目标；④ **新增愿景**：美观 / 优雅 / 现代化的 UI；尽最大可能兼容客制化与社区生态；适配移动端是长期愿景；⑤ 叙事姿态：不点名酒馆 / SillyTavern（讲「提示词范式」），品类词统一「文字冒险游戏」；⑥ 放弃商业化沿用（AGPL-3.0-or-later，无双授权）。
+- **后果**：问题域 §一句话 / §6.3、成功标准 §3 非目标、用户与场景增 §4 愿景，均按此口径对齐。**下游技术设计（02/03/04）不变**；三层约束（L1/L2/L3）、GM 塑形（F1/F2/F3）、数据层四域架构全部保留。**被否**：① 保持「角色扮演宿主」——易被误读为只服务角色扮演品类，不能清晰表达界面通用性；② 将「不覆盖纯陪伴品类」列为产品级非目标——过度限定平台层，与界面通用定位矛盾。
 
 ---
 

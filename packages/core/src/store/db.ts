@@ -46,7 +46,8 @@ export function initSchema(db: DB): void {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       created_seq INTEGER, condition TEXT NOT NULL, payload TEXT NOT NULL,
       mode TEXT NOT NULL DEFAULT 'once', armed INTEGER NOT NULL DEFAULT 1,
-      last_fired_seq INTEGER, status TEXT NOT NULL DEFAULT 'active'
+      last_fired_seq INTEGER, status TEXT NOT NULL DEFAULT 'active',
+      source TEXT NOT NULL DEFAULT 'manual'
     );
     CREATE TABLE IF NOT EXISTS lore (
       name TEXT, content TEXT, category TEXT, tags TEXT, visible INTEGER NOT NULL DEFAULT 0
@@ -69,6 +70,29 @@ export function initSchema(db: DB): void {
       spec_json TEXT NOT NULL,      -- 规格(无结果)
       status TEXT NOT NULL DEFAULT 'awaiting',  -- 'awaiting' | 'committed'
       verdict_seq INTEGER           -- commit 后链接 kind=verdict event 的 seq
+    );
+    CREATE TABLE IF NOT EXISTS front (
+      id TEXT PRIMARY KEY, name TEXT NOT NULL, stakes TEXT,
+      clock_ref TEXT, status TEXT NOT NULL DEFAULT 'active'
+    );
+    CREATE TABLE IF NOT EXISTS plotline (
+      id TEXT PRIMARY KEY, title TEXT NOT NULL, summary TEXT,
+      status TEXT NOT NULL DEFAULT 'open'
+    );
+    CREATE TABLE IF NOT EXISTS foreshadow (
+      id TEXT PRIMARY KEY, content TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'planted'
+    );
+    CREATE TABLE IF NOT EXISTS history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      seq_from INTEGER NOT NULL, seq_to INTEGER NOT NULL,
+      summary TEXT NOT NULL, created_seq INTEGER NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS anchor (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      owner_table TEXT NOT NULL, owner_id TEXT NOT NULL,
+      target_table TEXT NOT NULL, target_id TEXT NOT NULL,
+      role TEXT
     );
   `);
 

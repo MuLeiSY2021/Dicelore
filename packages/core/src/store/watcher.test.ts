@@ -10,12 +10,21 @@
 import { beforeEach, describe, expect, test } from "vitest";
 import { initSchema, openDb, type DB } from "./db.js";
 import { recomputeWatchers, watcherList, watcherSet } from "./watcher.js";
-import { logSince } from "./log.js";
+import { logAppend, logSince } from "./log.js";
+import { makeEvalCtx } from "./evalCtx.js";
 
 let db: DB;
 beforeEach(() => { db = openDb(":memory:"); initSchema(db); });
 
 const ctxWith = (hp: number) => ({ getRef: (_e: string, _a: string) => String(hp) });
+
+test("watcherSet 默认 source='manual'、可设 source", () => {
+  const id1 = watcherSet(db, { condition: "{张三.HP} < 10", payload: "濒死" });
+  const id2 = watcherSet(db, { condition: "{张三.HP} < 5", payload: "凶兆", source: "front:魔道入侵" });
+  const list = watcherList(db);
+  expect(list.find((w) => w.id === id1)!.source).toBe("manual");
+  expect(list.find((w) => w.id === id2)!.source).toBe("front:魔道入侵");
+});
 
 describe("watcher", () => {
   test("条件满足 → 触发一次、落 watcher_fired、armed→0", () => {
@@ -36,5 +45,25 @@ describe("watcher", () => {
     expect(recomputeWatchers(db, ctxWith(20))).toHaveLength(1); // 触发
     expect(recomputeWatchers(db, ctxWith(50))).toHaveLength(0); // 解除 → re-arm
     expect(recomputeWatchers(db, ctxWith(20))).toHaveLength(1); // 再触发
+  });
+});
+
+describe("watcher log-has + since 游标", () => {
+  test("log-has watcher: once 出现即触发一次", () => {
+    watcherSet(db, { condition: "{log:has(kind=choice)}", payload: "选了", mode: "once" });
+    logAppend(db, { kind: "choice", content: "驰援" });
+    const fired = recomputeWatchers(db, makeEvalCtx(db));
+    expect(fired.map((f) => f.payload)).toEqual(["选了"]);
+    // 再 recompute 不重复(once 已 disarm)
+    expect(recomputeWatchers(db, makeEvalCtx(db))).toEqual([]);
+  });
+
+  test("repeat log-has: since 游标只认新事件、可重触发", () => {
+    watcherSet(db, { condition: "{log:has(kind=reveal)}", payload: "揭示", mode: "repeat" });
+    logAppend(db, { kind: "reveal", content: "A" });
+    expect(recomputeWatchers(db, makeEvalCtx(db)).length).toBe(1); // 触发1
+    expect(recomputeWatchers(db, makeEvalCtx(db)).length).toBe(0); // 无新 reveal,re-arm 不触发
+    logAppend(db, { kind: "reveal", content: "B" });
+    expect(recomputeWatchers(db, makeEvalCtx(db)).length).toBe(1); // 新 reveal,再触发
   });
 });

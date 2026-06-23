@@ -10,11 +10,13 @@
 import { rollDice, type Rng } from "../dice/index.js";
 import { parseExpr, type TermKind } from "./parse.js";
 import { DiceloreError } from "../errors.js";
+import type { HasCond } from "../store/existsMatch.js";
 
 export type RefGetter = (entity: string, attr: string) => string | undefined;
 export interface EvalCtx {
   rng?: Rng;
   getRef: RefGetter;
+  existsMatch?: (ns: string, conds: HasCond[], sinceSeq?: number) => boolean;
 }
 
 export interface ExprTerm {
