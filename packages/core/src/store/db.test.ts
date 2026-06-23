@@ -15,7 +15,7 @@ describe("schema", () => {
     const db = openDb(":memory:");
     initSchema(db);
     const names = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map((r: any) => r.name);
-    for (const t of ["state", "log", "watcher", "lore", "pool", "rule", "session_meta", "pending_choice"]) {
+    for (const t of ["state", "log", "watcher", "lore", "pool", "rule", "session_meta", "pending_choice", "front", "plotline", "foreshadow", "history", "anchor"]) {
       expect(names).toContain(t);
     }
   });

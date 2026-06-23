@@ -17,6 +17,14 @@ beforeEach(() => { db = openDb(":memory:"); initSchema(db); });
 
 const ctxWith = (hp: number) => ({ getRef: (_e: string, _a: string) => String(hp) });
 
+test("watcherSet 默认 source='manual'、可设 source", () => {
+  const id1 = watcherSet(db, { condition: "{张三.HP} < 10", payload: "濒死" });
+  const id2 = watcherSet(db, { condition: "{张三.HP} < 5", payload: "凶兆", source: "front:魔道入侵" });
+  const list = watcherList(db);
+  expect(list.find((w) => w.id === id1)!.source).toBe("manual");
+  expect(list.find((w) => w.id === id2)!.source).toBe("front:魔道入侵");
+});
+
 describe("watcher", () => {
   test("条件满足 → 触发一次、落 watcher_fired、armed→0", () => {
     watcherSet(db, { condition: "{张三.HP} < 30", payload: "濒死!" });

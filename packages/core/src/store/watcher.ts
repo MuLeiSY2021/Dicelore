@@ -19,22 +19,23 @@ export interface WatcherRow {
   mode: "once" | "repeat";
   armed: number;
   status: string;
+  source: string;
 }
 
 export function watcherSet(
   db: DB,
-  opts: { condition: string; payload: string; mode?: "once" | "repeat"; created_seq?: number },
+  opts: { condition: string; payload: string; mode?: "once" | "repeat"; created_seq?: number; source?: string },
 ): number {
   const info = db
     .prepare(
-      "INSERT INTO watcher (created_seq, condition, payload, mode, armed, status) VALUES (?, ?, ?, ?, 1, 'active')",
+      "INSERT INTO watcher (created_seq, condition, payload, mode, armed, status, source) VALUES (?, ?, ?, ?, 1, 'active', ?)",
     )
-    .run(opts.created_seq ?? null, opts.condition, opts.payload, opts.mode ?? "once");
+    .run(opts.created_seq ?? null, opts.condition, opts.payload, opts.mode ?? "once", opts.source ?? "manual");
   return Number(info.lastInsertRowid);
 }
 
 export function watcherList(db: DB): WatcherRow[] {
-  return db.prepare("SELECT * FROM watcher WHERE status='active'").all() as WatcherRow[];
+  return db.prepare("SELECT id, condition, payload, mode, armed, status, source FROM watcher WHERE status='active'").all() as WatcherRow[];
 }
 
 // edge-triggered:armed∧cond→触发；¬armed∧¬cond∧repeat→re-arm。
