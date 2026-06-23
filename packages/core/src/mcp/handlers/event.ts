@@ -9,7 +9,8 @@
 
 import type { DB } from "../../store/db.js";
 import { logAppend, logRecall, type LogRow } from "../../store/log.js";
-import { watcherSet, watcherList, type WatcherRow } from "../../store/watcher.js";
+import { watcherSet, watcherList, recomputeWatchers, type WatcherRow } from "../../store/watcher.js";
+import { makeEvalCtx } from "../../store/evalCtx.js";
 import { truncateText } from "../../store/truncate.js";
 import type { ToolDef } from "../tooldef.js";
 import {
@@ -34,7 +35,8 @@ function appendHandler(
     tags: input.tags?.length ? input.tags.join(" ") : undefined,
     visible: input.visible,
   });
-  return { event_id };
+  const fired_watchers = recomputeWatchers(db, makeEvalCtx(db));
+  return { event_id, fired_watchers };
 }
 
 function recallHandler(db: DB, input: { query: string; k: number }) {

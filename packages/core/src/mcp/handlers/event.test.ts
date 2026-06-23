@@ -11,7 +11,7 @@
 import { describe, it, expect } from "vitest";
 import { openDb, initSchema } from "../../store/db.js";
 import { logSince } from "../../store/log.js";
-import { watcherList } from "../../store/watcher.js";
+import { watcherList, watcherSet } from "../../store/watcher.js";
 import { eventTools } from "./event.js";
 
 function freshDb() { const db = openDb(":memory:"); initSchema(db); return db; }
@@ -55,5 +55,14 @@ describe("event handlers", () => {
     const w = out.watchers.find((x: any) => x.condition === "{世界.入侵} >= 6");
     expect(w).toMatchObject({ payload: "破阵", mode: "once", armed: 1, status: "active" });
     expect(typeof w.id).toBe("number");
+  });
+
+  it("event_append 触发 log-has watcher,回 fired_watchers", () => {
+    const db = freshDb();
+    watcherSet(db, { condition: "{log:has(kind=reveal)}", payload: "有新揭示", mode: "once" });
+    const out = byName("event_append").handler(db, { kind: "reveal", content: "秘密曝光" });
+    expect(out.fired_watchers).toBeDefined();
+    expect(out.fired_watchers.length).toBe(1);
+    expect(out.fired_watchers[0].payload).toBe("有新揭示");
   });
 });
