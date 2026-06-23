@@ -13,5 +13,11 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
   // 开发期代理到 orchestrator；ws:true 透传 /sessions/:id/ws 的 WebSocket 升级。
-  server: { proxy: { "/sessions": { target: "http://localhost:8787", ws: true, changeOrigin: true } } },
+  server: {
+    proxy: {
+      "/sessions": { target: "http://localhost:8787", ws: true, changeOrigin: true },
+      "/catalog": { target: "http://localhost:8787", changeOrigin: true },
+      "/lore-sessions": { target: "http://localhost:8787", changeOrigin: true },
+    },
+  },
 });
