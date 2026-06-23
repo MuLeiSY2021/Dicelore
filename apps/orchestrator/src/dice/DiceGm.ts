@@ -10,6 +10,7 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { Agent, TurnInput, TurnEvent } from "../pkg/agent.js";
+import { stripReasoning } from "../pkg/reasoning.js";
 
 export interface DiceGmDeps {
   mcpServer: McpServer; // DiceSession 的 in-process MCP(已注入 onCanonWrite/rollGate)
@@ -37,7 +38,8 @@ export class DiceGm implements Agent {
         if (msg.type === "assistant") {
           const content = (msg as { message?: { content?: { type: string; text?: string }[] } }).message?.content ?? [];
           const text = content.filter((b) => b.type === "text").map((b) => b.text ?? "").join("");
-          if (text) yield { type: "narration", text };
+          const narration = stripReasoning(text); // P6:剥推理类模型(DeepSeek-R1/GLM think)的思考段
+          if (narration) yield { type: "narration", text: narration };
         } else if (msg.type === "result") {
           break; // 回合结束
         }
