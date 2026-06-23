@@ -30,3 +30,17 @@ describe("evalPredicate", () => {
     expect(() => evalPredicate("{张三.HP}", { getRef })).toThrow();
   });
 });
+
+describe("evalPredicate has()", () => {
+  test("{ns:has(...)} 走 existsMatch、不被内部 OP 切开", () => {
+    const ctx = { getRef: () => undefined, existsMatch: (ns: string, conds: any[]) => ns === "state" && conds.length === 2 };
+    expect(evalPredicate("{state:has(attr=敌意, value>=8)}", ctx as any)).toBe(true);
+  });
+  test("无 existsMatch 时 has 谓词抛错", () => {
+    expect(() => evalPredicate("{state:has(x=1)}", { getRef: () => undefined } as any)).toThrow();
+  });
+  test("普通比较谓词仍走旧路径", () => {
+    const ctx = { getRef: (e: string, a: string) => (e === "张三" && a === "HP" ? "20" : undefined) };
+    expect(evalPredicate("{张三.HP} < 30", ctx as any)).toBe(true);
+  });
+});
