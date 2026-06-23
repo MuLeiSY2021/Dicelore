@@ -38,4 +38,10 @@ export {
 // 回合末 hook（choice 物化 + L3 审计）——组件4，供 orchestrator turn-end 复用。
 export { runTurnEnd } from "./adapter/turnEnd.js";
 
+// ===== Catalog 团本包库（后端双路径架构 P2）=====
+export {
+  openCatalog, type CatalogDB, uuidv5, resolveId, commit, history, checkout, tag, list,
+  type PackFile, type CommitRow, type TuanbenSummary,
+} from "./catalog/index.js";
+
 
