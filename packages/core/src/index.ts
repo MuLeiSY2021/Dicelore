@@ -45,5 +45,7 @@ export {
 } from "./catalog/index.js";
 // import 信任闸门 + 建库（P3）
 export { importPack, validatePack, type ImportResult, type ImportIssue } from "./catalog/index.js";
+// git 单向投影（P4）
+export { exportGit, importGit } from "./catalog/index.js";
 
 

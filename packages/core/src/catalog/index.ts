@@ -14,3 +14,4 @@ export {
   type PackFile, type CommitRow, type TuanbenSummary,
 } from "./catalog.js";
 export { importPack, validatePack, type ImportResult, type ImportIssue } from "./import.js";
+export { exportGit, importGit } from "./git.js";
