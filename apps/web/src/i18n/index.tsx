@@ -23,7 +23,7 @@ const STORAGE_KEY = "dicelore.lang";
 type Dict = Record<string, string>;
 
 const ZH: Dict = {
-  "nav.home": "主页", "nav.play": "跑团", "nav.build": "团本制作", "nav.config": "配置",
+  "nav.home": "主页", "nav.catalog": "团本", "nav.play": "跑团", "nav.build": "团本制作", "nav.config": "配置",
   "bar.lang": "语言", "bar.theme": "明暗", "bar.accent": "强调色",
   "bar.model": "模型", "bar.mcp": "MCP", "bar.notify": "notify", "bar.notify.unset": "未配", "bar.notify.connected": "已连",
   // 主页
@@ -52,7 +52,7 @@ const ZH: Dict = {
   "cfg.startup.home": "打开时落到主页", "cfg.startup.last": "打开上次会话",
   "cfg.service.port": "主页端口", "cfg.service.host": "监听地址", "cfg.service.notify": "notify webhook",
   "cfg.service.notify.status": "连通状态", "cfg.service.proto": "协议版本",
-  "cfg.model.gm": "GM 模型", "cfg.model.agent": "Agent", "cfg.model.base": "API baseURL",
+  "cfg.model.gm": "GM 模型", "cfg.model.agent": "Agent 底座", "cfg.model.agent.hint": "驱动 GM 的运行时：Harness(默认) 或 Claude Agent SDK", "cfg.model.base": "API baseURL",
   "cfg.model.key": "API key", "cfg.model.key.ph": "sk-… 或留空走环境变量", "cfg.model.show": "显示", "cfg.model.hide": "隐藏",
   "cfg.model.fakehint": "当前为 FAKE_GM 模拟模式，未接真实模型推理。",
   "cfg.mcp.add": "添加 MCP", "cfg.mcp.core": "核心 · 规范态来源", "cfg.mcp.custom": "自定义 · out-of-canon",
@@ -68,9 +68,13 @@ const ZH: Dict = {
   "cfg.about.product": "产品", "cfg.about.version": "版本", "cfg.about.proto": "协议契约", "cfg.about.shell": "运行壳",
   "accent.gold": "金（默认）", "accent.copper": "铜", "accent.teal": "青", "accent.crimson": "绛", "accent.indigo": "靛",
   // 跑团
-  "play.rail.world": "设定", "play.rail.rule": "规则", "play.rail.log": "日志", "play.rail.session": "会话",
+  "play.rail.world": "设定", "play.rail.tools": "工具",
   "play.rail.add": "拖出生成面板",
-  "play.search.world": "搜设定 / 卡池", "play.search.rule": "搜规则", "play.search.log": "搜日志", "play.search.session": "搜会话",
+  "play.bar.session": "会话", "play.bar.pack": "团本", "play.bar.hide": "隐藏会话栏", "play.bar.show": "显示会话栏",
+  "play.bar.group.date": "按日期", "play.bar.group.pack": "按团本", "play.bar.nosession": "（无会话，去主页开新局）",
+  "play.tools.search": "全文搜索设定", "play.tools.log": "本局日志", "play.tools.pins": "已钉到呈现台", "play.tools.none": "暂无可用工具",
+  "play.date.today": "今天", "play.date.week": "本周", "play.date.earlier": "更早",
+  "play.search.world": "搜设定（名称 / 分类）",
   "play.narr.empty": "等待 GM 开场……输入你的第一个行动。",
   "play.input.ph": "你做什么？（回车发送）",
   "play.roll": "丢骰子", "play.roll.hint": "这一掷决定上面的结果",
@@ -88,10 +92,21 @@ const ZH: Dict = {
   "build.report": "整包校验", "build.report.errors": "{n} error", "build.report.warns": "{n} warn",
   "build.empty": "还没有团本，新建一个或去主页造示例。",
   "common.cancel": "取消", "common.confirm": "确定", "common.loading": "加载中…",
+  // 团本目录页
+  "catalog.title": "团本目录", "catalog.sub": "选一个团本开始游戏，或去团本制作创建 / 导入。",
+  "catalog.start": "开始游戏", "catalog.edit": "编辑", "catalog.versions": "{n} 版本",
+  "catalog.empty.title": "还没有团本", "catalog.empty.sub": "去团本制作创建一个，或一键造示例团本。",
+  "catalog.empty.build": "去团本制作", "catalog.empty.sample": "造示例团本",
+  "catalog.starting": "开局中…",
+  // Play 开场层 / 会话
+  "play.start": "点击开始游戏", "play.start.hint": "GM 将带来开场……",
+  "play.start.busy": "开场中…",
+  "play.session.delete": "删除会话", "play.session.empty.title": "还没有任何会话",
+  "play.session.empty.sub": "去团本目录选一个团本开始游戏。", "play.session.empty.cta": "去团本目录",
 };
 
 const EN: Dict = {
-  "nav.home": "Home", "nav.play": "Play", "nav.build": "Build", "nav.config": "Settings",
+  "nav.home": "Home", "nav.catalog": "Campaigns", "nav.play": "Play", "nav.build": "Build", "nav.config": "Settings",
   "bar.lang": "Language", "bar.theme": "Theme", "bar.accent": "Accent",
   "bar.model": "Model", "bar.mcp": "MCP", "bar.notify": "notify", "bar.notify.unset": "unset", "bar.notify.connected": "connected",
   "home.greeting.morning": "Good morning", "home.greeting.afternoon": "Good afternoon",
@@ -118,7 +133,7 @@ const EN: Dict = {
   "cfg.startup.home": "Open the Home page", "cfg.startup.last": "Open last session",
   "cfg.service.port": "Port", "cfg.service.host": "Host", "cfg.service.notify": "notify webhook",
   "cfg.service.notify.status": "Status", "cfg.service.proto": "Protocol",
-  "cfg.model.gm": "GM model", "cfg.model.agent": "Agent", "cfg.model.base": "API baseURL",
+  "cfg.model.gm": "GM model", "cfg.model.agent": "Agent runtime", "cfg.model.agent.hint": "Runtime that drives the GM: Harness (default) or Claude Agent SDK", "cfg.model.base": "API baseURL",
   "cfg.model.key": "API key", "cfg.model.key.ph": "sk-… or leave blank for env", "cfg.model.show": "Show", "cfg.model.hide": "Hide",
   "cfg.model.fakehint": "Running in FAKE_GM mode — no real model inference.",
   "cfg.mcp.add": "Add MCP", "cfg.mcp.core": "Core · canonical source", "cfg.mcp.custom": "Custom · out-of-canon",
@@ -133,9 +148,13 @@ const EN: Dict = {
   "cfg.data.dir": "Sessions dir", "cfg.data.fts": "FTS mode", "cfg.data.count": "Sessions",
   "cfg.about.product": "Product", "cfg.about.version": "Version", "cfg.about.proto": "Protocol", "cfg.about.shell": "Shell",
   "accent.gold": "Gold (default)", "accent.copper": "Copper", "accent.teal": "Teal", "accent.crimson": "Crimson", "accent.indigo": "Indigo",
-  "play.rail.world": "Lore", "play.rail.rule": "Rules", "play.rail.log": "Log", "play.rail.session": "Sessions",
+  "play.rail.world": "Lore", "play.rail.tools": "Tools",
   "play.rail.add": "Drag out a panel",
-  "play.search.world": "Search lore / pools", "play.search.rule": "Search rules", "play.search.log": "Search log", "play.search.session": "Search sessions",
+  "play.bar.session": "Session", "play.bar.pack": "Pack", "play.bar.hide": "Hide session bar", "play.bar.show": "Show session bar",
+  "play.bar.group.date": "By date", "play.bar.group.pack": "By pack", "play.bar.nosession": "(no sessions — start one from Home)",
+  "play.tools.search": "Search lore", "play.tools.log": "Session log", "play.tools.pins": "Pinned to stage", "play.tools.none": "No tools available",
+  "play.date.today": "Today", "play.date.week": "This week", "play.date.earlier": "Earlier",
+  "play.search.world": "Search lore (name / category)",
   "play.narr.empty": "Waiting for the GM… type your first action.",
   "play.input.ph": "What do you do? (Enter to send)",
   "play.roll": "Roll", "play.roll.hint": "This roll decides the outcome above",
@@ -152,6 +171,15 @@ const EN: Dict = {
   "build.report": "Validation", "build.report.errors": "{n} error", "build.report.warns": "{n} warn",
   "build.empty": "No packs yet — create one or build the sample from Home.",
   "common.cancel": "Cancel", "common.confirm": "OK", "common.loading": "Loading…",
+  "catalog.title": "Campaigns", "catalog.sub": "Pick a campaign to start, or create / import one in Build.",
+  "catalog.start": "Start game", "catalog.edit": "Edit", "catalog.versions": "{n} versions",
+  "catalog.empty.title": "No campaigns yet", "catalog.empty.sub": "Create one in Build, or build the sample.",
+  "catalog.empty.build": "Go to Build", "catalog.empty.sample": "Build sample",
+  "catalog.starting": "Starting…",
+  "play.start": "Click to start", "play.start.hint": "The GM will set the scene…",
+  "play.start.busy": "Opening…",
+  "play.session.delete": "Delete session", "play.session.empty.title": "No sessions yet",
+  "play.session.empty.sub": "Pick a campaign in Campaigns to start.", "play.session.empty.cta": "Go to Campaigns",
 };
 
 const DICTS: Record<Lang, Dict> = { zh: ZH, en: EN };
@@ -182,7 +210,8 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
 export function useI18n(): I18nCtx {
   const v = useContext(Ctx);
-  if (!v) throw new Error("useI18n 必须在 I18nProvider 内使用");
-  return v;
+  if (v) return v;
+  // 无 provider 回退(隔离组件测试 / 渐进增强)：默认 zh，setLang noop。
+  return { lang: "zh", setLang: () => { /* noop */ }, t: (k, vars) => interpolate(DICTS.zh[k] ?? k, vars) };
 }
 export function useT(): TFunc { return useI18n().t; }

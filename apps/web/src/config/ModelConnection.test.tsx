@@ -10,9 +10,10 @@
 import { render, screen } from "@testing-library/react";
 import { ModelConnection } from "./ModelConnection.js";
 
-it("渲染模型连接(GM 模型 / API key·OAuth)", () => {
+it("渲染模型连接(GM 模型可选 + API key + 连接测试)", () => {
   render(<ModelConnection />);
   expect(screen.getByText("模型连接")).toBeInTheDocument();
-  expect(screen.getAllByText(/当 GM/).length).toBeGreaterThan(0);
-  expect(screen.getByText(/API key/)).toBeInTheDocument();
+  expect(screen.getByLabelText("GM 模型")).toBeInTheDocument(); // 真实模型下拉
+  expect(screen.getByLabelText("API key")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /连接测试/ })).toBeInTheDocument();
 });

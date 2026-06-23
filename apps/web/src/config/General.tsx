@@ -7,21 +7,38 @@
 // Software Foundation, either version 3 of the License, or (at your option)
 // any later version. See <https://www.gnu.org/licenses/>.
 
-// 配置 → 通用（视觉页 §6）。展示态骨架（只读，真实数据接线属后续轮）。
+import { useI18n, LANGS, type Lang } from "../i18n/index.js";
+import { useSettings, type StartupBehavior } from "../settings/useSettings.js";
+
+// 配置 → 通用：语言切换(真生效+持久化) + 启动行为。
 export function General() {
+  const { lang, setLang, t } = useI18n();
+  const { settings, setStartup } = useSettings();
   return (
-    <div className="cfg-section">
-      <h2 className="cfg-h2">通用</h2>
-
-      <div className="cfg-row">
-        <span className="cfg-label">语言</span>
-        <span className="cfg-static">简体中文（默认）· 待接线</span>
+    <>
+      <div className="mhead"><h3>{t("cfg.general")}</h3></div>
+      <div className="section">
+        <div className="frow">
+          <span className="flabel">{t("cfg.general.lang")}</span>
+          <div className="fctrl">
+            <select className="f" aria-label={t("cfg.general.lang")} value={lang} onChange={(e) => setLang(e.target.value as Lang)}>
+              {LANGS.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
+            </select>
+          </div>
+        </div>
+        <div className="frow">
+          <span className="flabel">{t("cfg.general.startup")}</span>
+          <div className="fctrl">
+            <div className="seg" role="group" aria-label={t("cfg.general.startup")}>
+              {(["home", "last"] as StartupBehavior[]).map((v) => (
+                <button key={v} className={settings.startup === v ? "on" : ""} onClick={() => setStartup(v)}>
+                  {t(v === "home" ? "cfg.startup.home" : "cfg.startup.last")}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
-
-      <div className="cfg-row">
-        <span className="cfg-label">启动</span>
-        <span className="cfg-static">打开时落到主页 · 待接线</span>
-      </div>
-    </div>
+    </>
   );
 }

@@ -69,6 +69,25 @@ export async function openPlaySession(sessionId: string, tuanbenId: string, ref:
   if (!res.ok) throw new Error(`open 请求失败：${res.status}`);
 }
 
+// kickoff：触发 GM 开场回合(prologue 驱动，无玩家输入)。后端契约 POST /sessions/:id/start。
+// 优雅降级：后端未上线 /start(404)时回退到 POST /messages 喂开场 cue，使当前后端也能开场。
+export async function startGame(sessionId: string): Promise<{ turnId: string }> {
+  const res = await fetch(`/sessions/${encodeURIComponent(sessionId)}/start`, {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({}),
+  });
+  if (res.ok) return (await res.json()) as { turnId: string };
+  if (res.status === 404) return postMessage(sessionId, "（开始游戏）"); // 回退
+  throw new Error(`start 请求失败：${res.status}`);
+}
+
+// 删除会话(DELETE /sessions/:id)。后端未上线时静默成功(前端本地移除)。
+export async function deleteSession(sessionId: string): Promise<void> {
+  try {
+    const res = await fetch(`/sessions/${encodeURIComponent(sessionId)}`, { method: "DELETE" });
+    if (!res.ok && res.status !== 404) throw new Error(`delete 请求失败：${res.status}`);
+  } catch { /* 后端未上线 DELETE：前端本地移除即可 */ }
+}
+
 // 读团本版本全部包文件(团本制作页中央渲染)。
 export async function getCatalogFiles(tuanbenId: string, ref = "head"): Promise<PackFile[]> {
   const res = await fetch(`/catalog/${encodeURIComponent(tuanbenId)}/files?ref=${encodeURIComponent(ref)}`);
