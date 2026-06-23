@@ -8,11 +8,12 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import type { Rng } from "../dice/index.js";
-import { evalExpr, type RefGetter } from "../expr/evaluate.js";
+import { evalExpr } from "../expr/evaluate.js";
 import type { DB } from "./db.js";
 import { stateGet, stateSet } from "./state.js";
 import { logAppend } from "./log.js";
 import { recomputeWatchers } from "./watcher.js";
+import { makeEvalCtx } from "./evalCtx.js";
 import { DiceloreError } from "../errors.js";
 
 export type MutOp = "+" | "-" | "=";
@@ -57,8 +58,7 @@ export function applyMutations(
   mutations: Mutation[],
   opts?: { rng?: Rng },
 ): MutationResult {
-  const getRef: RefGetter = (e, a) => stateGet(db, e, a)?.value;
-  const ctx = { rng: opts?.rng, getRef };
+  const ctx = makeEvalCtx(db, { rng: opts?.rng });
 
   const txn = db.transaction(() => {
     const applied: MutationApplied[] = [];
