@@ -68,3 +68,82 @@ export async function openPlaySession(sessionId: string, tuanbenId: string, ref:
   });
   if (!res.ok) throw new Error(`open 请求失败：${res.status}`);
 }
+
+// 读团本版本全部包文件(团本制作页中央渲染)。
+export async function getCatalogFiles(tuanbenId: string, ref = "head"): Promise<PackFile[]> {
+  const res = await fetch(`/catalog/${encodeURIComponent(tuanbenId)}/files?ref=${encodeURIComponent(ref)}`);
+  if (!res.ok) throw new Error(`files 请求失败：${res.status}`);
+  return ((await res.json()) as { files: PackFile[] }).files;
+}
+
+// 整包校验(团本制作页校验报告)。
+export interface ValidateIssue { level: "error" | "warn"; path: string; msg: string }
+export async function validateCatalog(files: PackFile[]): Promise<{ ok: boolean; issues: ValidateIssue[] }> {
+  const res = await fetch("/catalog/validate", {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ files }),
+  });
+  if (!res.ok) throw new Error(`validate 请求失败：${res.status}`);
+  return (await res.json()) as { ok: boolean; issues: ValidateIssue[] };
+}
+
+// 发布 tag。
+export async function tagPack(tuanbenId: string, commitId: string, label: string): Promise<void> {
+  const res = await fetch(`/catalog/${encodeURIComponent(tuanbenId)}/tag`, {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ commitId, label }),
+  });
+  if (!res.ok) throw new Error(`tag 请求失败：${res.status}`);
+}
+
+// 构建助手对话(POST /lore-sessions/:id/messages)。
+export async function postBuildMessage(loreSessionId: string, text: string, name: string): Promise<{ turnId: string }> {
+  const res = await fetch(`/lore-sessions/${encodeURIComponent(loreSessionId)}/messages`, {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text, name }),
+  });
+  if (!res.ok) throw new Error(`build message 请求失败：${res.status}`);
+  return (await res.json()) as { turnId: string };
+}
+
+// 选项点选：玩家点 choice 作下一回合输入(POST /sessions/:id/choices)。接口页 §9.3 gap② 闭环。
+export async function postChoice(sessionId: string, eventId: number, optionIndex: number): Promise<{ turnId: string }> {
+  const res = await fetch(`/sessions/${encodeURIComponent(sessionId)}/choices`, {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ eventId, optionIndex }),
+  });
+  if (!res.ok) throw new Error(`choice 请求失败：${res.status}`);
+  return (await res.json()) as { turnId: string };
+}
+
+// 左活动轨自查源浏览(GET /sessions/:id/browse)。
+export type BrowseSource = "world" | "rule" | "log";
+export interface BrowseEntry { name: string; tag: string | null; snippet: string; canPin: boolean; ref: string }
+export async function browse(sessionId: string, source: BrowseSource, q = ""): Promise<BrowseEntry[]> {
+  const res = await fetch(`/sessions/${encodeURIComponent(sessionId)}/browse?source=${source}&q=${encodeURIComponent(q)}`);
+  if (!res.ok) throw new Error(`browse 请求失败：${res.status}`);
+  return ((await res.json()) as { entries: BrowseEntry[] }).entries;
+}
+
+// ===== 诊断/自检(缝B 真值；配置页 + 顶栏运行态) =====
+export interface HealthInfo {
+  protocol: string; fakeGm: boolean; port: number;
+  model: { gm: string; configured: boolean; baseUrl: string | null };
+  mcp: { name: string; transport: string; toolCount: number; running: boolean };
+  notify: { url: string | null; configured: boolean };
+  storage: { sessionsDir: string; ftsMode: string };
+}
+export async function getHealth(): Promise<HealthInfo> {
+  const res = await fetch("/diagnostics/health");
+  if (!res.ok) throw new Error(`health 请求失败：${res.status}`);
+  return (await res.json()) as HealthInfo;
+}
+export interface TestResult { ok: boolean; status?: number; latencyMs?: number; message: string; fake?: boolean }
+export async function testModel(input: { baseUrl: string; key: string; gm: string }): Promise<TestResult> {
+  const res = await fetch("/diagnostics/model-test", {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(input),
+  });
+  return (await res.json()) as TestResult;
+}
+export async function testMcp(input: { transport: string; endpoint: string }): Promise<TestResult> {
+  const res = await fetch("/diagnostics/mcp-test", {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(input),
+  });
+  return (await res.json()) as TestResult;
+}
