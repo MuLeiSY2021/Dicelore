@@ -19,6 +19,7 @@ const KNOWN_TOP = new Set([
   "state",          // legacy: Draft.toPackFiles() 生成的旧格式
   "manifest.md",    // legacy: Draft.toPackFiles() 生成的旧格式
   "manifest.yaml",  // 新格式
+  "prologue.md",    // 团本开场白 prompt（必填）
 ]);
 
 // ── 极简 CSV 解析（与 import.ts 保持一致）────────────────────────────────
@@ -152,6 +153,12 @@ export function validatePack(files: PackFile[]): ValidateReport {
     if (!KNOWN_TOP.has(top)) {
       err(f.path, `未知顶层路径段「${top}」(允许: ${[...KNOWN_TOP].join(", ")})`);
     }
+  }
+
+  // ── Rule 0c: prologue.md 必须存在 ─────────────────────────────────────
+  const hasPrologue = files.some((f) => f.path === "prologue.md");
+  if (!hasPrologue) {
+    err("prologue.md", "团本必须有开场白 prologue.md", "用 dicelore_build_set_prologue 写入团本开场 prompt（可以是固定台词、导调 MCP 的指令、或让 agent 即兴的指导语）");
   }
 
   // ── Rule 5a: state/ CSV 列（backward compat）─────────────────────────

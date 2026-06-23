@@ -128,6 +128,7 @@ describe("dicelore_build_validate", () => {
   it("有合法内容的 draft → ok=true", () => {
     const c = ctx();
     invokeBuildTool(c, "write_lore", { name: "设定", content: "江南正道。" });
+    invokeBuildTool(c, "set_prologue", { text: "游戏开始。" });
     const r = invokeBuildTool(c, "validate", {});
     expect(r.isError).toBeFalsy();
     const out = JSON.parse(r.content[0].text) as { ok: boolean; issues: unknown[] };
@@ -393,6 +394,53 @@ describe("dicelore_build_add_front", () => {
     const files = c.draft.toPackFiles().filter((f) => f.path === "fronts/dup.md");
     expect(files).toHaveLength(1);
     expect(files[0].content).toContain("第二版");
+    c.catalog.close();
+    c.retrievalDb!.close();
+  });
+});
+
+// ── set_prologue ──────────────────────────────────────────────────────────────
+describe("dicelore_build_set_prologue", () => {
+  it("返回 { ok: true }，draft 产出 prologue.md", () => {
+    const c = ctx();
+    const r = invokeBuildTool(c, "set_prologue", { text: "游戏开始，请 GM 开场。" });
+    expect(r.isError).toBeFalsy();
+    const out = JSON.parse(r.content[0].text) as { ok: boolean };
+    expect(out.ok).toBe(true);
+    const prologueFile = c.draft.toPackFiles().find((f) => f.path === "prologue.md");
+    expect(prologueFile).toBeDefined();
+    expect(prologueFile!.content).toBe("游戏开始，请 GM 开场。");
+    c.catalog.close();
+    c.retrievalDb!.close();
+  });
+
+  it("多次调用 → 后者覆盖，只有一个 prologue.md", () => {
+    const c = ctx();
+    invokeBuildTool(c, "set_prologue", { text: "第一版开场。" });
+    invokeBuildTool(c, "set_prologue", { text: "第二版开场。" });
+    const prologueFiles = c.draft.toPackFiles().filter((f) => f.path === "prologue.md");
+    expect(prologueFiles).toHaveLength(1);
+    expect(prologueFiles[0].content).toBe("第二版开场。");
+    c.catalog.close();
+    c.retrievalDb!.close();
+  });
+
+  it("缺 text 字段 → isError", () => {
+    const c = ctx();
+    const r = invokeBuildTool(c, "set_prologue", {});
+    expect(r.isError).toBe(true);
+    c.catalog.close();
+    c.retrievalDb!.close();
+  });
+
+  it("设置 prologue 后 validate 不再报 prologue 缺失错误", () => {
+    const c = ctx();
+    invokeBuildTool(c, "write_lore", { name: "设定", content: "世界观。" });
+    invokeBuildTool(c, "set_prologue", { text: "GM，请开始游戏！" });
+    const vr = invokeBuildTool(c, "validate", {});
+    const vout = JSON.parse(vr.content[0].text) as { ok: boolean; issues: { level: string; file: string; msg: string }[] };
+    expect(vout.issues.some((i) => i.file === "prologue.md" && i.level === "error")).toBe(false);
+    expect(vout.ok).toBe(true);
     c.catalog.close();
     c.retrievalDb!.close();
   });

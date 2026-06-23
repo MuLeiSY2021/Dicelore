@@ -72,6 +72,7 @@ export const BUILD_SCHEMAS = {
     clock_mode: z.enum(["once", "repeat"]).optional(),
     omens: z.array(z.object({ threshold: z.number(), payload: z.string() })),
   }).strict(),
+  set_prologue: z.object({ text: z.string() }).strict(),
 } as const;
 
 // 调一个构建工具(无 dicelore_build_ 前缀):校验入参 → 改 draft / commit。可测核心。
@@ -138,6 +139,7 @@ export function invokeBuildTool(ctx: BuildCtx, name: string, args: unknown): Bui
       ctx.draft.addFront(spec);
       return ok({ ok: true });
     }
+    case "set_prologue": ctx.draft.setPrologue(a.text as string); return ok({ ok: true });
     default: return err("UNKNOWN_TOOL", name);
   }
 }
@@ -156,6 +158,7 @@ const TOOL_META: Record<string, { description: string; annotations?: { readOnlyH
   validate:     { description: "校验 Draft 当前内容是否符合团本包规范（manifest/fronts/CSV 列等）。返回 { ok, issues }。只读。", annotations: { readOnlyHint: true } },
   read:         { description: "回读 Draft 当前内容（供审阅）。section 可选：manifest/world/rules/pools/sheets/fronts；省略返回全部。只读。", annotations: { readOnlyHint: true } },
   add_front:    { description: "添加/覆写一个 Front（阵线）到 Draft，产出 fronts/<id>.md（frontmatter 声明 Clock + 凶兆阶梯表）。同 id 覆盖，幂等。", annotations: { idempotentHint: true } },
+  set_prologue: { description: "设置团本开场白 prompt（**必填**）。prologue.md 是 GM agent 开局时执行的第一个 prompt——可以是一句固定台词、导调 MCP 的指令、或让 agent 基于团本即兴发挥的指导语。覆盖写，幂等。团本无 prologue 不合法（validate 会报 error）。", annotations: { idempotentHint: true } },
 };
 
 // 构建版 MCP server:注册 dicelore_build_* 工具,挂在 LoreSession 的 in-process MCP。

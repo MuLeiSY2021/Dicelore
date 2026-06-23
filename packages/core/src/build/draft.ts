@@ -71,11 +71,15 @@ export class Draft {
   private manifestName?: string;
   private manifestId?: string;
   private fronts = new Map<string, FrontSpec>();
+  private prologueText?: string;
 
   setManifest(a: { name?: string; id?: string }): void {
     if (a.name) this.manifestName = a.name;
     if (a.id) this.manifestId = a.id;
   }
+
+  /** 设置团本开场白 prompt（必填）。同名覆盖，幂等。 */
+  setPrologue(text: string): void { this.prologueText = text; }
   writeLore(name: string, content: string): void { this.loreDocs.set(name, content); }
   writeRule(name: string, content: string): void { this.ruleDocs.set(name, content); }
   addPool(pool: string, rows: Record<string, string | number>[]): void {
@@ -93,6 +97,7 @@ export class Draft {
   /** 回读 Draft 当前内容(供 read 工具)。 */
   snapshot(): {
     manifest: { name?: string; id?: string };
+    prologue?: string;
     world: Record<string, string>;
     rules: Record<string, string>;
     pools: Record<string, Record<string, string | number>[]>;
@@ -101,6 +106,7 @@ export class Draft {
   } {
     return {
       manifest: { name: this.manifestName, id: this.manifestId },
+      prologue: this.prologueText,
       world: Object.fromEntries(this.loreDocs),
       rules: Object.fromEntries(this.ruleDocs),
       pools: Object.fromEntries(this.pools),
@@ -113,6 +119,9 @@ export class Draft {
     const files: PackFile[] = [];
     if (this.manifestName || this.manifestId) {
       files.push({ path: "manifest.md", content: `# ${this.manifestName ?? "(未命名)"}\n\n- id: ${this.manifestId ?? ""}` });
+    }
+    if (this.prologueText !== undefined) {
+      files.push({ path: "prologue.md", content: this.prologueText });
     }
     for (const [n, c] of this.loreDocs) files.push({ path: `lore/${n}.md`, content: c });
     for (const [n, c] of this.ruleDocs) files.push({ path: `rules/${n}.md`, content: c });

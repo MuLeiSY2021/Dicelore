@@ -17,6 +17,7 @@ import { importPack, validatePack } from "./import.js";
 
 const PACK = [
   { path: "manifest.md", content: "# 凡人修仙传\n\n- id: fanren" },
+  { path: "prologue.md", content: "你是 GM，请开始游戏。" },
   { path: "lore/黄枫谷.md", content: "黄枫谷乃江南正道。" },
   { path: "rules/修炼体系.md", content: "练气→筑基→结丹" },
   { path: "pools/灵根.csv", content: "名称,品级,weight\n天灵根,上品,1\n五灵根,下品,51\n" },
@@ -40,7 +41,7 @@ describe("importPack", () => {
 
   it("checkout(tag label) 也能物化", () => {
     const cat = openCatalog(":memory:");
-    const r = commit(cat, { name: "x", files: [{ path: "lore/a.md", content: "甲" }], message: "init", createdAt: "2026-01-01" });
+    const r = commit(cat, { name: "x", files: [{ path: "lore/a.md", content: "甲" }, { path: "prologue.md", content: "开场。" }], message: "init", createdAt: "2026-01-01" });
     tag(cat, { tuanbenId: r.tuanbenId, commitId: r.commitId, label: "v1" });
     const run = openDb(":memory:"); initSchema(run);
     importPack(cat, run, r.tuanbenId, "v1");
@@ -52,7 +53,7 @@ describe("importPack", () => {
     expect(validatePack([]).ok).toBe(false);
     expect(validatePack([{ path: "evil/x.md", content: "" }]).ok).toBe(false);
     expect(validatePack([{ path: "state/x.csv", content: "foo,bar\n1,2\n" }]).ok).toBe(false);
-    expect(validatePack([{ path: "lore/x.md", content: "ok" }]).ok).toBe(true);
+    expect(validatePack([{ path: "lore/x.md", content: "ok" }, { path: "prologue.md", content: "开场。" }]).ok).toBe(true);
   });
 
   it("importPack 对坏包抛错(信任闸门)", () => {

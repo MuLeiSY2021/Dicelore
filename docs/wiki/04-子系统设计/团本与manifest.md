@@ -14,6 +14,7 @@
 ```
 凡人修仙传/
 ├── manifest.yaml          # 顶层声明（元信息 + 选 skill + 钟 + 引子）
+├── prologue.md            # 团本开场白 prompt（**必备**，驱动 GM agent 开局）
 ├── world/                 # 散文底料（AI 直读）   → world_doc (FTS5)
 │   ├── 设定.md
 │   ├── 门派/黄枫谷.md
@@ -30,7 +31,27 @@
     └── 魔道入侵.md
 ```
 
-运行时由 `dicelore` 的建库流程 import 该目录（§8）。除 `manifest.yaml` 外全部子目录**按需出现**——最小团本可以只有 manifest + 一篇 `world/设定.md`。
+运行时由 `dicelore` 的建库流程 import 该目录（§8）。除 `manifest.yaml` 和 `prologue.md` 外全部子目录**按需出现**——最小合法团本需要 manifest + prologue（+ 至少一些内容）。
+
+---
+
+## 1b. `prologue.md`（团本开场白 prompt，必备）
+
+`prologue.md` 是 **GM agent 开局时执行的第一个 prompt**——团本开场的统一入口。**必须存在**（`validatePack` 若缺此文件报 error）。
+
+> **与 `manifest.yaml` 的 `entry` 字段的区别**
+> - `entry`：指向 world doc 的锚点或内联文本，是**世界观引子**（供 AI 阅读背景的文字，属于"世界观内容"）。
+> - `prologue.md`：是给 **GM agent 的行动指令**，是"开局时你要做什么"的 prompt，与内容无关。
+>
+> 一个类比：`entry` = 剧本首页的场景说明；`prologue.md` = 导演给演员的开场指令。
+
+三种常见形态（任选其一，也可混搭）：
+
+1. **固定台词**：直接告诉 agent 说什么。
+2. **导调 MCP 指令**：让 agent 在开局时调特定工具（抽灵根 / 读状态 / 初始化 sheet）。
+3. **即兴指导**：给 agent 风格约束和自由发挥空间。
+
+构建时用 `dicelore_build_set_prologue` 写入。
 
 ---
 
@@ -169,6 +190,7 @@ version: 3
 | 包内 | → 域 | 备注 |
 |------|------|------|
 | `manifest.yaml` | `session_meta` | id / version / flows / clock / entry |
+| `prologue.md` | `session_meta` | GM agent 开局 prompt；运行时由开局流程读取 |
 | `world/**/*.md` | `world_doc` | frontmatter → tags / visible / source |
 | `pools/*.csv` | `world_pool` | 整行存 row_json，不拍平 |
 | `params/*.csv` | （随 flow skill 取用） | 不单独建表，作 skill 数据 |

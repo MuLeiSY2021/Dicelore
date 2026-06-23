@@ -21,6 +21,8 @@ clock: 世界.年
 entry: world/设定.md#引子
 `;
 
+const PROLOGUE_FILE = { path: "prologue.md", content: "你是 GM。请根据团本设定开启这次游戏。" };
+
 function hasError(files: PackFile[], substr: string): boolean {
   const r = validatePack(files);
   return r.issues.some((i) => i.level === "error" && i.msg.includes(substr));
@@ -57,6 +59,7 @@ describe("validatePack – unknown top segment", () => {
       { path: "sheets/a.csv", content: "entity,attr,value,visible\nX,hp,0,0\n" },
       { path: "fronts/a.md", content: "---\nclock: 世界.入侵\nmin: 0\nmax: 8\nmode: once\n---\n# 阵线\n" },
       { path: "manifest.yaml", content: VALID_MANIFEST_YAML },
+      PROLOGUE_FILE,
     ];
     const r = validatePack(knownPaths);
     const unknownErrors = r.issues.filter((i) => i.level === "error" && i.msg.includes("未知顶层路径段"));
@@ -122,6 +125,7 @@ describe("validatePack – Rule 1: manifest required fields", () => {
       { path: "manifest.yaml", content: VALID_MANIFEST_YAML },
       { path: "world/设定.md", content: "设定内容\n## 引子\n故事开始了" },
       { path: "sheets/开局.csv", content: "entity,attr,value,visible\n世界,年,0,0\n" },
+      PROLOGUE_FILE,
     ];
     expect(isOk(files)).toBe(true);
   });
@@ -183,6 +187,7 @@ describe("validatePack – Rule 4: manifest.entry", () => {
     const files: PackFile[] = [
       { path: "manifest.yaml", content: "id: t\nname: 测\nversion: 1.0.0\nentry: world/设定.md\n" },
       { path: "world/设定.md", content: "设定内容" },
+      PROLOGUE_FILE,
     ];
     expect(isOk(files)).toBe(true);
   });
@@ -191,6 +196,7 @@ describe("validatePack – Rule 4: manifest.entry", () => {
     const files: PackFile[] = [
       { path: "manifest.yaml", content: "id: t\nname: 测\nversion: 1.0.0\nentry: world/设定.md#引子\n" },
       { path: "world/设定.md", content: "设定内容\n## 引子\n故事开始了" },
+      PROLOGUE_FILE,
     ];
     expect(isOk(files)).toBe(true);
   });
@@ -301,6 +307,7 @@ describe("validatePack – Rule 6: fronts frontmatter", () => {
         path: "fronts/入侵.md",
         content: "---\nclock: 世界.入侵\nmin: 0\nmax: 8\nmode: once\n---\n# 阵线\n\n## 凶兆阶梯\n\n| 钟值 | 凶兆（触发 payload） |\n|------|---------------------|\n| 3 | 边境沦陷 |\n",
       },
+      PROLOGUE_FILE,
     ];
     expect(isOk(files)).toBe(true);
   });
@@ -344,7 +351,39 @@ describe("validatePack – backward compat with manifest.md (Draft format)", () 
       { path: "manifest.md", content: "# 测试团本\n\n- id: test" },
       { path: "lore/a.md", content: "ok" },
       { path: "state/开局.csv", content: "entity,attr,value,visible\n韩立,hp,0,1\n" },
+      PROLOGUE_FILE,
     ];
     expect(isOk(files)).toBe(true);
+  });
+});
+
+// ── Rule 0c: prologue.md 必须存在 ────────────────────────────────────────
+describe("validatePack – Rule 0c: prologue.md required", () => {
+  it("缺 prologue.md → error", () => {
+    const files: PackFile[] = [
+      { path: "manifest.yaml", content: "id: t\nname: 测\nversion: 1.0.0\n" },
+      { path: "lore/a.md", content: "ok" },
+    ];
+    expect(hasError(files, "prologue.md")).toBe(true);
+    const r = validatePack(files);
+    const prologueErr = r.issues.find((i) => i.level === "error" && i.file === "prologue.md");
+    expect(prologueErr).toBeDefined();
+    expect(prologueErr!.hint).toContain("dicelore_build_set_prologue");
+  });
+
+  it("有 prologue.md → 无 prologue error", () => {
+    const files: PackFile[] = [
+      { path: "manifest.yaml", content: "id: t\nname: 测\nversion: 1.0.0\n" },
+      { path: "lore/a.md", content: "ok" },
+      PROLOGUE_FILE,
+    ];
+    const r = validatePack(files);
+    expect(r.issues.some((i) => i.level === "error" && i.file === "prologue.md")).toBe(false);
+  });
+
+  it("prologue.md 是合法顶层路径（无 unknown-seg error）", () => {
+    const files: PackFile[] = [PROLOGUE_FILE];
+    const r = validatePack(files);
+    expect(r.issues.some((i) => i.msg.includes("未知顶层路径段") && i.file === "prologue.md")).toBe(false);
   });
 });

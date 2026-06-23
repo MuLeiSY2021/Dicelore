@@ -22,12 +22,13 @@ describe("invokeBuildTool", () => {
     invokeBuildTool(c, "write_lore", { name: "黄枫谷", content: "正道" });
     invokeBuildTool(c, "add_pool", { pool: "灵根", rows: [{ 名称: "天灵根" }] });
     invokeBuildTool(c, "set_state", { cells: [{ entity: "韩立", kind: "player", attr: "资质", value: "五灵根" }] });
+    invokeBuildTool(c, "set_prologue", { text: "开场白：游戏开始，你们来到了江南。" });
     const r = JSON.parse(invokeBuildTool(c, "commit", { message: "init" }).content[0].text) as { tuanbenId: string; commitId: string };
     expect(history(c.catalog, r.tuanbenId).map((x) => x.message)).toEqual(["init"]);
     const files = checkout(c.catalog, r.tuanbenId, r.commitId).map((f) => f.path).sort();
-    expect(files).toEqual(["lore/黄枫谷.md", "manifest.md", "pools/灵根.csv", "state/开局.csv"]);
+    expect(files).toEqual(["lore/黄枫谷.md", "manifest.md", "pools/灵根.csv", "prologue.md", "state/开局.csv"]);
     expect(invokeBuildTool(c, "tag", { commitId: r.commitId, label: "v1" }).isError).toBeFalsy();
-    expect(checkout(c.catalog, r.tuanbenId, "v1").length).toBe(4);
+    expect(checkout(c.catalog, r.tuanbenId, "v1").length).toBe(5);
     c.catalog.close();
   });
 

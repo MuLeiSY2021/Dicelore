@@ -19,6 +19,7 @@ describe("Draft → commit → import 全链", () => {
   it("作者用 draft 造团本 → commitDraft → importPack 物化运行库,内容贯通", () => {
     const draft = new Draft();
     draft.setManifest({ name: "凡人修仙传", id: "fanren" });
+    draft.setPrologue("你是 GM，请开始游戏。");
     draft.writeLore("黄枫谷", "江南正道。");
     draft.writeRule("修炼", "练气→筑基");
     draft.addPool("灵根", [{ 名称: "天灵根", weight: 1 }, { 名称: "五灵根", weight: 51 }]);
@@ -35,5 +36,43 @@ describe("Draft → commit → import 全链", () => {
     const cell = run.prepare("SELECT kind, value FROM state WHERE entity='韩立' AND attr='资质'").get() as { kind: string; value: string };
     expect(cell).toEqual({ kind: "player", value: "五灵根" });
     cat.close(); run.close();
+  });
+});
+
+describe("Draft.setPrologue", () => {
+  it("setPrologue 产出 prologue.md 文件，内容为传入文本", () => {
+    const draft = new Draft();
+    draft.setPrologue("你是 GM，请开始游戏。");
+    const files = draft.toPackFiles();
+    const pf = files.find((f) => f.path === "prologue.md");
+    expect(pf).toBeDefined();
+    expect(pf!.content).toBe("你是 GM，请开始游戏。");
+  });
+
+  it("未调用 setPrologue 时 toPackFiles 不产出 prologue.md", () => {
+    const draft = new Draft();
+    draft.writeLore("设定", "世界观。");
+    const files = draft.toPackFiles();
+    expect(files.some((f) => f.path === "prologue.md")).toBe(false);
+  });
+
+  it("多次调用 setPrologue → 后者覆盖，只有一个 prologue.md", () => {
+    const draft = new Draft();
+    draft.setPrologue("第一版开场。");
+    draft.setPrologue("第二版开场，更好。");
+    const files = draft.toPackFiles().filter((f) => f.path === "prologue.md");
+    expect(files).toHaveLength(1);
+    expect(files[0].content).toBe("第二版开场，更好。");
+  });
+
+  it("snapshot 含 prologue 字段", () => {
+    const draft = new Draft();
+    draft.setPrologue("开场白文本。");
+    expect(draft.snapshot().prologue).toBe("开场白文本。");
+  });
+
+  it("未设置 prologue 时 snapshot.prologue 为 undefined", () => {
+    const draft = new Draft();
+    expect(draft.snapshot().prologue).toBeUndefined();
   });
 });

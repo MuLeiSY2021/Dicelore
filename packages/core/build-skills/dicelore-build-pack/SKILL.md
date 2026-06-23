@@ -19,6 +19,7 @@ description: >
 | 工具 | 功能 | 只读？ |
 |------|------|--------|
 | `set_manifest {name, id}` | 设团本元信息 | — |
+| `set_prologue {text}` | 写开场白 prompt（**必填**） | — |
 | `write_lore {name, content}` | 写 world 散文（世界观/NPC 人设） | — |
 | `write_rule {name, content}` | 写机制规则文档 | — |
 | `add_pool {pool, rows}` | 追加卡池/随机表行 | — |
@@ -40,13 +41,14 @@ description: >
 ```
 0. ingest（开头一次）
 1. manifest
-2. 世界观 / 设定      search → write_lore
-3. NPC               search → write_lore（人设）+ set_state（数值）
-4. 卡池 / 随机表      search → add_pool
-5. 机制规则           search → write_rule
-6. 阵线 / 钟          search → add_front
-7. 开局状态           set_state（player / world 初值）
-8. 收口               validate → read → commit → tag
+2. prologue（开场白 prompt，必填）
+3. 世界观 / 设定      search → write_lore
+4. NPC               search → write_lore（人设）+ set_state（数值）
+5. 卡池 / 随机表      search → add_pool
+6. 机制规则           search → write_rule
+7. 阵线 / 钟          search → add_front
+8. 开局状态           set_state（player / world 初值）
+9. 收口               validate → read → commit → tag
 ```
 
 ### 阶段 0：ingest（第一件事）
@@ -69,7 +71,30 @@ set_manifest({ name: "凡人修仙传", id: "fanren-xiuxian" })
 
 `id` 是团本唯一标识，影响 catalog key；`name` 是人类可读名。先写 manifest，再写内容——工具层靠 name 建 draft context。
 
-### 阶段 2：世界观 / 设定
+### 阶段 2：prologue（开场白 prompt，**必填**）
+
+`prologue.md` 是 GM agent 开局时执行的**第一个 prompt**——团本开场的统一入口。团本无 prologue 不合法（`validate` 会报 error）。
+
+三种常见形态：
+
+1. **固定开场白**：一句话直接告诉 agent 开场台词。
+   ```
+   set_prologue({ text: "你是修仙世界的守门 GM。请向刚踏入黄枫谷的主角道出第一声问候，并简述眼前的场景。" })
+   ```
+
+2. **导调 MCP 指令**：让 agent 在开局时调特定工具（如读取世界状态、抽初始灵根）。
+   ```
+   set_prologue({ text: "开局时先调 world_sample 从灵根池抽取主角资质，再用 sheet_upsert 写入，然后向玩家描述初见的黄枫谷场景。" })
+   ```
+
+3. **即兴指导**：给 agent 充分自由，但锚定风格和约束。
+   ```
+   set_prologue({ text: "你是修仙题材的 GM。请基于《凡人修仙传》的低武底色，即兴为刚入门的主角开启第一幕——保持写实克制的笔调，不要过度渲染。" })
+   ```
+
+写完 prologue 后继续写内容；内容齐了才 commit。
+
+### 阶段 3：世界观 / 设定
 
 每篇 lore 文档都先 search 再写，因为你的 context 窗口放不下整本原著，search 会帮你捞到最相关的段落：
 
@@ -83,7 +108,7 @@ search({ query: "黄枫谷 门派历史 长老", k: 8 })
 
 按原著中的组织粒度切文档——一个地点/门派一篇，不要堆成一大篇。
 
-### 阶段 3：NPC
+### 阶段 4：NPC
 
 人设/性格/动机/背景 → `write_lore`（进 world_doc，AI 运行时直读）；
 只有"开局即在场、需要确定数值"的关键 NPC，才额外 `set_state` 预置机械数值（kind=npc）。
@@ -98,7 +123,7 @@ set_state({ cells: [{ entity:"墨大夫", kind:"npc", attr:"战力", value:"70",
 
 `visible:2` = 暗值（玩家不可见，AI 可见）。详见 `references/format-cheatsheet.md`。
 
-### 阶段 4：卡池 / 随机表
+### 阶段 5：卡池 / 随机表
 
 ```
 search({ query: "灵根品级 分布 概率 天灵根 异灵根", k: 10 })
@@ -111,7 +136,7 @@ search({ query: "灵根品级 分布 概率 天灵根 异灵根", k: 10 })
 
 每行可带 `weight`（加权采样）、`visible`（0/1/2）。列名自由，只要一致。
 
-### 阶段 5：机制规则
+### 阶段 6：机制规则
 
 ```
 search({ query: "修炼体系 境界 练气 筑基 突破条件", k: 10 })
@@ -120,7 +145,7 @@ search({ query: "修炼体系 境界 练气 筑基 突破条件", k: 10 })
 
 规则文档会带 `version` frontmatter，供运行时热更新。曲线/分档可以直接写进散文，不用强行 CSV。
 
-### 阶段 6：阵线 / 钟（Front/Clock）
+### 阶段 7：阵线 / 钟（Front/Clock）
 
 Front 是"会自己推进的压力源"——一个倒计时钟 + 阶梯式凶兆触发表。它让团本有了"不跑也在走"的动态感（呼应 ADR-0016）。
 
@@ -146,7 +171,7 @@ search({ query: "魔道入侵 威胁 进度 触发条件", k: 8 })
 
 若团本没有需要倒计时的威胁，此阶段可跳过。
 
-### 阶段 7：开局状态
+### 阶段 8：开局状态
 
 ```
 set_state({ cells: [
@@ -158,7 +183,7 @@ set_state({ cells: [
 
 `kind` 决定 sheet 的查询分区。玩家属性通常 `visible:1`；世界状态 `visible:0`（隐）。
 
-### 阶段 8：收口
+### 阶段 9：收口
 
 ```
 # 1. 检查包完整性
