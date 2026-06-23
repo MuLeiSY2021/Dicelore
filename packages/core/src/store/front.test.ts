@@ -9,7 +9,8 @@
 
 import { beforeEach, describe, expect, test } from "vitest";
 import { initSchema, openDb, type DB } from "./db.js";
-import { frontUpsert, frontGet, frontList, frontSetStatus } from "./front.js";
+import { frontUpsert, frontGet, frontList, frontSetStatus, frontOmenList } from "./front.js";
+import { watcherSet } from "./watcher.js";
 
 let db: DB;
 beforeEach(() => { db = openDb(":memory:"); initSchema(db); });
@@ -27,4 +28,12 @@ describe("front store", () => {
     expect(frontGet(db, "f1")!.status).toBe("spent");
     expect(frontList(db).map((f) => f.id)).toEqual(["f1"]);
   });
+});
+
+test("frontOmenList 只返回该 front 的凶兆 watcher", () => {
+  frontUpsert(db, { id: "魔道入侵", name: "魔道入侵" });
+  watcherSet(db, { condition: "{世界.入侵进度} >= 3", payload: "边境沦陷", source: "front:魔道入侵" });
+  watcherSet(db, { condition: "{张三.HP} < 5", payload: "无关", source: "manual" });
+  const omens = frontOmenList(db, "魔道入侵");
+  expect(omens.map((w) => w.payload)).toEqual(["边境沦陷"]);
 });
