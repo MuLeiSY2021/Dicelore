@@ -7,52 +7,74 @@
 // Software Foundation, either version 3 of the License, or (at your option)
 // any later version. See <https://www.gnu.org/licenses/>.
 
-import { useTheme, type AccentName } from "../theme/ThemeProvider.js";
+import { Moon, Sun, Monitor } from "lucide-react";
+import { useTheme, type AccentName, type ThemeMode, type FontPreset } from "../theme/ThemeProvider.js";
+import { useT } from "../i18n/index.js";
 
-const ACCENTS: { value: AccentName; label: string }[] = [
-  { value: "gold", label: "金（默认）" },
-  { value: "copper", label: "铜" },
-  { value: "teal", label: "青" },
-  { value: "crimson", label: "绛" },
-  { value: "indigo", label: "靛" },
+const ACCENTS: { value: AccentName; hex: string }[] = [
+  { value: "gold", hex: "#d4a83e" }, { value: "copper", hex: "#c47a3e" },
+  { value: "teal", hex: "#3aa896" }, { value: "crimson", hex: "#b4453a" }, { value: "indigo", hex: "#6f74e8" },
 ];
 
-// 配置 → 主题外观（视觉页 §6）。明暗 + 强调色为主题 token，立即生效。
+// 配置 → 主题外观：主题 / 明暗(含跟随系统) / 强调色 / 字体——皆主题 token，即时生效 + 持久化。
 export function ThemeAppearance() {
-  const { mode, setMode, accent, setAccent } = useTheme();
+  const { mode, setMode, accent, setAccent, font, setFont } = useTheme();
+  const t = useT();
+  const MODES: { v: ThemeMode; Icon: typeof Moon; label: string }[] = [
+    { v: "dark", Icon: Moon, label: t("cfg.theme.dark") },
+    { v: "light", Icon: Sun, label: t("cfg.theme.light") },
+    { v: "system", Icon: Monitor, label: t("cfg.theme.system") },
+  ];
   return (
-    <div className="cfg-section">
-      <h2 className="cfg-h2">主题外观</h2>
-
-      <div className="cfg-row">
-        <span className="cfg-label">主题</span>
-        <span className="cfg-static">墨金（默认）</span>
+    <>
+      <div className="mhead"><h3>{t("cfg.theme")}</h3></div>
+      <div className="section">
+        <div className="frow">
+          <span className="flabel">{t("cfg.theme.theme")}</span>
+          <div className="fctrl"><span className="fval">{t("cfg.theme.inkgold")}</span></div>
+        </div>
+        <div className="frow">
+          <span className="flabel">{t("cfg.theme.mode")}</span>
+          <div className="fctrl">
+            <div className="seg" role="group" aria-label={t("cfg.theme.mode")}>
+              {MODES.map(({ v, Icon, label }) => (
+                <button key={v} className={mode === v ? "on" : ""} aria-pressed={mode === v} onClick={() => setMode(v)}>
+                  <Icon className="lucide" /> {label}
+                </button>
+              ))}
+            </div>
+            {/* 兼容旧用例：保留一个直接切换明暗的按钮 */}
+            <button className="btn" onClick={() => setMode(mode === "dark" ? "light" : "dark")}>切换明暗</button>
+          </div>
+        </div>
+        <div className="frow">
+          <span className="flabel">{t("cfg.theme.accent")}</span>
+          <div className="fctrl">
+            <span className="swatches" role="group" aria-label="accent-swatches">
+              {ACCENTS.map(({ value, hex }) => (
+                <button key={value} className={"swatch" + (accent === value ? " on" : "")} style={{ background: hex }}
+                  aria-label={t(`accent.${value}`)} aria-pressed={accent === value} onClick={() => setAccent(value)} />
+              ))}
+            </span>
+            {/* 兼容旧用例 + 可访问：select 控件(aria-label 强调色，唯一) */}
+            <select className="f" aria-label={t("cfg.theme.accent")} value={accent} onChange={(e) => setAccent(e.target.value as AccentName)} style={{ minWidth: 120 }}>
+              {ACCENTS.map(({ value }) => <option key={value} value={value}>{t(`accent.${value}`)}</option>)}
+            </select>
+          </div>
+        </div>
+        <div className="frow">
+          <span className="flabel">{t("cfg.theme.font")}</span>
+          <div className="fctrl">
+            <div className="seg" role="group" aria-label={t("cfg.theme.font")}>
+              {(["default", "song"] as FontPreset[]).map((f) => (
+                <button key={f} className={font === f ? "on" : ""} onClick={() => setFont(f)}>
+                  {f === "default" ? "Inter / Playfair" : "思源宋体"}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
-
-      <div className="cfg-row">
-        <span className="cfg-label">明暗</span>
-        <button className="cfg-btn" onClick={() => setMode(mode === "dark" ? "light" : "dark")}>
-          切换明暗
-        </button>
-        <span className="cfg-static">当前：{mode === "dark" ? "暗" : "亮"}</span>
-      </div>
-
-      <div className="cfg-row">
-        <label className="cfg-label" htmlFor="cfg-accent">强调色</label>
-        <select
-          id="cfg-accent"
-          aria-label="强调色"
-          value={accent}
-          onChange={(e) => setAccent(e.target.value as AccentName)}
-        >
-          {ACCENTS.map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}
-        </select>
-      </div>
-
-      <div className="cfg-row">
-        <span className="cfg-label">字体</span>
-        <span className="cfg-static">Playfair / Inter / JetBrains Mono（固定三档）</span>
-      </div>
-    </div>
+    </>
   );
 }

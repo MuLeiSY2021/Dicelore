@@ -16,29 +16,31 @@ import { McpServers } from "../config/McpServers.js";
 import { ModelConnection } from "../config/ModelConnection.js";
 import { DataStorage } from "../config/DataStorage.js";
 import { About } from "../config/About.js";
+import { useT } from "../i18n/index.js";
 
 // 配置（子页型 · 视觉页 §6 / config.html）：左导航(设置分组 + 图标) + 右子页。
-const NAV: { label: string; Icon: ComponentType<{ className?: string }>; Sub: ComponentType }[] = [
-  { label: "通用", Icon: SlidersHorizontal, Sub: General },
-  { label: "服务与网络", Icon: Network, Sub: ServiceNetwork },
-  { label: "MCP 服务器", Icon: Plug, Sub: McpServers },
-  { label: "模型连接", Icon: BrainCircuit, Sub: ModelConnection },
-  { label: "主题外观", Icon: Palette, Sub: ThemeAppearance },
-  { label: "数据与存储", Icon: Database, Sub: DataStorage },
-  { label: "关于", Icon: Info, Sub: About },
+const NAV: { key: string; Icon: ComponentType<{ className?: string }>; Sub: ComponentType }[] = [
+  { key: "cfg.general", Icon: SlidersHorizontal, Sub: General },
+  { key: "cfg.service", Icon: Network, Sub: ServiceNetwork },
+  { key: "cfg.mcp", Icon: Plug, Sub: McpServers },
+  { key: "cfg.model", Icon: BrainCircuit, Sub: ModelConnection },
+  { key: "cfg.theme", Icon: Palette, Sub: ThemeAppearance },
+  { key: "cfg.data", Icon: Database, Sub: DataStorage },
+  { key: "cfg.about", Icon: Info, Sub: About },
 ];
 
 export default function ConfigPage() {
-  const [active, setActive] = useState("通用");
-  const Sub = NAV.find((n) => n.label === active)?.Sub ?? General;
+  const t = useT();
+  const [active, setActive] = useState("cfg.general");
+  const Sub = NAV.find((n) => n.key === active)?.Sub ?? General;
 
   return (
     <div className="cfg">
       <nav className="sidenav" aria-label="配置导航">
-        <div className="sn-grp">设置</div>
-        {NAV.map(({ label, Icon }) => (
-          <button key={label} className={"sn" + (label === active ? " on" : "")} onClick={() => setActive(label)}>
-            <Icon className="lucide" />{label}
+        <div className="sn-grp">{t("cfg.group")}</div>
+        {NAV.map(({ key, Icon }) => (
+          <button key={key} className={"sn" + (key === active ? " on" : "")} onClick={() => setActive(key)}>
+            <Icon className="lucide" />{t(key)}
           </button>
         ))}
       </nav>

@@ -17,7 +17,7 @@ export type McpTransport = "sse" | "stdio";
 
 export interface ModelSettings {
   gm: string;        // GM 模型 id，如 claude-opus-4-8
-  agent: string;     // agent 预设，如 dicelore-gm
+  agent: string;     // Agent 底座(驱动 GM 的 agent 运行时)：harness(默认) / claude-agent(Claude Agent SDK)
   baseUrl: string;   // ANTHROPIC_BASE_URL 覆盖(空=走服务器 env)
   key: string;       // API key 覆盖(空=走服务器 env)
 }
@@ -43,13 +43,14 @@ export const GM_MODELS: { id: string; label: string }[] = [
   { id: "claude-haiku-4-5", label: "Claude Haiku 4.5 (快)" },
   { id: "claude-fable-5", label: "Claude Fable 5" },
 ];
+// Agent 底座(驱动 GM 的运行时)。harness=自带 harness 驱动(默认)；claude-agent=Claude Agent SDK。
 export const AGENTS: { id: string; label: string }[] = [
-  { id: "dicelore-gm", label: "Dicelore GM (默认)" },
-  { id: "raw", label: "Raw (无系统提示)" },
+  { id: "harness", label: "Harness (默认)" },
+  { id: "claude-agent", label: "Claude Agent SDK" },
 ];
 
 const DEFAULTS: Settings = {
-  model: { gm: "claude-opus-4-8", agent: "dicelore-gm", baseUrl: "", key: "" },
+  model: { gm: "claude-opus-4-8", agent: "harness", baseUrl: "", key: "" },
   mcpServers: [],
   notifyUrl: "",
   startup: "home",
@@ -112,6 +113,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
 export function useSettings(): SettingsCtx {
   const v = useContext(Ctx);
-  if (!v) throw new Error("useSettings 必须在 SettingsProvider 内使用");
-  return v;
+  if (v) return v;
+  // 无 provider 回退(隔离组件测试)：只读默认值，setter noop。
+  const noop = () => { /* noop */ };
+  return { settings: DEFAULTS, setModel: noop, setNotifyUrl: noop, setStartup: noop, addMcp: noop, updateMcp: noop, removeMcp: noop };
 }

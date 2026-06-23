@@ -7,30 +7,33 @@
 // Software Foundation, either version 3 of the License, or (at your option)
 // any later version. See <https://www.gnu.org/licenses/>.
 
+import { useState } from "react";
 import { NavLink } from "react-router-dom";
-import { Home, Dices, Hammer, Settings, Languages, Moon, Sun, Palette } from "lucide-react";
-import { useTheme, type AccentName } from "../theme/ThemeProvider.js";
-
-const NAV = [
-  { to: "/", label: "主页", Icon: Home, end: true },
-  { to: "/play", label: "跑团", Icon: Dices, end: false },
-  { to: "/build", label: "团本制作", Icon: Hammer, end: false },
-  { to: "/config", label: "配置", Icon: Settings, end: false },
-];
-
-const ACCENTS: { name: AccentName; hex: string }[] = [
-  { name: "gold", hex: "#d4a83e" },
-  { name: "copper", hex: "#c47a3e" },
-  { name: "teal", hex: "#3aa896" },
-  { name: "crimson", hex: "#b4453a" },
-  { name: "indigo", hex: "#6f74e8" },
-];
+import { Home, Dices, Hammer, Settings, Languages, Moon, Sun, Check, BookMarked } from "lucide-react";
+import { useTheme } from "../theme/ThemeProvider.js";
+import { useI18n, LANGS } from "../i18n/index.js";
+import { useHealth } from "./useHealth.js";
+import { Logo } from "./Logo.js";
 
 export function TopBar() {
-  const { mode, setMode, accent, setAccent } = useTheme();
+  const { resolved, setMode } = useTheme();
+  const { lang, setLang, t } = useI18n();
+  const { health, offline } = useHealth();
+  const [langOpen, setLangOpen] = useState(false);
+
+  const NAV = [
+    { to: "/", label: t("nav.home"), Icon: Home, end: true },
+    { to: "/packs", label: t("nav.catalog"), Icon: BookMarked, end: false },
+    { to: "/play", label: t("nav.play"), Icon: Dices, end: false },
+    { to: "/build", label: t("nav.build"), Icon: Hammer, end: false },
+    { to: "/config", label: t("nav.config"), Icon: Settings, end: false },
+  ];
+
   return (
     <header className="bar">
-      <span className="brand">Dicelore<span style={{ color: "#d8553f" }}>.</span></span>
+      <NavLink to="/" aria-label="Dicelore" style={{ textDecoration: "none" }}>
+        <Logo variant="lockup" size={26} />
+      </NavLink>
       <nav className="nav">
         {NAV.map(({ to, label, Icon, end }) => (
           <NavLink key={to} to={to} end={end} className={({ isActive }) => (isActive ? "on" : "")}>
@@ -38,23 +41,36 @@ export function TopBar() {
           </NavLink>
         ))}
       </nav>
+
       <div className="tools">
-        <button className="tool" aria-label="语言" title="语言"><Languages className="lucide" /></button>
-        <button className="tool" aria-label="明暗" title="明暗" onClick={() => setMode(mode === "dark" ? "light" : "dark")}>
-          {mode === "dark" ? <Moon className="lucide" /> : <Sun className="lucide" />}
+        {/* 运行态指示：模型 / MCP / notify(真值来自 /diagnostics/health) */}
+        {!offline && health && (
+          <div className="status" aria-label="运行态">
+            <span className="st"><span className={"dot" + (health.model.configured ? " ok" : " warn")} />{t("bar.model")} <b>{health.model.gm}</b></span>
+            <span className="st"><span className={"dot" + (health.mcp.running ? " ok" : "")} />{t("bar.mcp")} <b>{health.mcp.toolCount}</b></span>
+            <span className="st"><span className={"dot" + (health.notify.configured ? " ok" : " warn")} />{t("bar.notify")} {health.notify.configured ? t("bar.notify.connected") : t("bar.notify.unset")}</span>
+          </div>
+        )}
+
+        <div className="langmenu">
+          <button className="tool" aria-label={t("bar.lang")} title={t("bar.lang")} onClick={() => setLangOpen((v) => !v)}>
+            <Languages className="lucide" />
+          </button>
+          {langOpen && (
+            <div className="pop" role="menu">
+              {LANGS.map((l) => (
+                <button key={l.value} className={l.value === lang ? "on" : ""} role="menuitemradio" aria-checked={l.value === lang}
+                  onClick={() => { setLang(l.value); setLangOpen(false); }}>
+                  {l.value === lang ? <Check className="lucide" style={{ width: 13 }} /> : <span style={{ width: 13 }} />}{l.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <button className="tool" aria-label={t("bar.theme")} title={t("bar.theme")} onClick={() => setMode(resolved === "dark" ? "light" : "dark")}>
+          {resolved === "dark" ? <Moon className="lucide" /> : <Sun className="lucide" />}
         </button>
-        <span className="palette" title="强调色">
-          <Palette className="lucide" />
-          {ACCENTS.map(({ name, hex }) => (
-            <button
-              key={name}
-              className={"sw" + (accent === name ? " on" : "")}
-              style={{ background: hex }}
-              aria-label={`强调色 ${name}`}
-              onClick={() => setAccent(name)}
-            />
-          ))}
-        </span>
       </div>
     </header>
   );

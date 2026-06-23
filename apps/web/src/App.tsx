@@ -13,6 +13,7 @@ import { I18nProvider } from "./i18n/index.js";
 import { SettingsProvider } from "./settings/useSettings.js";
 import { TopBar } from "./shell/TopBar.js";
 import HomePage from "./pages/HomePage.js";
+import CatalogPage from "./pages/CatalogPage.js";
 import PlayPage from "./pages/PlayPage.js";
 import BuildPage from "./pages/BuildPage.js";
 import ConfigPage from "./pages/ConfigPage.js";
@@ -35,6 +36,7 @@ export default function App() {
             <Routes>
               <Route element={<Shell />}>
                 <Route index element={<HomePage />} />
+                <Route path="packs" element={<CatalogPage />} />
                 <Route path="play" element={<PlayPage />} />
                 <Route path="play/:sessionId" element={<PlayPage />} />
                 <Route path="build" element={<BuildPage />} />

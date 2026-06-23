@@ -37,6 +37,8 @@ export const SessionSummarySchema = z.object({
   title: z.string(),
   status: SessionStatusSchema,
   updatedAt: z.number().optional(), // epoch ms；无则省略
+  packName: z.string().optional(),  // 团本名(session_meta；会话列表前缀/分组用)
+  started: z.boolean().optional(),  // 是否已开场(kickoff 跑过开场回合)
 });
 export const SessionsListResponseSchema = z.object({ sessions: z.array(SessionSummarySchema) });
 

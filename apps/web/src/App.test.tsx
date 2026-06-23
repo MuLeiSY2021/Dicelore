@@ -11,18 +11,33 @@ import { render, screen } from "@testing-library/react";
 import { vi } from "vitest";
 import { MemoryRouter, Routes, Route, Outlet } from "react-router-dom";
 import { ThemeProvider } from "./theme/ThemeProvider.js";
+import { I18nProvider } from "./i18n/index.js";
+import { SettingsProvider } from "./settings/useSettings.js";
 import { TopBar } from "./shell/TopBar.js";
 import HomePage from "./pages/HomePage.js";
 import PlayPage from "./pages/PlayPage.js";
 
-vi.mock("./api/client.js", () => ({ listSessions: vi.fn().mockResolvedValue([]) }));
+vi.mock("./api/client.js", () => ({
+  listSessions: vi.fn().mockResolvedValue([{ sessionId: "demo", title: "demo", status: "active" }]),
+  getHealth: vi.fn().mockResolvedValue({
+    protocol: "dicelore.client/1", fakeGm: true, port: 8787,
+    model: { gm: "fake-gm", configured: true, baseUrl: null },
+    mcp: { name: "dicelore", transport: "in-process", toolCount: 20, running: true },
+    notify: { url: null, configured: false }, storage: { sessionsDir: ".", ftsMode: "jieba" },
+  }),
+  commitPack: vi.fn(), openPlaySession: vi.fn(), browse: vi.fn().mockResolvedValue([]),
+  startGame: vi.fn(), deleteSession: vi.fn(),
+}));
 vi.mock("./live/useSession.js", () => ({
-  useSession: () => ({ snapshot: null, narration: [], pendingRoll: null, postMessage: vi.fn(), roll: vi.fn() }),
+  useSession: () => ({
+    snapshot: null, narration: [], pendingRoll: null, generating: false, error: null, gameEnd: null, reveals: [],
+    postMessage: vi.fn(), roll: vi.fn(), choose: vi.fn(), dismissReveal: vi.fn(),
+  }),
 }));
 
 function tree(initial: string) {
   return (
-    <ThemeProvider>
+    <I18nProvider><ThemeProvider><SettingsProvider>
       <MemoryRouter initialEntries={[initial]}>
         <Routes>
           <Route element={<><TopBar /><Outlet /></>}>
@@ -31,15 +46,14 @@ function tree(initial: string) {
           </Route>
         </Routes>
       </MemoryRouter>
-    </ThemeProvider>
+    </SettingsProvider></ThemeProvider></I18nProvider>
   );
 }
 
-it("bar 渲染四个页面导航 + 品牌", () => {
+it("bar 渲染四个页面导航 + 品牌 logo", () => {
   render(tree("/"));
-  expect(screen.getByText(/Dicelore/)).toBeInTheDocument();
+  expect(screen.getByLabelText("Dicelore")).toBeInTheDocument(); // 品牌 logo lockup
   for (const label of ["主页", "跑团", "团本制作", "配置"]) {
-    // 精确名只匹配导航链接(主页的 quick 卡片可访问名含描述,不精确匹配)
     expect(screen.getByRole("link", { name: label })).toBeInTheDocument();
   }
 });
