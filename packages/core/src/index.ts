@@ -43,5 +43,7 @@ export {
   openCatalog, type CatalogDB, uuidv5, resolveId, commit, history, checkout, tag, list,
   type PackFile, type CommitRow, type TuanbenSummary,
 } from "./catalog/index.js";
+// import 信任闸门 + 建库（P3）
+export { importPack, validatePack, type ImportResult, type ImportIssue } from "./catalog/index.js";
 
 

@@ -13,3 +13,4 @@ export {
   resolveId, commit, history, checkout, tag, list,
   type PackFile, type CommitRow, type TuanbenSummary,
 } from "./catalog.js";
+export { importPack, validatePack, type ImportResult, type ImportIssue } from "./import.js";
