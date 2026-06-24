@@ -15,6 +15,7 @@ import { FakeDiceGm } from "../dice/FakeDiceGm.js";
 
 const PACK = [
   { path: "manifest.md", content: "# 凡人\n\n- id: f" },
+  { path: "prologue.md", content: "你睁开眼，发现自己躺在七玄门弟子的木屋中。请向韩立描述清晨的山门。" },
   { path: "lore/黄枫谷.md", content: "正道" },
   { path: "state/开局.csv", content: "entity,kind,attr,value,visible\n韩立,player,HP,12,1\n" },
 ];
