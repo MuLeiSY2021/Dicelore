@@ -1,6 +1,6 @@
 # MCP 工具面（组件2）
 
-> **本页职责**：定"外层 MCP 工具面"的详细设计——裁决工具（resolver 族：choice + outcome/contest 各明暗两版）+ 数据工具 + 可见性工具 + `narrate` 的**入参/出参 schema（Zod）**、补刀形态、内层原子→外层工具的组合映射。这是 L1 塑形的焊接位。
+> **本页职责**：定"外层 MCP 工具面"的详细设计——裁决工具（resolver 族：choice + outcome/contest 各明暗两版）+ 数据工具 + 可见性工具 + `narrate` 的**入参/出参 schema（Zod）**、补刀形态、内层原子→外层工具的组合映射。这是 L1 塑形的焊接位。**§8 另记构建期工具面**（`dicelore_build_*`，组件5，与运行时面分属两套）。
 > **上游依赖**：[总体架构 §2 两层工具 / §3 数据工具 / §3.1 可见性 / §4 裁决 / §4.1 narrate / §6 一轮+三流](../03-架构/总体架构.md)；[技术选型 §1 Zod / §4 stdio](../03-架构/技术选型.md)；[02 §2 四业务域+要点5 / §3 行动层](../02-领域模型/核心概念.md)；[ADR-0007 状态骰下沉 / 0009 narrate 升格 / 0010 可见性](../05-决策记录-ADR/)；求值与存储语义 → [内层能力库](内层能力库.md)。
 > **状态**：🟢 已成型（2026-06-03 brainstorming；R1-R3 上游落地后解冻填充）。
 
@@ -385,6 +385,56 @@ export function createMcpServer(db: DB, deps?: McpServerDeps): McpServer;
 - **多 session 安全**：回调按 `createMcpServer` 实例传入（非模块全局）。
 - **明骰 gate**：`deps.rollGate` 经工厂接既有模块级 `setRollGate`（单人；多人 per-instance 化为未来）。
 - **orchestrator 侧映射**：onCanonWrite → `presentation_delta`（普通写，web refetch 对账）或 `roll_committed`（`resolve_*_open` 明骰 verdict）。详见 [玩家客户端 §9.2](玩家客户端.md) / [接口页 §4/§5](玩家客户端-接口.md)。
+
+---
+
+## 8. 构建期工具面（`dicelore_build_*`，组件5）
+
+> **本页主体（§1–§7）是运行时工具面**（GM 跑团：resolver / sheet / world / narrate……）。**构建期工具面另属一套**——作者侧、构建期专属，挂在 `LoreSession` 的 in-process 构建 MCP（[团本构建工具链 §6](团本构建工具链.md)、[后端双路径架构 §5](后端双路径架构.md)），与运行时 `TOOLS` **编译期不交叉**（[ADR-0023](../05-决策记录-ADR/README.md) ⑥）。两套工具面互不出现在对方场景。本节记其权威 schema。
+
+注册 ID 同加 `dicelore_build_` 前缀；入参一律 `.strict()`；本轮新增 6 工具（`ingest`/`search`/`validate`/`read`/`add_front`/`set_prologue`），叠加 ② 已有的 manifest/lore/rule/pool/state/commit/tag + 叙事域 plotline/foreshadow/anchor。
+
+### 8.1 检索 + 校验 + 回读（本轮新增 4）
+
+```ts
+// 素材检索库（[团本构建工具链 §3]）——切块入库 / BM25 召回
+ingest:   { text: z.string() } → { ... }                         // 原著切块入 build_material（追加语义）
+search:   { query: z.string(), k: z.number().int().positive().optional() }
+                                → { hits: [{ idx, text }] }       // jieba BM25 top-k，只读
+// 整包校验（与 import 信任闸门共用 validatePack，[后端双路径架构 §4]）
+validate: {}                    → { ok: boolean, issues: [{ level, file, msg, hint? }] }  // 只读
+// 回读 Draft 供审阅
+read:     { section: z.enum(["manifest","world","rules","pools","sheets","fronts"]).optional() }
+                                → { ... }                         // 省略 section 返回全部，只读
+```
+
+### 8.2 front md 正典 + prologue 必备（本轮新增 2，[ADR-0024](../05-决策记录-ADR/README.md)）
+
+```ts
+// 添加/覆写一个 Front → 产出 fronts/<id>.md（frontmatter Clock + 凶兆阶梯表；否决 CSV 扁平）
+add_front: {
+  id: z.string(), name: z.string(), stakes: z.string().optional(),
+  clock_attr: z.string(),                                    // Clock 钟 attr（如 世界.入侵进度）
+  clock_min: z.number(), clock_max: z.number(),
+  clock_mode: z.enum(["once","repeat"]).optional(),
+  omens: z.array(z.object({ threshold: z.number(), payload: z.string() })),  // 凶兆阶梯（钟值→payload）
+} → { ok: true }                                             // 同 id 覆盖，幂等
+// 设置团本开场白 prompt（必填；validate 缺 prologue.md 报 error）
+set_prologue: { text: z.string() } → { ok: true }            // 覆盖写，幂等；三形态：固定台词/导调MCP/即兴指导
+```
+
+### 8.3 已有工具（②/main 落地，列出供对照）
+
+| 工具 | in（要点） | 备注 |
+|---|---|---|
+| `set_manifest` | `{ name?, id? }` | 只更新传入字段，幂等 |
+| `write_lore` / `write_rule` | `{ name, content }` | 同名覆盖，幂等 |
+| `add_pool` | `{ pool, rows[] }` | 追加随机池行（world_pool） |
+| `set_state` | `{ cells:[{entity,kind?,attr,value,visible?}] }` | 追加开局状态格 |
+| `add_plotline` / `add_foreshadow` / `add_anchor` | `{ rows[] }`（叙事域 CSV 行对象） | 追加，CSV 扁平（无阶梯结构） |
+| `commit` / `tag` | `{ message }` / `{ commitId, label }` | 提交版本 / 打发布标签（dice 只认 tag） |
+
+> 构建工具的 description / annotations（readOnly / destructive / idempotent）随注册固定，单源在 `packages/core/src/build/buildMcp.ts`；本节只定 schema 骨架。
 
 ---
 

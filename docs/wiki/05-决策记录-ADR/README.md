@@ -225,6 +225,16 @@
 
 ---
 
+## ADR-0024 团本包格式补强：front 取 md 正典（否决 CSV 扁平）+ 每团本必备 prologue.md
+
+- **背景**：构建工具链落地（[ADR-0023](#adr-0023-后端双路径架构lore-构建--dice-跑团一后端共享底层)）期间，叙事域 import/构建一度把 **front 并入 `fronts/main.csv` 扁平 CSV**（与 plotline/foreshadow/anchor 同走「CSV 一行=一个对象」），与 [ADR-0016](#adr-0016-全盘对齐-pbta-术语--新增-agenda-层--f2-双边护栏fail-forward--frontclock-团本内容类型) + [团本与 manifest §6](../04-子系统设计/团本与manifest.md) 已定稿的 `fronts/*.md`（frontmatter Clock + 凶兆阶梯表）正典格式冲突。另一面：构建工具链补全后，需把「团本开场白 prompt」从一度的隐式约定升为**显式、必备**的包成员（[团本与 manifest §1b](../04-子系统设计/团本与manifest.md) 已加 seg-P）。两件事一并裁决收口。
+- **决策**（两连）：
+  - **① front 包格式定 `fronts/*.md`（承 [ADR-0016](#adr-0016-全盘对齐-pbta-术语--新增-agenda-层--f2-双边护栏fail-forward--frontclock-团本内容类型) 凶兆阶梯，否决 CSV 扁平）**：每个 Front 一个 md 文件——frontmatter 声明 Clock（`clock`/`min`/`max`/`mode`/`visible`），body 写阵线散文 + 利害，markdown 表格写**阶梯凶兆表**（钟值→凶兆 payload）。**否决** `fronts/main.csv` 扁平格式——**理由**：CSV 一行只能放一个标量对象，**丢失「凶兆阶梯」这一 Front/Clock 的核心**（Front = Clock + 一组随钟值上升的预声明 watcher，是 PbtA 备团的核心单元，非一行能表达），且偏离 [团本与 manifest §6](../04-子系统设计/团本与manifest.md) 已定稿口径。import 改为**解析 md → frontUpsert**（frontmatter → clock 状态 + clock_ref；H1 → name）；**凶兆阶梯 → watcher 物化仍欠**（与 main 现状一致，留主题 A2，见 [问题总账](../06-里程碑与问题/问题总账.md)）。plotline/foreshadow/anchor 维持 CSV（它们本就是扁平行对象，无阶梯结构）。
+  - **② 每团本必备 `prologue.md`（开场白 prompt）**：`prologue.md` 是 **GM agent 开局时执行的第一个 prompt**——**三形态**：固定开场台词 / 导调 MCP 的指令 / 让 agent 基于团本即兴发挥的指导语。与 `manifest.entry`（世界观引子=供 AI 阅读的背景内容）**正交**：prologue 是「开局你要做什么」的行动指令。**构建必填校验**（`validatePack` 缺 `prologue.md` 报 error）+ 构建侧 `Draft.setPrologue` / `dicelore_build_set_prologue` 工具；**消费侧**（② 已做）import 接出 prologue → 回传 `session_meta` → GM kickoff（[后端双路径架构](../04-子系统设计/后端双路径架构.md)）。prologue 正文**不物化进 store**，仅回传供开局流程读取。
+- **后果**：落 [团本与 manifest §1/§1b/§6/§8](../04-子系统设计/团本与manifest.md)（front md 正典维持、prologue 必备 seg-P 已加）、[团本构建工具链](../04-子系统设计/团本构建工具链.md)（校验器 + 构建 MCP `set_prologue`/`add_front`）、[后端双路径架构 §4/§5](../04-子系统设计/后端双路径架构.md)（import 信任闸门解析 md front + prologue 接出）。**关联进度** → [问题总账 H2/A2](../06-里程碑与问题/问题总账.md)。**被否**：① front 走 `fronts/main.csv` 扁平格式（丢凶兆阶梯=丢 Front/Clock 核心，偏离 §6 定稿）；② prologue 留隐式约定/可缺省（GM 开局无统一入口，kickoff 无据可依）。
+
+---
+
 ## 待决策（记录但未定，勿当结论引用）
 
 - ~~**注入机制**：guideline 规则是"安装时焊进 skill 本体" vs "运行时 MCP 读取"~~ → **已由 [ADR-0012](#adr-0012-guideline-载体焊进-skill-本体静态-markdown非运行时-mcp-读取) 决议**：焊进 skill 本体（静态 markdown，走 Claude Code skill 装载）。
