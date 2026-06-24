@@ -235,6 +235,17 @@
 
 ---
 
+## ADR-0025 eval 经 play-mcp 连真后端（缝B）+ 后端 session 路径对齐 core
+
+- **背景**：[Skills-eval §0](../04-子系统设计/Skills-eval.md) 原定 eval 跑分底座 =「裸 CC harness，不依赖组件7 orchestrator」（narrate 泄漏用 `buildPlayerView` mock 契约）。用户重定向：CC 经**新 play-mcp**（stdio MCP）连真后端 play HTTP（缝B），当玩家+评估者——与 web 同构、测真实玩家路径，不另造 in-process harness（那会绕过后端 HTTP/WS 层、测不到缝B）。RUN_LIVE 首跑暴露真 bug：**后端 `server.ts` session db 路径（平铺 `${dir}/${id}.db`）与 core `sessionDbPath`（`${dir}/dicelore/sessions/${id}.db`）不一致**——eval `prepareSessionDb` 灌种子到 core 路径、后端开平铺空库，种子（tone/rules/sheets/prologue）全丢，GM 开场"世界是空的"。
+- **决策**：
+  - **① eval 经 play-mcp 连真后端（缝B）**：弃"裸 CC harness"路线。play-mcp 包后端 play HTTP 为 8 工具（list_scenarios/open_session/start_game/send_message/get_presentation/choose/roll/browse）；narration 只经 WS 流式（`streamDriverTurn` 不落库），故 `send_message`/`start_game` 内部连 WS 收 `narration_commit`→`turn_ended` 返回 GM 散文，`get_presentation` 取机械态快照。玩家视图 = narrations(WS) + presentation(HTTP)。CC 当玩家+评估者，两档对照 doctrine（带 gm-core）vs baseline（`DICELORE_BASELINE=1` 去教条）。
+  - **② 后端 session db 路径对齐 core（以 core 为准，不绕过/降级）**：`server.ts` openSession 改用 core `openSession(id).db`（sessionDbPath 规则），listSessionSummaries/deleteSession 同步对齐；`packages/core/src/index.ts` 补 export `sessionDbPath`/`openSession`（路径规则单源）。
+  - **③ baseline 接线**：`DiceSessionDeps.baseline?` → `buildBaselinePrompt`（去 doctrine）+ 强制 skills 空；`server.ts` 读 env `DICELORE_BASELINE=1` 透传。分离「教条有无」作对照变量。
+- **后果**：落 [Skills-eval §0/§4/§5](../04-子系统设计/Skills-eval.md)（路线改 play-mcp）、`apps/orchestrator/src/server.ts` + `packages/core/src/index.ts`（路径对齐）、`apps/orchestrator/eval/play-mcp.ts`（eval 入口）、[.claude/skills/dicelore-eval](../../../.claude/skills/dicelore-eval/SKILL.md)（eval 流程 skill）。**2026-06-24 RUN_LIVE 通路验证通过**：orc-hunt doctrine 档，真 GM（glm-5.2）+ 种子生效 + WS 事件流闭环（见 [reports/](../../../reports/)）。**首份 finding**：`stripReasoning` 只剥 `<think>` 标签块，glm-5.2 无标签英文思考段泄漏成 narration（narrate-leak）——靠 gm-core 教条约束（别吐思考），记 [findings B7](../../../packages/core/eval/findings.md)。**未结**：F2 终局观测待多轮跑；baseline 对照报告待跑；完整语料对标待 dicelore-eval skill 跑。**被否**：① in-process harness（绕过后端 HTTP/WS、测不到缝B）；② 后端保留平铺路径 + play-mcp 适配（违"以 core 为准"、留两套路径规则）。
+
+---
+
 ## 待决策（记录但未定，勿当结论引用）
 
 - ~~**注入机制**：guideline 规则是"安装时焊进 skill 本体" vs "运行时 MCP 读取"~~ → **已由 [ADR-0012](#adr-0012-guideline-载体焊进-skill-本体静态-markdown非运行时-mcp-读取) 决议**：焊进 skill 本体（静态 markdown，走 Claude Code skill 装载）。

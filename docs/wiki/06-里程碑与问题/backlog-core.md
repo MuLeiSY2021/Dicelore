@@ -20,12 +20,12 @@
 
 > **路由**：F 是 meta 闸——**先建它，再跑剧本2/3 eval**，否则继续产污染数据。建好后，全项目所有 ⚠️ 项才可重新评定。
 >
-> **进度（2026-06-24 核对）**：faithful 真引擎工具链**已备**——`eval/tool.ts`/`batch.ts` 对真 `.db` 调 `runTool`+`TOOLS`、`run.ts` 灌种子+init、`grade.ts`/`grader.md`/`findings.md` 齐。**缺的不是工具链，是自动闭环**：`run.ts` 现仍靠「手动 `claude`/headless `claude -p` 喂 playerTurns」驱动 GM，无子代理 GM 自动跑、无 mock 玩家程序。本批要补的就是这层闭环。
+> **进度（2026-06-24 核对 → 闭环达成）**：faithful 真引擎工具链**已备**（`eval/tool.ts`/`batch.ts`/`run.ts`/`grade.ts`/`grader.md`/`findings.md`）。自动闭环**已补**——经 **play-mcp**（CC 经它连真后端 play HTTP 当玩家+评估者，见 [ADR-0025](../05-决策记录-ADR/README.md)），非原"子代理当 GM"方案。RUN_LIVE 通路验证通过（[reports](../../../reports/)）。F1 闭环；F2 终局观测待多轮跑。
 
 | # | 类型 | 问题 | 来源 | 恶化 | 下一步 |
 |---|------|------|------|:--:|--------|
-| F1 | feat | **eval 是单人自导自演**（同一个我兼任即兴玩家 + GM），不是 mock 玩家 ↔ 独立 Claude-GM。后果：凡「GM 行为好不好 / gm-core 措辞够不够 / 缺口有多痛」的结论**全部不可信**（我不会违反自己内化的规则）；只有「架构能不能表达」的客观缺口幸存 | 用户指正 + session | — | 搭真 harness：**子代理当 GM**（喂 gm-core 全文 + 「每动作经 `eval/tool.ts`/`batch.ts` 调真引擎」）+ mock 玩家程序喂回合输入；dicelore 不是 MCP server 无妨，GM 子代理走 CLI 包装一样调真引擎 |
-| F2 | feat | **game_end 由谁敲、何时敲** 未定：本局 game_end 是「driver 知道回合预算后的人为收尾」，污染；且忠实 gm-core AI 被教「别朝结局叙事」→ 真实下大概率**不主动收局**（只在死亡收）。终局判据缺失 | 用户追问 + session | — | 归入主题「裁决/终局」（见 E1/E2）；harness 建好后才能测「真 GM 到底收不收局」 |
+| F1 | feat | **eval 是单人自导自演**（同一个我兼任即兴玩家 + GM），不是 mock 玩家 ↔ 独立 Claude-GM。后果：凡「GM 行为好不好 / gm-core 措辞够不够 / 缺口有多痛」的结论**全部不可信**（我不会违反自己内化的规则）；只有「架构能不能表达」的客观缺口幸存 | 用户指正 + session | — | ✅ 已闭环（方案改：CC 经 play-mcp 连真后端当玩家+评估者，非"子代理当GM"——见 [ADR-0025](../05-决策记录-ADR/README.md)）；RUN_LIVE 通路验证通过（[reports](../../../reports/)） |
+| F2 | feat | **game_end 由谁敲、何时敲** 未定：本局 game_end 是「driver 知道回合预算后的人为收尾」，污染；且忠实 gm-core AI 被教「别朝结局叙事」→ 真实下大概率**不主动收局**（只在死亡收）。终局判据缺失 | 用户追问 + session | — | 🟡 harness 闭环已建（play-mcp），待多轮跑测「真 GM 收不收局」；首份报告见 [reports](../../../reports/) |
 
 ---
 

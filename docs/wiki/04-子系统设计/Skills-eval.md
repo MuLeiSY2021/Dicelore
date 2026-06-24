@@ -2,7 +2,7 @@
 
 > **本页职责**：定 `dicelore-gm-core`（及流程 skill）的**定向优化方法与工装**——以**真实安价语料**为黄金标准、用可跑的 eval-loop 量化迭代 skill 措辞。这是 [Skills包 §6.1](Skills包.md) 「措辞终稿靠 eval-loop」的落地蓝本，**未来每轮 skill 迭代以此为据**。
 > **上游依赖**：[Skills包 §6.1](Skills包.md)（F1/F2/F3 可客观验证 → L3 信号复用作 assertions）；[总体架构 §6 三流](../03-架构/总体架构.md)（玩家视图＝narrate 流 + 输出层面板）；[adapter §4 L3 两档](adapter与L3审计.md)；skill-creator（评测循环 / 反过拟合 / with-without baseline）。
-> **状态**：🟢 工装已落源码（2026-06-21，`packages/core/{src/present/playerView,src/eval/assertions,eval/*}`）。语义/对标真人的 grader 为规格 + 人/LLM 执行。
+> **状态**：🟢 工装已落源码（2026-06-21，`packages/core/{src/present/playerView,src/eval/assertions,eval/*}`）。语义/对标真人的 grader 为规格 + 人/LLM 执行。**2026-06-24 RUN_LIVE 通路验证通过**：CC 经 [play-mcp](../../06-里程碑与问题/路线图.md) 连真后端(缝B)跑 orc-hunt,真 GM(glm-5.2)+种子生效+WS 事件流闭环(见 [reports/](../../../reports/))。
 
 ---
 
@@ -10,7 +10,7 @@
 
 gm-core 不是单次任务 skill——它的「输出」是**一整局多回合跑团**（工具调用 + narrate + 裁决）。所以 eval 不照 skill-creator 的「单 prompt → 评一次输出」，而是：**脚本场景驱动真 GM → 抓 .db/transcript → 玩家视图 + 两层评分**。其中评分的**黄金标准是 [真实安价语料](../../research/scraped/)**（兽人冒险 / 抽卡 / 恶龙团 三真串）——优化的「好」不是我们拍脑袋的断言，是**真人 GM 怎么跑这局**。
 
-> **关键耦合澄清**：eval 跑分底座 = **裸 CC harness**（组件2 MCP + 组件4 三 hook，均已合并），**不依赖组件7 orchestrator**。唯一例外：**narrate 泄漏**的「正确行为」取决于组件7 渲染契约（玩家看 narrate 流、不看 GM raw 正文）——本 eval 用 `buildPlayerView` **mock 这个契约**（玩家视图只认 narrate + 面板），故 narrate 泄漏也能在裸 CC 上量化、不必等组件7。
+> **关键耦合澄清**：eval 跑分底座 = **CC 经 play-mcp 连真后端 orchestrator(缝B)**——与 web 同构、测真实玩家路径,不另造 in-process harness(那会绕过后端 HTTP/WS 层)。narration 只经 WS 流式(`streamDriverTurn` 不落库),故玩家视图 = **WS narrations + HTTP presentation**(机械态快照:sheets/mechanics/choices/pendingRoll/ended);`buildPlayerView` 的 mock 契约(玩家只见 narrate+面板)现由真后端 WS+presentation 兑现。原「裸 CC harness 不依赖组件7」路线已弃——见 [ADR](../05-决策记录-ADR/README.md)(play-mcp 作 eval 入口)。
 
 ---
 
@@ -55,17 +55,21 @@ PlayerView = {
 
 ## 4. 工装与跑法
 
-- [`eval/run.ts`](../../../packages/core/eval/run.ts)：场景就绪器——灌种子 + `dicelore init` 临时项目 + 重写 `.mcp.json` 指本地 tsx（未发布期）+ `--baseline`（去 gm-core 作对照）+ 打印全流程。
-- 驱动 GM（择一）：手动 `claude` 逐条贴 `playerTurns`；或 headless `claude -p`（多回合 `--resume` 串，确切 flag 实现期核实）。
-- [`eval/grade.ts`](../../../packages/core/eval/grade.ts)：对捕获的 `.db`（+ `--transcript`）跑 playerView + 机械断言 → 报告。**立即可跑**（可直接评既有 harness 会话）。
-- grader（[`eval/grader.md`](../../../packages/core/eval/grader.md)）：把 grade 报告 + 玩家视图 + transcript + 对应语料桥段，喂 LLM/人 → 定性裁决 + `skill_fix_hints`。
+> **路线(2026-06-24 定)**：CC(Claude Code)经 **play-mcp**(stdio MCP,`apps/orchestrator/eval/play-mcp.ts`)连真后端 play HTTP,**当玩家+评估者**;不再走「手动 claude/headless claude -p 喂 playerTurns」。两档对照:doctrine(带 gm-core)vs baseline(`DICELORE_BASELINE=1` 去教条)。
 
-**一轮 loop**：`run.ts`（with / baseline 各一）→ 驱动 GM → `grade.ts` → grader 对标语料 → 据 `skill_fix_hints` 改 gm-core 措辞 → 重跑比较，直到接近真人 GM。**with/without baseline** 证明 skill 增量价值。
+- [`eval/run.ts`](../../../packages/core/eval/run.ts)：场景就绪器——`prepareSessionDb` 灌种子 + `dicelore init` 临时项目 + 重写 `.mcp.json` 指本地 tsx(未发布期) + 打印全流程(手动调试用,自动闭环走 play-mcp)。
+- **play-mcp**([`apps/orchestrator/eval/play-mcp.ts`](../../../apps/orchestrator/eval/play-mcp.ts))：包后端 play HTTP 为 8 个 MCP 工具(list_scenarios/open_session/start_game/send_message/get_presentation/choose/roll/browse)。`send_message`/`start_game` 内部连 WS 收 `narration_commit`→`turn_ended`(narration 不落库、只流式),返回 GM 散文;`get_presentation` 取机械态快照。后端 URL/sessions_dir 来自 env(`DICELORE_PLAY_URL`/`DICELORE_SESSIONS_DIR`)。
+- **dicelore-eval skill**([`.claude/skills/dicelore-eval/SKILL.md`](../../../.claude/skills/dicelore-eval/SKILL.md))：教 CC 经 play-mcp 跑 eval + 写报告的流程 skill(起后端两档 → 配 play-mcp → 跑局 → 按教条口径评估 → 写报告到 `reports/`)。
+- [`eval/run-live.ts`](../../../apps/orchestrator/eval/run-live.ts)：RUN_LIVE 入口(经 play-mcp handler 跑 orc-hunt 验真 GM,冒烟用)。
+- [`eval/grade.ts`](../../../packages/core/eval/grade.ts) + [`eval/grader.md`](../../../packages/core/eval/grader.md)：对 `.db`(+ transcript)跑 playerView + 机械断言 + 参考式定性。play-mcp 通路下 transcript 从 presentation 的 mechanics/choices 推断工具画像。
+- **跑法**：CC 配 play-mcp(.mcp.json `DICELORE_PLAY_URL` 指 doctrine 或 baseline 后端)→ `list_scenarios`→`open_session`→`start_game`→逐轮 `send_message`+`get_presentation`+`choose`/`roll` → 按 [grader.md](../../../packages/core/eval/grader.md) 口径评估 → 写报告。**注意**:开场回合烧 LLM ~120s+,eval 脚本 timeout ≥200s。
+
+**一轮 loop**：doctrine/baseline 各跑一局 → grader 对标语料 → 据 `skill_fix_hints` 改 gm-core 措辞 → 重跑比较,直到接近真人 GM。**with/without baseline** 证明教条增量价值。
 
 ---
 
 ## 5. 边界与未来
 
-- **裸 CC 底座、零碰组件7**：F1/F2/F3/明暗骰选对/可见性/narrate 泄漏 全可现在测（明骰玩家点击全流程除外——那要组件7 roll-gate，但「该明该暗」的工具选择从 event 即可判）。
+- **经 play-mcp 连真后端(缝B)、与 web 同构**：F1/F2/F3/明暗骰选对/可见性/narrate 泄漏 全可测;narration 经 WS 流式、presentation 取机械态,玩家视图=narrations+presentation(明骰玩家点击全流程除外——那要 web roll-gate,但「该明该暗」的工具选择从 presentation 的 roll event 即可判)。
 - **narrate 泄漏措辞终稿**：行为对错由 `buildPlayerView` 已固化（玩家只见 narrate）；最终 skill 措辞与组件7 渲染契约对齐后收口。
 - **措辞 eval-pending**：gm-core 现有措辞均待本 loop 迭代定稿（[Skills包 §6.1](Skills包.md)）。

@@ -30,7 +30,7 @@
 | G-后端-Phase2 | feat | **实时引擎面 Phase 2**：多人明骰「谁来点这一掷」per-instance gate 硬化 · **组件3/4 hook 接入 Agent SDK**（Phase 1 暂用 `turnLoop.runTurnEnd` 物化 choice） | 设计/接口页 | — | 随实时引擎面排期 |
 | G-后端-version | feat | **About 真实版本号需 health 暴露**（前端 About 页等后端 `/health` 暴露版本号） | 接口页 §9 fast-follow | ✗ | health 端点加版本字段（前端项见 [backlog-前端](backlog-前端.md)） |
 | G-后端-toolcall | feat | **构建助手「显示调了哪些工具」需 lore-sessions 回 tool-call 痕迹** | 接口页 §9 fast-follow | ✗ | lore-session 回传 tool-call 痕迹（前端展示项见 [backlog-前端](backlog-前端.md)） |
-| G-后端-gmcore | feat | **真 GM 接 gm-core skill（去 stopgap）**：现 `dice/openingPrompt.ts` 内联教条全文是 stopgap（`16969d4`，解 GM 裸奔/OOC），正式 skill staged 接入 `DiceGm` 待 `RUN_LIVE` 实测。与 [主题F harness](backlog-core.md) **是一条线**——harness 要真 GM、真 GM 要教条 | ADR-0023 后果 + 2026-06-24 核对 | — | `DiceGm` skillStage 真接 gm-core skill + RUN_LIVE 验证；**并入第一批 harness 一起做** |
+| G-后端-gmcore | feat | **真 GM 接 gm-core skill（去 stopgap）**：现 `dice/openingPrompt.ts` 内联教条全文是 stopgap（`16969d4`，解 GM 裸奔/OOC），正式 skill staged 接入 `DiceGm` 待 `RUN_LIVE` 实测。与 [主题F harness](backlog-core.md) **是一条线**——harness 要真 GM、真 GM 要教条 | ADR-0023 后果 + 2026-06-24 核对 | — | ✅ `DiceGm` skillStage 真接 gm-core + RUN_LIVE 验证通过（[ADR-0025](../05-决策记录-ADR/README.md)）；openingPrompt 内联教条 stopgap 保留作兜底，去 stopgap 留后续 |
 
 ---
 
