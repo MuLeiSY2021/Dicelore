@@ -29,7 +29,7 @@ export async function streamDriverTurn(deps: StreamTurnDeps, input: TurnInput): 
   send({ protocol: CLIENT_PROTOCOL, type: "turn_started", turnId });
   let seq = 0;
   try {
-    for await (const ev of deps.driver.runTurn(input)) {
+    for await (const ev of deps.driver.runTurn({ ...input, turnId: deps.turnId })) {
       if (ev.type === "narration") {
         seq += 1;
         send({ protocol: CLIENT_PROTOCOL, type: "narration_commit", seq, text: ev.text });

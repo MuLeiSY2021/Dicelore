@@ -54,11 +54,12 @@ export interface LiveDeps {
   catalog?: CatalogDB; // 给「开局 import 团本」用
   deleteSession?: (id: string) => void; // 删 .db 文件(server 注入);省略则只注销内存
   baseline?: boolean; // eval baseline 对照:传给 DiceSession 切教条/skills 空
+  sessionsDir?: string; // GM raw 日志根目录(穿给 DiceSession→DiceGm);省略=不记日志
 }
 
 export function createLiveApp(deps: LiveDeps): Hono {
   const app = new Hono();
-  const hostDeps = (id: string) => ({ db: deps.openSession?.(id), agentFactory: deps.agentFactory, skills: deps.skills, model: deps.model, baseline: deps.baseline });
+  const hostDeps = (id: string) => ({ db: deps.openSession?.(id), agentFactory: deps.agentFactory, skills: deps.skills, model: deps.model, baseline: deps.baseline, sessionsDir: deps.sessionsDir });
 
   // 开新局:选一个团本版本 import → 物化运行库(信任闸门)。body {tuanbenId, ref}。
   app.post("/sessions/:id/open", async (c) => {

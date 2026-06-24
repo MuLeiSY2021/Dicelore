@@ -44,7 +44,7 @@ export function startServer(port: number): void {
 
   const app = new Hono();
   app.route("/", createLiveApp({
-    agentFactory, skills: diceSkills, openSession, catalog, baseline,
+    agentFactory, skills: diceSkills, openSession, catalog, baseline, sessionsDir: dir,
     listSessions: () => listSessionSummaries(join(dir, "dicelore", "sessions")),
     deleteSession: (id) => { const p = sessionDbPath(id); try { rmSync(p); rmSync(`${p}-wal`, { force: true }); rmSync(`${p}-shm`, { force: true }); } catch { /* ignore */ } },
   }));

@@ -9,7 +9,7 @@
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
-export interface TurnInput { text: string }
+export interface TurnInput { text: string; turnId?: string }
 
 export type TurnEvent =
   | { type: "narration"; text: string } // 一段散文(Phase 1 = narrate 工具调用粒度)
@@ -33,6 +33,8 @@ export interface AgentInit {
   openingPrompt: string; // 系统提示(dice=signpost+教条+prologue;lore=构建prompt)
   skills: SkillRef[]; // 会话本地 staged skill 副本(空=不 stage,走 settingSources:[])
   model?: string; // 默认由 env / 适配器内定
+  sessionId?: string; // GM raw 日志用:标识会话(日志文件名)
+  sessionsDir?: string; // GM raw 日志用:sessions 根目录(日志落 <dir>/dicelore/sessions/<id>.gm.log)
 }
 
 export type AgentFactory = (init: AgentInit) => Agent;

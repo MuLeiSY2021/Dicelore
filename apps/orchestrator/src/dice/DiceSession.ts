@@ -27,6 +27,7 @@ export interface DiceSessionDeps {
   model?: string; // GM 模型覆盖
   importFrom?: { catalog: CatalogDB; tuanbenId: string; ref: string }; // 开局从 Catalog import 团本(信任闸门重验)→运行库
   baseline?: boolean; // eval baseline 对照:去 doctrine(buildBaselinePrompt) + 强制 skills 空,分离「教条有无」
+  sessionsDir?: string; // GM raw 日志根目录(日志落 <dir>/dicelore/sessions/<sessionId>.gm.log);省略=不记日志
 }
 
 // dice 跑团运行单元：db + in-process MCP(按实例注入 onCanonWrite/rollGate) + Agent + WsHub + turn-end hook。
@@ -89,7 +90,7 @@ export class DiceSession implements Session {
 
   // 据本会话状态组装 AgentInit(每回合新建一个 agent)。baseline 强制 skills 空(不 stage 教条)。
   private buildInit(): AgentInit {
-    return { mcpServer: this.mcpServer, openingPrompt: this.openingPrompt, skills: this.deps.baseline ? [] : (this.deps.skills ?? []), model: this.deps.model };
+    return { mcpServer: this.mcpServer, openingPrompt: this.openingPrompt, skills: this.deps.baseline ? [] : (this.deps.skills ?? []), model: this.deps.model, sessionId: this.sessionId, sessionsDir: this.deps.sessionsDir };
   }
 
   async handleMessage(text: string): Promise<{ turnId: string }> {
