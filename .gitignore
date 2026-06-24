@@ -14,3 +14,4 @@ dist/
 # Claude Code 本地态（不入库）；.claude/skills/ 是项目专属工作流，入库
 .claude/settings.local.json
 .claude/worktrees/
+.dl-eval-doctrine/

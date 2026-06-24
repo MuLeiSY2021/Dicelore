@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "dicelore-play": {
+      "command": "npx",
+      "args": ["tsx", "apps/orchestrator/eval/play-mcp.ts"],
+      "env": {
+        "DICELORE_PLAY_URL": "http://localhost:8787",
+        "DICELORE_SESSIONS_DIR": ".dl-eval-doctrine"
+      }
+    }
+  }
+}
