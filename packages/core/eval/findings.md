@@ -11,6 +11,7 @@
 | iter1→2 | 兽人 | 玩家已决断仍可能补造分叉 | 闸A加「已决断不补分叉」 | e970740 |
 | iter1 | 恶龙 | 明骰「亮DC」vs 隐藏AC 冲突,退回暗骰夺走玩家掷 | 「明骰⊥亮DC」:隐藏DC时明骰照给玩家掷、不亮DC | ab99da5 |
 | faithful | 探索压价 | flow-explore 漏 `event_recall`、未教「有代价刺探→隐藏DC检定而非 reveal_once」 | flow-explore 补伏笔召回 + 无代价瞥/有代价刺探分支 + 分级线索 | (本轮) |
+| live | 兽人 | 开场 GM 把英文思考/元叙述("The table's set, let me check...")narrate 给玩家(narrate-leak);开局建卡未 r 六维明骰(暗中建卡) | gm-core 教"思考/元叙述别进 narrate,只吐玩家该见的"+强化开局 r 六维明骰措辞 | (本轮) |
 
 ## B · 架构 / 能力缺口（路由设计，勿提示词硬磨）
 
@@ -24,6 +25,7 @@
 | B4 | **分级线索披露** | `reveal_once` 只能快照 raw cell(要么泄全、要么泄数字);只好把线索塞进 band consequence | 「按检定档披露分级线索散文」原语(线索≠实体属性≠世界条目) |
 | B5 | **NPC 表演层 vs 真实层双值** | `resolve_contest` 只能填一个常数底线;表达不了「叫价18/真实不在乎钱、差额即线索」 | NPC 属性带「表演层/真实层」双值 |
 | B6 | **GM 待办/悬置钩子看板** | 未触发 watcher / 未回收伏笔 / 状态机 散在三处;`event_recall` 只能搜不能列「未结清单」 | 「当前所有未结张力」一览(GM 侧) |
+| B7 | **无标签思考段泄漏** | `stripReasoning`(P6) 只剥 `<think>/<thinking>/<reasoning>` 标签块;glm-5.2 的英文自言自语("The table's set, let me check the world state...")无标签,剥不掉→泄漏成 narration_commit | 靠 gm-core 教条约束(GM 别把思考/元叙述 narrate 给玩家);strip 留作标签类模型(DeepSeek-R1 等)兜底。本质模型行为,非 strip 能解 |
 
 > **路由**:B1-B6 攒成「叙事脚手架」设计周期——可能新 ADR + 新工具/抽象(plotline / 伏笔 lifecycle / 事件触发器 / 分级线索 / NPC 双层值)。**不在 gm-core 提示词里硬塞**(用户明示:低效甚至无解)。Front/Clock([ADR-0016]) 与 watcher 是部分地基,需评估扩展 vs 新建。
 
