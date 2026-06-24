@@ -12,7 +12,7 @@ import type { IncomingMessage } from "node:http";
 import type { Duplex } from "node:stream";
 import type { DB } from "@dicelore/core";
 import { getOrCreateHost } from "../dice/registry.js";
-import { restagePendingRolls } from "../dice/recovery.js";
+import { restagePendingRolls, replayNarration } from "../dice/recovery.js";
 import type { AgentFactory, SkillRef } from "../pkg/agent.js";
 
 export interface WsUpgradeDeps {
@@ -29,7 +29,7 @@ export function attachWsUpgrade(server: unknown, deps: WsUpgradeDeps): void {
   (server as { on(ev: string, cb: (req: IncomingMessage, socket: Duplex, head: Buffer) => void): void }).on(
     "upgrade",
     (req, socket, head) => {
-      const m = /^\/sessions\/([^/]+)\/ws$/.exec(req.url ?? "");
+      const m = /^\/sessions\/([^/]+)\/ws(?:\?(.*))?$/.exec(req.url ?? "");
       if (!m) { socket.destroy(); return; }
       wss.handleUpgrade(req, socket, head, (ws) => {
         const id = decodeURIComponent(m[1]);
@@ -37,6 +37,9 @@ export function attachWsUpgrade(server: unknown, deps: WsUpgradeDeps): void {
         const wsLike = ws as unknown as { send(d: string): void; readyState: number };
         host.attachWs(wsLike);
         restagePendingRolls(host); // 重连/重启 → 重弹未决掷骰卡
+        // B2：重连带 ?since=<narrativeCursor> 时补叙述历史(无 since=首连,客户端走 snapshot+GET /events,不重发避重复)。
+        const since = new URLSearchParams(m[2] ?? "").get("since");
+        if (since !== null) replayNarration(host, Number(since) || 0);
         ws.on("close", () => host.detachWs(wsLike));
       });
     },

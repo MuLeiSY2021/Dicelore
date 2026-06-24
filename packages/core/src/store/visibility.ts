@@ -12,26 +12,26 @@ import { stateGet, stateSet } from "./state.js";
 import { logAppend } from "./log.js";
 import { DiceloreError } from "../errors.js";
 
-// 可见性变更审计:kind=note、visible=0(对玩家隐),供 L3 / 回看(§4.2)。
-function auditNote(db: DB, content: string): void {
-  logAppend(db, { kind: "note", content, visible: 0 });
+// 可见性变更审计:kind=note、visible=0(对玩家隐),供 L3 / 回看(§4.2)。返回 audit event seq。
+function auditNote(db: DB, content: string): number {
+  return logAppend(db, { kind: "note", content, visible: 0 });
 }
 
 // attr 级:指定 cell 置 1(暗值 visible=2 焊死,不揭);entity 级(省 attr):写长效策略 cell __show_all。
-export function sheetShow(db: DB, entity: string, attr?: string): void {
+// 返回 audit event seq(供调用方透出 audit_event_id)。
+export function sheetShow(db: DB, entity: string, attr?: string): number {
   if (attr === undefined) {
     stateSet(db, entity, "__show_all", "1");
-    auditNote(db, `揭示:${entity} 全卡(__show_all)`);
-    return;
+    return auditNote(db, `揭示:${entity} 全卡(__show_all)`);
   }
   db.prepare("UPDATE state SET visible=1 WHERE entity=? AND attr=? AND visible!=2").run(entity, attr);
-  auditNote(db, `揭示:${entity}.${attr}`);
+  return auditNote(db, `揭示:${entity}.${attr}`);
 }
 
-export function worldShow(db: DB, table: "lore" | "pool", rowid: number): void {
+export function worldShow(db: DB, table: "lore" | "pool", rowid: number): number {
   // table 是字面量联合类型(非用户自由输入)→ 插值安全。
   db.prepare(`UPDATE ${table} SET visible=1 WHERE rowid=?`).run(rowid);
-  auditNote(db, `揭示:${table}#${rowid}`);
+  return auditNote(db, `揭示:${table}#${rowid}`);
 }
 
 export type RevealTarget =

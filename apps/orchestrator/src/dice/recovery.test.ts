@@ -11,7 +11,7 @@ import { describe, it, expect } from "vitest";
 import { openDb, initSchema, stagePendingRoll } from "@dicelore/core";
 import { WsHub } from "../pkg/wsHub.js";
 import { PlayerRollGate } from "./rollGate.js";
-import { restagePendingRolls } from "./recovery.js";
+import { restagePendingRolls, replayNarration } from "./recovery.js";
 
 describe("restagePendingRolls", () => {
   it("对 awaiting 的 pending_roll 重弹 roll_staged", () => {
@@ -30,5 +30,36 @@ describe("restagePendingRolls", () => {
     const hub = new WsHub();
     const gate = new PlayerRollGate(db, hub, "s1");
     expect(restagePendingRolls({ db, gate, hub, sessionId: "s1" })).toBe(0);
+  });
+});
+
+// B2：重连补叙述历史——replayNarration 把 since 之后的 narrate event 重发为 narration_commit。
+describe("replayNarration", () => {
+  it("重连后按 since 重发 narrate 历史为 narration_commit(seq=全局 event seq)", () => {
+    const db = openDb(":memory:"); initSchema(db);
+    const seqs: number[] = [];
+    for (const c of ["第一段", "第二段", "第三段"]) {
+      const info = db.prepare("INSERT INTO log (content, kind, visible) VALUES (?, 'narrate', 1)").run(c);
+      seqs.push(Number(info.lastInsertRowid));
+    }
+    // 夹一条非 narrate(不应补)。
+    db.prepare("INSERT INTO log (content, kind, visible) VALUES ('掷骰', 'verdict', 1)").run();
+    const hub = new WsHub(); const sent: any[] = [];
+    hub.add("s1", { send: (d: string) => sent.push(JSON.parse(d)), readyState: 1 });
+    // 已渲染到 seqs[0]，重连补 seqs[1]、seqs[2]。
+    const n = replayNarration({ db, hub, sessionId: "s1" }, seqs[0]);
+    expect(n).toBe(2);
+    const narr = sent.filter((m) => m.type === "narration_commit");
+    expect(narr.map((m) => m.seq)).toEqual([seqs[1], seqs[2]]);
+    expect(narr.map((m) => m.text)).toEqual(["第二段", "第三段"]);
+  });
+
+  it("since 已到末尾时补 0 条", () => {
+    const db = openDb(":memory:"); initSchema(db);
+    const info = db.prepare("INSERT INTO log (content, kind, visible) VALUES ('唯一一段','narrate',1)").run();
+    const hub = new WsHub(); const sent: any[] = [];
+    hub.add("s1", { send: (d: string) => sent.push(JSON.parse(d)), readyState: 1 });
+    expect(replayNarration({ db, hub, sessionId: "s1" }, Number(info.lastInsertRowid))).toBe(0);
+    expect(sent.length).toBe(0);
   });
 });

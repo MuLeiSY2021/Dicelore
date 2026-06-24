@@ -9,7 +9,6 @@
 
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import type { Agent, TurnInput, TurnEvent, AgentInit } from "../pkg/agent.js";
-import { stripReasoning } from "../pkg/reasoning.js";
 import { stageSkills, cleanupSkills } from "./skillStage.js";
 
 let stageSeq = 0; // staged 目录命名,避免并发回合碰撞(不依赖随机/时间)
@@ -37,12 +36,10 @@ export class DiceGm implements Agent {
       } as Parameters<typeof query>[0]["options"];
 
       for await (const msg of query({ prompt: input.text, options })) {
-        if (msg.type === "assistant") {
-          const content = (msg as { message?: { content?: { type: string; text?: string }[] } }).message?.content ?? [];
-          const text = content.filter((b) => b.type === "text").map((b) => b.text ?? "").join("");
-          const narration = stripReasoning(text); // P6:剥推理类模型(DeepSeek-R1/GLM think)的思考段
-          if (narration) yield { type: "narration", text: narration };
-        } else if (msg.type === "result") {
+        // A1：assistant text(流③ GM 思考/口白)不当 narration —— 叙事单源走 narrate MCP event
+        // → onCanonWrite → mapCanonWrite → narration_commit(接口页 §5.1/§10.1 A1)。
+        // 这里只消费流到 result 为止取回合结束信号,不再 yield narration(避免 GM 思考泄漏进 narrate)。
+        if (msg.type === "result") {
           break; // 回合结束
         }
       }

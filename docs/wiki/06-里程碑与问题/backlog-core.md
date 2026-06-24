@@ -91,7 +91,7 @@
 
 | # | 类型 | 问题 | 现状 | 来源 | 恶化 | 下一步 |
 |---|------|------|------|------|:--:|--------|
-| V1 | fix | **`sheet_show`/`world_show` 审计 event_id 不回 AI**：[总体架构 §3.1](../03-架构/总体架构.md) 承诺 show 写 `kind=note` 审计 event 供 L3/回看，但工具出参无 `audit_event_id`，AI 无法串联审计链（审计 event 内部写了但不回 AI） | `mcp/handlers/io.ts` show 出参无 event_id | [接口页 §10.1 C1](../04-子系统设计/玩家客户端-接口.md) 核验 2026-06-24 | ✗ | show/world_show 出参加 `audit_event_id`（回 AI，供 L3 比对串联） |
+| V1 | fix | **`sheet_show`/`world_show` 审计 event_id 不回 AI**：[总体架构 §3.1](../03-架构/总体架构.md) 承诺 show 写 `kind=note` 审计 event 供 L3/回看，但工具出参无 `audit_event_id`，AI 无法串联审计链（审计 event 内部写了但不回 AI） | `mcp/handlers/io.ts` show 出参无 event_id | [接口页 §10.1 C1](../04-子系统设计/玩家客户端-接口.md) 核验 2026-06-24 | ✗ | ✅ 已修（2026-06-24）：`visibility.ts` `sheetShow`/`worldShow` 返回审计 note seq（`logAppend` rowid），`io.ts` 出参加 `audit_event_id`（照 `reveal_once` 模式）；schema+工具 description 同步。多 attrs 取末次 seq 作上界 |
 
 ---
 

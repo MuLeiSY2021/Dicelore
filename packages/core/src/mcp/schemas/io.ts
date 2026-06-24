@@ -13,12 +13,12 @@ import { z } from "zod";
 export const sheetShowIn = z
   .object({ entity: z.string(), attrs: z.array(z.string()).optional(), recursive: z.boolean().default(false) })
   .strict();
-export const sheetShowOut = z.object({ shown: z.array(z.string()), ok: z.literal(true) });
+export const sheetShowOut = z.object({ shown: z.array(z.string()), ok: z.literal(true), audit_event_id: z.number() });
 
 export const worldShowIn = z
   .object({ doc: z.string().optional(), pool_rowid: z.number().int().optional() })
   .strict();
-export const worldShowOut = z.object({ ok: z.literal(true) });
+export const worldShowOut = z.object({ ok: z.literal(true), audit_event_id: z.number() });
 
 export const revealOnceIn = z
   .object({

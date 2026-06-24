@@ -25,29 +25,31 @@ import {
 
 function sheetShowHandler(db: DB, input: { entity: string; attrs?: string[]; recursive?: boolean }) {
   if (input.attrs && input.attrs.length > 0) {
-    for (const attr of input.attrs) sheetShow(db, input.entity, attr);
-    return { shown: input.attrs, ok: true as const };
+    let audit_event_id = 0;
+    for (const attr of input.attrs) audit_event_id = sheetShow(db, input.entity, attr);
+    return { shown: input.attrs, ok: true as const, audit_event_id };
   }
   // recursive=true or no attrs → write __show_all
   if (!input.recursive) {
     throw new DiceloreError("INTERNAL", "sheet_show: 需给 attrs 或 recursive=true");
   }
-  sheetShow(db, input.entity); // entity 级:写 __show_all
-  return { shown: ["__show_all"], ok: true as const };
+  const audit_event_id = sheetShow(db, input.entity); // entity 级:写 __show_all
+  return { shown: ["__show_all"], ok: true as const, audit_event_id };
 }
 
 function worldShowHandler(db: DB, input: { doc?: string; pool_rowid?: number }) {
   if ((input.doc === undefined) === (input.pool_rowid === undefined)) {
     throw new DiceloreError("INTERNAL", "world_show: doc 与 pool_rowid 二选一");
   }
+  let audit_event_id: number;
   if (input.doc !== undefined) {
     const d = loreGet(db, input.doc);
     if (!d) throw new DiceloreError("NOT_FOUND", `world_show: doc 不存在 "${input.doc}"`);
-    worldShow(db, "lore", d.rowid);
+    audit_event_id = worldShow(db, "lore", d.rowid);
   } else {
-    worldShow(db, "pool", input.pool_rowid!);
+    audit_event_id = worldShow(db, "pool", input.pool_rowid!);
   }
-  return { ok: true as const };
+  return { ok: true as const, audit_event_id };
 }
 
 function revealOnceHandler(db: DB, input: { sheet?: { entity: string; attr: string }; world?: { rowid: number } }) {
@@ -85,7 +87,7 @@ export const ioTools: ToolDef[] = [
     title: "持久揭示卡格",
     description:
       "翻 visible=1 让玩家看到指定 cell(强制隐=2 不受影响)。Args: entity、attrs?(给定=attr 级)、recursive?(省略 attrs + true=写 __show_all 整卡长效)。" +
-      "Returns: {shown, ok:true}。use: 公开角色已知属性。don't: 一次性披露(用 reveal_once)。错误: 入参非法→INTERNAL。",
+      "Returns: {shown, ok:true, audit_event_id}。audit_event_id 为审计 note event 的 seq,供 L3 比对串联。use: 公开角色已知属性。don't: 一次性披露(用 reveal_once)。错误: 入参非法→INTERNAL。",
     inputSchema: sheetShowIn,
     outputSchema: sheetShowOut,
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
@@ -95,7 +97,8 @@ export const ioTools: ToolDef[] = [
     name: "world_show",
     title: "持久揭示世界条目",
     description:
-      "翻世界条目 visible=1。Args: doc(按名)或 pool_rowid(按行 rowid),二选一。Returns: {ok:true}。" +
+      "翻世界条目 visible=1。Args: doc(按名)或 pool_rowid(按行 rowid),二选一。Returns: {ok:true, audit_event_id}。" +
+      "audit_event_id 为审计 note event 的 seq,供 L3 比对串联。" +
       "use: 公开已揭示的设定/地点。don't: 揭示卡格(用 sheet_show)。错误: doc 不存在→NOT_FOUND;入参非法→INTERNAL。",
     inputSchema: worldShowIn,
     outputSchema: worldShowOut,

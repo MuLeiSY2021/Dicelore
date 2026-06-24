@@ -21,23 +21,51 @@ function freshDb() { const db = openDb(":memory:"); initSchema(db); return db; }
 const byName = (n: string) => ioTools.find((t) => t.name === n)!;
 
 describe("io handlers", () => {
-  it("sheet_show(attrs):翻 visible=1 + 落审计 note", () => {
+  it("sheet_show(attrs):翻 visible=1 + 落审计 note + 出参含 audit_event_id", () => {
     const db = freshDb();
     stateSet(db, "张三", "秘密", "卧底", 0);
     const out = byName("sheet_show").handler(db, { entity: "张三", attrs: ["秘密"] });
     expect(out.ok).toBe(true);
     expect(out.shown).toEqual(["秘密"]);
     expect(stateGet(db, "张三", "秘密")?.visible).toBe(1);
-    expect(logSince(db, 0).some((e) => e.kind === "note")).toBe(true);
+    const notes = logSince(db, 0).filter((e) => e.kind === "note");
+    expect(notes).toHaveLength(1);
+    expect(typeof out.audit_event_id).toBe("number");
+    expect(out.audit_event_id).toBe(notes[0].seq);
   });
 
-  it("world_show(doc):按名解析 rowid 翻 visible", () => {
+  it("sheet_show(recursive):翻 __show_all + 出参含 audit_event_id", () => {
+    const db = freshDb();
+    const out = byName("sheet_show").handler(db, { entity: "李四", recursive: true });
+    expect(out.ok).toBe(true);
+    expect(out.shown).toEqual(["__show_all"]);
+    const notes = logSince(db, 0).filter((e) => e.kind === "note");
+    expect(notes).toHaveLength(1);
+    expect(typeof out.audit_event_id).toBe("number");
+    expect(out.audit_event_id).toBe(notes[0].seq);
+  });
+
+  it("world_show(doc):按名解析 rowid 翻 visible + 出参含 audit_event_id", () => {
     const db = freshDb();
     const rowid = loreUpsert(db, { name: "密道", content: "通往地窖", visible: 0 });
     const out = byName("world_show").handler(db, { doc: "密道" });
     expect(out.ok).toBe(true);
     const row = db.prepare("SELECT visible FROM lore WHERE rowid=?").get(rowid) as { visible: number };
     expect(row.visible).toBe(1);
+    const notes = logSince(db, 0).filter((e) => e.kind === "note");
+    expect(notes).toHaveLength(1);
+    expect(typeof out.audit_event_id).toBe("number");
+    expect(out.audit_event_id).toBe(notes[0].seq);
+  });
+
+  it("world_show(pool_rowid):按 rowid 翻 visible + 出参含 audit_event_id", () => {
+    const db = freshDb();
+    const out = byName("world_show").handler(db, { pool_rowid: 1 });
+    expect(out.ok).toBe(true);
+    const notes = logSince(db, 0).filter((e) => e.kind === "note");
+    expect(notes).toHaveLength(1);
+    expect(typeof out.audit_event_id).toBe("number");
+    expect(out.audit_event_id).toBe(notes[0].seq);
   });
 
   it("reveal_once(sheet):append kind=reveal 可见 event", () => {

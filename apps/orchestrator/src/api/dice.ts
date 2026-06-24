@@ -93,6 +93,23 @@ export function createLiveApp(deps: LiveDeps): Hono {
     return c.json(buildSnapshot(host.db, id));
   });
 
+  // B2：叙述/事件历史回填(重连补 narrate)。?since=<seq> 取该 seq 之后的事件；
+  // ?visibleOnly=true(默认)只回可见事件。返回 { events:[{seq,kind,text,data}] }(接口页 §2)。
+  app.get("/sessions/:id/events", (c) => {
+    const id = c.req.param("id");
+    const since = Number(c.req.query("since") ?? "0") || 0;
+    const visibleOnly = c.req.query("visibleOnly") !== "false";
+    const db = getOrCreateHost(id, hostDeps(id)).db;
+    const rows = logSince(db, since).filter((r) => (visibleOnly ? r.visible === 1 : true));
+    const events = rows.map((r) => ({
+      seq: r.seq,
+      kind: r.kind,
+      text: r.content ?? "",
+      data: r.data_json ? JSON.parse(r.data_json) : undefined,
+    }));
+    return c.json({ events });
+  });
+
   // 跑团页左活动轨自查源浏览(world/rule/log)。q 为空=列全量(读投影)；q 非空=FTS 检索。
   // 返回 { source, entries:[{name,tag,snippet,canPin}] }。rule 只查不钉(canPin=false)。
   app.get("/sessions/:id/browse", (c) => {
@@ -137,8 +154,13 @@ export function createLiveApp(deps: LiveDeps): Hono {
     const id = c.req.param("id");
     const body = ChoiceRequestSchema.parse(await c.req.json());
     const host = getOrCreateHost(id, hostDeps(id));
-    const { turnId } = await host.handleMessage(`[choice ${body.eventId}#${body.optionIndex}]`);
-    return c.json({ turnId }, 202);
+    // B1：走正式「玩家选择捕获」路径(§5)——落所选记录 + 据所选作下一回合输入,不再伪装成 [choice] 文本。
+    try {
+      const { turnId } = await host.handleChoice(body.eventId, body.optionIndex);
+      return c.json({ turnId }, 202);
+    } catch {
+      return c.json({ code: "no_pending_choice" }, 409);
+    }
   });
   app.post("/sessions/:id/roll", async (c) => {
     const id = c.req.param("id");

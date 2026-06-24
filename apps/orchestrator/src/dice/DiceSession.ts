@@ -60,8 +60,23 @@ export class DiceSession implements Session {
   }
 
   onCanonWrite(evt: CanonWriteEvent): void {
-    const msg = mapCanonWrite(evt);
+    const msg = mapCanonWrite(this.enrich(evt));
     if (msg) this.hub.broadcast(this.sessionId, msg);
+  }
+
+  // 缝 A 出参贫信息补全：narrate / game_end 的工具出参不含展示所需内容(text / reason+outcome)，
+  // 由会话从 store 按 seq / session_meta 取出注入 output,供 mapCanonWrite(纯映射器)消费。
+  private enrich(evt: CanonWriteEvent): CanonWriteEvent {
+    if (evt.kind === "event" && evt.toolName === "narrate") {
+      const r = this.db.prepare("SELECT content FROM log WHERE seq=?").get(evt.seq) as { content: string | null } | undefined;
+      return { ...evt, output: { ...(evt.output as object ?? {}), content: r?.content ?? "" } };
+    }
+    if (evt.kind === "game_end") {
+      const raw = metaGet(this.db, "ended");
+      const meta = raw ? (JSON.parse(raw) as { reason?: string; outcome?: string }) : {};
+      return { ...evt, output: { ...(evt.output as object ?? {}), reason: meta.reason ?? "", outcome: meta.outcome ?? "" } };
+    }
+    return evt;
   }
 
   attachWs(ws: WsLike): void { this.hub.add(this.sessionId, ws); }
@@ -83,6 +98,29 @@ export class DiceSession implements Session {
     await runTurn(
       { db: this.db, driver, hub: this.hub, sessionId: this.sessionId, turnId, runTurnEnd: (db) => this.turnEnd(db) },
       { text },
+    );
+    return { turnId };
+  }
+
+  // B1：玩家点选待选项的正式路径(接口页 §5「玩家选择捕获」)——
+  // ① 据 eventId 读已物化 kind=choice event 的 options，取第 optionIndex 项；
+  // ② 落一条「玩家所选」记录(kind=note·player_choice，供快照/历史复原)；
+  // ③ 以所选 option 作下一回合 TurnInput(玩家视角的决定文本)——不伪装成 "[choice …]" 文本喂 handleMessage。
+  async handleChoice(eventId: number, optionIndex: number): Promise<{ turnId: string }> {
+    const row = this.db.prepare("SELECT data_json FROM log WHERE seq=? AND kind='choice'").get(eventId) as { data_json: string | null } | undefined;
+    if (!row?.data_json) throw new Error(`handleChoice: 无此 choice event #${eventId}`);
+    const parsed = JSON.parse(row.data_json) as { prompt?: string; options?: { label: string; consequence: string }[] };
+    const opt = parsed.options?.[optionIndex];
+    if (!opt) throw new Error(`handleChoice: choice #${eventId} 无 optionIndex=${optionIndex}`);
+    // ② 落玩家所选记录(隐事件,不进玩家可见叙事；供重连/审计复原"玩家选了哪个")。
+    this.db.prepare("INSERT INTO log (content, kind, data_json, visible) VALUES (?, 'note', ?, 0)")
+      .run(opt.label, JSON.stringify({ player_choice: { eventId, optionIndex, label: opt.label, consequence: opt.consequence } }));
+    // ③ 所选 option 作下一回合输入(玩家视角决定文本)。
+    const turnId = nextTurnId(this.sessionId);
+    const driver = this.deps.agentFactory(this.buildInit());
+    await runTurn(
+      { db: this.db, driver, hub: this.hub, sessionId: this.sessionId, turnId, runTurnEnd: (db) => this.turnEnd(db) },
+      { text: opt.label },
     );
     return { turnId };
   }

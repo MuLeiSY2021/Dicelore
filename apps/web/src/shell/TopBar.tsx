@@ -7,26 +7,34 @@
 // Software Foundation, either version 3 of the License, or (at your option)
 // any later version. See <https://www.gnu.org/licenses/>.
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import { Home, Dices, Hammer, Settings, Languages, Moon, Sun, Check, BookMarked } from "lucide-react";
 import { useTheme } from "../theme/ThemeProvider.js";
 import { useI18n, LANGS } from "../i18n/index.js";
 import { useHealth } from "./useHealth.js";
 import { Logo } from "./Logo.js";
+import { listSessions } from "../api/client.js";
 
 export function TopBar() {
   const { resolved, setMode } = useTheme();
   const { lang, setLang, t } = useI18n();
   const { health, offline } = useHealth();
   const [langOpen, setLangOpen] = useState(false);
+  const [hasSessions, setHasSessions] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    listSessions().then((s) => setHasSessions(s.length > 0)).catch(() => setHasSessions(false));
+  }, []);
+
+  const playDisabled = hasSessions === false;
 
   const NAV = [
-    { to: "/", label: t("nav.home"), Icon: Home, end: true },
-    { to: "/packs", label: t("nav.catalog"), Icon: BookMarked, end: false },
-    { to: "/play", label: t("nav.play"), Icon: Dices, end: false },
-    { to: "/build", label: t("nav.build"), Icon: Hammer, end: false },
-    { to: "/config", label: t("nav.config"), Icon: Settings, end: false },
+    { to: "/", label: t("nav.home"), Icon: Home, end: true, disabled: false },
+    { to: "/packs", label: t("nav.catalog"), Icon: BookMarked, end: false, disabled: false },
+    { to: "/play", label: t("nav.play"), Icon: Dices, end: false, disabled: playDisabled },
+    { to: "/build", label: t("nav.build"), Icon: Hammer, end: false, disabled: false },
+    { to: "/config", label: t("nav.config"), Icon: Settings, end: false, disabled: false },
   ];
 
   return (
@@ -35,8 +43,12 @@ export function TopBar() {
         <Logo variant="lockup" size={26} />
       </NavLink>
       <nav className="nav">
-        {NAV.map(({ to, label, Icon, end }) => (
-          <NavLink key={to} to={to} end={end} className={({ isActive }) => (isActive ? "on" : "")}>
+        {NAV.map(({ to, label, Icon, end, disabled }) => (
+          <NavLink key={to} to={to} end={end}
+            className={({ isActive }) => (isActive ? "on" : "") + (disabled ? " disabled" : "")}
+            aria-disabled={disabled || undefined}
+            onClick={disabled ? (e) => e.preventDefault() : undefined}
+            tabIndex={disabled ? -1 : undefined}>
             <Icon className="lucide" /> {label}
           </NavLink>
         ))}

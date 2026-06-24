@@ -18,6 +18,7 @@ import { createDiagnosticsApp } from "./api/diagnostics.js";
 import { attachWsUpgrade } from "./api/ws.js";
 import { listSessionSummaries } from "./dice/sessions.js";
 import { gmCoreSkill } from "./dice/openingPrompt.js";
+import { buildPackSkill } from "./lore/openingPrompt.js";
 import type { AgentFactory, SkillRef } from "./pkg/agent.js";
 import { DiceGm } from "./dice/DiceGm.js";
 import { FakeDiceGm } from "./dice/FakeDiceGm.js";
@@ -37,6 +38,9 @@ export function startServer(port: number): void {
   // dice 默认会话本地 skill = gm-core(源目录在则 staged;教条另内联进 openingPrompt 兜底)。
   const gm = gmCoreSkill();
   const diceSkills: SkillRef[] = gm ? [gm] : [];
+  // lore 构建 skill = dicelore-build-pack(源目录在则 staged;同 gmCoreSkill() 退化策略)。
+  const bp = buildPackSkill();
+  const loreSkills: SkillRef[] = bp ? [bp] : [];
 
   const app = new Hono();
   app.route("/", createLiveApp({
@@ -44,7 +48,7 @@ export function startServer(port: number): void {
     listSessions: () => listSessionSummaries(join(dir, "dicelore", "sessions")),
     deleteSession: (id) => { const p = sessionDbPath(id); try { rmSync(p); rmSync(`${p}-wal`, { force: true }); rmSync(`${p}-shm`, { force: true }); } catch { /* ignore */ } },
   }));
-  app.route("/", createLoreApp({ catalog, agentFactory, buildPrompt: process.env.DICELORE_BUILD_PROMPT }));
+  app.route("/", createLoreApp({ catalog, agentFactory, buildPrompt: process.env.DICELORE_BUILD_PROMPT, skills: loreSkills }));
   app.route("/", createDiagnosticsApp({ port, fakeGm: fake }));
 
   const server = serve({ fetch: app.fetch, port });

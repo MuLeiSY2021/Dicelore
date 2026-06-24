@@ -8,7 +8,7 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import { CLIENT_PROTOCOL, type StreamMessage } from "@dicelore/shared";
-import type { DB } from "@dicelore/core";
+import { logSince, type DB } from "@dicelore/core";
 import type { PlayerRollGate } from "./rollGate.js";
 import type { WsHub } from "../pkg/wsHub.js";
 
@@ -25,4 +25,17 @@ export function restagePendingRolls(host: { db: DB; gate: PlayerRollGate; hub: W
     n += 1;
   }
   return n;
+}
+
+// B2：重连补叙述历史——把 since(= 客户端 narrativeCursor)之后的 kind=narrate event
+// 按全局 seq 重发为 narration_commit(对齐快照 narrativeCursor 去重口径,接口页 §2/§3+4 注⑥)。
+// 返回补发条数。配套端点 GET /sessions/:id/events?since= 供客户端主动拉取;本函数是服务端重连推齐路径。
+export function replayNarration(host: { db: DB; hub: WsHub; sessionId: string }, since: number): number {
+  const rows = logSince(host.db, since).filter((r) => r.kind === "narrate" && r.visible === 1);
+  for (const r of rows) {
+    host.hub.broadcast(host.sessionId, {
+      protocol: CLIENT_PROTOCOL, type: "narration_commit", seq: r.seq, text: r.content ?? "",
+    });
+  }
+  return rows.length;
 }

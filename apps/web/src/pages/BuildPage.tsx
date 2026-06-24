@@ -116,9 +116,9 @@ export default function BuildPage() {
     setBusy(true);
     try {
       const { turnId } = await postBuildMessage(`build-${active.id}`, text, active.name);
-      setChat((c) => [...c, { role: "a", text: `已接收(${turnId.slice(0, 8)})。产物写入后点「刷新产物」重读。` }]);
+      setChat((c) => [...c, { role: "a", text: t("build.chat.received", { id: turnId.slice(0, 8), refresh: t("build.refresh") }) }]);
     } catch (err: unknown) {
-      setChat((c) => [...c, { role: "a", text: `发送失败：${err instanceof Error ? err.message : ""}` }]);
+      setChat((c) => [...c, { role: "a", text: t("build.chat.error", { msg: err instanceof Error ? err.message : "" }) }]);
     } finally { setBusy(false); }
   }
   const refresh = () => { if (active) getCatalogFiles(active.id, active.head ?? "head").then(setFiles).catch(() => {}); };
@@ -167,7 +167,7 @@ export default function BuildPage() {
         <div className="main">
           <div className="mtool">
             <span className="t">{NAV.find((n) => n.key === ctype)?.label}</span><span className="sp" />
-            <button className="btn" onClick={refresh}><RefreshCw className="lucide" />刷新产物</button>
+            <button className="btn" onClick={refresh}><RefreshCw className="lucide" />{t("build.refresh")}</button>
           </div>
           <div className="mbody">
             {ctype === "npc" && (npcs.length === 0
@@ -178,13 +178,13 @@ export default function BuildPage() {
                 return (
                   <div className={"npc" + (col ? " collapsed" : "")} key={e.entity}>
                     <div className="nh"><span className="av"><User className="lucide" /></span><span className="nm">{e.entity}</span>
-                      <span className="tag">{e.kind}</span>{e.cells.length === 0 && <span className="tag" style={{ color: "var(--warn)", borderColor: "var(--warn)" }}>缺卡</span>}
+                      <span className="tag">{e.kind}</span>{e.cells.length === 0 && <span className="tag" style={{ color: "var(--warn)", borderColor: "var(--warn)" }}>{t("build.npc.nocard")}</span>}
                       <span className="ed"><Pencil className="lucide" />
-                        <button aria-label="折叠" onClick={() => setCollapsed((s) => { const n = new Set(s); n.has(e.entity) ? n.delete(e.entity) : n.add(e.entity); return n; })} style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", display: "flex" }}>
+                        <button aria-label={t("build.npc.collapse")} onClick={() => setCollapsed((s) => { const n = new Set(s); n.has(e.entity) ? n.delete(e.entity) : n.add(e.entity); return n; })} style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", display: "flex" }}>
                           {col ? <ChevronDown className="lucide" /> : <ChevronUp className="lucide" />}</button></span>
                     </div>
                     <div className="nb">
-                      <div className="prose"><div className="lbl">人设散文</div>{prose ? prose.content : "（无人设散文）"}</div>
+                      <div className="prose"><div className="lbl">{t("build.npc.prose")}</div>{prose ? prose.content : t("build.npc.prose.empty")}</div>
                       <div className="card"><div className="lbl">sheet 卡</div>
                         {e.cells.length === 0 ? <div className="crow" style={{ border: "none" }}><span>—</span></div>
                           : e.cells.map((c) => <div className="crow" key={c.attr}><span>{c.attr}</span><b>{c.value}</b></div>)}
@@ -204,23 +204,23 @@ export default function BuildPage() {
         <div className="aside">
           <div className="as-h"><Sparkles className="lucide" />{t("build.assistant")}</div>
           <div className="chat">
-            {chat.length === 0 && <div className="msg a"><div className="who"><Sparkles className="lucide" />{t("build.assistant")}</div>用自然语言让我补全人物 / 设定 / 卡池，我会调构建工具产出。</div>}
+            {chat.length === 0 && <div className="msg a"><div className="who"><Sparkles className="lucide" />{t("build.assistant")}</div>{t("build.assistant.welcome")}</div>}
             {chat.map((m, i) => m.role === "u"
               ? <div className="msg u" key={i}>{m.text}</div>
               : <div className="msg a" key={i}><div className="who"><Sparkles className="lucide" />{t("build.assistant")}</div>{m.text}</div>)}
           </div>
           <div className="cin">
             <input value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") send(); }} placeholder={t("build.assistant.ph")} aria-label={t("build.assistant.ph")} />
-            <button className="send" onClick={send} disabled={busy || !active} aria-label="发送"><ArrowUp className="lucide" /></button>
+            <button className="send" onClick={send} disabled={busy || !active} aria-label={t("build.send")}><ArrowUp className="lucide" /></button>
           </div>
           <div className="valid">
             <div className="vh"><ShieldCheck className="lucide" style={{ color: errCount ? "var(--err)" : "var(--ok)" }} />{t("build.report")}
               <span className={"chip " + (errCount ? "warn" : "ok")}>{t("build.report.errors", { n: errCount })}</span>
               <span className="chip warn">{t("build.report.warns", { n: warnCount })}</span></div>
             {issues === null
-              ? <div className="vitem"><FolderOpen className="lucide" style={{ color: "var(--text3)" }} /><span>点顶部「{t("build.validate")}」运行整包校验</span></div>
+              ? <div className="vitem"><FolderOpen className="lucide" style={{ color: "var(--text3)" }} /><span>{t("build.validate.hint", { label: t("build.validate") })}</span></div>
               : issues.length === 0
-                ? <div className="vitem"><ShieldCheck className="lucide" style={{ color: "var(--ok)" }} /><span>校验通过，无问题</span></div>
+                ? <div className="vitem"><ShieldCheck className="lucide" style={{ color: "var(--ok)" }} /><span>{t("build.validate.pass")}</span></div>
                 : issues.map((it, i) => (
                   <div className="vitem" key={i}><AlertTriangle className="lucide" style={{ color: it.level === "error" ? "var(--err)" : "var(--warn)" }} />
                     <span><span className="f">{it.path}</span> {it.msg}</span></div>

@@ -21,15 +21,30 @@ function capture() {
 }
 
 describe("runTurn", () => {
-  it("narration → narration_commit；末尾发 turn_ended", async () => {
+  it("narration(driver yield) → narration_commit；末尾发 turn_ended", async () => {
     const db = openDb(":memory:"); initSchema(db);
     const { hub, msgs } = capture();
     await runTurn({ db, driver: new FakeDiceGm([{ type: "narration", text: "你推门进去。" }, { type: "turn_end" }]),
       hub, sessionId: "s1", turnId: "t1", runTurnEnd: () => ({}) }, { text: "我推门" });
     const types = msgs.map((m) => m.type);
     expect(types[0]).toBe("turn_started");
-    expect(types).toContain("narration_commit");
+    expect(types).toContain("narration_commit"); // streamDriverTurn 共享分支(lore 需要)仍在
     expect(types.at(-1)).toBe("turn_ended");
+  });
+
+  // B4：turn_ended.seq = 全局 log event seq（非回合内计数器），对齐 §1 narrativeCursor。
+  it("turn_ended.seq = 全局 log event seq（非 per-turn 计数器）", async () => {
+    const db = openDb(":memory:"); initSchema(db);
+    // 预置若干历史 event，模拟此前已积累的全局 seq。
+    for (const c of ["旧叙事1", "旧叙事2", "旧叙事3"]) {
+      db.prepare("INSERT INTO log (content, kind, visible) VALUES (?, 'narrate', 1)").run(c);
+    }
+    const globalSeq = (db.prepare("SELECT MAX(seq) s FROM log").get() as { s: number }).s;
+    const { hub, msgs } = capture();
+    await runTurn({ db, driver: new FakeDiceGm([{ type: "turn_end" }]),
+      hub, sessionId: "s1", turnId: "t1", runTurnEnd: () => ({}) }, { text: "x" });
+    const ended = msgs.find((m) => m.type === "turn_ended");
+    expect(ended.seq).toBe(globalSeq); // 与全局口径一致，而非回合内 0/1 计数
   });
 
   it("turn-end 产 choices → 发 choices 消息", async () => {
