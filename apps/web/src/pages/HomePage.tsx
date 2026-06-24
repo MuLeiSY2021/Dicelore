@@ -17,6 +17,7 @@ import { useT } from "../i18n/index.js";
 // 示例团本(快速验证「建团本→开局玩」闭环;无需 LLM)。
 const SAMPLE_PACK = [
   { path: "manifest.md", content: "# 示例·黑风寨\n\n- id: sample" },
+  { path: "prologue.md", content: "你是这局《黑风寨》的 GM。开场：旅人行至鹰愁涧口，暮色四合，寨门紧闭。请即兴铺陈第一幕。" },
   { path: "lore/黑风寨.md", content: "黑风寨盘踞鹰愁涧,当家钟三爷使子母钟锤。" },
   { path: "state/开局.csv", content: "entity,kind,attr,value,visible\n旅人,player,HP,12,1\n旅人,player,身上银两,30,1\n" },
 ];

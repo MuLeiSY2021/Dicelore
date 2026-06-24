@@ -99,7 +99,7 @@ export default function BuildPage() {
   async function newPack() {
     const name = prompt(t("build.create"), "新团本");
     if (!name) return;
-    const seed: PackFile[] = [{ path: "manifest.md", content: `# ${name}\n\n- id: ${name}` }, { path: "lore/序章.md", content: "（在此填写世界设定）" }];
+    const seed: PackFile[] = [{ path: "manifest.md", content: `# ${name}\n\n- id: ${name}` }, { path: "prologue.md", content: "（在此填写团本开场白 prompt：固定台词、导调指令、或让 GM 即兴的指导语）" }, { path: "lore/序章.md", content: "（在此填写世界设定）" }];
     const r = await commitPack(name, "init", seed);
     const list = await listCatalog(); setPacks(list);
     setActive(list.find((x) => x.id === r.tuanbenId) ?? list[0] ?? null);
