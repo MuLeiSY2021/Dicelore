@@ -17,3 +17,4 @@ export function getOrCreateHost(sessionId: string, deps: DiceSessionDeps): DiceS
   return registry.getOrCreate(sessionId, () => new DiceSession(sessionId, deps));
 }
 export function getHost(sessionId: string): DiceSession | undefined { return registry.get(sessionId); }
+export function removeHost(sessionId: string): void { registry.remove(sessionId); }

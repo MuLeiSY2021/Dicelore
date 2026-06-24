@@ -58,4 +58,6 @@ export { loreSearch, loreGet, type Lore } from "./store/world.js";
 export { ruleSearch, ruleGet, type Rule } from "./store/rule.js";
 export { logSince, logRecall, type LogRow } from "./store/log.js";
 export { stateList, stateGet, type StateCell as RuntimeStateCell } from "./store/state.js";
-
+// session_meta KV(团本名/prologue/started 等,P2 Play 生命周期)
+export { metaGet, metaSet } from "./session/resolve.js";
+export { buildSessionContext } from "./adapter/sessionContext.js";

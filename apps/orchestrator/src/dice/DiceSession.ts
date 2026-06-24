@@ -7,12 +7,13 @@
 // Software Foundation, either version 3 of the License, or (at your option)
 // any later version. See <https://www.gnu.org/licenses/>.
 
-import { openDb, initSchema, createMcpServer, buildPresentationModel, runTurnEnd, importPack, type DB, type CanonWriteEvent, type CatalogDB } from "@dicelore/core";
+import { openDb, initSchema, createMcpServer, buildPresentationModel, runTurnEnd, importPack, metaSet, metaGet, type DB, type CanonWriteEvent, type CatalogDB } from "@dicelore/core";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WsHub, type WsLike } from "../pkg/wsHub.js";
 import { PlayerRollGate } from "./rollGate.js";
 import { mapCanonWrite } from "./notify.js";
 import { runTurn, type TurnEndResult } from "./turnLoop.js";
+import { buildOpeningPrompt } from "./openingPrompt.js";
 import type { Agent } from "../pkg/agent.js";
 import type { Session } from "../pkg/session.js";
 
@@ -37,7 +38,16 @@ export class DiceSession implements Session {
     // 开局物化:从 Catalog import 选定团本版本(信任闸门重验)→ 本局运行库。仅空库时(避免重复 import)。
     if (deps.importFrom) {
       const empty = (this.db.prepare("SELECT COUNT(*) n FROM log").get() as { n: number }).n === 0;
-      if (empty) importPack(deps.importFrom.catalog, this.db, deps.importFrom.tuanbenId, deps.importFrom.ref);
+      if (empty) {
+        const { catalog, tuanbenId, ref } = deps.importFrom;
+        const res = importPack(catalog, this.db, tuanbenId, ref);
+        // 写 session_meta:团本关联 + prologue + 未开场。供 Play 列表/kickoff/开场prompt。
+        metaSet(this.db, "tuanben_id", tuanbenId);
+        metaSet(this.db, "ref", ref);
+        if (res.tuanbenName) metaSet(this.db, "tuanben_name", res.tuanbenName);
+        if (res.prologue) metaSet(this.db, "prologue", res.prologue);
+        if (metaGet(this.db, "started") === undefined) metaSet(this.db, "started", "0");
+      }
     }
     this.gate = new PlayerRollGate(this.db, this.hub, sessionId);
     this.mcpServer = createMcpServer(this.db, {
@@ -54,6 +64,9 @@ export class DiceSession implements Session {
   attachWs(ws: WsLike): void { this.hub.add(this.sessionId, ws); }
   detachWs(ws: WsLike): void { this.hub.remove(this.sessionId, ws); }
 
+  // 开场 prompt(signpost + 团本 prologue);driver 工厂取它作 systemPrompt → GM 不再裸奔。
+  get openingPrompt(): string { return buildOpeningPrompt(this.db); }
+
   async handleMessage(text: string): Promise<{ turnId: string }> {
     const turnId = nextTurnId(this.sessionId);
     const driver = this.deps.driverFactory(this);
@@ -62,6 +75,20 @@ export class DiceSession implements Session {
       { text },
     );
     return { turnId };
+  }
+
+  // kickoff:「开始游戏」。未开场则以 prologue 为首轮 impetus 跑开场回合(无玩家输入)→ 流式开场叙事。幂等。
+  async start(): Promise<{ started: boolean }> {
+    if (metaGet(this.db, "started") === "1") return { started: false };
+    const prologue = metaGet(this.db, "prologue") ?? "";
+    const turnId = nextTurnId(this.sessionId);
+    const driver = this.deps.driverFactory(this);
+    await runTurn(
+      { db: this.db, driver, hub: this.hub, sessionId: this.sessionId, turnId, runTurnEnd: (db) => this.turnEnd(db) },
+      { text: prologue || "[开始游戏]" },
+    );
+    metaSet(this.db, "started", "1");
+    return { started: true };
   }
 
   handleRoll(eventId: number): boolean { return this.gate.resolveRoll(eventId); }

@@ -7,21 +7,22 @@
 // Software Foundation, either version 3 of the License, or (at your option)
 // any later version. See <https://www.gnu.org/licenses/>.
 
-// 配置 → 关于（视觉页 §6）。展示态骨架（只读）。
+import { useT } from "../i18n/index.js";
+import { useHealth } from "../shell/useHealth.js";
+
+// 配置 → 关于：真实版本 / 协议契约版本 / 运行壳。
 export function About() {
+  const t = useT();
+  const { health } = useHealth();
   return (
-    <div className="cfg-section">
-      <h2 className="cfg-h2">关于</h2>
-
-      <div className="cfg-row">
-        <span className="cfg-label">产品</span>
-        <span className="cfg-static">Dicelore · 玩家客户端</span>
+    <>
+      <div className="mhead"><h3>{t("cfg.about")}</h3></div>
+      <div className="section">
+        <div className="frow"><span className="flabel">{t("cfg.about.product")}</span><div className="fctrl"><span className="fval">Dicelore · 玩家客户端</span></div></div>
+        <div className="frow"><span className="flabel">{t("cfg.about.version")}</span><div className="fctrl"><span className="fval">v1 · {health?.fakeGm ? "FAKE_GM" : "live"}</span></div></div>
+        <div className="frow"><span className="flabel">{t("cfg.about.proto")}</span><div className="fctrl"><span className="fval">{health?.protocol ?? "dicelore.client/1"} · dicelore.notify/1</span></div></div>
+        <div className="frow"><span className="flabel">{t("cfg.about.shell")}</span><div className="fctrl"><span className="fval">Web</span></div></div>
       </div>
-
-      <div className="cfg-row">
-        <span className="cfg-label">版本</span>
-        <span className="cfg-static">v1 · 开发态</span>
-      </div>
-    </div>
+    </>
   );
 }

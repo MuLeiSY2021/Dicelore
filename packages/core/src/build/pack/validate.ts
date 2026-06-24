@@ -16,6 +16,7 @@ export interface ValidateReport { ok: boolean; issues: ValidateIssue[] }
 // ── 允许的顶层路径段 ──────────────────────────────────────────────────────
 const KNOWN_TOP = new Set([
   "lore", "rules", "world", "pools", "params", "sheets", "fronts",
+  "plotlines", "foreshadows", "anchors", // 叙事域 CSV
   "state",          // legacy: Draft.toPackFiles() 生成的旧格式
   "manifest.md",    // legacy: Draft.toPackFiles() 生成的旧格式
   "manifest.yaml",  // 新格式
@@ -99,7 +100,8 @@ function parseManifestYaml(text: string): Record<string, string | string[]> {
 }
 
 // ── frontmatter 解析（fronts/*.md）───────────────────────────────────────
-function parseFrontmatter(content: string): { meta: Record<string, string>; body: string } | null {
+/** 解析 YAML frontmatter(--- ... ---) + body。供 import.ts 物化 fronts/*.md 共用。 */
+export function parseFrontmatter(content: string): { meta: Record<string, string>; body: string } | null {
   if (!content.startsWith("---")) return null;
   const end = content.indexOf("\n---", 3);
   if (end === -1) return null;
@@ -177,6 +179,23 @@ export function validatePack(files: PackFile[]): ValidateReport {
       const rows = parseCsv(f.content);
       if (rows.length && !("entity" in rows[0] && "attr" in rows[0] && "value" in rows[0])) {
         err(f.path, "sheets CSV 缺 entity/attr/value 列");
+      }
+    }
+  }
+
+  // ── Rule 5c: 叙事域 CSV 必需列 ───────────────────────────────────────
+  const NARRATIVE_REQ: Record<string, string[]> = {
+    plotlines:   ["id", "title"],
+    foreshadows: ["id", "content"],
+    anchors:     ["owner_table", "owner_id", "target_table", "target_id"],
+  };
+  for (const f of files) {
+    const top = f.path.indexOf("/") === -1 ? f.path : f.path.slice(0, f.path.indexOf("/"));
+    const req = NARRATIVE_REQ[top];
+    if (req) {
+      const rows = parseCsv(f.content);
+      if (rows.length && !req.every((c) => c in rows[0])) {
+        err(f.path, `${top} CSV 缺必需列(需 ${req.join("/")})`, `请确保 CSV 首行包含: ${req.join(", ")}`);
       }
     }
   }

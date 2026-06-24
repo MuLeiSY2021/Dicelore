@@ -13,7 +13,7 @@ import type { SessionInfo, SessionSummary } from "@dicelore/shared";
 import { MessageRequestSchema, ChoiceRequestSchema, RollRequestSchema } from "@dicelore/shared";
 import { loreSearch, ruleSearch, logSince } from "@dicelore/core";
 import { buildSnapshot } from "../dice/presentation.js";
-import { getOrCreateHost, getHost } from "../dice/registry.js";
+import { getOrCreateHost, getHost, removeHost } from "../dice/registry.js";
 import type { DiceSession } from "../dice/DiceSession.js";
 import type { Agent } from "../pkg/agent.js";
 
@@ -51,6 +51,7 @@ export interface LiveDeps {
   openSession?: (id: string) => DB; // 省略则 DiceSession 用内存库(测试)
   listSessions?: () => SessionSummary[]; // 会话列表(主页继续上次/最近);省略则空
   catalog?: CatalogDB; // 给「开局 import 团本」用
+  deleteSession?: (id: string) => void; // 删 .db 文件(server 注入);省略则只注销内存
 }
 
 export function createLiveApp(deps: LiveDeps): Hono {
@@ -66,7 +67,23 @@ export function createLiveApp(deps: LiveDeps): Hono {
     return c.json({ sessionId: id, imported: true }, 201);
   });
 
+  // kickoff:「开始游戏」→ 开场回合(prologue 驱动、幂等),WS 流式开场叙事。
+  app.post("/sessions/:id/start", async (c) => {
+    const id = c.req.param("id");
+    const host = getOrCreateHost(id, hostDeps(id));
+    const { started } = await host.start();
+    return c.json({ sessionId: id, started }, 202);
+  });
+
   app.get("/sessions", (c) => c.json({ sessions: deps.listSessions?.() ?? [] }));
+
+  // 删会话:注销内存 host + 删 .db 文件。
+  app.delete("/sessions/:id", (c) => {
+    const id = c.req.param("id");
+    removeHost(id);
+    deps.deleteSession?.(id);
+    return c.json({ ok: true });
+  });
 
   app.get("/sessions/:id/presentation", (c) => {
     const id = c.req.param("id");

@@ -11,17 +11,27 @@ import type { DB } from "../store/db.js";
 import { loreUpsert } from "../store/world.js";
 import { poolAdd } from "../store/world.js";
 import { ruleUpsert } from "../store/rule.js";
+import { frontUpsert } from "../store/front.js";
+import { plotlineUpsert } from "../store/plotline.js";
+import { foreshadowUpsert } from "../store/foreshadow.js";
+import { anchorAdd } from "../store/anchor.js";
 import { checkout, type PackFile } from "./catalog.js";
 import type { CatalogDB } from "./db.js";
-import { validatePack as validatePackFull, type ValidateIssue } from "../build/pack/validate.js";
+import { validatePack as validatePackFull, parseFrontmatter, type ValidateIssue } from "../build/pack/validate.js";
 
-// 团本包 → per-session 运行库的物化映射(对齐 数据层 spec §9,只覆已落域 lore/rule/pool/state)。
-// 包格式(manifest.yaml / world / sheets / fronts / pools / params / rules / state / lore)。
+// 团本包 → per-session 运行库的物化映射(对齐 数据层 spec §9)。
+// 包路径约定: lore/<n>.md、rules/<n>.md、pools/<n>.csv、state/<n>.csv、manifest.md
+//   + 叙事域 fronts/<id>.md(正典 md 格式)、plotlines/<n>.csv、foreshadows/<n>.csv、anchors/<n>.csv、prologue.md。
 // validatePack 实现集中在 build/pack/validate.ts(信任闸门 + 构建期 DX 报告),此处直接复用。
 
 /** 包校验 issue（与 ValidateIssue 同构，`file` 为 issue 所属路径段）。 */
 export type ImportIssue = ValidateIssue;
-export interface ImportResult { lore: number; rules: number; pools: number; stateCells: number }
+export interface ImportResult {
+  lore: number; rules: number; pools: number; stateCells: number;
+  fronts: number; plotlines: number; foreshadows: number; anchors: number;
+  prologue?: string;     // 包根 prologue.md 正文(团本开场 prompt;不物化进 store,回传供 session_meta)
+  tuanbenName?: string;  // manifest.md H1(团本名,session_meta 兜底)
+}
 
 // 信任闸门:永不信任来源,跑起来前重验包结构。坏包 → ok:false。
 // 单源:校验逻辑在 build/pack/validate.ts；此处只是转发，确保 importPack 与 /catalog/validate 共用同一实现。
@@ -59,6 +69,8 @@ function parseCsv(text: string): Record<string, string>[] {
   });
 }
 
+
+
 const META_COLS = new Set(["weight", "source", "visible"]);
 
 // 物化:checkout 某版本 → 校验(throw on error) → 按域写入运行库。caller 提供已 initSchema 的 runDB。
@@ -68,7 +80,7 @@ export function importPack(catalogDB: CatalogDB, runDB: DB, tuanbenId: string, r
   if (!v.ok) {
     throw new Error(`团本包校验失败(信任闸门): ${v.issues.filter((i) => i.level === "error").map((i) => `${i.file}: ${i.msg}`).join("; ")}`);
   }
-  const res: ImportResult = { lore: 0, rules: 0, pools: 0, stateCells: 0 };
+  const res: ImportResult = { lore: 0, rules: 0, pools: 0, stateCells: 0, fronts: 0, plotlines: 0, foreshadows: 0, anchors: 0 };
   const stateStmt = runDB.prepare(
     `INSERT INTO state (entity, kind, attr, value, visible) VALUES (?,?,?,?,?)
      ON CONFLICT(entity, attr) DO UPDATE SET kind=excluded.kind, value=excluded.value, visible=excluded.visible`,
@@ -96,8 +108,38 @@ export function importPack(catalogDB: CatalogDB, runDB: DB, tuanbenId: string, r
           stateStmt.run(r.entity, r.kind || "world", r.attr, r.value, r.visible ? Number(r.visible) : 0);
           res.stateCells++;
         }
+      } else if (top === "fronts") {
+        // front 正典格式：fronts/<id>.md (YAML frontmatter + body)
+        // 解析 frontmatter → clock_ref(clock attr) + H1 → frontUpsert。
+        // 凶兆→watcher 物化待 A2（main 也未做，此处只落 front 表行 + clock_ref）。
+        const id = baseName(f.path);
+        const parsed = parseFrontmatter(f.content);
+        const clockRef = parsed?.meta.clock?.trim() || undefined;
+        const nameMatch = /^#\s+(.+)$/m.exec(parsed?.body ?? f.content);
+        const name = nameMatch?.[1]?.trim() ?? id;
+        frontUpsert(runDB, { id, name, clock_ref: clockRef, stakes: undefined, status: undefined });
+        res.fronts++;
+      } else if (top === "plotlines") {
+        for (const r of parseCsv(f.content)) {
+          plotlineUpsert(runDB, { id: r.id, title: r.title, summary: r.summary || undefined, status: r.status || undefined });
+          res.plotlines++;
+        }
+      } else if (top === "foreshadows") {
+        for (const r of parseCsv(f.content)) {
+          foreshadowUpsert(runDB, { id: r.id, content: r.content, status: r.status || undefined });
+          res.foreshadows++;
+        }
+      } else if (top === "anchors") {
+        for (const r of parseCsv(f.content)) {
+          anchorAdd(runDB, { owner_table: r.owner_table, owner_id: r.owner_id, target_table: r.target_table, target_id: r.target_id, role: r.role || undefined });
+          res.anchors++;
+        }
+      } else if (f.path === "manifest.md") {
+        const m = /^#\s+(.+)$/m.exec(f.content);
+        if (m) res.tuanbenName = m[1].trim();
+      } else if (f.path === "prologue.md") {
+        res.prologue = f.content; // 团本开场 prompt:不物化进 store,回传供 session_meta
       }
-      // manifest.yaml / manifest.md: 元信息载体,P5 接入 session_meta 时消费。
     }
   });
   tx();

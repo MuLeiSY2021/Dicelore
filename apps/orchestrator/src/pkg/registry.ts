@@ -14,6 +14,7 @@ import type { Session } from "./session.js";
 export interface SessionRegistry<S extends Session = Session> {
   getOrCreate(sessionId: string, create: () => S): S;
   get(sessionId: string): S | undefined;
+  remove(sessionId: string): void;
 }
 
 export class InMemorySessionRegistry<S extends Session = Session> implements SessionRegistry<S> {
@@ -24,4 +25,5 @@ export class InMemorySessionRegistry<S extends Session = Session> implements Ses
     return s;
   }
   get(sessionId: string): S | undefined { return this.map.get(sessionId); }
+  remove(sessionId: string): void { this.map.delete(sessionId); }
 }

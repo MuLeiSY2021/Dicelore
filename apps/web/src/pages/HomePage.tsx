@@ -7,11 +7,12 @@
 // Software Foundation, either version 3 of the License, or (at your option)
 // any later version. See <https://www.gnu.org/licenses/>.
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ComponentType } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Play, Dices, Hammer, MessagesSquare, Settings, Swords, Clock, Flag } from "lucide-react";
 import type { SessionSummary } from "@dicelore/shared";
 import { listSessions, commitPack, openPlaySession } from "../api/client.js";
+import { useT } from "../i18n/index.js";
 
 // 示例团本(快速验证「建团本→开局玩」闭环;无需 LLM)。
 const SAMPLE_PACK = [
@@ -20,25 +21,20 @@ const SAMPLE_PACK = [
   { path: "state/开局.csv", content: "entity,kind,attr,value,visible\n旅人,player,HP,12,1\n旅人,player,身上银两,30,1\n" },
 ];
 
-const STATUS_LABEL: Record<SessionSummary["status"], string> = {
-  active: "进行中",
-  archived: "已存档",
-  ended: "终局",
-};
-const STATUS_ICON: Record<SessionSummary["status"], typeof Swords> = {
-  active: Swords,
-  archived: Clock,
-  ended: Flag,
+const STATUS_ICON: Record<SessionSummary["status"], ComponentType<{ className?: string }>> = {
+  active: Swords, archived: Clock, ended: Flag,
 };
 
-const QUICK = [
-  { Icon: Dices, qt: "开新局", qd: "选团本 / 存档起一局", to: "/play" },
-  { Icon: Hammer, qt: "团本制作", qd: "丢本小说造团本", to: "/build" },
-  { Icon: MessagesSquare, qt: "会话管理", qd: "搜索 / 续档 / 删档", to: "/config" },
-  { Icon: Settings, qt: "配置", qd: "服务 / MCP / 模型", to: "/config" },
-];
+function greetingKey(): string {
+  const h = new Date().getHours();
+  if (h < 6) return "home.greeting.night";
+  if (h < 12) return "home.greeting.morning";
+  if (h < 18) return "home.greeting.afternoon";
+  return "home.greeting.evening";
+}
 
 export default function HomePage() {
+  const t = useT();
   const [sessions, setSessions] = useState<SessionSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -69,24 +65,30 @@ export default function HomePage() {
 
   const list = sessions ?? [];
   const last = list[0];
+  const statusLabel = (s: SessionSummary["status"]) => t(`status.${s}`);
+
+  const QUICK = [
+    { Icon: Dices, qt: t("home.quick.newgame"), qd: t("home.quick.newgame.d"), to: "/packs" },
+    { Icon: Hammer, qt: t("home.quick.build"), qd: t("home.quick.build.d"), to: "/build" },
+    { Icon: MessagesSquare, qt: t("home.quick.sessions"), qd: t("home.quick.sessions.d"), to: "/play" },
+    { Icon: Settings, qt: t("home.quick.config"), qd: t("home.quick.config.d"), to: "/config" },
+  ];
 
   return (
     <main className="home">
-      <div className="hello">Good evening · 旅人</div>
-      <div className="htitle">{last ? `夜还长，要继续${last.title}吗？` : "欢迎回到案上"}</div>
-      <div className="hsub">
-        {error ? "" : last ? "上次的故事还在等你落座。" : "选一个团本，开一局新的故事。"}
-      </div>
+      <div className="hello">{t(greetingKey())} · {t("home.traveler")}</div>
+      <div className="htitle">{last ? t("home.welcome.resume", { title: last.title }) : t("home.welcome.empty")}</div>
+      <div className="hsub">{error ? "" : last ? t("home.sub.resume") : t("home.sub.empty")}</div>
 
-      {error && <div className="herror">加载失败：{error}</div>}
+      {error && <div className="herror">{t("home.error", { msg: error })}</div>}
 
       <div className="resume" aria-label="快速开局">
         <div className="meta">
-          <div className="scen">示例·黑风寨</div>
-          <div className="where">一键造示例团本并开局(验证闭环)</div>
+          <div className="scen">{t("home.sample.title")}</div>
+          <div className="where">{t("home.sample.where")}</div>
         </div>
         <button className="cont" onClick={quickPlay} disabled={busy} data-testid="quick-play">
-          <Play className="lucide" />{busy ? "开局中…" : "造团本并开局"}
+          <Play className="lucide" />{busy ? t("home.sample.btn.busy") : t("home.sample.btn")}
         </button>
       </div>
 
@@ -94,9 +96,9 @@ export default function HomePage() {
         <div className="resume" aria-label="继续上次">
           <div className="meta">
             <div className="scen">{last.title}</div>
-            <div className="where">{STATUS_LABEL[last.status]}{last.updatedAt ? ` · ${new Date(last.updatedAt).toLocaleString()}` : ""}</div>
+            <div className="where">{statusLabel(last.status)}{last.updatedAt ? ` · ${new Date(last.updatedAt).toLocaleString()}` : ""}</div>
           </div>
-          <Link className="cont" to="/play"><Play className="lucide" />继续跑团</Link>
+          <Link className="cont" to={`/play/${encodeURIComponent(last.sessionId)}`}><Play className="lucide" />{t("home.continue")}</Link>
         </div>
       )}
 
@@ -110,18 +112,18 @@ export default function HomePage() {
         ))}
       </div>
 
-      <div className="label">最近 Session</div>
+      <div className="label">{t("home.recent")}</div>
       <div className="recent">
         {list.length === 0 ? (
-          <div className="row"><span className="rs">暂无会话，去开新局</span></div>
+          <div className="row"><span className="rs">{t("home.recent.empty")}</span></div>
         ) : (
           list.map((s) => {
             const Icon = STATUS_ICON[s.status];
             return (
-              <Link className="row" to="/play" key={s.sessionId}>
+              <Link className="row" to={`/play/${encodeURIComponent(s.sessionId)}`} key={s.sessionId}>
                 <Icon className="lucide" />
                 <span className="rs">{s.title}</span>
-                <span className={"tag" + (s.status === "active" ? " live" : "")}>{STATUS_LABEL[s.status]}</span>
+                <span className={"tag" + (s.status === "active" ? " live" : "")}>{statusLabel(s.status)}</span>
                 {s.updatedAt && <span className="rt">{new Date(s.updatedAt).toLocaleDateString()}</span>}
               </Link>
             );

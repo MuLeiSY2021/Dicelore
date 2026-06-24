@@ -9,6 +9,7 @@
 
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
+import { rmSync } from "node:fs";
 import { openDb, initSchema, openCatalog } from "@dicelore/core";
 import { createLiveApp } from "./api/dice.js";
 import { createLoreApp } from "./api/lore.js";
@@ -29,14 +30,18 @@ export function startServer(port: number): void {
   // dice 跑团 driver
   const driverFactory: (host: DiceSession) => Agent = fake
     ? () => new FakeDiceGm((input) => [{ type: "narration", text: `（GM）你说：「${input.text}」。门吱呀一声开了。` }, { type: "turn_end" }])
-    : (host) => new DiceGm({ mcpServer: host.mcpServer });
+    : (host) => new DiceGm({ mcpServer: host.mcpServer, systemPrompt: host.openingPrompt });
   // lore 构建 driver(同 SDK agent,挂构建 MCP;教条由构建 skill 提供,经 systemPrompt)
   const loreDriver: (host: LoreSession) => Agent = fake
     ? () => new FakeDiceGm((input) => [{ type: "narration", text: `（构建）收到：「${input.text}」` }, { type: "turn_end" }])
     : (host) => new DiceGm({ mcpServer: host.mcpServer, systemPrompt: process.env.DICELORE_BUILD_PROMPT });
 
   const app = new Hono();
-  app.route("/", createLiveApp({ driverFactory, openSession, listSessions: () => listSessionSummaries(dir), catalog }));
+  app.route("/", createLiveApp({
+    driverFactory, openSession, catalog,
+    listSessions: () => listSessionSummaries(dir),
+    deleteSession: (id) => { try { rmSync(`${dir}/${id}.db`); rmSync(`${dir}/${id}.db-wal`, { force: true }); rmSync(`${dir}/${id}.db-shm`, { force: true }); } catch { /* ignore */ } },
+  }));
   app.route("/", createLoreApp({ catalog, driverFactory: loreDriver }));
   app.route("/", createDiagnosticsApp({ port, fakeGm: fake }));
 

@@ -55,7 +55,7 @@ export const BUILD_SCHEMAS = {
   }).strict(),
   commit: z.object({ message: z.string() }).strict(),
   tag: z.object({ commitId: z.string(), label: z.string() }).strict(),
-  // ── 新增 5 个工具 ────────────────────────────────────────────────────────
+  // ── 新増 5 个工具（检索 + 校验 + 读取 + front md格式 + prologue）────────
   ingest: z.object({ text: z.string() }).strict(),
   search: z.object({ query: z.string(), k: z.number().int().positive().optional() }).strict(),
   validate: z.object({}).strict(),
@@ -73,6 +73,16 @@ export const BUILD_SCHEMAS = {
     omens: z.array(z.object({ threshold: z.number(), payload: z.string() })),
   }).strict(),
   set_prologue: z.object({ text: z.string() }).strict(),
+  // ── 叙事域工具（plotline/foreshadow/anchor，来自 main）─────────────────
+  add_plotline: z.object({ rows: z.array(z.object({
+    id: z.string(), title: z.string(), summary: z.string().optional(), status: z.string().optional(),
+  })).min(1) }).strict(),
+  add_foreshadow: z.object({ rows: z.array(z.object({
+    id: z.string(), content: z.string(), status: z.string().optional(),
+  })).min(1) }).strict(),
+  add_anchor: z.object({ rows: z.array(z.object({
+    owner_table: z.string(), owner_id: z.string(), target_table: z.string(), target_id: z.string(), role: z.string().optional(),
+  })).min(1) }).strict(),
 } as const;
 
 // 调一个构建工具(无 dicelore_build_ 前缀):校验入参 → 改 draft / commit。可测核心。
@@ -140,6 +150,10 @@ export function invokeBuildTool(ctx: BuildCtx, name: string, args: unknown): Bui
       return ok({ ok: true });
     }
     case "set_prologue": ctx.draft.setPrologue(a.text as string); return ok({ ok: true });
+    // ── 叙事域工具（plotline/foreshadow/anchor，来自 main）─────────────────
+    case "add_plotline": ctx.draft.addPlotline(a.rows as Parameters<Draft["addPlotline"]>[0]); return ok({ ok: true });
+    case "add_foreshadow": ctx.draft.addForeshadow(a.rows as Parameters<Draft["addForeshadow"]>[0]); return ok({ ok: true });
+    case "add_anchor": ctx.draft.addAnchor(a.rows as Parameters<Draft["addAnchor"]>[0]); return ok({ ok: true });
     default: return err("UNKNOWN_TOOL", name);
   }
 }
@@ -157,8 +171,12 @@ const TOOL_META: Record<string, { description: string; annotations?: { readOnlyH
   search:       { description: "在素材检索库中用 jieba BM25 全文搜索，返回 top-k 相关块（{ hits: [{idx, text}] }）。只读。", annotations: { readOnlyHint: true } },
   validate:     { description: "校验 Draft 当前内容是否符合团本包规范（manifest/fronts/CSV 列等）。返回 { ok, issues }。只读。", annotations: { readOnlyHint: true } },
   read:         { description: "回读 Draft 当前内容（供审阅）。section 可选：manifest/world/rules/pools/sheets/fronts；省略返回全部。只读。", annotations: { readOnlyHint: true } },
-  add_front:    { description: "添加/覆写一个 Front（阵线）到 Draft，产出 fronts/<id>.md（frontmatter 声明 Clock + 凶兆阶梯表）。同 id 覆盖，幂等。", annotations: { idempotentHint: true } },
-  set_prologue: { description: "设置团本开场白 prompt（**必填**）。prologue.md 是 GM agent 开局时执行的第一个 prompt——可以是一句固定台词、导调 MCP 的指令、或让 agent 基于团本即兴发挥的指导语。覆盖写，幂等。团本无 prologue 不合法（validate 会报 error）。", annotations: { idempotentHint: true } },
+  add_front:     { description: "添加/覆写一个 Front（阵线）到 Draft，产出 fronts/<id>.md（frontmatter 声明 Clock + 凶兆阶梯表）。同 id 覆盖，幂等。", annotations: { idempotentHint: true } },
+  set_prologue:  { description: "设置团本开场白 prompt（**必填**）。prologue.md 是 GM agent 开局时执行的第一个 prompt——可以是一句固定台词、导调 MCP 的指令、或让 agent 基于团本即兴发挥的指导语。覆盖写，幂等。团本无 prologue 不合法（validate 会报 error）。", annotations: { idempotentHint: true } },
+  // 叙事域工具（plotline/foreshadow/anchor，来自 main）
+  add_plotline:  { description: "追加故事线（plotline）行到 Draft，产出 plotlines/main.csv。非幂等——多次调用追加行。", annotations: { destructiveHint: false } },
+  add_foreshadow:{ description: "追加伏笔（foreshadow）行到 Draft，产出 foreshadows/main.csv。非幂等——多次调用追加行。", annotations: { destructiveHint: false } },
+  add_anchor:    { description: "追加关系锚点（anchor）行到 Draft，产出 anchors/main.csv。非幂等——多次调用追加行。", annotations: { destructiveHint: false } },
 };
 
 // 构建版 MCP server:注册 dicelore_build_* 工具,挂在 LoreSession 的 in-process MCP。

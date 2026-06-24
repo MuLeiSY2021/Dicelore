@@ -62,8 +62,8 @@ describe("listSessionSummaries", () => {
       writeFileSync(join(dir, "notes.txt"), "");
       const got = listSessionSummaries(dir);
       expect(got).toEqual([
-        { sessionId: "alpha", title: "alpha", status: "active" },
-        { sessionId: "beta", title: "beta", status: "active" },
+        { sessionId: "alpha", title: "alpha", status: "active", updatedAt: expect.any(Number) },
+        { sessionId: "beta", title: "beta", status: "active", updatedAt: expect.any(Number) },
       ]);
     } finally {
       rmSync(dir, { recursive: true, force: true });
