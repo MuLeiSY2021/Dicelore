@@ -14,7 +14,7 @@ import { FakeDiceGm } from "./FakeDiceGm.js";
 describe("DiceSession", () => {
   it("handleMessage 跑一回合：WS 收到 turn_started…turn_ended", async () => {
     const host = new DiceSession("s1", {
-      driverFactory: () => new FakeDiceGm([{ type: "narration", text: "门开了。" }, { type: "turn_end" }]),
+      agentFactory: () => new FakeDiceGm([{ type: "narration", text: "门开了。" }, { type: "turn_end" }]),
     });
     const sent: any[] = [];
     host.attachWs({ send: (d: string) => sent.push(JSON.parse(d)), readyState: 1 });
@@ -27,7 +27,7 @@ describe("DiceSession", () => {
   });
 
   it("onCanonWrite 经 hub 推 presentation_delta", async () => {
-    const host = new DiceSession("s1", { driverFactory: () => new FakeDiceGm([{ type: "turn_end" }]) });
+    const host = new DiceSession("s1", { agentFactory: () => new FakeDiceGm([{ type: "turn_end" }]) });
     const sent: any[] = [];
     host.attachWs({ send: (d: string) => sent.push(JSON.parse(d)), readyState: 1 });
     host.onCanonWrite({ kind: "mutation", seq: 7, toolName: "sheet_update", output: {} });
@@ -35,7 +35,7 @@ describe("DiceSession", () => {
   });
 
   it("handleRoll 对无待掷返回 false", () => {
-    const host = new DiceSession("s1", { driverFactory: () => new FakeDiceGm([{ type: "turn_end" }]) });
+    const host = new DiceSession("s1", { agentFactory: () => new FakeDiceGm([{ type: "turn_end" }]) });
     expect(host.handleRoll(999)).toBe(false);
   });
 });

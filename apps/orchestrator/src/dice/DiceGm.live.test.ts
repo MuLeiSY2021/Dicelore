@@ -18,7 +18,7 @@ describe.skipIf(!LIVE)("DiceGm 真 SDK 冒烟", () => {
     const { DiceGm } = await import("./DiceGm.js");
     const db = openDb(":memory:"); initSchema(db);
     const mcpServer = createMcpServer(db, {});
-    const drv = new DiceGm({ mcpServer });
+    const drv = new DiceGm({ mcpServer, openingPrompt: "你是 GM。", skills: [] });
     const got: string[] = [];
     for await (const e of drv.runTurn({ text: "用一句话开场。" })) got.push(e.type);
     expect(got).toContain("turn_end");

@@ -16,9 +16,8 @@ import { createLoreApp } from "./api/lore.js";
 import { createDiagnosticsApp } from "./api/diagnostics.js";
 import { attachWsUpgrade } from "./api/ws.js";
 import { listSessionSummaries } from "./dice/sessions.js";
-import type { DiceSession } from "./dice/DiceSession.js";
-import type { LoreSession } from "./lore/LoreSession.js";
-import type { Agent } from "./pkg/agent.js";
+import { gmCoreSkill } from "./dice/openingPrompt.js";
+import type { AgentFactory, SkillRef } from "./pkg/agent.js";
 import { DiceGm } from "./dice/DiceGm.js";
 import { FakeDiceGm } from "./dice/FakeDiceGm.js";
 
@@ -27,26 +26,25 @@ export function startServer(port: number): void {
   const openSession = (id: string) => { const db = openDb(`${dir}/${id}.db`); initSchema(db); return db; };
   const catalog = openCatalog(process.env.DICELORE_CATALOG ?? `${dir}/catalog.db`);
   const fake = process.env.DICELORE_FAKE_GM === "1";
-  // dice 跑团 driver
-  const driverFactory: (host: DiceSession) => Agent = fake
+  // Agent 适配缝:据 AgentInit 产 agent。真=CC SDK 适配器(DiceGm),fake=FakeDiceGm。
+  const agentFactory: AgentFactory = fake
     ? () => new FakeDiceGm((input) => [{ type: "narration", text: `（GM）你说：「${input.text}」。门吱呀一声开了。` }, { type: "turn_end" }])
-    : (host) => new DiceGm({ mcpServer: host.mcpServer, systemPrompt: host.openingPrompt });
-  // lore 构建 driver(同 SDK agent,挂构建 MCP;教条由构建 skill 提供,经 systemPrompt)
-  const loreDriver: (host: LoreSession) => Agent = fake
-    ? () => new FakeDiceGm((input) => [{ type: "narration", text: `（构建）收到：「${input.text}」` }, { type: "turn_end" }])
-    : (host) => new DiceGm({ mcpServer: host.mcpServer, systemPrompt: process.env.DICELORE_BUILD_PROMPT });
+    : (init) => new DiceGm(init);
+  // dice 默认会话本地 skill = gm-core(源目录在则 staged;教条另内联进 openingPrompt 兜底)。
+  const gm = gmCoreSkill();
+  const diceSkills: SkillRef[] = gm ? [gm] : [];
 
   const app = new Hono();
   app.route("/", createLiveApp({
-    driverFactory, openSession, catalog,
+    agentFactory, skills: diceSkills, openSession, catalog,
     listSessions: () => listSessionSummaries(dir),
     deleteSession: (id) => { try { rmSync(`${dir}/${id}.db`); rmSync(`${dir}/${id}.db-wal`, { force: true }); rmSync(`${dir}/${id}.db-shm`, { force: true }); } catch { /* ignore */ } },
   }));
-  app.route("/", createLoreApp({ catalog, driverFactory: loreDriver }));
+  app.route("/", createLoreApp({ catalog, agentFactory, buildPrompt: process.env.DICELORE_BUILD_PROMPT }));
   app.route("/", createDiagnosticsApp({ port, fakeGm: fake }));
 
   const server = serve({ fetch: app.fetch, port });
-  attachWsUpgrade(server, { openSession, driverFactory });
+  attachWsUpgrade(server, { openSession, agentFactory, skills: diceSkills });
   console.log(`[orchestrator] live :${port}`);
 }
 

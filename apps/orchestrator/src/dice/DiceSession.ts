@@ -14,7 +14,7 @@ import { PlayerRollGate } from "./rollGate.js";
 import { mapCanonWrite } from "./notify.js";
 import { runTurn, type TurnEndResult } from "./turnLoop.js";
 import { buildOpeningPrompt } from "./openingPrompt.js";
-import type { Agent } from "../pkg/agent.js";
+import type { AgentFactory, AgentInit, SkillRef } from "../pkg/agent.js";
 import type { Session } from "../pkg/session.js";
 
 let turnCounter = 0; // 进程内自增,测试稳定(不依赖随机/时间)
@@ -22,7 +22,9 @@ function nextTurnId(sessionId: string): string { turnCounter += 1; return `${ses
 
 export interface DiceSessionDeps {
   db?: DB; // 省略则内存库(测试)
-  driverFactory: (host: DiceSession) => Agent; // 每回合产一个 driver;真实现据 host.mcpServer 建 DiceGm
+  agentFactory: AgentFactory; // 适配缝:据 AgentInit 产一个会话 agent(真=DiceGm,fake=FakeDiceGm)
+  skills?: SkillRef[]; // 会话本地 staged skill(dice 默认 gm-core);省略=不 stage
+  model?: string; // GM 模型覆盖
   importFrom?: { catalog: CatalogDB; tuanbenId: string; ref: string }; // 开局从 Catalog import 团本(过信任闸门)→运行库
 }
 
@@ -64,12 +66,17 @@ export class DiceSession implements Session {
   attachWs(ws: WsLike): void { this.hub.add(this.sessionId, ws); }
   detachWs(ws: WsLike): void { this.hub.remove(this.sessionId, ws); }
 
-  // 开场 prompt(signpost + 团本 prologue);driver 工厂取它作 systemPrompt → GM 不再裸奔。
+  // 开场 prompt(signpost + 教条 + 团本 prologue);adapter 取它作 systemPrompt → GM 不再裸奔。
   get openingPrompt(): string { return buildOpeningPrompt(this.db); }
+
+  // 据本会话状态组装 AgentInit(每回合新建一个 agent)。
+  private buildInit(): AgentInit {
+    return { mcpServer: this.mcpServer, openingPrompt: this.openingPrompt, skills: this.deps.skills ?? [], model: this.deps.model };
+  }
 
   async handleMessage(text: string): Promise<{ turnId: string }> {
     const turnId = nextTurnId(this.sessionId);
-    const driver = this.deps.driverFactory(this);
+    const driver = this.deps.agentFactory(this.buildInit());
     await runTurn(
       { db: this.db, driver, hub: this.hub, sessionId: this.sessionId, turnId, runTurnEnd: (db) => this.turnEnd(db) },
       { text },
@@ -82,7 +89,7 @@ export class DiceSession implements Session {
     if (metaGet(this.db, "started") === "1") return { started: false };
     const prologue = metaGet(this.db, "prologue") ?? "";
     const turnId = nextTurnId(this.sessionId);
-    const driver = this.deps.driverFactory(this);
+    const driver = this.deps.agentFactory(this.buildInit());
     await runTurn(
       { db: this.db, driver, hub: this.hub, sessionId: this.sessionId, turnId, runTurnEnd: (db) => this.turnEnd(db) },
       { text: prologue || "[开始游戏]" },

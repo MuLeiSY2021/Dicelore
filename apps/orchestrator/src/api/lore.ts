@@ -11,11 +11,13 @@ import { Hono } from "hono";
 import { list, commit, tag, checkout, validatePack, type CatalogDB, type PackFile } from "@dicelore/core";
 import { InMemorySessionRegistry } from "../pkg/registry.js";
 import { LoreSession, type LoreSessionDeps } from "../lore/LoreSession.js";
-import type { Agent } from "../pkg/agent.js";
+import type { AgentFactory, SkillRef } from "../pkg/agent.js";
 
 export interface LoreDeps {
   catalog: CatalogDB;
-  driverFactory: (host: LoreSession) => Agent; // LoreBuilder(SDK + 构建 MCP + 构建 skill)
+  agentFactory: AgentFactory; // CC SDK 适配器挂构建 MCP + 构建 skill
+  buildPrompt?: string; // 构建教条(→ openingPrompt)
+  skills?: SkillRef[]; // 构建 skill(staged)
 }
 
 const loreReg = new InMemorySessionRegistry<LoreSession>();
@@ -59,7 +61,7 @@ export function createLoreApp(deps: LoreDeps): Hono {
   app.post("/lore-sessions/:id/messages", async (c) => {
     const id = c.req.param("id");
     const body = (await c.req.json()) as { text: string; name: string };
-    const dep: LoreSessionDeps = { catalog: deps.catalog, name: body.name, driverFactory: deps.driverFactory };
+    const dep: LoreSessionDeps = { catalog: deps.catalog, name: body.name, agentFactory: deps.agentFactory, buildPrompt: deps.buildPrompt, skills: deps.skills };
     const host = loreReg.getOrCreate(id, () => new LoreSession(id, dep));
     const { turnId } = await host.handleMessage(body.text);
     return c.json({ turnId }, 202);

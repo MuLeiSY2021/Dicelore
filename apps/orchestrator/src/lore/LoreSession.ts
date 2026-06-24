@@ -12,7 +12,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { CLIENT_PROTOCOL } from "@dicelore/shared";
 import { WsHub, type WsLike } from "../pkg/wsHub.js";
 import { streamDriverTurn } from "../pkg/streamTurn.js";
-import type { Agent } from "../pkg/agent.js";
+import type { AgentFactory, SkillRef } from "../pkg/agent.js";
 import type { Session } from "../pkg/session.js";
 
 let loreTurnCounter = 0;
@@ -21,7 +21,9 @@ function nextTurnId(id: string): string { loreTurnCounter += 1; return `${id}-l$
 export interface LoreSessionDeps {
   catalog: CatalogDB;
   name: string; // 在造的团本名(→ UUIDv5 身份)
-  driverFactory: (host: LoreSession) => Agent; // 真实现 = LoreBuilder(SDK + 构建 MCP + 构建 skill)
+  agentFactory: AgentFactory; // 适配缝;真实现 = CC SDK 适配器挂构建 MCP + 构建 skill
+  buildPrompt?: string; // 构建教条(→ openingPrompt;默认 env DICELORE_BUILD_PROMPT)
+  skills?: SkillRef[]; // 构建 skill(会话本地 staged);省略=不 stage
 }
 
 // lore 构建运行单元:挂构建 MCP(BUILD_TOOLS over Draft+Catalog),无 rollGate/turn-end/canon-notify。
@@ -40,7 +42,11 @@ export class LoreSession implements Session {
 
   async handleMessage(text: string): Promise<{ turnId: string }> {
     const turnId = nextTurnId(this.sessionId);
-    const driver = this.deps.driverFactory(this);
+    const driver = this.deps.agentFactory({
+      mcpServer: this.mcpServer,
+      openingPrompt: this.deps.buildPrompt ?? process.env.DICELORE_BUILD_PROMPT ?? "",
+      skills: this.deps.skills ?? [],
+    });
     const { seq } = await streamDriverTurn({ driver, hub: this.hub, sessionId: this.sessionId, turnId }, { text });
     // 构建无 turn-end hook / choice / canon-notify —— 直接收尾。
     this.hub.broadcast(this.sessionId, { protocol: CLIENT_PROTOCOL, type: "turn_ended", turnId, seq });

@@ -8,30 +8,32 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import { query } from "@anthropic-ai/claude-agent-sdk";
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { Agent, TurnInput, TurnEvent } from "../pkg/agent.js";
+import type { Agent, TurnInput, TurnEvent, AgentInit } from "../pkg/agent.js";
 import { stripReasoning } from "../pkg/reasoning.js";
+import { stageSkills, cleanupSkills } from "./skillStage.js";
 
-export interface DiceGmDeps {
-  mcpServer: McpServer; // DiceSession 的 in-process MCP(已注入 onCanonWrite/rollGate)
-  model?: string; // 默认 env DICELORE_GM_MODEL ?? "opus"
-  systemPrompt?: string; // gm-core 教条(组件3);Phase 1 可选
-}
+let stageSeq = 0; // staged 目录命名,避免并发回合碰撞(不依赖随机/时间)
 
 // 真 GM 驱动：@anthropic-ai/claude-agent-sdk query()，in-process 挂 dicelore MCP。
 // 鉴权沿用 env ANTHROPIC_BASE_URL/ANTHROPIC_AUTH_TOKEN(SDK 原生读)。不进单测(烧 LLM)。
+// CC SDK 适配器 = Agent 适配缝(AgentInit→Agent)的首个实现。
 export class DiceGm implements Agent {
-  constructor(private deps: DiceGmDeps) {}
+  constructor(private init: AgentInit) {}
 
   async *runTurn(input: TurnInput): AsyncIterable<TurnEvent> {
-    const model = this.deps.model ?? process.env.DICELORE_GM_MODEL ?? "opus";
+    const model = this.init.model ?? process.env.DICELORE_GM_MODEL ?? "opus";
+    // skill 非空 → stage 会话本地副本,以该 cwd 起 agent 可加载 skill 供自助查阅(渐进披露);
+    // 空 → 沿 ADR-0020 settingSources:[](不读本地 .claude)。教条已内联进 openingPrompt 作兜底,
+    // staged skill 额外提供 references/ 等深层内容供 GM 按需 Read。
+    const staged = this.init.skills.length > 0 ? stageSkills(`dg-${++stageSeq}`, this.init.skills) : undefined;
     try {
       const options = {
         model,
-        settingSources: [], // 不读本地 .claude;MCP/prompt 显式注入
-        mcpServers: { dicelore: { type: "sdk", name: "dicelore", instance: this.deps.mcpServer } },
-        systemPrompt: this.deps.systemPrompt,
-        allowedTools: ["mcp__dicelore"], // 允许 dicelore 工具族(mcp__dicelore__*)
+        settingSources: staged ? ["project"] : [], // staged 时读副本 cwd 的 .claude;否则不读本地
+        ...(staged ? { cwd: staged } : {}),
+        mcpServers: { dicelore: { type: "sdk", name: "dicelore", instance: this.init.mcpServer } },
+        systemPrompt: this.init.openingPrompt,
+        allowedTools: staged ? ["mcp__dicelore", "Skill", "Read"] : ["mcp__dicelore"],
       } as Parameters<typeof query>[0]["options"];
 
       for await (const msg of query({ prompt: input.text, options })) {
@@ -47,6 +49,8 @@ export class DiceGm implements Agent {
       yield { type: "turn_end" };
     } catch (e) {
       yield { type: "error", message: e instanceof Error ? e.message : String(e) };
+    } finally {
+      if (staged) cleanupSkills(staged);
     }
   }
 }

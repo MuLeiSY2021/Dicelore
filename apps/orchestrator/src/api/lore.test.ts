@@ -22,7 +22,7 @@ const PACK = [
 describe("后端 e2e: 建团本 → 列 → 开局 import → 呈现", () => {
   it("catalog commit → list → /sessions/:id/open → presentation 含导入态", async () => {
     const catalog = openCatalog(":memory:");
-    const lore = createLoreApp({ catalog, driverFactory: () => new FakeDiceGm([]) });
+    const lore = createLoreApp({ catalog, agentFactory: () => new FakeDiceGm([]) });
 
     // 1. 直接提交一个团本
     const commitRes = await lore.request("/catalog/commit", {
@@ -43,7 +43,7 @@ describe("后端 e2e: 建团本 → 列 → 开局 import → 呈现", () => {
       if (!d) { d = openDb(":memory:"); initSchema(d); dbs.set(id, d); }
       return d;
     };
-    const live = createLiveApp({ catalog, openSession, driverFactory: () => new FakeDiceGm([{ type: "narration", text: "门开了" }, { type: "turn_end" }]) });
+    const live = createLiveApp({ catalog, openSession, agentFactory: () => new FakeDiceGm([{ type: "narration", text: "门开了" }, { type: "turn_end" }]) });
     const openRes = await live.request("/sessions/s1/open", {
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ tuanbenId, ref: commitId }),

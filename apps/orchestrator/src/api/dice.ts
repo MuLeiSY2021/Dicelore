@@ -14,8 +14,7 @@ import { MessageRequestSchema, ChoiceRequestSchema, RollRequestSchema } from "@d
 import { loreSearch, ruleSearch, logSince } from "@dicelore/core";
 import { buildSnapshot } from "../dice/presentation.js";
 import { getOrCreateHost, getHost, removeHost } from "../dice/registry.js";
-import type { DiceSession } from "../dice/DiceSession.js";
-import type { Agent } from "../pkg/agent.js";
+import type { AgentFactory, SkillRef } from "../pkg/agent.js";
 
 export interface ServerDeps {
   openSession: (sessionId: string) => DB; // 读侧句柄(每会话一文件；测试可注入内存库)
@@ -47,7 +46,9 @@ export function createApp(deps: ServerDeps): Hono {
 
 // 实时引擎面：动作进(POST messages/choices/roll) + 首屏快照，经 registry/DiceSession。
 export interface LiveDeps {
-  driverFactory: (host: DiceSession) => Agent;
+  agentFactory: AgentFactory;
+  skills?: SkillRef[]; // dice 默认 gm-core(staged skill)
+  model?: string; // GM 模型覆盖
   openSession?: (id: string) => DB; // 省略则 DiceSession 用内存库(测试)
   listSessions?: () => SessionSummary[]; // 会话列表(主页继续上次/最近);省略则空
   catalog?: CatalogDB; // 给「开局 import 团本」用
@@ -56,7 +57,7 @@ export interface LiveDeps {
 
 export function createLiveApp(deps: LiveDeps): Hono {
   const app = new Hono();
-  const hostDeps = (id: string) => ({ db: deps.openSession?.(id), driverFactory: deps.driverFactory });
+  const hostDeps = (id: string) => ({ db: deps.openSession?.(id), agentFactory: deps.agentFactory, skills: deps.skills, model: deps.model });
 
   // 开新局:选一个团本版本 import → 物化运行库(信任闸门)。body {tuanbenId, ref}。
   app.post("/sessions/:id/open", async (c) => {

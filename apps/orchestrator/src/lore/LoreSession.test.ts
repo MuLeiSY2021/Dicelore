@@ -17,7 +17,7 @@ describe("LoreSession", () => {
     const catalog = openCatalog(":memory:");
     const host = new LoreSession("b1", {
       catalog, name: "凡人",
-      driverFactory: () => new FakeDiceGm(() => [{ type: "narration", text: "已写入设定。" }, { type: "turn_end" }]),
+      agentFactory: () => new FakeDiceGm(() => [{ type: "narration", text: "已写入设定。" }, { type: "turn_end" }]),
     });
     expect(host.mcpServer).toBeTruthy();
     expect(host.kind).toBe("lore");
@@ -37,7 +37,7 @@ describe("LoreSession", () => {
 
   it("draft 经构建工具累积可 commit 到 catalog", () => {
     const catalog = openCatalog(":memory:");
-    const host = new LoreSession("b2", { catalog, name: "魔道", driverFactory: () => new FakeDiceGm([]) });
+    const host = new LoreSession("b2", { catalog, name: "魔道", agentFactory: () => new FakeDiceGm([]) });
     // 直接驱动 draft(模拟 agent 调构建工具后)
     host.draft.setManifest({ name: "魔道", id: "md" });
     host.draft.writeLore("入侵", "魔道压境");
