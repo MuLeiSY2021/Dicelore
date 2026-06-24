@@ -24,12 +24,13 @@
 
 | # | 类型 | 问题 | 来源 | 恶化 | 下一步/依赖 |
 |---|------|------|------|:--:|--------|
-| G-后端-缺端点 | feat | **Play 会话生命周期端点未上线**：`POST /sessions/:id/start`(kickoff) · `DELETE /sessions/:id` · `GET /sessions` 填 `packName`/`started`（前端已按契约接好、对未上线端点降级） | 接口页 §9.3/§9.4 | ✓ | 后端 spec 在写（agent 适配层 + Play 会话生命周期）；单源在 [接口页 §9.3/§9.4](../04-子系统设计/玩家客户端-接口.md) |
+| ~~G-后端-缺端点~~ | feat | **Play 会话生命周期端点** `POST /sessions/:id/start`(kickoff) · `DELETE /sessions/:id` · `GET /sessions`（填 `started`） | 接口页 §9.3/§9.4 | ✓ | ✅ **已落地**（`api/dice.ts` 三端点全实现，`544dac5`/`247832e`；agent 适配层 spec 亦落，[玩家客户端 §9.2](../04-子系统设计/玩家客户端.md)） |
 | G-后端-seq | fix | **`narration_commit.seq` 语义债** | 接口页 §9.4 | — | 随会话生命周期 spec 一并理清 |
 | G-后端-重连 | fix | **`GET /events` 重连补叙述**（WS 断线重连后补回历史叙述） | 接口页 §9.4 | — | 同上 |
 | G-后端-Phase2 | feat | **实时引擎面 Phase 2**：多人明骰「谁来点这一掷」per-instance gate 硬化 · **组件3/4 hook 接入 Agent SDK**（Phase 1 暂用 `turnLoop.runTurnEnd` 物化 choice） | 设计/接口页 | — | 随实时引擎面排期 |
 | G-后端-version | feat | **About 真实版本号需 health 暴露**（前端 About 页等后端 `/health` 暴露版本号） | 接口页 §9 fast-follow | ✗ | health 端点加版本字段（前端项见 [backlog-前端](backlog-前端.md)） |
 | G-后端-toolcall | feat | **构建助手「显示调了哪些工具」需 lore-sessions 回 tool-call 痕迹** | 接口页 §9 fast-follow | ✗ | lore-session 回传 tool-call 痕迹（前端展示项见 [backlog-前端](backlog-前端.md)） |
+| G-后端-gmcore | feat | **真 GM 接 gm-core skill（去 stopgap）**：现 `dice/openingPrompt.ts` 内联教条全文是 stopgap（`16969d4`，解 GM 裸奔/OOC），正式 skill staged 接入 `DiceGm` 待 `RUN_LIVE` 实测。与 [主题F harness](backlog-core.md) **是一条线**——harness 要真 GM、真 GM 要教条 | ADR-0023 后果 + 2026-06-24 核对 | — | `DiceGm` skillStage 真接 gm-core skill + RUN_LIVE 验证；**并入第一批 harness 一起做** |
 
 ---
 
@@ -41,8 +42,9 @@
 
 | # | 类型 | 问题 | 来源 | 恶化 | 下一步/依赖 |
 |---|------|------|------|:--:|--------|
-| H-import | feat | **import 未实现** → 现在跑 eval 只能**手搓富种子脚本**当团本（`packages/core/eval/seeds/*.ts`）；手搓很痛本身印证组件5/6 优先级。构建台四件套（读写层 / 双门面 / 检索 / 构建 skill）+ 包→四域 import 映射待实现 | 里程碑一在建 | ✓ | 排期实现 |
-| H2-DEFER | feat | **front/plotline/foreshadow/history 域的构建工具 + import 物化**（叙事层表已建于 main，工具待扩） | ADR-0023 仍 DEFER | ✓ | 对照 [backlog-core 主题A′ 进度](backlog-core.md)补——叙事层物理表建好后才能扩构建工具 |
+| ~~H-import~~ | feat | **团本构建 import**（包→四域 + 叙事域物化） | 里程碑一在建 | ✓ | ✅ **已落地**——`catalog/import.ts` `importPack` 实现完整：lore/rule/pool/state 四域 + front/plotline/foreshadow/anchor 叙事四域 + manifest + prologue 全物化，带信任闸门（`59d8972`/`9661615`/`c819353`）。eval 手搓种子（`eval/seeds/*.ts`）是 eval 用途，非 import 缺失。 |
+| H-build-tools | feat | **构建工具补全 + toolgen 接线**：`dicelore_build_*` 已覆 ingest/search/validate/read/add_front + `Draft.addFront`；仍缺 plotline/foreshadow/anchor 构建工具 + toolgen 接进构建期声明 | ADR-0023/0024 | ✓ | 随第二批视图层+dogfooding 带；front md 正典已定（[ADR-0024](../05-决策记录-ADR/README.md)）；对照 [backlog-core 主题A′ ③](backlog-core.md) |
+| H-lore-skill | feat | **构建 skill 未接进 LoreSession**：`server.ts` `createLoreApp` **没传 skills**，`dicelore-build-pack` 没被 staged，默认部署构建 agent 拿不到教条、只靠 `DICELORE_BUILD_PROMPT` env 注入 | 2026-06-24 核对 | ✗ | `createLoreApp` 接 skills 参数（对齐跑团侧 `DiceGm` 的 skillStage） |
 
 ---
 

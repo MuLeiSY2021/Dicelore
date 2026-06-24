@@ -19,6 +19,8 @@
 ## 主题F · eval harness 真实性 ⚠️→💡
 
 > **路由**：F 是 meta 闸——**先建它，再跑剧本2/3 eval**，否则继续产污染数据。建好后，全项目所有 ⚠️ 项才可重新评定。
+>
+> **进度（2026-06-24 核对）**：faithful 真引擎工具链**已备**——`eval/tool.ts`/`batch.ts` 对真 `.db` 调 `runTool`+`TOOLS`、`run.ts` 灌种子+init、`grade.ts`/`grader.md`/`findings.md` 齐。**缺的不是工具链，是自动闭环**：`run.ts` 现仍靠「手动 `claude`/headless `claude -p` 喂 playerTurns」驱动 GM，无子代理 GM 自动跑、无 mock 玩家程序。本批要补的就是这层闭环。
 
 | # | 类型 | 问题 | 来源 | 恶化 | 下一步 |
 |---|------|------|------|:--:|--------|
@@ -29,17 +31,19 @@
 
 ## 主题A · 运行时缺少「叙事脚手架」一等抽象 💡
 
-> **一句话病根**：同一概念在**团本作者层**有、在**运行时跑团层**塌缩成底层存储原语（sheet/doc/watcher），AI 拿不到「以这个概念为单位」的**读（聚合视图）+ 写（生命周期操作）**。这是 conceptual integrity 问题，**跨多 session 反复命中、随回合数线性恶化** = 全项目头号架构债。建议**一个 ADR + 一个设计周期**统一解，**勿往 gm-core 提示词硬塞**。
+> **一句话病根**：同一概念在**团本作者层**有、在**运行时跑团层**塌缩成底层存储原语，AI 拿不到「以这个概念为单位」的**读（聚合视图）+ 写（生命周期操作）**。这是 conceptual integrity 问题，**跨多 session 反复命中、随回合数线性恶化** = 全项目头号架构债。建议**一个 ADR + 一个设计周期**统一解，**勿往 gm-core 提示词硬塞**。
 >
 > **想要**：`NPC` / `Front` / `plotline` / `foreshadow` 的运行时一等抽象（开/进行/收口状态 + 关联锚点 + 到点浮现提醒）+ **一张「未结张力」聚合视图**。Front/Clock（[ADR-0016](../05-决策记录-ADR/)）与 watcher（[ADR-0013](../05-决策记录-ADR/)）是部分地基，需评估**扩展 vs 新建**。
+>
+> **进度（2026-06-24 核对）·存储地基已完、工具面暴露未做**：A2-A5 的物理表 + store CRUD + `tensionBoard`/`frontOmenList` 聚合**均已建**（见主题A′ 进度）。**A1-A5 现在统一的真缺口不是"缺存储"，是"没暴露成 MCP 工具给 GM"**——聚合函数躺在 `present/` 层却没接进 `buildMcp`，GM 仍调不到「以概念为单位」的读；NPC 连一等表都没有。这把 A 主题从"建存储"收窄为"补视图层投影 + 暴露工具 + NPC 升一等"，依赖与路线见主题A′。
 
-| # | 类型 | 缺口 | 现状硬凑 | 来源 | 恶化 |
+| # | 类型 | 缺口 | 现状（2026-06-24 核对） | 来源 | 恶化 |
 |---|------|------|----------|------|:--:|
-| A1 | feat | **NPC 无运行时一等概念**：团本层有（`world/npc/*.md` + sheets），运行时塌成散落 sheet 格 + doc，AI 无「NPC」对象去读/操作 | 假实体 + 散格 | 另一 session | ✓ |
-| A2 | feat | **Front/Clock 运行时不可见、不可管**：团本层有（`fronts/*.md`→钟+watcher），运行时 AI 仍无「Front」聚合对象去读/管（`watcher_list` 已可列底层 armed watcher＝D2✅，但 Front＝钟+凶兆阶梯+散文 的聚合管理仍缺） | armed watcher 裸条目、无 Front 视图 | 用户「需要 front」+ eval B6 | ✓✓ |
-| A3 | feat | **多情节线/故事线追踪**：情节线不是任何实体属性 | 假实体（`剧情线.X`）+ 隐藏 sheet 格当状态机 | findings B1 + eval | ✓✓ |
-| A4 | feat | **伏笔「埋—回收」闭环**：无 planted/recalled 状态、无到点提醒；`event_recall` 是全 event FTS，埋的 note 排不过叙事噪音 | `event_append note(visible:0)` + FTS 硬搜 | findings B2 + eval（13 条 note 硬当伏笔库） | ✓✓ |
-| A5 | feat | **未结张力看板**：列「所有未结张力」要翻 3 处（多实体暗格 / note 无 list / watcher 现可 `watcher_list` 列出＝D2✅，但仍是裸条目），三者无聚合视图；game_end 也不和解开放线程 | 人脑同时持有 3 store | findings B6 + eval（T30 实测散落） | ✓✓✓ |
+| A1 | feat | **NPC 无运行时一等概念**：团本层有（`world/npc/*.md` + sheets），运行时无「NPC」对象去读/操作 | `state` 表有 `player`/`npc`/`world` kind 区分但**无 npc 一等表/工具**，仍散格 | 另一 session | ✓ |
+| A2 | feat | **Front/Clock 运行时不可见、不可管**：运行时 AI 无「Front」聚合对象去读/管（Front＝钟+凶兆阶梯+散文） | `front` 表 + `frontOmenList` 聚合**已建**，但**未暴露 MCP 工具**；`watcher_list` 可列底层 armed watcher＝D2✅ | 用户「需要 front」+ eval B6 | ✓✓ |
+| A3 | feat | **多情节线/故事线追踪**：情节线不是任何实体属性 | `plotline` 表**已建**，**无工具暴露** | findings B1 + eval | ✓✓ |
+| A4 | feat | **伏笔「埋—回收」闭环**：无 planted/recalled 状态、无到点提醒；`event_recall` 是全 log FTS，埋的 note 排不过叙事噪音 | `foreshadow` 表**已建**，**无 planted/recalled 状态机 + 无工具** | findings B2 + eval（13 条 note 硬当伏笔库） | ✓✓ |
+| A5 | feat | **未结张力看板**：列「所有未结张力」无聚合视图；game_end 也不和解开放线程 | `tensionBoard` 聚合**已实现**（present 层），但**未接进 `buildMcp`**，GM 调不到 | findings B6 + eval（T30 实测散落） | ✓✓✓ |
 | A6 | feat | **NPC 双层值（裁决侧）**：双层值**存储**没问题（表演层 cell 公开 + 真实层 cell 暗）；缺口在**裁决**——`resolve_contest` 每边只一个常数，编不了「表演叫价 vs 真实底线、差额即线索」（裁决侧正交，留 resolver spec） | margin 手解 | findings B5（已缩窄定义） | ✗ |
 
 ### 主题A′ · 团本构建 ↔ 跑团 术语 / store 不对齐（地基级，需大改）💡⚠️🚧
@@ -51,11 +55,16 @@
 - **用户判断**：**跑团侧 store 方案有必要大改，至少与团本侧设计对齐**。应**先统一术语 + 重新概念化 sheet + store 对齐团本**，再谈主题A 的叙事脚手架（A 建在此之上）。
 - **路由**：开 ADR（两侧术语统一表 + store 重构方案），**与团本构建（组件5/6，里程碑一在建）协同设计**，别两侧继续分叉。
 - **落地方向（用户提案）**：给 MCP 加「叙事层」(几张表)、**废弃通用 `sheet`**，改为一组一等 kind/表：`player` / `npc` / `world` / `rule` / `watcher` / `front` / `pool`——每类有自己的表与工具，而非全塞进 `(entity,attr,value)` 通用格，直解「sheet 临时空间误当人物卡」根因。**待商榷**：① 与现四域(sheet/event/world/rule)如何重映射(world/rule/pool/watcher 已有、npc/player/front 需升一等)；② 原 sheet 的「临时空间」真实职责是否单列一类；③ 与团本 import(组件5/6)对齐。
-- **进度（2026-06-22）🚧 部分落地、未全关**：方案见 spec [运行时数据层重构-叙事层](../../superpowers/specs/2026-06-21-运行时数据层重构-叙事层-design.md)（拱心石＝物理表精简 + kind 视图 + 业务工具；非"每概念一张物理表"，relation/flag/clock 是 `state` 的行形态）。**step① 改名段已落 `main`**：`sheet→state`(+`kind`/`rel_*`/`clock_*` 列)、`event→log`(+`is_moment`)、`world_doc→lore`、fts 随改（[ADR-0021](../05-决策记录-ADR/)）。**仍欠**：
-  - ① 叙事/记忆**物理表** `front`(+`front_omen`)/`plotline`/`foreshadow`/`history` **未建**（A2/A3/A4 主体）；
-  - ② **视图层**（`npc`/`player`/`world`/`relation`/`tension_board` 投影，A1/A5）；
-  - ③ 类型化读写 + 工具生成层（叙事业务工具走**声明**实现，[spec](../../superpowers/specs/2026-06-22-声明式工具生成层-design.md)）；
-  - ④ 补充改名 `rule_doc→rule`/`world_pool→pool`（待确认）。
+- **进度（2026-06-24 重评）🚧 地基已完、工具面暴露未做**：方案见 spec [运行时数据层重构-叙事层](../../superpowers/specs/2026-06-21-运行时数据层重构-叙事层-design.md)（拱心石＝物理表精简 + kind 视图 + 业务工具；非"每概念一张物理表"，relation/flag/clock 是 `state` 的行形态）。
+  - ✅ **改名段**已落 `main`：`sheet→state`(+`kind`/`rel_*`/`clock_*` 列)、`event→log`(+`is_moment`)、`world_doc→lore`、fts 随改（[ADR-0021](../05-决策记录-ADR/)）。
+  - ✅ **补充改名** `rule_doc→rule`/`world_pool→pool` 已落。
+  - ✅ **叙事/记忆物理表** `front`/`plotline`/`foreshadow`/`history`(+`anchor`) **已建** + store CRUD + `tensionBoard`/`frontOmenList` 聚合（present 层）。
+  - ✅ **声明式工具生成层引擎** `toolgen/`（SQL 闸/视图定义/读写工具编译/写匹配防泄露）已建，6 模块 981 行 + 6 测试绿。
+  - 🚧 **仍欠（真正的剩余 = 工具面暴露，非存储）**：
+    - ① **视图层未投影**：叙事层 spec §4 的 `npc`/`player`/`world`/`relation`/`tension_board` 命名视图未建 → toolgen 读工具无基视图可 `CREATE VIEW`，是 step②/③ 的**前置闸**。
+    - ② **业务 MCP 工具未暴露**：`tensionBoard`/front/plotline/foreshadow 聚合已在 present 层但**没接进 `buildMcp`**，GM 调不到「以概念为单位」的读；NPC 无一等抽象（A1-A5 主体）。**已拍板走声明式 dogfooding**（守 spec DT-9「团本扩展框架零改动」契约），先补视图层再声明。
+    - ③ **toolgen 零接线**：引擎已通但**不进 `createMcpServer`/不进团本 import/无 dogfooding step③**（用本层声明出 front/plotline/foreshadow 业务工具）—— spec 承诺的「新剧本=新声明+新 flow、框架代码零改动」目前跑不通，团本扩展机制未对作者开放。
+  - **依赖链（单向，被原路线图掩盖）**：叙事层总纲(定视图契约) → 谓词扩展(step①建表✅) → toolgen(step②引擎✅但视图契约未兑现) → 业务工具声明(step③❌)。**视图层是闸**，须先落地才能 dogfooding。
   - A6 裁决侧正交、留 resolver spec。
 
 ---

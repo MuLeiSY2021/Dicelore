@@ -28,6 +28,6 @@
 
 ## 当前最高优先级（详见[路线图](路线图.md)）
 
-1. **主题F·eval harness 真实性**（mock 玩家 ↔ 真 Claude-GM，而非自导自演）——**meta 解阻塞**：不建它，一切「行为类/措辞类」结论都不可信 → **第一批**。见 [backlog-core 主题F](backlog-core.md)。
-2. **主题A·运行时叙事脚手架抽象缺失**（NPC/Front/情节线/伏笔在运行时塌缩成 sheet/doc/watcher）——反复出现、随规模恶化、跨多 session 命中 = **头号架构债**，先 A′ 地基对齐再 A → **第二批**。见 [backlog-core 主题A / A′](backlog-core.md)。
-3. **在途线**（组件7 后端 Play 会话生命周期 / 组件5/6 团本构建 import）按节奏推 → **第三批**。见 [backlog-后端](backlog-后端.md)。
+1. **教条 + eval harness 闭环**（真 GM 接 gm-core skill 去 stopgap + mock 玩家↔真 Claude-GM 自动闭环，而非自导自演）——**meta 解阻塞**：不建它，一切「行为类/措辞类」结论都不可信 → **第一批**。见 [backlog-core 主题F](backlog-core.md) + [backlog-后端 G-后端-gmcore](backlog-后端.md)。
+2. **主题A·GM 工具面可见性**（NPC/Front/plotline/foreshadow/张力看板的存储地基已建，但没暴露成 MCP 工具给 GM）——反复出现、随规模恶化 = **头号架构债的真正剩余**，走声明式 dogfooding → **第二批**。见 [backlog-core 主题A / A′](backlog-core.md)。
+3. **收尾 fix**（`narration_commit.seq` 语义 / `GET /events` 重连 / 构建 skill 接进 LoreSession）→ **第三批**。见 [backlog-后端](backlog-后端.md)。
