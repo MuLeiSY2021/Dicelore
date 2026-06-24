@@ -34,6 +34,16 @@
 
 ---
 
+## 主题 · 可观测性 · 日志分级统一 💡🔧
+
+> **跨层主题**：病根与统一方案（抽同构 `shared/logger`）在 [backlog-core 主题O · O1](backlog-core.md)；本页挂前端侧症状条目，依赖 O1 落地后接入。前端跑在浏览器，**复用同一分级约定 + 上下文（sessionId）**，sink 走浏览器 console（可选远端上报）。
+
+| # | 类型 | 问题 | 来源 | 恶化 | 下一步/依赖 |
+|---|------|------|------|:--:|--------|
+| O-前端 | feat | **前端日志分级覆盖**：`apps/web/src` 现 **0 日志**（无 console、无 logger），渲染/WS 重连/选项提交/错误全程无记录；按 `error/warn/info/debug` 分级覆盖 | 用户 | ✓ | 依赖 [backlog-core O1](backlog-core.md) 同构 logger 落地后接入；分级约定与 core/后端对齐 |
+
+---
+
 ## 🔮 未来池（前端层 · 明确推迟，别现在做）
 
 - **明骰/多人（前端）**：明骰交互终稿（措辞待 [backlog-core 主题F harness](backlog-core.md)）；多人会话 UI；Tauri 壳打包。来源：用户。

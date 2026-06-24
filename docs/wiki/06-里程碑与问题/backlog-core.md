@@ -84,6 +84,18 @@
 
 ---
 
+## 主题O · 可观测性 · 日志分级统一 💡🔧
+
+> **一句话病根**：项目**无统一日志体系**——全仓仅 7 处裸 `console.*`（后端运行时只 `server.ts` 一条启动 log；core 集中在 `cli.ts` 面向终端输出 + `mcp/main.ts` 一条裸 error），**`packages/shared` 无 logger 基建**。后端 HTTP/WS/会话生命周期/编排/错误**全程零日志**（排障盲区）；core 引擎/MCP 运行时亦无结构化日志。随会话数/并发/排障需求**线性恶化**。
+> **跨层难点（用户点出）**：core（引擎/MCP）与后端（orchestrator）都跑、都要日志，各打各的没法对齐 → **抽统一 logging 模块到 `packages/shared`**，两侧共用同一分级约定与上下文（sessionId/turnId）。
+
+| # | 类型 | 问题 | 现状 | 来源 | 恶化 | 下一步/依赖 |
+|---|------|------|------|------|:--:|--------|
+| O1 | feat | **统一 logging 模块缺失**：无 logger（pino/winston/自研均可）、无分级约定、shared 无日志基建；core/后端/前端无法对齐（前端 `apps/web` 亦 0 日志） | 裸 `console.*`、`shared` 空 | 用户 + grep 实测 | ✓✓ | 抽 `shared/logger`：`error/warn/info/debug` 分级 + 可配 level + 结构化 + sessionId/turnId 上下文 + **须同构**（浏览器 + node 通用，前端可复用同一模块与分级约定）；定级约定写 wiki（04 或 03）；轻量、可不开 ADR |
+| O2 | feat | **core 运行时日志接入**：engine/mcp 运行时无结构化日志；`cli.ts` 的 console 是面向终端用户输出（**保留**），`mcp/main.ts` 裸 error 改走 logger | cli console 保留 / mcp 裸 error | 同上 | ✓ | 依赖 O1；core 侧运行时（非 CLI 面向人输出）统一走 logger |
+
+---
+
 ## 🔮 未来池（core 层 · 明确推迟，别现在做）
 
 - **状态回滚/分支**：反刷骰 config 旋钮（稳定键播种）；「进行中存档遇 rule 版本热更」的 `schema_version`/团本版本迁移语义（深 diff/merge）。来源：03 TODO G。
