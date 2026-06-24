@@ -243,8 +243,13 @@
 .play .narr .you .lucide { width: 15px; height: 15px; color: var(--text3); margin-top: 3px; flex: none; }
 .play .narr p { margin: 0 0 12px; }
 .play .narr .empty { color: var(--text3); }
-.play .mech { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 11.5px; color: var(--acc-soft); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 7px 11px; margin: 11px 0; }
+.play .mech { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 11.5px; color: var(--acc-soft); background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--acc); border-radius: 6px; padding: 7px 11px; margin: 11px 0; }
 .play .mech .lucide { width: 14px; height: 14px; color: var(--acc); }
+/* 按 MCP 调用 kind 分色:裁决=金 / 状态变更=青 / 凶兆触发=赤 */
+.play .mech-mutation { border-left-color: var(--ok); }
+.play .mech-mutation .lucide { color: var(--ok); }
+.play .mech-watcher_fired { border-left-color: var(--err); }
+.play .mech-watcher_fired .lucide { color: var(--err); }
 .play .ranges { margin: 17px 0 2px; }
 .play .ranges .rt { display: flex; align-items: center; gap: 7px; font-family: var(--mono); font-size: 11px; color: var(--text2); margin-bottom: 9px; letter-spacing: .03em; }
 .play .ranges .rt .lucide { width: 14px; height: 14px; color: var(--acc); }

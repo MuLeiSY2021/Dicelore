@@ -95,7 +95,7 @@ const ZH: Dict = {
   "common.cancel": "取消", "common.confirm": "确定", "common.loading": "加载中…",
   // 团本目录页
   "catalog.title": "团本目录", "catalog.sub": "选一个团本开始游戏，或去团本制作创建 / 导入。",
-  "catalog.start": "开始游戏", "catalog.edit": "编辑", "catalog.versions": "{n} 版本",
+  "catalog.start": "新开一局", "catalog.edit": "编辑", "catalog.versions": "{n} 版本",
   "catalog.empty.title": "还没有团本", "catalog.empty.sub": "去团本制作创建一个，或一键造示例团本。",
   "catalog.empty.build": "去团本制作", "catalog.empty.sample": "造示例团本",
   "catalog.starting": "开局中…",
@@ -174,7 +174,7 @@ const EN: Dict = {
   "build.empty": "No packs yet — create one or build the sample from Home.",
   "common.cancel": "Cancel", "common.confirm": "OK", "common.loading": "Loading…",
   "catalog.title": "Campaigns", "catalog.sub": "Pick a campaign to start, or create / import one in Build.",
-  "catalog.start": "Start game", "catalog.edit": "Edit", "catalog.versions": "{n} versions",
+  "catalog.start": "New game", "catalog.edit": "Edit", "catalog.versions": "{n} versions",
   "catalog.empty.title": "No campaigns yet", "catalog.empty.sub": "Create one in Build, or build the sample.",
   "catalog.empty.build": "Go to Build", "catalog.empty.sample": "Build sample",
   "catalog.starting": "Starting…",

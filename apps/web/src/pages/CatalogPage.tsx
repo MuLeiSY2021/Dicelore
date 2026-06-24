@@ -39,7 +39,8 @@ export default function CatalogPage() {
     setBusy(p.id); setError(null);
     try {
       const ref = p.head ?? "head";
-      const sid = `${slug(p.name)}-${(p.head ?? Math.random().toString(36).slice(2)).slice(0, 6)}`;
+      // 每次点击 = 新开一局：sid 前缀团本 slug + 唯一后缀(同团本可并存多局，由 Play 会话栏切换/删除)。
+      const sid = `${slug(p.name)}-${Math.random().toString(36).slice(2, 8)}`;
       await openPlaySession(sid, p.id, ref);
       navigate(`/play/${encodeURIComponent(sid)}`);
     } catch (e: unknown) {

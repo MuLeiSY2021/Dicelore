@@ -13,14 +13,21 @@ import {
   BookOpen, Wrench, LayoutGrid, Search, File, Pin, CheckCircle2, Dices, LayoutDashboard,
   Grid3x3, User, Minus, X, Timer, Package, Eye, Sparkles, Loader2, AlertTriangle, Flag,
   BookMarked, ChevronDown, ChevronUp, ScrollText, Play, Trash2,
+  Scale, ArrowRightLeft, BellRing,
 } from "lucide-react";
 import { useSession } from "../live/useSession.js";
+import { Markdown } from "../play/Markdown.js";
 import { useT } from "../i18n/index.js";
 import { browse, listSessions, startGame, deleteSession, type BrowseEntry } from "../api/client.js";
 import { Link } from "react-router-dom";
 import type { SessionSummary } from "@dicelore/shared";
 
 const DEMO_SESSION = "demo";
+// 机械回显按 agent 不同 MCP 调用的 kind 分风格(参考视觉草图「内嵌机械回显·左金边」):
+// verdict(裁决·resolve_*) / mutation(状态变更·sheet/state 写) / watcher_fired(凶兆触发)。
+const MECH_ICON: Record<string, ComponentType<{ className?: string }>> = {
+  verdict: Scale, mutation: ArrowRightLeft, watcher_fired: BellRing,
+};
 // 左活动轨不再是固定的「设定/规则/日志」物理表分类——团本业务表段已客制化。
 // 改为：① 设定(可见 lore，按条目自带 category/tag 动态分组，天然兼容任意客制段) ② 工具(玩家自查工具)。
 type RailKey = "world" | "tools";
@@ -243,8 +250,15 @@ export default function PlayPage() {
               <p className="empty">{started ? t("play.narr.empty") : t("play.narr.prestart")}</p>
             ) : (
               <>
-                {narration.map((para, i) => <p key={i}>{para}</p>)}
-                {mechanics.map((m) => <div className="mech" key={m.seq}><CheckCircle2 className="lucide" />{m.text}</div>)}
+                {narration.map((para, i) => <Markdown key={i} text={para} />)}
+                {mechanics.map((m) => {
+                  const Icon = MECH_ICON[m.kind] ?? CheckCircle2;
+                  return (
+                    <div className={`mech mech-${m.kind}`} key={m.seq}>
+                      <Icon className="lucide" />{m.text}
+                    </div>
+                  );
+                })}
               </>
             )}
             {pendingRoll?.bands && pendingRoll.bands.length > 0 && (
