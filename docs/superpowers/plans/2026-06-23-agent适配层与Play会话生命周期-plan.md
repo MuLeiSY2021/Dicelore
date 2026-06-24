@@ -3,6 +3,12 @@
 > 按 superpowers:executing-plans 逐 Task；每 Task TDD + `npm test`/`tsc` 绿 + commit。
 > **上游 spec**：[2026-06-23-agent适配层与Play会话生命周期-design](../specs/2026-06-23-agent适配层与Play会话生命周期-design.md)（AD-1~7）。
 
+> **状态(2026-06-24)：✅ 全 9 Task 落地**。AgentInit/AgentFactory/SkillRef + skillStage + DiceGm 吃 AgentInit(staged skill)
+> + DiceSession/LoreSession/ws/dice/lore/server 全线 driverFactory→agentFactory；prologue import / session_meta /
+> kickoff `/start` / `GET·DELETE /sessions` 均在。orchestrator 45 测试 + core 254 + web 19 e2e(真服务器)全绿。
+> **遗留(单点)**：staged-skill 活体加载效果待 `RUN_LIVE` 实测裁定(spec Task3「降级兜底」)——当前教条已内联进
+> openingPrompt 作**保证投递**,即便 staged 不通 GM 仍有教条,下行风险有界。沉淀 → [后端双路径架构](../../wiki/04-子系统设计/后端双路径架构.md)。
+
 **Goal:** 把 `Agent` 抽成适配缝（`AgentInit`/`AgentFactory`），gm-core 终于接进跑团 GM（openingPrompt=signpost+prologue + skill 会话副本可达）；据新 Play 流程补 prologue import / session_meta / kickoff `/start` / `GET·DELETE /sessions`。
 
 **Architecture:** orchestrator `pkg/agent` 加 AgentInit/AgentFactory；`DiceGm` 升级吃 AgentInit（openingPrompt+skills+mcpServer+model）+ skill staging；`DiceSession` 造 AgentInit；core `import` 接出 prologue → session_meta；新 kickoff/sessions 端点。**CC SDK = 首个适配器（DiceGm 保留名，ClaudeCodeAgent 改名作 cosmetic 后续，减并行合并冲突）。**
