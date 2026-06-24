@@ -275,12 +275,17 @@
 .play .grid { padding: 10px; overflow: auto; flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 9px; align-content: start; }
 .play .pan { background: var(--surface2); border: 1px solid var(--line); border-radius: 7px; display: flex; flex-direction: column; }
 .play .pan.wide { grid-column: 1 / -1; }
+.play .pan.dragging { opacity: 0.45; outline: 1px dashed var(--acc); }
 .play .ph { display: flex; align-items: center; gap: 7px; padding: 7px 10px; border-bottom: 1px solid var(--line); font-size: 11.5px; color: var(--text); font-weight: 500; white-space: nowrap; }
+.play .ph .grip { display: flex; color: var(--text3); cursor: grab; opacity: 0.55; }
+.play .ph .grip:active { cursor: grabbing; }
+.play .ph .grip .lucide { width: 13px; height: 13px; }
 .play .ph .pt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .play .ph .pic { color: var(--text3); display: flex; }
 .play .ph .pic .lucide { width: 14px; height: 14px; }
 .play .ph .ctl { margin-left: auto; display: flex; gap: 9px; color: var(--text3); }
 .play .ph .ctl .lucide { width: 14px; height: 14px; cursor: pointer; }
+.play .sh .mode .reset { background: none; border: none; color: inherit; cursor: pointer; display: flex; padding: 0; margin-right: 2px; }
 .play .pc { padding: 9px 11px; }
 .play .pc .empty { color: var(--text3); font-size: 11px; }
 .play .row { display: flex; justify-content: space-between; padding: 3px 0; font-family: var(--mono); font-size: 12px; color: var(--text2); }

@@ -7,13 +7,13 @@
 // Software Foundation, either version 3 of the License, or (at your option)
 // any later version. See <https://www.gnu.org/licenses/>.
 
-import { useEffect, useRef, useState, type ComponentType, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, Fragment, type ComponentType, type KeyboardEvent } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   BookOpen, Wrench, LayoutGrid, Search, File, Pin, CheckCircle2, Dices, LayoutDashboard,
   Grid3x3, User, Minus, X, Timer, Package, Eye, Sparkles, Loader2, AlertTriangle, Flag,
   BookMarked, ChevronDown, ChevronUp, ScrollText, Play, Trash2,
-  Scale, ArrowRightLeft, BellRing,
+  Scale, ArrowRightLeft, BellRing, GripVertical, RotateCcw,
 } from "lucide-react";
 import { useSession } from "../live/useSession.js";
 import { Markdown } from "../play/Markdown.js";
@@ -74,10 +74,35 @@ export default function PlayPage() {
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [sessionsLoaded, setSessionsLoaded] = useState(false);
   const [kicked, setKicked] = useState(false); // 本地乐观：已点「开始游戏」
-  // 面板隐藏 / 最小化
+  // 面板隐藏 / 最小化 / 拖拽重排(可选+可拖拽;默认风格=自然顺序,可一键复位)
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [mini, setMini] = useState<Set<string>>(new Set());
+  const [order, setOrder] = useState<string[]>([]);
+  const [dragId, setDragId] = useState<string | null>(null);
   const qTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const orderKey = `dicelore.stage.order.${sid}`;
+  useEffect(() => {
+    try { const raw = localStorage.getItem(orderKey); setOrder(raw ? JSON.parse(raw) : []); }
+    catch { setOrder([]); }
+  }, [orderKey]);
+  const persistOrder = (next: string[]) => {
+    setOrder(next);
+    try { localStorage.setItem(orderKey, JSON.stringify(next)); } catch { /* 隐私模式忽略 */ }
+  };
+  // 把拖起的 id 落到目标 id 之前(同一序列内移动)。
+  const reorder = (targetId: string, ids: string[]) => {
+    if (!dragId || dragId === targetId) return;
+    const base = order.length ? order.filter((id) => ids.includes(id)) : ids.slice();
+    for (const id of ids) if (!base.includes(id)) base.push(id);
+    const from = base.indexOf(dragId);
+    if (from < 0) return;
+    base.splice(from, 1);
+    const to = base.indexOf(targetId);
+    base.splice(to < 0 ? base.length : to, 0, dragId);
+    persistOrder(base);
+  };
+  const resetOrder = () => persistOrder([]);
 
   useEffect(() => { setChosen(null); }, [snapshot?.choices?.eventId]);
   const reloadSessions = () => listSessions().then((s) => { setSessions(s); setSessionsLoaded(true); }).catch(() => setSessionsLoaded(true));
@@ -140,6 +165,41 @@ export default function PlayPage() {
     inv: g.cells.filter((c) => c.attr.startsWith(INV_PREFIX)),
     attrs: g.cells.filter((c) => !CLOCK_RE.test(c.value) && !c.attr.startsWith(INV_PREFIX)),
   }));
+
+  // 把呈现台所有面板收成一个带稳定 id 的扁平表(自然顺序),供拖拽重排排序。
+  const stageCells: { id: string; el: JSX.Element }[] = [];
+  // 统一接线:最小化 / 隐藏 / 拖拽重排。
+  const panel = (
+    id: string, title: string, Icon: ComponentType<{ className?: string }>,
+    body: React.ReactNode, opts?: { wide?: boolean; gmTag?: string; onHide?: () => void },
+  ): JSX.Element => (
+    <Panel id={id} title={title} Icon={Icon} wide={opts?.wide} gmTag={opts?.gmTag}
+      mini={mini.has(id)} onMin={() => toggleMin(id)} onHide={() => { opts?.onHide?.(); hide(id); }}
+      dragging={dragId === id}
+      onDragStart={() => setDragId(id)} onDragEnd={() => setDragId(null)}
+      onDragOver={(e) => { e.preventDefault(); }}
+      onDrop={(e) => { e.preventDefault(); reorder(id, stageCells.map((c) => c.id)); setDragId(null); }}>
+      {body}
+    </Panel>
+  );
+  const push = (id: string, render: () => JSX.Element) => { if (!hidden.has(id)) stageCells.push({ id, el: render() }); };
+  for (const { entity, attrs, clocks, inv } of attrPanels) {
+    if (attrs.length > 0) push(`attr:${entity}`, () => panel(`attr:${entity}`, entity, User,
+      attrs.map((c) => <div className="row" key={c.attr}><span>{c.attr}</span><b>{c.value}</b></div>)));
+    clocks.forEach((c) => { const m = CLOCK_RE.exec(c.value)!; push(`clock:${entity}:${c.attr}`, () => panel(
+      `clock:${entity}:${c.attr}`, t("play.panel.clock"), Timer,
+      <div className="clockrow"><ClockDial cur={Number(m[1])} max={Number(m[2])} /><div className="ck"><div className="nm">{c.attr}</div><div className="v">{c.value}</div></div></div>)); });
+    if (inv.length > 0) push(`inv:${entity}`, () => panel(`inv:${entity}`, `${t("play.panel.inv")} · ${inv.length}`, Package,
+      inv.map((c) => <div className="row" key={c.attr}><span>{c.attr.slice(INV_PREFIX.length)}</span><b>{c.value}</b></div>)));
+  }
+  for (const r of reveals) push(`rev:${r.seq}`, () => panel(`rev:${r.seq}`, t("play.panel.reveal"), Eye,
+    <div className="revc"><b>{r.target.replace(/^world:/, "")}</b>　{r.text}</div>,
+    { wide: true, gmTag: `GM·${r.seq}`, onHide: () => dismissReveal(r.seq) }));
+  for (const p of pins) push(`pin:${p.ref}`, () => panel(`pin:${p.ref}`, p.name, Pin,
+    <div className="revc">{p.snippet}</div>, { wide: true }));
+  // 按用户 order 稳定排序(未列入 order 的保持自然顺序追加在后)。
+  const rank = (id: string) => { const i = order.indexOf(id); return i < 0 ? Number.MAX_SAFE_INTEGER : i; };
+  const orderedCells = stageCells.map((c, i) => ({ ...c, i })).sort((a, b) => rank(a.id) - rank(b.id) || a.i - b.i);
 
   // 一局都没有(裸 /play) → 引导去团本目录。
   if (noSessions) return (
@@ -308,41 +368,19 @@ export default function PlayPage() {
         </section>
 
         <aside className="stage" aria-label="呈现台">
-          <div className="sh"><LayoutDashboard className="lucide" />{t("play.stage")}<span className="mode"><Grid3x3 className="lucide" />{t("play.stage.grid")}</span></div>
+          <div className="sh"><LayoutDashboard className="lucide" />{t("play.stage")}
+            <span className="mode">
+              {order.length > 0 && (
+                <button className="reset" aria-label={t("play.stage.reset")} title={t("play.stage.reset")} onClick={resetOrder}><RotateCcw className="lucide" /></button>
+              )}
+              <Grid3x3 className="lucide" />{t("play.stage.grid")}
+            </span>
+          </div>
           <div className="grid">
-            {sheets.length === 0 && reveals.length === 0 && pins.length === 0 ? (
+            {orderedCells.length === 0 ? (
               <div className="pan wide"><div className="pc"><span className="empty">{t("play.stage.empty")}</span></div></div>
             ) : (
-              <>
-                {attrPanels.map(({ entity, attrs, clocks, inv }) => {
-                  const items: JSX.Element[] = [];
-                  if (attrs.length > 0) { const id = `attr:${entity}`; if (!hidden.has(id)) items.push(
-                    <Panel key={id} id={id} title={entity} Icon={User} mini={mini.has(id)} onMin={() => toggleMin(id)} onHide={() => hide(id)}>
-                      {attrs.map((c) => <div className="row" key={c.attr}><span>{c.attr}</span><b>{c.value}</b></div>)}
-                    </Panel>); }
-                  clocks.forEach((c) => { const id = `clock:${entity}:${c.attr}`; const m = CLOCK_RE.exec(c.value)!; if (!hidden.has(id)) items.push(
-                    <Panel key={id} id={id} title={t("play.panel.clock")} Icon={Timer} mini={mini.has(id)} onMin={() => toggleMin(id)} onHide={() => hide(id)}>
-                      <div className="clockrow"><ClockDial cur={Number(m[1])} max={Number(m[2])} /><div className="ck"><div className="nm">{c.attr}</div><div className="v">{c.value}</div></div></div>
-                    </Panel>); });
-                  if (inv.length > 0) { const id = `inv:${entity}`; if (!hidden.has(id)) items.push(
-                    <Panel key={id} id={id} title={`${t("play.panel.inv")} · ${inv.length}`} Icon={Package} mini={mini.has(id)} onMin={() => toggleMin(id)} onHide={() => hide(id)}>
-                      {inv.map((c) => <div className="row" key={c.attr}><span>{c.attr.slice(INV_PREFIX.length)}</span><b>{c.value}</b></div>)}
-                    </Panel>); }
-                  return items;
-                })}
-                {reveals.filter((r) => !hidden.has(`rev:${r.seq}`)).map((r) => (
-                  <Panel key={`rev:${r.seq}`} id={`rev:${r.seq}`} title={t("play.panel.reveal")} Icon={Eye} wide gmTag={`GM·${r.seq}`}
-                    mini={mini.has(`rev:${r.seq}`)} onMin={() => toggleMin(`rev:${r.seq}`)} onHide={() => { dismissReveal(r.seq); hide(`rev:${r.seq}`); }}>
-                    <div className="revc"><b>{r.target.replace(/^world:/, "")}</b>　{r.text}</div>
-                  </Panel>
-                ))}
-                {pins.filter((p) => !hidden.has(`pin:${p.ref}`)).map((p) => (
-                  <Panel key={`pin:${p.ref}`} id={`pin:${p.ref}`} title={p.name} Icon={Pin} wide
-                    mini={mini.has(`pin:${p.ref}`)} onMin={() => toggleMin(`pin:${p.ref}`)} onHide={() => hide(`pin:${p.ref}`)}>
-                    <div className="revc">{p.snippet}</div>
-                  </Panel>
-                ))}
-              </>
+              orderedCells.map((c) => <Fragment key={c.id}>{c.el}</Fragment>)
             )}
           </div>
         </aside>
@@ -351,13 +389,18 @@ export default function PlayPage() {
   );
 }
 
-function Panel({ id, title, Icon, children, wide, gmTag, mini, onMin, onHide }: {
+function Panel({ id, title, Icon, children, wide, gmTag, mini, onMin, onHide, dragging, onDragStart, onDragEnd, onDragOver, onDrop }: {
   id: string; title: string; Icon: ComponentType<{ className?: string }>; children: React.ReactNode;
   wide?: boolean; gmTag?: string; mini: boolean; onMin: () => void; onHide: () => void;
+  dragging?: boolean; onDragStart?: () => void; onDragEnd?: () => void;
+  onDragOver?: (e: React.DragEvent) => void; onDrop?: (e: React.DragEvent) => void;
 }) {
   return (
-    <div className={"pan" + (wide ? " wide" : "") + (mini ? " min" : "")} data-panel={id}>
+    <div className={"pan" + (wide ? " wide" : "") + (mini ? " min" : "") + (dragging ? " dragging" : "")} data-panel={id}
+      onDragOver={onDragOver} onDrop={onDrop}>
       <div className="ph">
+        <span className="grip" draggable aria-label="拖拽排序" title="拖拽排序"
+          onDragStart={onDragStart} onDragEnd={onDragEnd}><GripVertical className="lucide" /></span>
         <span className="pic"><Icon className="lucide" /></span><span className="pt">{title}</span>
         <span className="ctl">
           {gmTag && <span className="gm-tag"><Sparkles className="lucide" />{gmTag}</span>}

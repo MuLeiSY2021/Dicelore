@@ -80,7 +80,7 @@ const ZH: Dict = {
   "play.input.ph": "你做什么？（回车发送）",
   "play.roll": "丢骰子", "play.roll.hint": "这一掷决定上面的结果",
   "play.generating": "GM 正在叙述……",
-  "play.stage": "呈现台", "play.stage.grid": "网格", "play.stage.empty": "暂无呈现数据（首屏快照加载中，或本局尚无可见状态）",
+  "play.stage": "呈现台", "play.stage.grid": "网格", "play.stage.reset": "复位默认布局", "play.stage.empty": "暂无呈现数据（首屏快照加载中，或本局尚无可见状态）",
   "play.panel.attrs": "人物属性", "play.panel.clock": "倒计时钟", "play.panel.inv": "库存", "play.panel.reveal": "揭示 · 设定",
   "play.tree.empty": "（无可浏览条目）",
   // 团本制作
@@ -161,7 +161,7 @@ const EN: Dict = {
   "play.input.ph": "What do you do? (Enter to send)",
   "play.roll": "Roll", "play.roll.hint": "This roll decides the outcome above",
   "play.generating": "The GM is narrating…",
-  "play.stage": "Stage", "play.stage.grid": "Grid", "play.stage.empty": "No presentation yet (loading snapshot, or nothing visible this session)",
+  "play.stage": "Stage", "play.stage.grid": "Grid", "play.stage.reset": "Reset layout", "play.stage.empty": "No presentation yet (loading snapshot, or nothing visible this session)",
   "play.panel.attrs": "Attributes", "play.panel.clock": "Clock", "play.panel.inv": "Inventory", "play.panel.reveal": "Reveal · Lore",
   "play.tree.empty": "(nothing to browse)",
   "build.validate": "Validate", "build.import": "Import source", "build.export": "Export pack",
