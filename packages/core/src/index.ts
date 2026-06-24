@@ -36,6 +36,9 @@ export {
 } from "./mcp/server.js";
 export { TOOLS } from "./mcp/tools.js"; // 工具清单（组件7 配置页展示真实工具数）
 
+// eval 场景准备（run.ts 手动调试 + orchestrator harness 自动闭环共用）。
+export { loadScenario, prepareSessionDb, type Scenario, type PreparedSession } from "./eval/scenario.js";
+
 // 回合末 hook（choice 物化 + L3 审计）——组件4，供 orchestrator turn-end 复用。
 export { runTurnEnd } from "./adapter/turnEnd.js";
 
