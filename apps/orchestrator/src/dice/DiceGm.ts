@@ -21,7 +21,7 @@ export class DiceGm implements Agent {
   constructor(private init: AgentInit) {}
 
   async *runTurn(input: TurnInput): AsyncIterable<TurnEvent> {
-    const model = this.init.model ?? process.env.DICELORE_GM_MODEL ?? "opus";
+    const model = this.init.model ?? process.env.DICELORE_GM_MODEL ?? "glm-5.2";
     // skill 非空 → stage 会话本地副本,以该 cwd 起 agent 可加载 skill 供自助查阅(渐进披露);
     // 空 → 沿 ADR-0020 settingSources:[](不读本地 .claude)。教条已内联进 openingPrompt 作兜底,
     // staged skill 额外提供 references/ 等深层内容供 GM 按需 Read。

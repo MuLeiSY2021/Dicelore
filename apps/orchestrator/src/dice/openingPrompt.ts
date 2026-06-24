@@ -53,3 +53,11 @@ export function buildOpeningPrompt(db: DB): string {
   const head = core ? `${signpost}\n\n---\n\n${core}` : signpost;
   return prologue ? `${head}\n\n---\n\n# 团本开场\n\n${prologue}` : head;
 }
+
+// baseline 系统提示:signpost + prologue,**不含 gm-core 教条**(用于 harness baseline 对照,
+// 分离"教条有无")。与 buildOpeningPrompt 的区别仅是去掉 doctrine 段。
+export function buildBaselinePrompt(db: DB): string {
+  const signpost = buildSessionContext(db);
+  const prologue = metaGet(db, "prologue");
+  return prologue ? `${signpost}\n\n---\n\n# 团本开场\n\n${prologue}` : signpost;
+}

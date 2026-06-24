@@ -20,6 +20,7 @@ export interface WsUpgradeDeps {
   agentFactory: AgentFactory;
   skills?: SkillRef[];
   model?: string;
+  baseline?: boolean; // eval baseline 对照:透传 DiceSession
 }
 
 // dice 会话 WS 升级(/sessions/:id/ws)挂到 http server——从原 startServer 内联块抽出,行为不变。
@@ -32,7 +33,7 @@ export function attachWsUpgrade(server: unknown, deps: WsUpgradeDeps): void {
       if (!m) { socket.destroy(); return; }
       wss.handleUpgrade(req, socket, head, (ws) => {
         const id = decodeURIComponent(m[1]);
-        const host = getOrCreateHost(id, { db: deps.openSession(id), agentFactory: deps.agentFactory, skills: deps.skills, model: deps.model });
+        const host = getOrCreateHost(id, { db: deps.openSession(id), agentFactory: deps.agentFactory, skills: deps.skills, model: deps.model, baseline: deps.baseline });
         const wsLike = ws as unknown as { send(d: string): void; readyState: number };
         host.attachWs(wsLike);
         restagePendingRolls(host); // 重连/重启 → 重弹未决掷骰卡

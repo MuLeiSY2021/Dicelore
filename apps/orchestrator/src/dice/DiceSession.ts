@@ -13,7 +13,7 @@ import { WsHub, type WsLike } from "../pkg/wsHub.js";
 import { PlayerRollGate } from "./rollGate.js";
 import { mapCanonWrite } from "./notify.js";
 import { runTurn, type TurnEndResult } from "./turnLoop.js";
-import { buildOpeningPrompt } from "./openingPrompt.js";
+import { buildOpeningPrompt, buildBaselinePrompt } from "./openingPrompt.js";
 import type { AgentFactory, AgentInit, SkillRef } from "../pkg/agent.js";
 import type { Session } from "../pkg/session.js";
 
@@ -25,7 +25,8 @@ export interface DiceSessionDeps {
   agentFactory: AgentFactory; // 适配缝:据 AgentInit 产一个会话 agent(真=DiceGm,fake=FakeDiceGm)
   skills?: SkillRef[]; // 会话本地 staged skill(dice 默认 gm-core);省略=不 stage
   model?: string; // GM 模型覆盖
-  importFrom?: { catalog: CatalogDB; tuanbenId: string; ref: string }; // 开局从 Catalog import 团本(过信任闸门)→运行库
+  importFrom?: { catalog: CatalogDB; tuanbenId: string; ref: string }; // 开局从 Catalog import 团本(信任闸门重验)→运行库
+  baseline?: boolean; // eval baseline 对照:去 doctrine(buildBaselinePrompt) + 强制 skills 空,分离「教条有无」
 }
 
 // dice 跑团运行单元：db + in-process MCP(按实例注入 onCanonWrite/rollGate) + Agent + WsHub + turn-end hook。
@@ -66,12 +67,14 @@ export class DiceSession implements Session {
   attachWs(ws: WsLike): void { this.hub.add(this.sessionId, ws); }
   detachWs(ws: WsLike): void { this.hub.remove(this.sessionId, ws); }
 
-  // 开场 prompt(signpost + 教条 + 团本 prologue);adapter 取它作 systemPrompt → GM 不再裸奔。
-  get openingPrompt(): string { return buildOpeningPrompt(this.db); }
+  // 开场 prompt:baseline=纯 signpost+prologue(去教条);否则 signpost+教条+prologue。adapter 取它作 systemPrompt。
+  get openingPrompt(): string {
+    return this.deps.baseline ? buildBaselinePrompt(this.db) : buildOpeningPrompt(this.db);
+  }
 
-  // 据本会话状态组装 AgentInit(每回合新建一个 agent)。
+  // 据本会话状态组装 AgentInit(每回合新建一个 agent)。baseline 强制 skills 空(不 stage 教条)。
   private buildInit(): AgentInit {
-    return { mcpServer: this.mcpServer, openingPrompt: this.openingPrompt, skills: this.deps.skills ?? [], model: this.deps.model };
+    return { mcpServer: this.mcpServer, openingPrompt: this.openingPrompt, skills: this.deps.baseline ? [] : (this.deps.skills ?? []), model: this.deps.model };
   }
 
   async handleMessage(text: string): Promise<{ turnId: string }> {

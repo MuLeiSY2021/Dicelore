@@ -8,8 +8,12 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import { describe, it, expect } from "vitest";
+import { openDb, initSchema } from "@dicelore/core";
 import { DiceSession } from "./DiceSession.js";
 import { FakeDiceGm } from "./FakeDiceGm.js";
+import type { AgentInit, Agent } from "../pkg/agent.js";
+
+const memDb = () => { const d = openDb(":memory:"); initSchema(d); return d; };
 
 describe("DiceSession", () => {
   it("handleMessage 跑一回合：WS 收到 turn_started…turn_ended", async () => {
@@ -37,5 +41,28 @@ describe("DiceSession", () => {
   it("handleRoll 对无待掷返回 false", () => {
     const host = new DiceSession("s1", { agentFactory: () => new FakeDiceGm([{ type: "turn_end" }]) });
     expect(host.handleRoll(999)).toBe(false);
+  });
+});
+
+describe("DiceSession baseline", () => {
+  it("baseline:true → openingPrompt 去教条(不含形状表)", () => {
+    const s = new DiceSession("t-bl-1", { agentFactory: () => ({ async *runTurn() {} }) as Agent, db: memDb(), baseline: true });
+    expect(s.openingPrompt).toContain("Dicelore GM");
+    expect(s.openingPrompt).not.toContain("形状表");
+  });
+
+  it("baseline:true → handleMessage 给 agentFactory 的 skills=[];非 baseline 用 deps.skills", async () => {
+    let captured: AgentInit | null = null;
+    const fac = (init: AgentInit): Agent => {
+      captured = init;
+      return { async *runTurn() { yield { type: "turn_end" } } };
+    };
+    const s = new DiceSession("t-bl-2", { agentFactory: fac, db: memDb(), baseline: true, skills: [{ name: "x", srcDir: "/x" }] });
+    await s.handleMessage("hi");
+    expect(captured!.skills).toEqual([]);
+
+    const s2 = new DiceSession("t-bl-3", { agentFactory: fac, db: memDb(), skills: [{ name: "x", srcDir: "/x" }] });
+    await s2.handleMessage("hi");
+    expect(captured!.skills).toEqual([{ name: "x", srcDir: "/x" }]);
   });
 });

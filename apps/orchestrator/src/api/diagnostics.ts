@@ -49,7 +49,7 @@ export function createDiagnosticsApp(deps: DiagDeps): Hono {
       protocol: PROTOCOL,
       fakeGm: deps.fakeGm,
       port: deps.port,
-      model: { gm: process.env.DICELORE_GM_MODEL ?? (deps.fakeGm ? "fake-gm" : "claude-opus-4-8"), configured, baseUrl },
+      model: { gm: process.env.DICELORE_GM_MODEL ?? (deps.fakeGm ? "fake-gm" : "glm-5.2"), configured, baseUrl },
       mcp: { name: "dicelore", transport: "in-process", toolCount: TOOLS.length, running: true },
       notify: { url: notifyUrl, configured: !!notifyUrl },
       storage: {

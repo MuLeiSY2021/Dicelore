@@ -36,6 +36,9 @@ export {
 } from "./mcp/server.js";
 export { TOOLS } from "./mcp/tools.js"; // 工具清单（组件7 配置页展示真实工具数）
 
+// eval 场景准备（run.ts 手动调试 + orchestrator harness 自动闭环共用）。
+export { loadScenario, prepareSessionDb, type Scenario, type PreparedSession } from "./eval/scenario.js";
+
 // 回合末 hook（choice 物化 + L3 审计）——组件4，供 orchestrator turn-end 复用。
 export { runTurnEnd } from "./adapter/turnEnd.js";
 
@@ -58,6 +61,7 @@ export { loreSearch, loreGet, type Lore } from "./store/world.js";
 export { ruleSearch, ruleGet, type Rule } from "./store/rule.js";
 export { logSince, logRecall, type LogRow } from "./store/log.js";
 export { stateList, stateGet, type StateCell as RuntimeStateCell } from "./store/state.js";
-// session_meta KV(团本名/prologue/started 等,P2 Play 生命周期)
-export { metaGet, metaSet } from "./session/resolve.js";
+// session_meta KV(团本名/prologue/started 等,P2 Play 生命周期) + 路径规则(sessionDbPath/openSession)。
+// 后端 server.ts 与 eval prepareSessionDb 共用 openSession 路径规则,避免种子灌到 core 路径而后端开平铺空库。
+export { metaGet, metaSet, sessionDbPath, openSession } from "./session/resolve.js";
 export { buildSessionContext } from "./adapter/sessionContext.js";

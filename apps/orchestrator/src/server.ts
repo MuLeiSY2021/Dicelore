@@ -10,7 +10,8 @@
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { rmSync } from "node:fs";
-import { openDb, initSchema, openCatalog } from "@dicelore/core";
+import { join } from "node:path";
+import { openCatalog, sessionDbPath, openSession as openCoreSession } from "@dicelore/core";
 import { createLiveApp } from "./api/dice.js";
 import { createLoreApp } from "./api/lore.js";
 import { createDiagnosticsApp } from "./api/diagnostics.js";
@@ -23,9 +24,12 @@ import { FakeDiceGm } from "./dice/FakeDiceGm.js";
 
 export function startServer(port: number): void {
   const dir = process.env.DICELORE_SESSIONS_DIR ?? ".";
-  const openSession = (id: string) => { const db = openDb(`${dir}/${id}.db`); initSchema(db); return db; };
+  // 以 core 路径规则为准(sessionDbPath=${dir}/dicelore/sessions/${id}.db):eval prepareSessionDb 灌种子到同路径,
+  // 后端开同库读种子;core openSession 含 mkdir+initSchema+meta,避免种子灌 core 路径而后端开平铺空库。
+  const openSession = (id: string) => openCoreSession(id).db;
   const catalog = openCatalog(process.env.DICELORE_CATALOG ?? `${dir}/catalog.db`);
   const fake = process.env.DICELORE_FAKE_GM === "1";
+  const baseline = process.env.DICELORE_BASELINE === "1"; // eval baseline:openingPrompt 去 doctrine + skills 空
   // Agent 适配缝:据 AgentInit 产 agent。真=CC SDK 适配器(DiceGm),fake=FakeDiceGm。
   const agentFactory: AgentFactory = fake
     ? () => new FakeDiceGm((input) => [{ type: "narration", text: `（GM）你说：「${input.text}」。门吱呀一声开了。` }, { type: "turn_end" }])
@@ -36,15 +40,15 @@ export function startServer(port: number): void {
 
   const app = new Hono();
   app.route("/", createLiveApp({
-    agentFactory, skills: diceSkills, openSession, catalog,
-    listSessions: () => listSessionSummaries(dir),
-    deleteSession: (id) => { try { rmSync(`${dir}/${id}.db`); rmSync(`${dir}/${id}.db-wal`, { force: true }); rmSync(`${dir}/${id}.db-shm`, { force: true }); } catch { /* ignore */ } },
+    agentFactory, skills: diceSkills, openSession, catalog, baseline,
+    listSessions: () => listSessionSummaries(join(dir, "dicelore", "sessions")),
+    deleteSession: (id) => { const p = sessionDbPath(id); try { rmSync(p); rmSync(`${p}-wal`, { force: true }); rmSync(`${p}-shm`, { force: true }); } catch { /* ignore */ } },
   }));
   app.route("/", createLoreApp({ catalog, agentFactory, buildPrompt: process.env.DICELORE_BUILD_PROMPT }));
   app.route("/", createDiagnosticsApp({ port, fakeGm: fake }));
 
   const server = serve({ fetch: app.fetch, port });
-  attachWsUpgrade(server, { openSession, agentFactory, skills: diceSkills });
+  attachWsUpgrade(server, { openSession, agentFactory, skills: diceSkills, baseline });
   console.log(`[orchestrator] live :${port}`);
 }
 
