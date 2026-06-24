@@ -17,6 +17,7 @@ description: spec 落 wiki / 沉淀 spec / 清 superpowers。把 superpowers 的
 2. **沉淀**：按单向推导（下游只引上游）、单源（一事一处权威）写进 wiki；别在多处复制。
 3. **关账**：对应 backlog 条目标 `→ADR-00xx` 或删；删对应 `docs/todo/`。
 4. **清草稿（铁律）**：**必须先确认知识已沉淀进 wiki（步骤 2）才能删** superpowers spec/plan——沉淀在前、删除在后。
+5. **收尾：提交 + 合并 main（不 push）**：落盘即闭环——开分支提交（`docs(wiki): ...` scoped 前缀）、切 main `git merge --ff-only <分支>`、删分支。**不问用户、不 push**；git 命令一律 `--no-pager`。
 
 ## 硬约束
 - **多步实现的多份 plan（P1/P2…）只完成一部分时，整套 spec/plan 留着别删**，直到全部落地 + 沉淀 wiki 才统一清场。
