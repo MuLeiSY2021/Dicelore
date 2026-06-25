@@ -9,7 +9,7 @@
 
 import { describe, it, expect, beforeEach } from "vitest";
 import { openDb, initSchema, metaSet, setRollGate, getRollGate, type DB } from "@dicelore/core";
-import { DiceSession } from "./DiceSession.js";
+import { DiceSession, TurnInProgressError } from "./DiceSession.js";
 import { FakeDiceGm } from "./FakeDiceGm.js";
 import type { AgentInit, Agent } from "../pkg/agent.js";
 
@@ -111,6 +111,76 @@ describe("DiceSession", () => {
     const db = memDb();
     const host = new DiceSession("s-choice-bad", { db, agentFactory: () => new FakeDiceGm([{ type: "turn_end" }]) });
     await expect(host.handleChoice(999, 0)).rejects.toThrow();
+  });
+});
+
+describe("DiceSession 会话级并发互斥(RT-2)", () => {
+  // 可控延迟 agent：runTurn 卡在一个外部 Promise 上，直到 release() 才结束——
+  // 用于制造「上一回合仍在跑」的窗口，验证并发入口被拒。
+  function suspendableAgent(): { agent: Agent; release: () => void; started: Promise<void> } {
+    let release!: () => void;
+    let markStarted!: () => void;
+    const gate = new Promise<void>((r) => { release = r; });
+    const started = new Promise<void>((r) => { markStarted = r; });
+    const agent: Agent = {
+      async *runTurn() {
+        markStarted();
+        await gate;
+        yield { type: "turn_end" };
+      },
+    };
+    return { agent, release, started };
+  }
+
+  it("上一回合在跑时，handleMessage 并发调用抛 TurnInProgressError", async () => {
+    const { agent, release, started } = suspendableAgent();
+    const host = new DiceSession("s-mutex", { agentFactory: () => agent, db: memDb() });
+    const first = host.handleMessage("第一回合"); // 不 await，让它挂起
+    await started; // 确保第一回合已进入 runTurn
+    await expect(host.handleMessage("并发第二回合")).rejects.toBeInstanceOf(TurnInProgressError);
+    release();
+    await first; // 第一回合正常结束
+  });
+
+  it("并发 handleChoice / start 同样被互斥拒绝", async () => {
+    const { agent, release, started } = suspendableAgent();
+    const host = new DiceSession("s-mutex2", { agentFactory: () => agent, db: memDb() });
+    const first = host.handleMessage("占住");
+    await started;
+    await expect(host.handleChoice(1, 0)).rejects.toBeInstanceOf(TurnInProgressError);
+    await expect(host.start()).rejects.toBeInstanceOf(TurnInProgressError);
+    release();
+    await first;
+  });
+
+  it("回合结束后互斥释放，下一回合可正常跑（含上一回合 throw 后）", async () => {
+    const host = new DiceSession("s-mutex3", {
+      agentFactory: () => new FakeDiceGm([{ type: "turn_end" }]),
+      db: memDb(),
+    });
+    const r1 = await host.handleMessage("回合一");
+    expect(r1.turnId).toBeTruthy();
+    const r2 = await host.handleMessage("回合二"); // 上一回合已释放
+    expect(r2.turnId).toBeTruthy();
+    expect(r1.turnId).not.toBe(r2.turnId);
+  });
+
+  it("回合内 agent 出错(errored)后互斥仍释放（finally）——之后可开新回合", async () => {
+    let first = true;
+    const host = new DiceSession("s-mutex4", {
+      agentFactory: () => ({
+        async *runTurn() {
+          if (first) { first = false; throw new Error("回合内炸"); }
+          yield { type: "turn_end" };
+        },
+      }) as Agent,
+      db: memDb(),
+    });
+    // streamDriverTurn 把 agent 错误吞成 errored 返回（不向上抛），handleMessage 正常 resolve；
+    // 关键是互斥在 finally 释放——下一回合不被误判为 in-flight。
+    await host.handleMessage("炸的回合");
+    const r = await host.handleMessage("正常回合");
+    expect(r.turnId).toBeTruthy();
   });
 });
 

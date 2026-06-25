@@ -14,6 +14,7 @@ import { MessageRequestSchema, ChoiceRequestSchema, RollRequestSchema } from "@d
 import { loreSearch, ruleSearch, logSince, getLogger } from "@dicelore/core";
 import { buildSnapshot } from "../dice/presentation.js";
 import { getOrCreateHost, getHost, removeHost } from "../dice/registry.js";
+import { TurnInProgressError } from "../dice/DiceSession.js";
 import type { AgentFactory, SkillRef } from "../pkg/agent.js";
 
 export interface ServerDeps {
@@ -75,8 +76,16 @@ export function createLiveApp(deps: LiveDeps): Hono {
   app.post("/sessions/:id/start", async (c) => {
     const id = c.req.param("id");
     const host = getOrCreateHost(id, hostDeps(id));
-    const { started } = await host.start();
-    return c.json({ sessionId: id, started }, 202);
+    try {
+      const { started } = await host.start();
+      return c.json({ sessionId: id, started }, 202);
+    } catch (e) {
+      if (e instanceof TurnInProgressError) {
+        getLogger().warn({ sessionId: id }, "start 时已有回合在跑,返回 409 turn_in_progress");
+        return c.json({ code: "turn_in_progress" }, 409);
+      }
+      throw e;
+    }
   });
 
   app.get("/sessions", (c) => c.json({ sessions: deps.listSessions?.() ?? [] }));
@@ -149,8 +158,16 @@ export function createLiveApp(deps: LiveDeps): Hono {
     const id = c.req.param("id");
     const body = MessageRequestSchema.parse(await c.req.json());
     const host = getOrCreateHost(id, hostDeps(id));
-    const { turnId } = await host.handleMessage(body.text);
-    return c.json({ turnId }, 202);
+    try {
+      const { turnId } = await host.handleMessage(body.text);
+      return c.json({ turnId }, 202);
+    } catch (e) {
+      if (e instanceof TurnInProgressError) {
+        getLogger().warn({ sessionId: id }, "messages 时已有回合在跑(双击/重发/并发),返回 409 turn_in_progress");
+        return c.json({ code: "turn_in_progress" }, 409);
+      }
+      throw e;
+    }
   });
   app.post("/sessions/:id/choices", async (c) => {
     const id = c.req.param("id");
@@ -161,6 +178,10 @@ export function createLiveApp(deps: LiveDeps): Hono {
       const { turnId } = await host.handleChoice(body.eventId, body.optionIndex);
       return c.json({ turnId }, 202);
     } catch (e) {
+      if (e instanceof TurnInProgressError) {
+        getLogger().warn({ sessionId: id, eventId: body.eventId }, "choices 时已有回合在跑,返回 409 turn_in_progress");
+        return c.json({ code: "turn_in_progress" }, 409);
+      }
       getLogger().warn({ err: e, sessionId: id, eventId: body.eventId, optionIndex: body.optionIndex }, "无 pending choice,客户端误请求,返回 409");
       return c.json({ code: "no_pending_choice" }, 409);
     }

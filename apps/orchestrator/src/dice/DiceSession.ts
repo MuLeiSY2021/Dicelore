@@ -20,6 +20,16 @@ import type { Session } from "../pkg/session.js";
 let turnCounter = 0; // 进程内自增,测试稳定(不依赖随机/时间)
 function nextTurnId(sessionId: string): string { turnCounter += 1; return `${sessionId}-t${turnCounter}`; }
 
+// RT-2 会话级并发互斥：同会话已有回合在跑时，并发的 handleMessage/handleChoice/start 抛此错误。
+// 双击/重发/WS 重连+REST 同时触发不再双开回合（GM 上下文 + DB 写竞态）。API 层映射 409 turn_in_progress。
+export class TurnInProgressError extends Error {
+  readonly code = "turn_in_progress" as const;
+  constructor(sessionId: string) {
+    super(`会话 ${sessionId} 已有回合在进行中，拒绝并发回合`);
+    this.name = "TurnInProgressError";
+  }
+}
+
 export interface DiceSessionDeps {
   db?: DB; // 省略则内存库(测试)
   agentFactory: AgentFactory; // 适配缝:据 AgentInit 产一个会话 agent(真=DiceGm,fake=FakeDiceGm)
@@ -38,6 +48,7 @@ export class DiceSession implements Session {
   readonly hub = new WsHub();
   readonly gate?: PlayerRollGate;
   readonly mcpServer: McpServer;
+  private inflight = false; // RT-2：本会话是否已有回合在跑（并发互斥标记）
   constructor(public sessionId: string, private deps: DiceSessionDeps) {
     this.db = deps.db ?? (() => { const d = openDb(":memory:"); initSchema(d); return d; })();
     // 开局物化:从 Catalog import 选定团本版本(信任闸门重验)→ 本局运行库。仅空库时(避免重复 import)。
@@ -98,14 +109,28 @@ export class DiceSession implements Session {
     return { mcpServer: this.mcpServer, openingPrompt: this.openingPrompt, skills: this.deps.baseline ? [] : (this.deps.skills ?? []), model: this.deps.model, sessionId: this.sessionId, sessionsDir: this.deps.sessionsDir };
   }
 
+  // RT-2：串行化所有「跑回合」入口。已有回合在跑则抛 TurnInProgressError（拒绝并发、不双开），
+  // finally 释放——即使回合内抛错也不会卡死后续回合。检查在任何 DB 读/写之前（最外层守门）。
+  private async runExclusive<T>(fn: () => Promise<T>): Promise<T> {
+    if (this.inflight) throw new TurnInProgressError(this.sessionId);
+    this.inflight = true;
+    try {
+      return await fn();
+    } finally {
+      this.inflight = false;
+    }
+  }
+
   async handleMessage(text: string): Promise<{ turnId: string }> {
-    const turnId = nextTurnId(this.sessionId);
-    const driver = this.deps.agentFactory(this.buildInit());
-    await runTurn(
-      { db: this.db, driver, hub: this.hub, sessionId: this.sessionId, turnId, runTurnEnd: (db) => this.turnEnd(db) },
-      { text },
-    );
-    return { turnId };
+    return this.runExclusive(async () => {
+      const turnId = nextTurnId(this.sessionId);
+      const driver = this.deps.agentFactory(this.buildInit());
+      await runTurn(
+        { db: this.db, driver, hub: this.hub, sessionId: this.sessionId, turnId, runTurnEnd: (db) => this.turnEnd(db) },
+        { text },
+      );
+      return { turnId };
+    });
   }
 
   // B1：玩家点选待选项的正式路径(接口页 §5「玩家选择捕获」)——
@@ -113,36 +138,40 @@ export class DiceSession implements Session {
   // ② 落一条「玩家所选」记录(kind=note·player_choice，供快照/历史复原)；
   // ③ 以所选 option 作下一回合 TurnInput(玩家视角的决定文本)——不伪装成 "[choice …]" 文本喂 handleMessage。
   async handleChoice(eventId: number, optionIndex: number): Promise<{ turnId: string }> {
-    const row = this.db.prepare("SELECT data_json FROM log WHERE seq=? AND kind='choice'").get(eventId) as { data_json: string | null } | undefined;
-    if (!row?.data_json) throw new Error(`handleChoice: 无此 choice event #${eventId}`);
-    const parsed = JSON.parse(row.data_json) as { prompt?: string; options?: { label: string; consequence: string }[] };
-    const opt = parsed.options?.[optionIndex];
-    if (!opt) throw new Error(`handleChoice: choice #${eventId} 无 optionIndex=${optionIndex}`);
-    // ② 落玩家所选记录(隐事件,不进玩家可见叙事；供重连/审计复原"玩家选了哪个")。
-    this.db.prepare("INSERT INTO log (content, kind, data_json, visible) VALUES (?, 'note', ?, 0)")
-      .run(opt.label, JSON.stringify({ player_choice: { eventId, optionIndex, label: opt.label, consequence: opt.consequence } }));
-    // ③ 所选 option 作下一回合输入(玩家视角决定文本)。
-    const turnId = nextTurnId(this.sessionId);
-    const driver = this.deps.agentFactory(this.buildInit());
-    await runTurn(
-      { db: this.db, driver, hub: this.hub, sessionId: this.sessionId, turnId, runTurnEnd: (db) => this.turnEnd(db) },
-      { text: opt.label },
-    );
-    return { turnId };
+    return this.runExclusive(async () => {
+      const row = this.db.prepare("SELECT data_json FROM log WHERE seq=? AND kind='choice'").get(eventId) as { data_json: string | null } | undefined;
+      if (!row?.data_json) throw new Error(`handleChoice: 无此 choice event #${eventId}`);
+      const parsed = JSON.parse(row.data_json) as { prompt?: string; options?: { label: string; consequence: string }[] };
+      const opt = parsed.options?.[optionIndex];
+      if (!opt) throw new Error(`handleChoice: choice #${eventId} 无 optionIndex=${optionIndex}`);
+      // ② 落玩家所选记录(隐事件,不进玩家可见叙事；供重连/审计复原"玩家选了哪个")。
+      this.db.prepare("INSERT INTO log (content, kind, data_json, visible) VALUES (?, 'note', ?, 0)")
+        .run(opt.label, JSON.stringify({ player_choice: { eventId, optionIndex, label: opt.label, consequence: opt.consequence } }));
+      // ③ 所选 option 作下一回合输入(玩家视角决定文本)。
+      const turnId = nextTurnId(this.sessionId);
+      const driver = this.deps.agentFactory(this.buildInit());
+      await runTurn(
+        { db: this.db, driver, hub: this.hub, sessionId: this.sessionId, turnId, runTurnEnd: (db) => this.turnEnd(db) },
+        { text: opt.label },
+      );
+      return { turnId };
+    });
   }
 
   // kickoff:「开始游戏」。未开场则以 prologue 为首轮 impetus 跑开场回合(无玩家输入)→ 流式开场叙事。幂等。
   async start(): Promise<{ started: boolean }> {
-    if (metaGet(this.db, "started") === "1") return { started: false };
-    const prologue = metaGet(this.db, "prologue") ?? "";
-    const turnId = nextTurnId(this.sessionId);
-    const driver = this.deps.agentFactory(this.buildInit());
-    await runTurn(
-      { db: this.db, driver, hub: this.hub, sessionId: this.sessionId, turnId, runTurnEnd: (db) => this.turnEnd(db) },
-      { text: prologue || "[开始游戏]" },
-    );
-    metaSet(this.db, "started", "1");
-    return { started: true };
+    return this.runExclusive(async () => {
+      if (metaGet(this.db, "started") === "1") return { started: false };
+      const prologue = metaGet(this.db, "prologue") ?? "";
+      const turnId = nextTurnId(this.sessionId);
+      const driver = this.deps.agentFactory(this.buildInit());
+      await runTurn(
+        { db: this.db, driver, hub: this.hub, sessionId: this.sessionId, turnId, runTurnEnd: (db) => this.turnEnd(db) },
+        { text: prologue || "[开始游戏]" },
+      );
+      metaSet(this.db, "started", "1");
+      return { started: true };
+    });
   }
 
   handleRoll(eventId: number): boolean { return this.gate?.resolveRoll(eventId) ?? false; }
