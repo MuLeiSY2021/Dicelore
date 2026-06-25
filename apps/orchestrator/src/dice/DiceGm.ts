@@ -58,9 +58,13 @@ export class DiceGm implements Agent {
 
   // SDK 单条消息:对话记录落原始结构,回合日志落可读摘要(result 用 info,余 debug)。
   private logMsg(idx: number, msg: unknown): void {
-    const m = msg as { type?: string; message?: { content?: unknown[] }; content?: unknown[]; subtype?: string; duration_ms?: number; usage?: unknown; result?: string };
+    const m = msg as { type?: string; subtype?: string; model?: string; session_id?: string; cwd?: string; message?: { content?: unknown[] }; content?: unknown[]; duration_ms?: number; usage?: unknown; result?: string };
     const type = m.type ?? "unknown";
-    this.appendConversation({ _: "msg", turnId: this.curTurnId, idx, ...m });
+    // system init 含巨量环境元数据(tools/slash_commands/agents/plugins 清单)——业务对话记录只留身份字段,砍掉几十KB噪音
+    const body = (type === "system" && m.subtype === "init")
+      ? { type, subtype: m.subtype, model: m.model, session_id: m.session_id, cwd: m.cwd }
+      : m;
+    this.appendConversation({ _: "msg", turnId: this.curTurnId, idx, ...body });
     const tag = `[msg#${idx} ${type}]`;
     if (type === "assistant") {
       const blocks = m.message?.content ?? [];
@@ -112,7 +116,7 @@ export class DiceGm implements Agent {
         staged = undefined;
       }
     }
-    this.sessionLogger.info({ turnId, settingSources: staged ? "project" : "[]", allowedTools: staged ? "mcp__dicelore,Skill,Read" : "mcp__dicelore" }, "[opts]");
+    this.sessionLogger.info({ turnId, settingSources: staged ? "project" : "[]", allowedTools: staged ? "mcp__dicelore,Skill,Read" : "mcp__dicelore" }, "turn opts");
     this.sessionLogger.debug({ turnId, system: this.init.openingPrompt }, "[system]");
     // ③ 超时兜底:防真 LLM 卡死拖垮 eval/联调。默认 3min,DICELORE_GM_TIMEOUT_MS 可覆盖。
     // abort 触发后 SDK 停 query(抛 AbortError 或以 result 结束)→ catch 转 error 事件,回合脱困不卡死。

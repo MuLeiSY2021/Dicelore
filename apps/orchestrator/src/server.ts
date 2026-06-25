@@ -58,6 +58,7 @@ export function startServer(port: number): void {
   const server = serve({ fetch: app.fetch, port });
   attachWsUpgrade(server, { openSession, agentFactory, skills: diceSkills, baseline });
   console.log(`[orchestrator] live :${port}`);
+  getLogger().info({ port, fakeGm: fake, sessionsDir: dir, catalog: catalogPath }, `orchestrator live :${port}`);
 }
 
 // tsx src/server.ts 直接起
