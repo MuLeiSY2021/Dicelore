@@ -170,8 +170,8 @@
 
 | # | 类型 | 问题 | 现状 | 来源 | 恶化 | 下一步/依赖 |
 |---|------|------|------|------|:--:|--------|
-| O1 | feat | **统一 logging 模块缺失**：无 logger（pino/winston/自研均可）、无分级约定、shared 无日志基建；core/后端/前端无法对齐（前端 `apps/web` 亦 0 日志） | 裸 `console.*`、`shared` 空 | 用户 + grep 实测 | ✓✓ | 抽 `shared/logger`：`error/warn/info/debug` 分级 + 可配 level + 结构化 + sessionId/turnId 上下文 + **须同构**（浏览器 + node 通用，前端可复用同一模块与分级约定）；定级约定写 wiki（04 或 03）；轻量、可不开 ADR |
-| O2 | feat | **core 运行时日志接入**：engine/mcp 运行时无结构化日志；`cli.ts` 的 console 是面向终端用户输出（**保留**），`mcp/main.ts` 裸 error 改走 logger | cli console 保留 / mcp 裸 error | 同上 | ✓ | 依赖 O1；core 侧运行时（非 CLI 面向人输出）统一走 logger |
+| O1 | feat | **统一 logging 模块**（2026-06-25 复核·描述严重过期）：~~无 logger~~——**core 已有成熟 logger** `packages/core/src/log.ts`（pino 分级文件 + `getLogger`/`initGlobalLogger`/`createFileLogger`，全仓 17+ 处用）。原「shared 无日志基建、抽同构 shared/logger」**误判**：`shared/` 是 schema 层（rest/ws 契约），logger 留 core 即可。真缺口收窄：① **前端 `apps/web` 零日志框架**（需 browser sink + 分级约定，真缺口）；② core 个别裸 console 补点（见 O2） | 裸 `console.*` 散点 | 用户 + grep + 2026-06-25 复核 | ✓ | **不新建 shared/logger**；logger 约定写 wiki（指向 core log.ts）；前端另起 browser sink 复用同分级约定。降 P2（核心基建已有） |
+| O2 | feat | **core 运行时日志接入**（2026-06-25 复核·大半已做）：`cli.ts` console 面向终端输出（**保留**）；`mcp/main.ts` 等裸 error 改走 `getLogger()`。grep 复核 core 剩余裸 `console.*` 散点补走 logger 即可 | cli console 保留 / 少量裸 error | 同上 + 复核 | ✗ | core logger 已有，本项是补点（低优先）；非「接入新模块」 |
 
 ---
 

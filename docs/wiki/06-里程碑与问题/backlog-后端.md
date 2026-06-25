@@ -55,11 +55,13 @@
 
 ## 主题 · 可观测性 · 日志分级统一 💡🔧
 
-> **跨层主题**：病根与统一方案（抽 `shared/logger`）在 [backlog-core 主题O · O1](backlog-core.md)；本页挂后端侧症状条目，依赖 O1 落地后接入。
+> **跨层主题**：病根与统一方案在 [backlog-core 主题O · O1](backlog-core.md)；本页挂后端侧症状条目。
+>
+> **2026-06-25 复核·O1 描述显著漂移**：① core **已有成熟 logger**（`packages/core/src/log.ts`：pino 分级文件 + `getLogger`/`initGlobalLogger`/`createFileLogger`，全仓 17+ 处用），**非「需抽同构 shared/logger」**——`shared/` 是 schema 层（rest/ws 契约），不该塞 logger；O1 原「抽 shared/logger 三层共用」是误判，实际是「core 已有、后端复用 core logger、前端另需 browser sink」。② 后端 `DiceGm.ts` 已用 sessionLogger（per-session 分级文件 + usage 落 raw log），关键路径（GM 回合/usage）**已覆盖 ~80%**，非「全程零日志」。真缺口收窄为：HTTP 路由/WS 连接/会话启停/编排异常的**补点覆盖**（低优先），+ **前端零日志框架**（真缺口）。
 
 | # | 类型 | 问题 | 来源 | 恶化 | 下一步/依赖 |
 |---|------|------|------|:--:|--------|
-| O-后端 | feat | **后端运行时日志分级细化覆盖**：现仅 `server.ts` 一条启动 log，HTTP/WS/会话生命周期/编排/错误**全程零日志**；按 `error/warn/info/debug` 分级细覆盖（请求/连接/会话启停/编排步骤/异常） | 用户 | ✓✓ | 依赖 [backlog-core O1](backlog-core.md) 统一 logger 落地后接入；分级约定与 core 对齐 |
+| O-后端 | feat | **后端运行时日志补点覆盖**（2026-06-25 复核降级）：`DiceGm` sessionLogger 已覆盖 GM 回合/usage（~80%）；剩 HTTP 路由/WS 连接/会话启停/编排异常**未走 logger**（部分裸 console 或无日志）。补这些点的 `error/warn/info/debug` 分级覆盖 | 用户 + 2026-06-25 复核 | ✓ | 复用 core `getLogger`/`createFileLogger`（**无需新建 shared/logger**）；分级约定与 core 对齐。降为 P2（关键路径已覆盖） |
 
 ---
 
