@@ -81,10 +81,10 @@
   - ✅ **叙事/记忆物理表** `front`/`plotline`/`foreshadow`/`history`(+`anchor`) **已建** + store CRUD + `tensionBoard`/`frontOmenList` 聚合（present 层）。
   - ✅ **声明式工具生成层引擎** `toolgen/`（SQL 闸/视图定义/读写工具编译/写匹配防泄露）已建，6 模块 981 行 + 6 测试绿。
   - ✅ **视图层投影（①，2026-06-25 落地）**：spec §4 的 6 命名视图（`player`/`npc`/`world`/`relation`/`clock`/`tension_board`）经 `store/views.ts` `initViews(db)` 用 `defineView` 投影、接进 `initSchema` 末尾（全仓 freshDb 自动获得视图）；`tension_board` SQL UNION 四表（front/plotline/foreshadow/watcher → 统一 `kind/id/label/status`）。present 层 JS 聚合保留作上层业务面，SQL 视图作下游 toolgen 稳定列契约，单源不同层。core 405 测试 + tsc 全绿。**toolgen 读工具的前置闸已拆除**。
-  - 🚧 **仍欠（真正的剩余 = 工具面暴露，非存储）**：
-    - ② **业务 MCP 工具未暴露**：`tensionBoard`/front/plotline/foreshadow 聚合已在 present 层但**没接进 `buildMcp`**，GM 调不到「以概念为单位」的读；NPC 无一等抽象（A1-A5 主体）。**已拍板走声明式 dogfooding**（守 spec DT-9「团本扩展框架零改动」契约），视图层（①）已就绪可起声明。
-    - ③ **toolgen 零接线**：引擎已通但**不进 `createMcpServer`/不进团本 import/无 dogfooding step③**（用本层声明出 front/plotline/foreshadow 业务工具）—— spec 承诺的「新剧本=新声明+新 flow、框架代码零改动」目前跑不通，团本扩展机制未对作者开放。
-  - **依赖链（单向，被原路线图掩盖）**：叙事层总纲(定视图契约) → 谓词扩展(step①建表✅) → toolgen(step②引擎✅) → **视图层投影✅(①已拆闸)** → 业务工具声明(step③❌)。视图层已落地，下一步可起 ②/③。
+  - ✅ **②③ 接线 + 叙事层 dogfooding（2026-06-25 落地）**：① 适配层 `toolgen/toToolDef.ts` `toolgenToToolDef(decl)` 把 `compileTool` 产物适配成 MCP `ToolDef`（zod schema、出参包 `{result}`、读 `readOnlyHint=true`）；② 标准库声明 `mcp/stdlib/narration.ts`（front_open/plotline_open·advance·close/foreshadow_plant·recall·abandon/tension_board 八工具，**全用声明、零硬编码 handler**）；③ `createMcpServer(db, deps, extraTools?)` 加可选 `extraTools` 入口（DT-9 守约：现有 19 工具零改动），生成工具与 `TOOLS` 并列注册。dogfooding 集成测试验证经 server 端到端落库 + 承重墙不破（写经正典原语）+ 坏声明编译期被拒。core 425 测试 + tsc 全绿。**spec DT-9「新工具=新声明、框架 core 零改动」契约在框架标准库侧已兑现**。
+    - ⚠️ **front_advance 撞 DSL 天花板（已知限制）**：推进 Front 的 clock 需跨 `state`(clock 行)↔`front`(clock_ref) JOIN，writeMatch 三模式（mutate/setStatus/insert）不支持 JOIN 写 → 无法纯声明。正是 spec §8 预言的「撞 DSL 天花板」。v1 不声明 `front_advance`；解法候选（留后续）：① 加 writeMatch 第四模式（clock 推进专用，绑 `front.clock_ref` 解析）；② 给 front_advance 留硬编码 handler（破 DT-9，下策）；③ 团本 flow skill 内分两步（先 query clock_ref 再 state mutate，但跨两次调用非原子）。记 backlog 待 DSL 扩展周期。
+  - 🚧 **仍欠（团本侧声明装载，独立后续）**：团本自定义 `tools:` 段的 manifest 解析 + import 装载（`catalog/import.ts` + 共享 validator，[团本与manifest](../04-子系统设计/团本与manifest.md)）——框架标准库已 dogfooding 跑通验证机制，团本侧声明装载是独立后续 plan（依赖 manifest schema 扩展 + 双校验共享 validator，spec §7）。
+  - **依赖链（单向）**：叙事层总纲(定视图契约) → 谓词扩展(step①建表✅) → toolgen(step②引擎✅) → 视图层投影✅(①拆闸) → **业务工具声明✅(②③ 框架标准库 dogfooding 跑通)** → 团本侧 tools 段装载(🚧 独立后续)。
   - A6 裁决侧正交、留 resolver spec。
 
 ---

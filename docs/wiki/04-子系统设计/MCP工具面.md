@@ -376,7 +376,7 @@ game_end: { reason: z.string(), outcome?: z.string() } → { ended: true, event_
 | **注册接缝** | `createMcpServer(db, deps)`（见下「in-process 工厂」节） | 接受额外的生成工具集（标准库 + 团本声明），与 `TOOLS` 并列 `registerTool`——这是 spec §9「挂载点已存在、不为它改结构」的兑现点 |
 | **import 装载** | `catalog/import.ts` + manifest `tools:` 段 | import 时读团本 `tools:`/`include:`、经**共享 validator**（[spec §7 双校验](../../superpowers/specs/2026-06-22-声明式工具生成层-design.md)）重验、`compileTool`，交给会话级 MCP server |
 
-**实现现状（2026-06-25 核对）🚧 未接**：三处接缝均未落地——`compileTool` 仅 toolgen 单测调用；`createMcpServer` 仍只注册硬编码 `TOOLS`（无生成工具入口）；`import.ts` 不读 `tools:` 段。叙事层 front/plotline/foreshadow 业务工具作"第一个标准库包"（dogfooding，spec §8 + DT-9 step③）尚未声明。视图层投影（基视图）已就绪（[团本构建工具链 §7](团本构建工具链.md)）——前置闸已拆，接线是下一步。详 [backlog-core 主题A′②③](../06-里程碑与问题/backlog-core.md)。
+**实现现状（2026-06-25 核对）✅ 框架标准库已接 / 🚧 团本侧待接**：接缝①②已落地——`toolgen/toToolDef.ts` `toolgenToToolDef(decl)` 适配 `compileTool` 产物为 `ToolDef`（zod schema、出参包 `{result}`、读 `readOnlyHint=true`）；`createMcpServer(db, deps, extraTools?)` 加可选 `extraTools` 入口（DT-9 守约：现有 19 工具零改动），`wrapToolForTest` 同步并入。框架标准库叙事工具（`mcp/stdlib/narration.ts` 八工具）已能经 `createMcpServer(db, {}, narrationStdlibTools())` 注册、dogfooding 集成测试端到端验证（落库 + 承重墙不破 + 坏声明编译期拒）。接缝③（团本 `tools:` 段 import 装载）🚧 未接——需 manifest schema + 共享 validator（[团本与manifest](团本与manifest.md)），是独立后续。详 [backlog-core 主题A′②③](../06-里程碑与问题/backlog-core.md)。
 
 ---
 
