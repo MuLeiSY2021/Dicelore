@@ -8,7 +8,7 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import { renderHook, act } from "@testing-library/react";
-import { vi, afterEach } from "vitest";
+import { vi, afterEach, expect, it } from "vitest";
 import { useSession } from "./useSession.js";
 import { CLIENT_PROTOCOL } from "@dicelore/shared";
 
@@ -43,4 +43,38 @@ it("收到 narration_commit 累积叙事；roll_staged 置 pendingRoll；roll_co
 
   act(() => { instances[0].emit({ protocol: CLIENT_PROTOCOL, type: "roll_committed", eventId: 5, rolls: [55], total: 55, outcome: "成功" }); });
   expect(result.current.pendingRoll).toBeNull();
+});
+
+it("postMessage 失败 → error 进 error 通道(不再静默吞)、generating 复位", async () => {
+  vi.stubGlobal("WebSocket", class extends FakeWS {});
+  // 首个 fetch(refetch presentation) ok，第二个(postMessage)失败
+  const fetchMock = vi.fn()
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ protocol: CLIENT_PROTOCOL, sessionId: "s1", seq: 0, sheets: [], mechanics: [], choices: null, narrativeCursor: 0, pendingRoll: null }) })
+    .mockResolvedValue({ ok: false, status: 409, json: async () => ({ code: "turn_in_progress" }) });
+  vi.stubGlobal("fetch", fetchMock);
+
+  const { result } = renderHook(() => useSession("s1"));
+  await act(async () => { await Promise.resolve(); });
+
+  await act(async () => {
+    await expect(result.current.postMessage("我推门")).rejects.toBeTruthy();
+  });
+  expect(result.current.error).toBeTruthy();
+  expect(result.current.generating).toBe(false);
+});
+
+it("roll 失败 → error 进 error 通道(roll 之前无 catch、静默吞)", async () => {
+  vi.stubGlobal("WebSocket", class extends FakeWS {});
+  const fetchMock = vi.fn()
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ protocol: CLIENT_PROTOCOL, sessionId: "s1", seq: 0, sheets: [], mechanics: [], choices: null, narrativeCursor: 0, pendingRoll: null }) })
+    .mockResolvedValue({ ok: false, status: 409, json: async () => ({ code: "no_pending_roll" }) });
+  vi.stubGlobal("fetch", fetchMock);
+
+  const { result } = renderHook(() => useSession("s1"));
+  await act(async () => { await Promise.resolve(); });
+
+  await act(async () => {
+    await expect(result.current.roll(5)).rejects.toBeTruthy();
+  });
+  expect(result.current.error).toBeTruthy();
 });

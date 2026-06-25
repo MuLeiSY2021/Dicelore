@@ -9,6 +9,23 @@
 
 import type { PresentationSnapshot, SessionSummary } from "@dicelore/shared";
 
+// 玩家动作请求(messages/roll/choices)失败时把 HTTP 状态译成可读中文错误。
+// 409 是会话级互斥/状态冲突(turn_in_progress / no_pending_roll / no_pending_choice)——
+// 给玩家可执行提示，不再让调用点静默吞（接 useSession 的 error 通道）。
+async function actionError(res: Response, what: string): Promise<Error> {
+  let code = "";
+  try { code = ((await res.json()) as { code?: string }).code ?? ""; } catch { /* 无 json 体 */ }
+  if (res.status === 409) {
+    switch (code) {
+      case "turn_in_progress": return new Error("上一回合还在进行中，请等当前回合结束再操作。");
+      case "no_pending_roll": return new Error("当前没有待掷的骰子（可能已掷过或回合已推进）。");
+      case "no_pending_choice": return new Error("当前没有待选择的选项（可能已选过或回合已推进）。");
+      default: return new Error(`${what}冲突：${code || res.status}`);
+    }
+  }
+  return new Error(`${what}失败：${res.status}`);
+}
+
 // 只读：取全量呈现快照(接口页 §2 GET /sessions/:id/presentation)。增量 WS 仍阻塞。
 export async function getPresentation(sessionId: string): Promise<PresentationSnapshot> {
   const res = await fetch(`/sessions/${encodeURIComponent(sessionId)}/presentation`);
@@ -28,7 +45,7 @@ export async function postMessage(sessionId: string, text: string): Promise<{ tu
   const res = await fetch(`/sessions/${encodeURIComponent(sessionId)}/messages`, {
     method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text }),
   });
-  if (!res.ok) throw new Error(`message 请求失败：${res.status}`);
+  if (!res.ok) throw await actionError(res, "发送消息");
   return (await res.json()) as { turnId: string };
 }
 
@@ -37,7 +54,7 @@ export async function postRoll(sessionId: string, eventId: number): Promise<{ tu
   const res = await fetch(`/sessions/${encodeURIComponent(sessionId)}/roll`, {
     method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ eventId }),
   });
-  if (!res.ok) throw new Error(`roll 请求失败：${res.status}`);
+  if (!res.ok) throw await actionError(res, "掷骰");
   return (await res.json()) as { turnId: string };
 }
 
@@ -127,7 +144,7 @@ export async function postChoice(sessionId: string, eventId: number, optionIndex
   const res = await fetch(`/sessions/${encodeURIComponent(sessionId)}/choices`, {
     method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ eventId, optionIndex }),
   });
-  if (!res.ok) throw new Error(`choice 请求失败：${res.status}`);
+  if (!res.ok) throw await actionError(res, "提交选择");
   return (await res.json()) as { turnId: string };
 }
 

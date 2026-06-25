@@ -78,9 +78,9 @@ export function useSession(sessionId: string) {
     return () => { closed = true; if (timer) clearTimeout(timer); ws?.close(); };
   }, [sessionId, refetch]);
 
-  const postMessage = useCallback((text: string) => { setGenerating(true); return apiPostMessage(sessionId, text).catch((e) => { setGenerating(false); throw e; }); }, [sessionId]);
-  const roll = useCallback((eventId: number) => apiPostRoll(sessionId, eventId), [sessionId]);
-  const choose = useCallback((eventId: number, optionIndex: number) => { setGenerating(true); return apiPostChoice(sessionId, eventId, optionIndex).catch((e) => { setGenerating(false); throw e; }); }, [sessionId]);
+  const postMessage = useCallback((text: string) => { setGenerating(true); setError(null); return apiPostMessage(sessionId, text).catch((e: Error) => { setGenerating(false); setError(e.message); throw e; }); }, [sessionId]);
+  const roll = useCallback((eventId: number) => { setError(null); return apiPostRoll(sessionId, eventId).catch((e: Error) => { setError(e.message); throw e; }); }, [sessionId]);
+  const choose = useCallback((eventId: number, optionIndex: number) => { setGenerating(true); setError(null); return apiPostChoice(sessionId, eventId, optionIndex).catch((e: Error) => { setGenerating(false); setError(e.message); throw e; }); }, [sessionId]);
   const dismissReveal = useCallback((seq: number) => setReveals((prev) => prev.filter((r) => r.seq !== seq)), []);
 
   return { snapshot, narration, pendingRoll, generating, error, gameEnd, reveals, postMessage, roll, choose, dismissReveal };
