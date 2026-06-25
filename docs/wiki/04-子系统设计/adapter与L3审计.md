@@ -266,6 +266,6 @@ CC 的对话记录（transcript jsonl）本身是 **UUID 父子链树**（/rewin
 - 确切的 Claude Code hook stdin 字段名 / JSON 决策格式 → 实现期官方文档核实（本页定映射与意图）
 - manifest 怎么声明"选哪些流程 skill"、`dicelore init` 拷哪些 → [团本与 manifest](团本与manifest.md)
 - 未来 **GUI 呈现层**的技术栈与界面、玩家选择的捕获方式（聊天 / 转轮 / 投票）、单/多人模式 → 未来 / 模式层
-- 多人论坛安价的远程部署（Streamable HTTP）→ 未来（[场景 B](../01-业务分析/用户与场景.md)）
+- 多人论坛形态的远程部署（Streamable HTTP）→ 已弃（[场景 B](../01-业务分析/用户与场景.md)，2026-06-25）
 </content>
 </invoke>
