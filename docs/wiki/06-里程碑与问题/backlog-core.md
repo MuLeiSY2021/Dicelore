@@ -31,10 +31,26 @@
 | F3 | feat | **团本构建(lore)侧零 eval**：现 eval harness 只覆盖跑团(dice)侧（play-mcp 连真后端当玩家跑剧本），构建团本侧（LoreSession/构建 GM/组件5·6 import/构建工具面）无任何评估。后果：构建流程「作者↔构建 GM」交互质量、import 映射正确性、构建工具可用性**全无客观验证**——与 play 侧 F1 同等不可信 | 用户指正 | ✓（随构建能力扩展越痛） | 🟡 第二批：接构建工具补全（H-build-tools）后接本项；评估形态待定：mock 作者↔真构建 GM，或复用 play-mcp 模式经 build HTTP 驱动 |
 | F4 | feat | **真 GM 不遵守开局 r 六维教条**：eval 重跑（debug 模式明骰降级 L3 已修卡死炸弹）暴露——GM(glm-5.2)读了 SKILL.md「开局必须 r 六维明骰、禁 sheet_update 硬编数值」仍建世界空转（world_register×4 / sheet_update / world_search），0 次明骰，180s 超时。骰子链路虽修了卡死（L3）但 GM 不调=没激活。根因待分：教条措辞不够强制 vs 模型(glm-5.2)不遵守教条 vs 开局建世界优先级 | eval 重跑诊断 | ✓（骰子链路永远激活不了） | 🟡 待诊断：①教条更强措辞（开局第一步 r 六维、禁先建世界）②切真 Claude 模型隔离「模型行为 vs 教条」③多轮跑 |
 
+> **2026-06-25 全量体检实证**（[findings](../../../audits/2026-06-25-全量体检/findings.yaml)）：主题F 被体检 P0/P2 多条命中——
+> - **CROSS-LORE-EVAL（P0）** = F3 的体检反指（lore 侧零 eval 场景文件，eval scenarios/ 仅 4 个全 dice 侧）。
+> - **QA-002（P0）**：F1"掷骰绕过率"无机械检测——`assertions.ts` `toolStats` 只按 event.kind 计数（verdictGated/verdictAuto），无"该骰却没骰"检测；`grade.ts` L60 注释"F1 时序校验"是 TODO 非实现；GM 遇对抗局面不调 `resolve_*`、纯 narrate 编结果时 `verdictCount=0` 不会被标记 fail。是 F1 闭环的**机械地板缺口**——eval 可被"不骰纯编"欺骗。
+> - **QA-003（P0）**：F2 软着陆率无机械地板 + baseline 对照报告缺失——`assertions` 只有 `narrateLeak`/`missingNarrate`/`toolStats` 三个机械断言无 F2 检测；`grader.md` L21 完全靠 LLM 判；`reports/` 仅一份 doctrine 报告无 baseline 对照。F2 的"做成了"判定目前完全不可信。
+> - **QA-006（P2）**：eval harness 自身测试覆盖薄——`play-mcp.test.ts` 只测 open→start→send 闭环，不测 choose/roll/browse/列表完整性/错误路径；`doChoose`/`doRoll`/`doBrowse` 无任何测试调用。
+
+### 主题F · 体检新增（机械地板 + harness 自测）
+
+| # | 类型 | 问题 | 来源 | 恶化 | 下一步/依赖 |
+|---|------|------|------|:--:|--------|
+| F1-floor | feat | **F1 机械地板缺失**（QA-002）：`assertions` 只统计 verdict 工具调用次数，无"该骰却没骰"检测；`grade.ts` L60 注释的 F1 时序校验是 TODO 非实现。GM 不调 `resolve_*` 纯 narrate 编结果时 `verdictCount=0` 不会被标记 fail——eval 可被"不骰纯编"欺骗，F1 假性 pass | 2026-06-25 全量体检 | ✓（随 eval 作发版依据越痛） | 🔧 补：① `assertions` 加 F1 时序校验实现（verdict.seq 应早于描述它的 narrate.seq，narrate 在所有 verdict 之前＝可疑绕过）；② `scenario.json` 加 `expects` 字段标"此回合应触发对抗"，assertions 比对预期 vs 实际 verdict 数；③ `grader.md` 对抗性 rubric 具体化（默认怀疑"是不是没骰就编结果"）；④ 人评一致性抽查流程落地。挂在第一批 F2 收尾深化或紧随 |
+| F2-floor | feat | **F2 机械地板 + baseline 对照缺失**（QA-003）：F2 软着陆无机械检测全靠 grader LLM 判；`reports/` 仅 doctrine 报告无 baseline 对照——验收口径"with 应显著低于 baseline"无数据支撑；grader 自校准风险（讨好本能）在 harness 无实现 | 2026-06-25 全量体检 | ✓（同上） | 🔧 补：① baseline 对照跑测（每场景跑 doctrine + baseline 各 N 局，`reports/` 落对照报告）；② F2 加弱机械地板（坏结果后 narrate 出现"幸好/不过/但是"转折词作 grader 参考非硬判）；③ grader 对抗性 rubric + 人评抽查落地；④ F1 的"存疑"也需多轮跑测才能定。挂在第一批 F2 收尾深化或紧随 |
+| F-harness-test | fix | **eval harness 自身测试覆盖薄**（QA-006）：`play-mcp.test.ts` 只测 open→start→send 闭环，`doChoose`/`doRoll`/`doBrowse`（eval 驱动 GM 跑完一局的关键动作）无任何测试调用；`list_scenarios` 无测试验场景清单非空/符合 schema；`assertions.test.ts` 不测 `grade.ts` 端到端评分流程 | 2026-06-25 全量体检 | ✓ | 🔧 补：① play-mcp.test.ts 补 choose/roll/browse happy path（FAKE_GM 触发后用 doChoose/doRoll 推进）；② 补错误路径（后端 500/WS error/turn 未 ended）；③ 补 list_scenarios 测试验非空 + 每场景符合 scenario schema；④ assertions.test.ts 补 grade.ts 端到端（fixture db + transcript 验报告结构）。非阻塞但发版闸前应补 |
+
 ---
 
 ## 主题A · 运行时缺少「叙事脚手架」一等抽象 💡
 
+> **2026-06-25 全量体检实证**：**CROSS-TOOLGEN（P0）** = 本主题的头号债反指——toolgen 引擎已建（981 行 6 模块）但**零接线**（`present/` 有 `tensionBoard` 聚合但 grep across `packages/core/src/mcp/` 零命中，未进 TOOLS 工具清单、未注册进 `createMcpServer`）；`packages/core/src/index.ts` L37 导出 TOOLS 是运行时工具清单，叙事域读工具不在其中。业务侧承诺"薄到近乎纯声明的 manifest"、spec 承诺 DT-9「团本扩展框架零改动」，实现却是"引擎建好但没接线、跑不通"——"半截工程比没做更危险"。守路线图第二批冻结令治理，链路跑通前一切 feat 冻结。见 [体检汇总 P0-1](../../../audits/2026-06-25-全量体检/06-汇总-合并.md)。
+>
 > **一句话病根**：同一概念在**团本作者层**有、在**运行时跑团层**塌缩成底层存储原语，AI 拿不到「以这个概念为单位」的**读（聚合视图）+ 写（生命周期操作）**。这是 conceptual integrity 问题，**跨多 session 反复命中、随回合数线性恶化** = 全项目头号架构债。建议**一个 ADR + 一个设计周期**统一解，**勿往 gm-core 提示词硬塞**。
 >
 > **想要**：`NPC` / `Front` / `plotline` / `foreshadow` 的运行时一等抽象（开/进行/收口状态 + 关联锚点 + 到点浮现提醒）+ **一张「未结张力」聚合视图**。Front/Clock（[ADR-0016](../05-决策记录-ADR/)）与 watcher（[ADR-0013](../05-决策记录-ADR/)）是部分地基，需评估**扩展 vs 新建**。
@@ -75,6 +91,9 @@
 
 ## 主题 · 裁决 / 披露 / 终局 增强 💡
 
+> **2026-06-25 全量体检实证**：**CROSS-END（P0）** = E1/E2 的体检反指——成功标准定总判据为"F1/F2/F3 被治住"但未定"一局何时算终局"；ADR-0009 定了 game_end/you_death 唯二出口但"何时敲、由谁敲"未定；core `gameEndHandler`（`io.ts` L74-82）只落 note event + `metaSet(db,"ended")`——无任何触发条件校验（GM 调即终局）。eval harness 跑多少轮都无法回答"做成了"。违"AI 有讨好本能、不可信"立项前提。注：BE-007 的 `GET /sessions/:id` ended 硬编码 bug 是独立 fix（在 [backlog-后端](backlog-后端.md)），不依赖 E2 ADR。见 [体检汇总 P0-2](../../../audits/2026-06-25-全量体检/06-汇总-合并.md)。
+> ⏳ **待裁决（见体检汇总 §未决问题 2）**：终局机制"何时敲/由谁敲"——PO 给了候选（N 回合 / 主线 Front 钟满 / 玩家死亡三选一），但"框架据 sheet 钟/watcher 自动敲防讨好 vs GM 自调"是架构决策，须 E2 ADR 定，不宜 AI 代断。
+
 | # | 类型 | 问题 | 现状 | 来源 | 恶化 |
 |---|------|------|------|------|:--:|
 | B7 | feat | **「带修正 ∧ 分级」检定无原语**：`resolve_outcome`（分级 bands）die 只吃纯 `NdS`、加不了修正；`resolve_contest`（吃修正）只回二元胜负。GM 想「掷+加值→超出难度多少决定后果程度」两个工具都不趁手 | 把加值**手算烘进每条 band 阈值**，玩家明骰看到裸骰，加值一变就重算整表 | eval（兽人局**几乎每个明骰**都踩）✅ | ✓（随属性成长越痛） |
@@ -86,6 +105,18 @@
 **C1 解法草案**：「按检定档披露分级线索散文」原语（线索 ≠ 实体属性 ≠ 世界条目）。
 **E1**：给 gm-core 加「终局判据」话术（A 类，**待 harness 能验证再动**）/ 或做成显式收局提示。
 **E2 解法方向（待商榷）**：把终局条件做成团本一等内容（类比 Front/Clock 凶兆阶梯，但触发的是 `game_end`）——rule/manifest 声明 + watcher 谓词候选；须解决与**可逆状态**的交互：复活、回合快照回滚（[ADR-0017](../05-决策记录-ADR/)）下「死亡终局」不应误触发或须可撤销。与 E1 配套：**E2 = 机制上何时算终局，E1 = GM 叙事上何时收局**。需 ADR。
+
+---
+
+## 主题 · 快照/回滚（CROSS-SNAP）💡
+
+> **2026-06-25 全量体检实证**：**CROSS-SNAP（P1）**——快照/回滚机制三层全断：① DB 层 `snapshot` 表未建（`db.ts` L23-102 initSchema 建表清单无 snapshot 表，L100 注释明示"并行未 rebase 进来"）；② core 无 `checkpoint()`/`restore(snapshotId)` 原语 + 无 `SnapshotParticipant` 注册表；③ orchestrator `DiceSession.turnEnd` 不调 `checkpoint()`、`UserPromptSubmit` hook 在 Phase 1 根本没接 Agent SDK；④ 前端 PlayPage 无回滚 UI（grep save/load/存档/读档/回滚/rollback/快照/undo/redo 零命中）。架构层（§3.2 + ADR-0017 + 内层 §4.5 + adapter §8）设计自洽（快照表树形+transcript 锚、IoC 注册表、event 脊柱不入快照、branch 是 transcript 树自然产物），但实现零接线——"设计自洽但实现零接线"的活体断节。见 [体检汇总 P1-6](../../../audits/2026-06-25-全量体检/06-汇总-合并.md)。
+> ⏳ **待裁决（见体检汇总 §未决问题 1）**：ADR-0017 快照/回滚 v1 是否对玩家开放？若开放需补 snapshot 表 + core 原语 + Stop/UserPromptSubmit hook 接线 + REST 端点 + UI 五层；若不开放需 ADR-0017 + 完整使用闭环显式降预期（"v1 自动持久化、手动回滚 v2"）。这是架构决策，不宜 AI 代断。
+> **关联**：与 CROSS-TIMEOUT（[backlog-后端](backlog-后端.md)）超时半途状态叠加——超时后无 restore 兜底；与 USER-002（[backlog-前端](backlog-前端.md)）终局后玩家流程合并设计：死局后"回滚到上一快照 / 重开 / 主页"三选。
+
+| # | 类型 | 问题 | 来源 | 恶化 | 下一步/依赖 |
+|---|------|------|------|:--:|--------|
+| SNAP-1 | feat | **快照回滚三层全断**：snapshot 表未建、core 无 checkpoint/restore 原语、Stop 不写快照、前端无回滚 UI。玩家死错了想回上一回合无入口——"尊重骰子、不崩坏"卖点在"骰错了想反悔"诉求上落空；branch/swipe（ADR-0017 上修进 v1）无法实现 | 2026-06-25 全量体检 | ✓（随回滚诉求越痛） | 💡 待裁决 v1 是否开放：若开放——① 并行"快照线"rebase 进 `db.ts` initSchema（建 snapshot 表 + `session_meta.current_snapshot_id`）；② core 补 `checkpoint()`/`restore(snapshotId)` + `SnapshotParticipant` 注册表（v1 注册 sheet/world.runtime/watcher，rule 不注册）；③ orchestrator `DiceSession.turnEnd` 调 `checkpoint()`；④ 前端 PlayPage 加"回滚到上一快照"按钮（REST `POST /sessions/:id/rewind`）。若不开放——ADR-0017 + 完整使用闭环显式降预期 |
 
 ---
 
@@ -101,9 +132,34 @@
 
 ## 主题 · 维护 🧹
 
+> **2026-06-25 全量体检实证**：M1 wiki 整理范畴被体检多条命中（文档/推导断节类）——
+> - **PROD-006（P2）**：玩家分型单源违例——术语表 L42 仍单列"替代派/相棒派"词条作现行定义、调研-期待与预测 §四 仍以旧二分为正文组织，未跟用户与场景 §1 四类切面升维。
+> - **CROSS-DEADLINK（P2）**：wiki 8 处死链引用已不存在的 `06-里程碑与问题/问题总账.md`（已被 backlog 三池取代）——MCP工具面、04 TODO、03 TODO、团本构建工具链、玩家客户端-接口、ADR README、后端双路径架构 §10、MCP工具面 §2.3。
+> - **PROD-010（P2）**：定位漂移——ADR-0022 品类词统一为"文字冒险游戏"、安科/安价升维为"载体"，但安科安价是什么页仍以安科/安价为"玩法/游戏类型"开篇、术语表"安科/安价"词条未升维为"载体"。
+> - **PROD-011（P2）**：愿景 §4（美观/现代 UI/移动端/社区生态）无 backlog 承接、无验收口径——业务增愿景但下游 backlog 无条目、里程碑四"社区适配与持续迭代"是占位无拆块。
+>
+> 以上四项均属"业务动了、下游没跟"的 wiki 推导链系统性断节（见 [体检汇总 §共性病根 2](../../../audits/2026-06-25-全量体检/06-汇总-合并.md)），由 `organize-wiki` skill 处理，长期任务、无批次。建议把"定位漂移清理 + 死链修复 + 分型单源统一"单列一次 organize-wiki 专项。
+
 | # | 类型 | 问题 | 来源 | 下一步 |
 |---|------|------|------|--------|
 | M1 | docs | **wiki 空间因快速迭代变乱**：多 session 高速迭代下，推导链页/ADR/设计页/06 出现冗余、过期、交叉错位（旧 TODO 锚点、计数/状态散落、设计页与实现漂移等；如 2026-06-23 定位升维后，愿景陈述在 ADR-0022 与 用户与场景 §4 轻微重复、待收拢单源） | 用户 | **由 `organize-wiki` skill 处理**（去重、对齐单源、修过期链接与计数、补设计-实现漂移）。**长期任务、持续进行**，非一次性 |
+| M1-a | docs | **玩家分型单源违例**（PROD-006）：术语表/调研页仍用旧"替代派/相棒派"二分，未跟用户与场景 §1 四类切面升维 | 2026-06-25 全量体检 | organize-wiki 专项：术语表"替代派/相棒派"词条改为"历史分型、已被四类切面取代（见用户与场景 §1）"；调研-期待与预测 §四 加注"本节为历史调研记录、现行分型见用户与场景 §1"。权威单源 = 用户与场景 §1 |
+| M1-b | docs | **wiki 8 处死链**（CROSS-DEADLINK）：引用已不存在的 `问题总账.md`（已被 backlog 三池取代） | 2026-06-25 全量体检 | organize-wiki 专项：批量改 8 处死链 `问题总账.md` → 对应 `backlog-{core,前端,后端}.md` 或 `路线图.md`（按引用语境定） |
+| M1-c | docs | **定位漂移**（PROD-010）：ADR-0022 品类词统一为"文字冒险游戏"、安科/安价升维为"载体"，但下游（安科安价是什么页、术语表）仍以安科/安价为"玩法/品类"定义 | 2026-06-25 全量体检 | organize-wiki 专项：安科安价是什么页顶部加定位注记"本页定安科/安价这一载体的背景；品类词统一为文字冒险游戏、安科/安价是其首发载体，见 ADR-0022"；术语表"安科/安价"词条加"载体"定性；不改玩法定义本身只升维定位层级 |
+| M1-d | docs | **愿景 §4 无承接**（PROD-011）：用户与场景 §4 愿景（美观/移动端/社区生态）无 backlog 承接、无验收口径 | 2026-06-25 全量体检 | organize-wiki 专项：在用户与场景 §4 为每条愿景加"v1 边界"（美观现代 UI v1 做到墨金 token 全量已落地、社区生态 v1 不做里程碑四、移动端 v1 不做长期愿景 backlog 显式推迟）；移动端进 backlog-前端 未来池显式推迟（见 [backlog-前端](backlog-前端.md)）；客制化/社区生态进里程碑四占位拆块（人工维护） |
+
+---
+
+## 主题 · 测试边界（体检新增）🔧
+
+> **2026-06-25 全量体检实证**：边界测试全缺是"改一处坏别处"的高回归风险区——无测试守则任何后端改动都可能默默 break 而测试全绿。见 [体检汇总 P1-12/P1-13](../../../audits/2026-06-25-全量体检/06-汇总-合并.md)。
+
+| # | 类型 | 问题 | 来源 | 恶化 | 下一步/依赖 |
+|---|------|------|------|:--:|--------|
+| TB-1 | feat | **并发/超时/重启恢复/注入四类边界测试全缺**（CROSS-BOUNDARY-TEST，P1）：grep concurren/race/parallel across test files 零命中——BE-002 并发竞态无测试；grep timeout/abort/recover across .test.ts（非 live）零命中——BE-001 超时半途状态无测试；recovery.test.ts 测了 restagePendingRolls 重弹正向路径但未测"waiters 空 + POST /roll 409 死锁"场景；grep inject/ssrf/恶意/注入 across test files 零命中——ARCH-009/BE-005/BE-006 注入无测试 | 2026-06-25 全量体检 | ✓✓（随代码增长回归风险线性升） | 🔧 补：① 并发测试（BE-002）：FakeDiceGm 慢回合 + 双发 POST /messages 验串行化或 409 turn_in_progress；② 超时测试（BE-001）：FakeDiceGm 模拟 abort 验半途状态 + 恢复路径（依赖 [backlog-后端 CROSS-TIMEOUT](backlog-后端.md) 修复）；③ 重启死锁测试（ARCH-007）：扩 recovery.test.ts 模拟 waiters 空 + pending_roll 在 + POST /roll 验 409 或恢复（依赖 [backlog-后端 CROSS-GATE](backlog-后端.md) 修复）；④ 注入测试（ARCH-009/BE-005/BE-006）：玩家输入"忽略指令"验 GM 是否被诱导；model-test 带内网 baseUrl 验拒绝；validatePack 带注入 prologue 验 warn/reject。挂第三批横切基建同期 |
+| TB-2 | feat | **live 测试默认 skip 不进 CI**（CROSS-LIVE-TEST，P1）：`DiceGm.live.test.ts` L13-15 `describe.skipIf(!LIVE)` 默认 skip；FAKE_GM 走完全不同的 FakeDiceGm 类、不经过 DiceGm，故 FAKE_GM=1 也验不到 DiceGm 的 SDK 装配。DiceGm 的 SDK 适配（query/options/mcpServers/abortController/settingSources/allowedTools）是真 GM 调用链承重层，任何改动（升级 agent-sdk、调 options）都可能静默破坏——commit 30fdfb0 加超时兜底的动因就是 eval 卡死，是真 SDK 路径无回归保护的例证 | 2026-06-25 全量体检 | ✓（随 SDK 版本升级越痛） | 🔧 补：① 抽 DiceGm 的 SDK 装配逻辑（query options/mcpServers config/abortController）为纯函数，FAKE_GM 模式下跑装配断言（不烧 LLM、验 options 形状）；② 或加 mock SDK（mock `@anthropic-ai/claude-agent-sdk` 的 query）跑 DiceGm.runTurn 的非 LLM 部分；③ 真 LLM live 测试留 RUN_LIVE 手动跑，但发版前必跑一次（纳入发版闸 checklist，见路线图第五批）。与 [主题S · S2](#主题s--战略风险--claude-code-承重绑定-) port 契约重构配套 |
+| TB-3 | feat | **lore WS 测试缺口**（BE-009-LORE-WS，P2）：lore.test.ts 只测 REST 端点，grep `lore.*ws|lore-sessions.*ws` across test files 零命中——BE-003 lore WS 缺失无测试（因实现就没有） | 2026-06-25 全量体检 | ✓ | 🔧 待 [backlog-后端 BE-003](backlog-后端.md) 修复后补 lore WS e2e 测试（构建台 WS 连接→turn_started→narration_commit→turn_ended） |
+| TB-4 | feat | **D 流畅派无 backlog 承接且架构层无落点**（CROSS-D，P2）：用户与场景 §1 D 流畅派架构落点写"约束多智能体编排深度（agent 数/反馈轮次 vs 延迟 trade-off）"但 backlog 三池无相关条目；架构层（§5 + ADR-0014）已把裁判 subagent 降为未来、v1 单 agent + Stop hook 脚本——当前架构无多智能体编排深度可言；玩家侧无延迟反馈护栏（无"已等 X 秒"/agent 轮次提示）；四切面本身未做定性验证（中国侧证据偏弱） | 2026-06-25 全量体检 | ✗ | ⏳ **待裁决（见体检汇总 §未决问题 3）**：D 流畅派 v1 是否实现？① 若实现——开 backlog 定"延迟预算/agent 数上限/反馈轮次"架构约束 + 玩家侧延迟反馈（计时/进度/agent 轮次提示）；② 若不实现——在用户与场景 §1 显式标注"D 分型架构落点 v1 不实现、仅作理论锚点"避免下游误以为已承接；③ 落地前在欧美+中国玩家中做定性验证 |
 
 ---
 
@@ -121,6 +177,9 @@
 
 ## 主题S · 战略风险 · Claude Code 承重绑定 💡
 
+> **2026-06-25 全量体检实证**：**ARCH-004（P0）** = S1/S2 的体检反指——`DiceGm.ts` L10 直接 `import { query } from "@anthropic-ai/claude-agent-sdk"`、用 SDK 专属 `mcpServers` config/`settingSources`/`allowedTools`；`AgentFactory` 是 factory（产 agent 实例）非 port（承重层接口契约）——L3 hook 承重（被动 rule 召回 + 回合末审计）在 Phase 1 根本没接 Agent SDK，现靠 `turnLoop.runTurnEnd` 物化 choice 兜底。换 agent sdk 需重写整个 DiceGm。见 [体检汇总 P0-10](../../../audits/2026-06-25-全量体检/06-汇总-合并.md)。
+> **PROD-008 反指**：「adapter 留下游」在 [backlog-后端](backlog-后端.md) / [backlog-前端](backlog-前端.md) 未来池各列一条（玩家选择捕获/语义自查轻推、GUI 前端壳），与本主题 S2 port 契约部分重叠——S2 port 契约落地后，adapter 留下游项范围会被吸收/收窄（已在两池未来池条目加注）。
+>
 > **一句话病根**：v1 把 L3 审计 / 被动 rule 召回押在 Claude Code hook 上（[技术选型 §6](../03-架构/技术选型.md) / [跨agent §3](../03-架构/跨agent与适配层.md) 定为"承重"）。core 虽称标准可搬，但"承重"即承认**实际不可搬**——CC 改 hook 语义 / SDK v2 breaking（已 pre-alpha）/ 付费策略 / 国内可用性任一变动都能让框架命门失重。这是用低开发成本换来的单点依赖，**对发版 / 商业化语境是供应商锁定风险**，当前未定价。
 >
 > **路由**：开 ADR 定**解绑触发条件** + 把承重层抽成 **port（adapter 接口契约，v1 单 Claude Code 实现、多 agent sdk 列未来）**——核心是回答 **L3 承重怎么跨 agent 表达**（被动 rule 召回 + 回合末审计，正是 [ADR-0008](../05-决策记录-ADR/) 否①「hook 类塑形难跨 agent 承重」的理由），并禁 `adapter/` 之外代码直接调 CC 专属 API。**不阻塞头号债链路，但发版前必决。**
