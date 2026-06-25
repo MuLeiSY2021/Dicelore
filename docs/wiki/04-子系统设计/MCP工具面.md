@@ -362,6 +362,24 @@ game_end: { reason: z.string(), outcome?: z.string() } → { ended: true, event_
 
 ---
 
+### 7.2 声明式生成工具并入工具面（toolgen → 运行时面）
+
+> **本节职责**：记「团本声明 / 标准库声明 编译出的业务工具如何并入本运行时工具面」的接缝与现状。设计意图见 [声明式工具生成层 spec](../../superpowers/specs/2026-06-22-声明式工具生成层-design.md)（DT-1~9）、引擎模块见 [团本构建工具链 §7](团本构建工具链.md)；本节只记**工具面侧的并入机制 + 实现现状**（单源不重复 spec）。
+
+§1–§7.1 的工具是**框架硬编码**的运行时工具面（`mcp/tools.ts` 的 `TOOLS`：resolver/sheet/event/world/io 五族）。spec §9 定「生成工具并入同一工具面」——团本 `tools:` 声明 + 框架标准库声明经 `toolgen.compileTool` 编译后，**与硬编码工具并列注册进同一 `createMcpServer`**，GM 侧无感（同 `dicelore_` 前缀，类别走 MCP annotation `source:"generated"`，[spec §6](../../superpowers/specs/2026-06-22-声明式工具生成层-design.md)）。
+
+**接缝三处**（实现落点）：
+
+| 接缝 | 位置 | 职责 |
+|---|---|---|
+| **编译产物 → ToolDef 适配** | toolgen 与 `mcp/` 之间（新建适配层） | `compileTool` 出 `{name, desc, handler(db,args)}`，须配 `decl.params`（`{p:"string"\|"int"\|"number"}`）生成 zod `inputSchema`、补 `outputSchema`/`annotations`（`source:"generated"`），适配成 [§7 工具清单](#7-内层原子--外层工具映射--工具清单) 的 `ToolDef` 形状 |
+| **注册接缝** | `createMcpServer(db, deps)`（见下「in-process 工厂」节） | 接受额外的生成工具集（标准库 + 团本声明），与 `TOOLS` 并列 `registerTool`——这是 spec §9「挂载点已存在、不为它改结构」的兑现点 |
+| **import 装载** | `catalog/import.ts` + manifest `tools:` 段 | import 时读团本 `tools:`/`include:`、经**共享 validator**（[spec §7 双校验](../../superpowers/specs/2026-06-22-声明式工具生成层-design.md)）重验、`compileTool`，交给会话级 MCP server |
+
+**实现现状（2026-06-25 核对）🚧 未接**：三处接缝均未落地——`compileTool` 仅 toolgen 单测调用；`createMcpServer` 仍只注册硬编码 `TOOLS`（无生成工具入口）；`import.ts` 不读 `tools:` 段。叙事层 front/plotline/foreshadow 业务工具作"第一个标准库包"（dogfooding，spec §8 + DT-9 step③）尚未声明。视图层投影（基视图）已就绪（[团本构建工具链 §7](团本构建工具链.md)）——前置闸已拆，接线是下一步。详 [backlog-core 主题A′②③](../06-里程碑与问题/backlog-core.md)。
+
+---
+
 ## in-process 挂载工厂 + onCanonWrite 写后接缝（组件7 实时引擎面，2026-06-21）
 
 为让 [组件7 orchestrator](玩家客户端.md) 把 dicelore MCP **in-process** 挂进 Agent SDK（`mcpServers:{dicelore:{type:"sdk",instance}}`），core 加一个 **additive 工厂**（不改任何工具行为、`main.ts` stdio 路径不变）：
