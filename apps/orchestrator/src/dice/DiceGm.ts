@@ -60,6 +60,9 @@ export class DiceGm implements Agent {
   private logMsg(idx: number, msg: unknown): void {
     const m = msg as { type?: string; subtype?: string; model?: string; session_id?: string; cwd?: string; message?: { content?: unknown[] }; content?: unknown[]; duration_ms?: number; usage?: unknown; result?: string };
     const type = m.type ?? "unknown";
+    // thinking_tokens 逐 delta 是 SDK 流式 token 计数噪音(每 token 一条,单回合数千行刷屏 debug.log),
+    // 无业务价值,完全跳过(不落 jsonl 对话记录、不落 debug.log)。
+    if (type === "system" && m.subtype === "thinking_tokens") return;
     // system init 含巨量环境元数据(tools/slash_commands/agents/plugins 清单)——业务对话记录只留身份字段,砍掉几十KB噪音
     const body = (type === "system" && m.subtype === "init")
       ? { type, subtype: m.subtype, model: m.model, session_id: m.session_id, cwd: m.cwd }
