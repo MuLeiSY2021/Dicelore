@@ -63,6 +63,21 @@
 
 ---
 
+## 主题 · 成本可观测性（token / 金钱计量）💡
+
+> **跨层主题**：LLM 调用发生在 `apps/orchestrator`（Agent SDK 驱动 `DiceGm` / `LoreSession`），但**全程零 token 采集**——`packages/shared` 无 usage schema、orchestrator 不回传/落库 token 用量、无查询接口、前端无可视化。后果：每 turn / 每会话烧多少 token 无感知、按 MCP 工具或 agent 归因无数据、金钱消耗不可估、[SEC2](#) 计费/限流缺数据前置。与 [主题O](#主题--可观测性--日志分级统一) 同属可观测性但**不同物**——O 是日志流、本主题是**结构化指标 + 归因 + 前端可视化**，单列。
+>
+> **概念待澄清（💡 设计待 ADR）**：「每个 mcp/skill 消耗多少 token」归因维度需先定——**skill 是 staged 教条（gm-core / dicelore-build-pack）非每次调用单位**、**MCP 工具执行本身不烧 token**，token 烧在 LLM 调用。可归因维度实为：per turn / per session / per agent（DiceGm vs 构建 GM）/ per 回合内工具调用链（粗粒度）。归因模型 + 定价换算（每 token 单价按模型）需 ADR。
+>
+> **路由**：采集（后端）进 [路线图第三批](路线图.md) 可观测性延伸（横切基建、越早越便宜，同 O 理由，不破坏冻结令）；前端可视化进第四批增强（依赖采集 + 归因 ADR）。是 [SEC2](#) 计费/限流的数据前置。
+
+| # | 类型 | 问题 | 来源 | 恶化 | 下一步/依赖 |
+|---|------|------|------|:--:|--------|
+| CO-后端-采集 | feat | **token 用量零采集**：orchestrator 调 Agent SDK 处不采集 input/output/cache token usage、不按 turn/session/agent 归因落库；`shared` 无 usage schema | 用户 2026-06-25 | ✓ | 💡 先开归因维度 ADR（per turn / per agent / per 工具调用链；skill 非调用单位需澄清）→ Agent SDK 回传处采集落库；与 [O1](backlog-core.md) logger 同期接（共用 sessionId/turnId 上下文）；是 [SEC2](#) 计费/限流的数据前置 |
+| CO-后端-接口 | feat | **token 用量查询接口缺失**：无 `GET /sessions/:id/usage`（per-turn / per-session / 按维度聚合）供前端消费 | 用户 2026-06-25 | ✗ | 依赖 CO-后端-采集落地；接口形态随归因 ADR 定 |
+
+---
+
 ## 主题 · 安全 / 多租户 💡
 
 > **空白区**：[里程碑二](里程碑.md) 承认"安全完全没考虑、多租户无概念"。Agent SDK headless host 把 GM 当库嵌进 Node 服务、玩家自由文本直接进 GM 上下文 → **prompt injection 面全开**；模型 key 持有 / 计费、SQLite 单文件多租户隔离、CC 子进程资源清理均空白。缝 B 设计预留了远程 / 多租户拓扑，但 `sessionId` 寻址之外无任何租户边界。**发版前必须做一次威胁建模。**
