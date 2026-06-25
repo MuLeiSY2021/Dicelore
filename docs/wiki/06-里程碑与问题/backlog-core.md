@@ -29,6 +29,7 @@
 | F1 | feat | **eval 是单人自导自演**（同一个我兼任即兴玩家 + GM），不是 mock 玩家 ↔ 独立 Claude-GM。后果：凡「GM 行为好不好 / gm-core 措辞够不够 / 缺口有多痛」的结论**全部不可信**（我不会违反自己内化的规则）；只有「架构能不能表达」的客观缺口幸存 | 用户指正 + session | — | ✅ 已闭环（方案改：CC 经 play-mcp 连真后端当玩家+评估者，非"子代理当GM"——见 [ADR-0025](../05-决策记录-ADR/README.md)）；RUN_LIVE 通路验证通过（[reports](../../../reports/)） |
 | F2 | feat | **game_end 由谁敲、何时敲** 未定：本局 game_end 是「driver 知道回合预算后的人为收尾」，污染；且忠实 gm-core AI 被教「别朝结局叙事」→ 真实下大概率**不主动收局**（只在死亡收）。终局判据缺失 | 用户追问 + session | — | 🟡 harness 闭环已建（play-mcp），待多轮跑测「真 GM 收不收局」；首份报告见 [reports](../../../reports/) |
 | F3 | feat | **团本构建(lore)侧零 eval**：现 eval harness 只覆盖跑团(dice)侧（play-mcp 连真后端当玩家跑剧本），构建团本侧（LoreSession/构建 GM/组件5·6 import/构建工具面）无任何评估。后果：构建流程「作者↔构建 GM」交互质量、import 映射正确性、构建工具可用性**全无客观验证**——与 play 侧 F1 同等不可信 | 用户指正 | ✓（随构建能力扩展越痛） | 🟡 第二批：接构建工具补全（H-build-tools）后接本项；评估形态待定：mock 作者↔真构建 GM，或复用 play-mcp 模式经 build HTTP 驱动 |
+| F4 | feat | **真 GM 不遵守开局 r 六维教条**：eval 重跑（debug 模式明骰降级 L3 已修卡死炸弹）暴露——GM(glm-5.2)读了 SKILL.md「开局必须 r 六维明骰、禁 sheet_update 硬编数值」仍建世界空转（world_register×4 / sheet_update / world_search），0 次明骰，180s 超时。骰子链路虽修了卡死（L3）但 GM 不调=没激活。根因待分：教条措辞不够强制 vs 模型(glm-5.2)不遵守教条 vs 开局建世界优先级 | eval 重跑诊断 | ✓（骰子链路永远激活不了） | 🟡 待诊断：①教条更强措辞（开局第一步 r 六维、禁先建世界）②切真 Claude 模型隔离「模型行为 vs 教条」③多轮跑 |
 
 ---
 
