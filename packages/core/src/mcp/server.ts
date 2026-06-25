@@ -10,6 +10,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { DB } from "../store/db.js";
 import { TOOLS } from "./tools.js";
+import type { ToolDef } from "./tooldef.js";
 import { runTool } from "./runTool.js";
 import { setRollGate, type RollGate } from "./rollGate.js";
 import { getLogger } from "../log.js";
@@ -48,8 +49,8 @@ function maxSeq(db: DB): number {
 }
 
 // 「调用工具 + 写后 onCanonWrite」封装(供工厂注册 + 单测复用)。runTool 是 async、返回信封。
-export function wrapToolForTest(db: DB, deps: McpServerDeps) {
-  const byName = new Map(TOOLS.map((t) => [t.name, t]));
+export function wrapToolForTest(db: DB, deps: McpServerDeps, extraTools: ToolDef[] = []) {
+  const byName = new Map([...TOOLS, ...extraTools].map((t) => [t.name, t]));
   return async (name: string, args: unknown): Promise<unknown> => {
     const t = byName.get(name);
     if (!t) throw new Error(`未知工具: ${name}`);
@@ -64,11 +65,11 @@ export function wrapToolForTest(db: DB, deps: McpServerDeps) {
   };
 }
 
-export function createMcpServer(db: DB, deps: McpServerDeps = {}): McpServer {
+export function createMcpServer(db: DB, deps: McpServerDeps = {}, extraTools: ToolDef[] = []): McpServer {
   if (deps.rollGate) setRollGate(deps.rollGate); // 单人明骰：接既有模块级 gate seam
   const server = new McpServer({ name: "dicelore", version: "0.0.0" });
-  const invoke = wrapToolForTest(db, deps);
-  for (const t of TOOLS) {
+  const invoke = wrapToolForTest(db, deps, extraTools);
+  for (const t of [...TOOLS, ...extraTools]) {
     server.registerTool(
       `dicelore_${t.name}`,
       {

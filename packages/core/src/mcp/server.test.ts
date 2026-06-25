@@ -10,6 +10,8 @@
 import { describe, it, expect } from "vitest";
 import { openDb, initSchema } from "../store/db.js";
 import { createMcpServer, wrapToolForTest, type CanonWriteEvent } from "./server.js";
+import type { ToolDef } from "./tooldef.js";
+import { z } from "zod";
 
 describe("createMcpServer onCanonWrite 接缝", () => {
   it("返回 McpServer 实例且不崩", () => {
@@ -37,5 +39,41 @@ describe("createMcpServer onCanonWrite 接缝", () => {
     const invoke = wrapToolForTest(db, { onCanonWrite: (e) => events.push(e) });
     await invoke("sheet_get", { entity: "张三" });
     expect(events.length).toBe(0);
+  });
+});
+
+describe("createMcpServer extraTools 接缝（声明式生成工具并入）", () => {
+  function fakeReadTool(): ToolDef {
+    return {
+      name: "fake_board",
+      title: "假板",
+      description: "测试用",
+      inputSchema: z.object({}).strict(),
+      outputSchema: z.object({ result: z.unknown() }),
+      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+      handler: () => ({ result: [{ ok: 1 }] }),
+    };
+  }
+
+  it("extraTools 经 wrapToolForTest 可调", async () => {
+    const db = openDb(":memory:");
+    initSchema(db);
+    const invoke = wrapToolForTest(db, {}, [fakeReadTool()]);
+    const res = await invoke("fake_board", {});
+    expect(res).toBeTruthy();
+  });
+
+  it("createMcpServer 接受 extraTools 不崩", () => {
+    const db = openDb(":memory:");
+    initSchema(db);
+    expect(createMcpServer(db, {}, [fakeReadTool()])).toBeTruthy();
+  });
+
+  it("默认无 extraTools 时现有工具仍在（向后兼容）", async () => {
+    const db = openDb(":memory:");
+    initSchema(db);
+    const invoke = wrapToolForTest(db, {});
+    const res = await invoke("event_append", { kind: "narrate", content: "x" });
+    expect(res).toBeTruthy();
   });
 });
