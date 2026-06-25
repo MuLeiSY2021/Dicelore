@@ -86,6 +86,11 @@ export class DiceGm implements Agent {
     this.log(`[skills] ${this.init.skills.length ? this.init.skills.map((s) => `${s.name}<-${s.srcDir}`).join(", ") : "(none)"}`);
     this.log(`[opts] settingSources=${staged ? "project" : "[]"} allowedTools=${staged ? "mcp__dicelore,Skill,Read" : "mcp__dicelore"}`);
     this.log(`[system] ${this.init.openingPrompt}`);
+    // GM 回合超时兜底:防真 LLM 卡死拖垮 eval/联调。默认 3min,DICELORE_GM_TIMEOUT_MS 可覆盖。
+    // abort 触发后 SDK 停 query(抛 AbortError 或以 result 结束)→ catch 转 error 事件,回合脱困不卡死。
+    const timeoutMs = Number(process.env.DICELORE_GM_TIMEOUT_MS ?? 180_000);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(new Error(`GM turn timeout (${timeoutMs / 1000}s)`)), timeoutMs);
     try {
       const options = {
         model,
@@ -94,6 +99,7 @@ export class DiceGm implements Agent {
         mcpServers: { dicelore: { type: "sdk", name: "dicelore", instance: this.init.mcpServer } },
         systemPrompt: this.init.openingPrompt,
         allowedTools: staged ? ["mcp__dicelore", "Skill", "Read"] : ["mcp__dicelore"],
+        abortController: controller,
       } as Parameters<typeof query>[0]["options"];
 
       let msgIdx = 0;
@@ -110,10 +116,14 @@ export class DiceGm implements Agent {
       yield { type: "turn_end" };
       this.log(`===== ${iso()} TURN ${turnId} end | msgs=${msgIdx} =====`);
     } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
+      // 超时 abort 优先按超时报(更可读);否则原样抛错信息。
+      const message = controller.signal.aborted
+        ? `GM 回合超时(${timeoutMs / 1000}s)中止,已脱困`
+        : (e instanceof Error ? e.message : String(e));
       this.log(`[ERROR] ${message}`);
       yield { type: "error", message };
     } finally {
+      clearTimeout(timer);
       if (staged) cleanupSkills(staged);
     }
   }
