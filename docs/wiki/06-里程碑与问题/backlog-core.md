@@ -22,13 +22,13 @@
 >
 > **进度（2026-06-24 核对 → 闭环达成）**：faithful 真引擎工具链**已备**（`eval/tool.ts`/`batch.ts`/`run.ts`/`grade.ts`/`grader.md`/`findings.md`）。自动闭环**已补**——经 **play-mcp**（CC 经它连真后端 play HTTP 当玩家+评估者，见 [ADR-0025](../05-决策记录-ADR/README.md)），非原"子代理当 GM"方案。RUN_LIVE 通路验证通过（[reports](../../../reports/)）。F1 闭环；F2 终局观测待多轮跑。
 >
-> **覆盖范围（2026-06-25 用户点出）**：现 harness **只覆盖跑团(dice/play)侧**——跑一个剧本看 GM 行为。**构建团本(lore)侧零 eval**（F3）：作者经构建 GM 建团本 / import 映射 / 构建工具面可用性，全无客观验证。F3 是 F1 在 lore 侧的对称缺口，待构建侧(组件5/6，第二批 dogfooding)稳定后补。
+> **覆盖范围（2026-06-25 用户点出）**：现 harness **只覆盖跑团(dice/play)侧**——跑一个剧本看 GM 行为。**构建团本(lore)侧零 eval**（F3）：作者经构建 GM 建团本 / import 映射 / 构建工具面可用性，全无客观验证。F3 是 F1 在 lore 侧的对称缺口，**编入第二批——接构建工具补全（H-build-tools）后接本项**；评估基建不齐则 lore 侧行为类结论同样不可信。
 
 | # | 类型 | 问题 | 来源 | 恶化 | 下一步 |
 |---|------|------|------|:--:|--------|
 | F1 | feat | **eval 是单人自导自演**（同一个我兼任即兴玩家 + GM），不是 mock 玩家 ↔ 独立 Claude-GM。后果：凡「GM 行为好不好 / gm-core 措辞够不够 / 缺口有多痛」的结论**全部不可信**（我不会违反自己内化的规则）；只有「架构能不能表达」的客观缺口幸存 | 用户指正 + session | — | ✅ 已闭环（方案改：CC 经 play-mcp 连真后端当玩家+评估者，非"子代理当GM"——见 [ADR-0025](../05-决策记录-ADR/README.md)）；RUN_LIVE 通路验证通过（[reports](../../../reports/)） |
 | F2 | feat | **game_end 由谁敲、何时敲** 未定：本局 game_end 是「driver 知道回合预算后的人为收尾」，污染；且忠实 gm-core AI 被教「别朝结局叙事」→ 真实下大概率**不主动收局**（只在死亡收）。终局判据缺失 | 用户追问 + session | — | 🟡 harness 闭环已建（play-mcp），待多轮跑测「真 GM 收不收局」；首份报告见 [reports](../../../reports/) |
-| F3 | feat | **团本构建(lore)侧零 eval**：现 eval harness 只覆盖跑团(dice)侧（play-mcp 连真后端当玩家跑剧本），构建团本侧（LoreSession/构建 GM/组件5·6 import/构建工具面）无任何评估。后果：构建流程「作者↔构建 GM」交互质量、import 映射正确性、构建工具可用性**全无客观验证**——与 play 侧 F1 同等不可信 | 用户指正 | ✓（随构建能力扩展越痛） | 🟡 eval 基建（非业务 feat，不破第二批冻结令），但依赖构建侧稳定——待第二批 dogfooding 链路产出真团本后补；评估形态待定：mock 作者↔真构建 GM，或复用 play-mcp 模式经 build HTTP 驱动 |
+| F3 | feat | **团本构建(lore)侧零 eval**：现 eval harness 只覆盖跑团(dice)侧（play-mcp 连真后端当玩家跑剧本），构建团本侧（LoreSession/构建 GM/组件5·6 import/构建工具面）无任何评估。后果：构建流程「作者↔构建 GM」交互质量、import 映射正确性、构建工具可用性**全无客观验证**——与 play 侧 F1 同等不可信 | 用户指正 | ✓（随构建能力扩展越痛） | 🟡 第二批：接构建工具补全（H-build-tools）后接本项；评估形态待定：mock 作者↔真构建 GM，或复用 play-mcp 模式经 build HTTP 驱动 |
 
 ---
 
