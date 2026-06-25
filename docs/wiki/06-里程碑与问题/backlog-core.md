@@ -80,11 +80,11 @@
   - ✅ **补充改名** `rule_doc→rule`/`world_pool→pool` 已落。
   - ✅ **叙事/记忆物理表** `front`/`plotline`/`foreshadow`/`history`(+`anchor`) **已建** + store CRUD + `tensionBoard`/`frontOmenList` 聚合（present 层）。
   - ✅ **声明式工具生成层引擎** `toolgen/`（SQL 闸/视图定义/读写工具编译/写匹配防泄露）已建，6 模块 981 行 + 6 测试绿。
+  - ✅ **视图层投影（①，2026-06-25 落地）**：spec §4 的 6 命名视图（`player`/`npc`/`world`/`relation`/`clock`/`tension_board`）经 `store/views.ts` `initViews(db)` 用 `defineView` 投影、接进 `initSchema` 末尾（全仓 freshDb 自动获得视图）；`tension_board` SQL UNION 四表（front/plotline/foreshadow/watcher → 统一 `kind/id/label/status`）。present 层 JS 聚合保留作上层业务面，SQL 视图作下游 toolgen 稳定列契约，单源不同层。core 405 测试 + tsc 全绿。**toolgen 读工具的前置闸已拆除**。
   - 🚧 **仍欠（真正的剩余 = 工具面暴露，非存储）**：
-    - ① **视图层未投影**：叙事层 spec §4 的 `npc`/`player`/`world`/`relation`/`tension_board` 命名视图未建 → toolgen 读工具无基视图可 `CREATE VIEW`，是 step②/③ 的**前置闸**。
-    - ② **业务 MCP 工具未暴露**：`tensionBoard`/front/plotline/foreshadow 聚合已在 present 层但**没接进 `buildMcp`**，GM 调不到「以概念为单位」的读；NPC 无一等抽象（A1-A5 主体）。**已拍板走声明式 dogfooding**（守 spec DT-9「团本扩展框架零改动」契约），先补视图层再声明。
+    - ② **业务 MCP 工具未暴露**：`tensionBoard`/front/plotline/foreshadow 聚合已在 present 层但**没接进 `buildMcp`**，GM 调不到「以概念为单位」的读；NPC 无一等抽象（A1-A5 主体）。**已拍板走声明式 dogfooding**（守 spec DT-9「团本扩展框架零改动」契约），视图层（①）已就绪可起声明。
     - ③ **toolgen 零接线**：引擎已通但**不进 `createMcpServer`/不进团本 import/无 dogfooding step③**（用本层声明出 front/plotline/foreshadow 业务工具）—— spec 承诺的「新剧本=新声明+新 flow、框架代码零改动」目前跑不通，团本扩展机制未对作者开放。
-  - **依赖链（单向，被原路线图掩盖）**：叙事层总纲(定视图契约) → 谓词扩展(step①建表✅) → toolgen(step②引擎✅但视图契约未兑现) → 业务工具声明(step③❌)。**视图层是闸**，须先落地才能 dogfooding。
+  - **依赖链（单向，被原路线图掩盖）**：叙事层总纲(定视图契约) → 谓词扩展(step①建表✅) → toolgen(step②引擎✅) → **视图层投影✅(①已拆闸)** → 业务工具声明(step③❌)。视图层已落地，下一步可起 ②/③。
   - A6 裁决侧正交、留 resolver spec。
 
 ---
