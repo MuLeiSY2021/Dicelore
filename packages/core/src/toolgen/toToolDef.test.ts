@@ -60,4 +60,45 @@ describe("toolgenToToolDef", () => {
     expect(() => def.inputSchema.parse({ floor: 3 })).not.toThrow();
     expect(() => def.inputSchema.parse({ floor: "x" })).toThrow();
   });
+
+  describe("承重墙：坏写声明编译期被拒（spec §4/§12）", () => {
+    test("写非叙事表 INSERT 被拒（只允许 front/plotline/foreshadow）", () => {
+      expect(() =>
+        toolgenToToolDef({
+          name: "bad_insert",
+          params: { e: "string", a: "string" },
+          sql: "INSERT INTO state (entity, attr) VALUES (:e, :a)",
+        }),
+      ).toThrow();
+    });
+
+    test("DELETE 形状被拒（无对应正典原语）", () => {
+      expect(() =>
+        toolgenToToolDef({
+          name: "bad_delete",
+          params: { id: "string" },
+          sql: "DELETE FROM plotline WHERE id = :id",
+        }),
+      ).toThrow();
+    });
+
+    test("带 OR 的 UPDATE 被拒（不可映射）", () => {
+      expect(() =>
+        toolgenToToolDef({
+          name: "bad_or",
+          params: { e: "string", p: "int" },
+          sql: "UPDATE state SET HP = HP - :p WHERE entity = :e OR entity = '魔王'",
+        }),
+      ).toThrow();
+    });
+
+    test("读 SELECT 含多语句（;）被拒", () => {
+      expect(() =>
+        toolgenToToolDef({
+          name: "bad_multi",
+          sql: "SELECT 1; DROP TABLE state",
+        }),
+      ).toThrow();
+    });
+  });
 });
