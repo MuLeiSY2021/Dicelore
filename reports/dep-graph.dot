@@ -1,0 +1,109 @@
+digraph deps {
+  compound=true; rankdir=LR; bgcolor="white";
+  node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=11, fillcolor="#f7f7f7", color="#cccccc"];
+  edge [fontname="Helvetica", fontsize=9, color="#999999"];
+  subgraph cluster__dicelore_orchestrator {
+    label="@dicelore/orchestrator"; fontname="Helvetica-Bold"; fontsize=14; color="#2980b9"; penwidth=2; style="rounded";
+    api__dicelore_orchestrator [label="◆ orchestrator API", shape=box, style="filled,bold", fillcolor="#2980b9", fontcolor="white", penwidth=0];
+    _dicelore_orchestrator_root_ [label="(root)\n1 文件"];
+    _dicelore_orchestratorapi [label="api\n4 文件"];
+    _dicelore_orchestratordice [label="dice\n13 文件"];
+    _dicelore_orchestratorlore [label="lore\n2 文件"];
+    _dicelore_orchestratorpkg [label="pkg\n6 文件"];
+  }
+  subgraph cluster__dicelore_web {
+    label="@dicelore/web"; fontname="Helvetica-Bold"; fontsize=14; color="#27ae60"; penwidth=2; style="rounded";
+    api__dicelore_web [label="◆ web API", shape=box, style="filled,bold", fillcolor="#27ae60", fontcolor="white", penwidth=0];
+    _dicelore_web_root_ [label="(root)\n2 文件"];
+    _dicelore_webapi [label="api\n1 文件"];
+    _dicelore_weblive [label="live\n1 文件"];
+    _dicelore_webshell [label="shell\n1 文件"];
+  }
+  subgraph cluster__dicelore_core {
+    label="@dicelore/core"; fontname="Helvetica-Bold"; fontsize=14; color="#c0392b"; penwidth=2; style="rounded";
+    api__dicelore_core [label="◆ core API", shape=box, style="filled,bold", fillcolor="#c0392b", fontcolor="white", penwidth=0];
+    _dicelore_core_root_ [label="(root)\n4 文件"];
+    _dicelore_coreadapter [label="adapter\n9 文件"];
+    _dicelore_corebuild [label="build\n7 文件"];
+    _dicelore_corecatalog [label="catalog\n6 文件"];
+    _dicelore_coredice [label="dice\n1 文件"];
+    _dicelore_coreeval [label="eval\n4 文件"];
+    _dicelore_coreexpr [label="expr\n3 文件"];
+    _dicelore_coremcp [label="mcp\n20 文件"];
+    _dicelore_corepresent [label="present\n3 文件"];
+    _dicelore_coreresolve [label="resolve\n3 文件"];
+    _dicelore_coresession [label="session\n1 文件"];
+    _dicelore_corestore [label="store\n22 文件"];
+    _dicelore_coretoolgen [label="toolgen\n7 文件"];
+  }
+  subgraph cluster__dicelore_shared {
+    label="@dicelore/shared"; fontname="Helvetica-Bold"; fontsize=14; color="#8e44ad"; penwidth=2; style="rounded";
+    api__dicelore_shared [label="◆ shared API", shape=box, style="filled,bold", fillcolor="#8e44ad", fontcolor="white", penwidth=0];
+    _dicelore_shared_root_ [label="(root)\n6 文件"];
+  }
+  _dicelore_orchestratorapi -> _dicelore_orchestratordice [label="5", color="#bbbbbb"];
+  _dicelore_orchestratorapi -> _dicelore_orchestratorpkg [label="4", color="#bbbbbb"];
+  _dicelore_orchestratorapi -> _dicelore_orchestratorlore [label="1", color="#bbbbbb"];
+  _dicelore_orchestratordice -> _dicelore_orchestratorpkg [label="13", color="#bbbbbb"];
+  _dicelore_orchestratorlore -> _dicelore_orchestratorpkg [label="3", color="#bbbbbb"];
+  _dicelore_orchestrator_root_ -> _dicelore_orchestratorapi [label="4", color="#bbbbbb"];
+  _dicelore_orchestrator_root_ -> _dicelore_orchestratordice [label="4", color="#bbbbbb"];
+  _dicelore_orchestrator_root_ -> _dicelore_orchestratorlore [label="1", color="#bbbbbb"];
+  _dicelore_orchestrator_root_ -> _dicelore_orchestratorpkg [label="1", color="#bbbbbb"];
+  _dicelore_weblive -> _dicelore_webapi [label="1", color="#bbbbbb"];
+  _dicelore_webshell -> _dicelore_webapi [label="1", color="#bbbbbb"];
+  _dicelore_coreadapter -> _dicelore_coresession [label="6", color="#bbbbbb"];
+  _dicelore_coreadapter -> _dicelore_core_root_ [label="2", color="#bbbbbb"];
+  _dicelore_coreadapter -> _dicelore_corestore [label="7", color="#bbbbbb"];
+  _dicelore_corebuild -> _dicelore_corecatalog [label="5", color="#bbbbbb"];
+  _dicelore_corebuild -> _dicelore_coretoolgen [label="1", color="#bbbbbb"];
+  _dicelore_corebuild -> _dicelore_corestore [label="3", color="#bbbbbb"];
+  _dicelore_corecatalog -> _dicelore_corestore [label="10", color="#bbbbbb"];
+  _dicelore_corecatalog -> _dicelore_corebuild [label="1", color="#bbbbbb"];
+  _dicelore_corecatalog -> _dicelore_coretoolgen [label="1", color="#bbbbbb"];
+  _dicelore_corecatalog -> _dicelore_coremcp [label="1", color="#bbbbbb"];
+  _dicelore_core_root_ -> _dicelore_coresession [label="2", color="#bbbbbb"];
+  _dicelore_core_root_ -> _dicelore_coreadapter [label="3", color="#bbbbbb"];
+  _dicelore_coredice -> _dicelore_core_root_ [label="1", color="#bbbbbb"];
+  _dicelore_coreeval -> _dicelore_corestore [label="4", color="#bbbbbb"];
+  _dicelore_coreeval -> _dicelore_corecatalog [label="3", color="#bbbbbb"];
+  _dicelore_coreeval -> _dicelore_corebuild [label="3", color="#bbbbbb"];
+  _dicelore_coreexpr -> _dicelore_coredice [label="1", color="#bbbbbb"];
+  _dicelore_coreexpr -> _dicelore_core_root_ [label="2", color="#bbbbbb"];
+  _dicelore_coreexpr -> _dicelore_corestore [label="2", color="#bbbbbb"];
+  _dicelore_core_root_ -> _dicelore_corestore [label="9", color="#bbbbbb"];
+  _dicelore_core_root_ -> _dicelore_coretoolgen [label="1", color="#bbbbbb"];
+  _dicelore_core_root_ -> _dicelore_coremcp [label="4", color="#bbbbbb"];
+  _dicelore_core_root_ -> _dicelore_corepresent [label="1", color="#bbbbbb"];
+  _dicelore_core_root_ -> _dicelore_coreresolve [label="1", color="#bbbbbb"];
+  _dicelore_core_root_ -> _dicelore_coreeval [label="1", color="#bbbbbb"];
+  _dicelore_core_root_ -> _dicelore_corecatalog [label="3", color="#bbbbbb"];
+  _dicelore_core_root_ -> _dicelore_corebuild [label="2", color="#bbbbbb"];
+  _dicelore_coremcp -> _dicelore_core_root_ [label="6", color="#bbbbbb"];
+  _dicelore_coremcp -> _dicelore_corestore [label="24", color="#bbbbbb"];
+  _dicelore_coremcp -> _dicelore_coresession [label="2", color="#bbbbbb"];
+  _dicelore_coremcp -> _dicelore_coreresolve [label="3", color="#bbbbbb"];
+  _dicelore_coremcp -> _dicelore_coretoolgen [label="4", color="#bbbbbb"];
+  _dicelore_corepresent -> _dicelore_corestore [label="7", color="#bbbbbb"];
+  _dicelore_coreresolve -> _dicelore_corestore [label="5", color="#bbbbbb"];
+  _dicelore_coreresolve -> _dicelore_coredice [label="3", color="#bbbbbb"];
+  _dicelore_coreresolve -> _dicelore_core_root_ [label="2", color="#bbbbbb"];
+  _dicelore_coreresolve -> _dicelore_coreexpr [label="1", color="#bbbbbb"];
+  _dicelore_coresession -> _dicelore_corestore [label="1", color="#bbbbbb"];
+  _dicelore_corestore -> _dicelore_coreexpr [label="4", color="#bbbbbb"];
+  _dicelore_corestore -> _dicelore_coredice [label="3", color="#bbbbbb"];
+  _dicelore_corestore -> _dicelore_core_root_ [label="3", color="#bbbbbb"];
+  _dicelore_corestore -> _dicelore_coretoolgen [label="1", color="#bbbbbb"];
+  _dicelore_coretoolgen -> _dicelore_corestore [label="9", color="#bbbbbb"];
+  _dicelore_coretoolgen -> _dicelore_core_root_ [label="5", color="#bbbbbb"];
+  _dicelore_coretoolgen -> _dicelore_coremcp [label="1", color="#bbbbbb"];
+  _dicelore_orchestratorapi -> api__dicelore_core [label="6", color="#c0392b", penwidth=1.8, lhead=cluster__dicelore_core];
+  _dicelore_orchestratorapi -> api__dicelore_shared [label="2", color="#8e44ad", penwidth=1.8, lhead=cluster__dicelore_shared];
+  _dicelore_orchestratordice -> api__dicelore_core [label="13", color="#c0392b", penwidth=1.8, lhead=cluster__dicelore_core];
+  _dicelore_orchestratordice -> api__dicelore_shared [label="6", color="#8e44ad", penwidth=1.8, lhead=cluster__dicelore_shared];
+  _dicelore_orchestratorlore -> api__dicelore_core [label="2", color="#c0392b", penwidth=1.8, lhead=cluster__dicelore_core];
+  _dicelore_orchestratorpkg -> api__dicelore_shared [label="2", color="#8e44ad", penwidth=1.8, lhead=cluster__dicelore_shared];
+  _dicelore_orchestrator_root_ -> api__dicelore_core [label="1", color="#c0392b", penwidth=1.8, lhead=cluster__dicelore_core];
+  _dicelore_webapi -> api__dicelore_shared [label="1", color="#8e44ad", penwidth=1.8, lhead=cluster__dicelore_shared];
+  _dicelore_weblive -> api__dicelore_shared [label="1", color="#8e44ad", penwidth=1.8, lhead=cluster__dicelore_shared];
+}
