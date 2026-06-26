@@ -13,7 +13,7 @@ import type { SessionInfo, SessionSummary } from "@dicelore/shared";
 import { MessageRequestSchema, ChoiceRequestSchema, RollRequestSchema } from "@dicelore/shared";
 import { loreSearch, ruleSearch, logSince, getLogger, metaGet } from "@dicelore/core";
 import { buildSnapshot } from "../dice/presentation.js";
-import { getOrCreateHost, getHost, removeHost } from "../dice/registry.js";
+import { getOrCreateHost, removeHost } from "../dice/registry.js";
 import { TurnInProgressError } from "../dice/DiceSession.js";
 import type { AgentFactory, SkillRef } from "../pkg/agent.js";
 
@@ -193,8 +193,13 @@ export function createLiveApp(deps: LiveDeps): Hono {
   app.post("/sessions/:id/roll", async (c) => {
     const id = c.req.param("id");
     const body = RollRequestSchema.parse(await c.req.json());
-    const host = getHost(id);
-    if (!host || !host.handleRoll(body.eventId)) return c.json({ code: "no_pending_roll" }, 409);
+    // RT-3：用 getOrCreateHost（而非 getHost）——进程重启后内存 registry 为空，
+    // 若玩家点掷骰是重启后首个请求(尚未经 WS/presentation 重连建 host)，getHost 会返回 undefined → 误判 409。
+    // 重建 host 后 handleRoll→resolveRoll 无 waiter 时走「立即掷」分支(见 PlayerRollGate.resolveRoll)落 verdict。
+    const host = getOrCreateHost(id, hostDeps(id));
+    // no_pending_roll 仅在库里确无此 eventId 的 pending_roll 时回(真正的无待掷)；
+    // 重启后有 awaiting pending_roll 的正常掷骰会被 resolveRoll 立即掷掉、返回 true，不再误当并发冲突拒掉。
+    if (!host.handleRoll(body.eventId)) return c.json({ code: "no_pending_roll" }, 409);
     return c.json({ turnId: id }, 202);
   });
 
