@@ -71,6 +71,16 @@ backend/server (组合根)   ──注入实现──→  harness 会话
 
 > 第 1–3 步无悔可逆；第 4 步是断环关键、也是不可逆架构落点；第 5–7 是结构搬迁。中途任一步可停且仓库可编译。
 
+### 5.1 实测教训（2026-06-26 首次尝试 phase-2，已回退到 ADR 绿 checkpoint）
+
+跳过 phase 1/3/4、直接做 phase 2（整体把 store 一族搬进 `backend/`）翻车，回退。教训：
+
+1. **先注册 workspace，再搬码**：新包要**先**加进根 `workspaces` glob + `npm install` + 确认 `node_modules/@dicelore/<pkg>` 软链稳定，**然后**才搬代码进去。否则 `npm install` 会删掉未注册的手动软链，跨包解析在多次 install 间忽有忽无，级联出大量假错、极难归因。
+2. **共享契约先下沉**：`ToolDef`（`mcp/tooldef.ts`）被 `toolgen/toToolDef` + `catalog/import`（→backend）消费、又被 `mcp/server`（→harness）消费。搬 store 一族时它成了 backend→harness 泄漏。**这类跨层共享类型须先挪到中立处**（`packages/interface` 或 backend/toolgen），再搬模块。
+3. **跨层集成测试要一并安置**：`eval/harness.test`、`catalog/import.test` 跨 backend+mcp（server/tools/runTool）。它们的家在集成侧（harness）；搬 backend 时一并迁出，否则 backend→harness 测试泄漏。
+4. **barrel 用显式 re-export，别自动 `export *` 广面**：自动 `export *` 全模块 + pinned tsc 触发了一个未归因的解析墙（backend 自身 typecheck 报找不到存在的兄弟模块，而直跑 `tsc` 能解析）。下次按 phase 1 手写 `SessionBackend` 显式接口（也正好是 ADR 本意），不要图省事自动 export*。
+5. **严格按 ADR 顺序**：先 `packages/interface` 类型 + 注册 workspace（无悔），再小步搬、每步 `typecheck+test` 绿。不要 phase-2 先行造破环中间态。
+
 ## 6. 被否 / 备选
 
 - **挪位避环**（api 放 harness）：能断环且零端口，但拿不到「后端可换存储 / 加 cache」的目标收益——用户明确要端口本身的价值，故否。
