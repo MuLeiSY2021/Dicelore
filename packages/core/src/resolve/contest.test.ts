@@ -11,7 +11,7 @@ import { describe, it, expect } from "vitest";
 import { openDb, initSchema } from "../store/db.js";
 import { stateSet } from "../store/state.js";
 import { resolveContest } from "./contest.js";
-import { DiceloreError } from "../errors.js";
+import { DiceloreError } from "@dicelore/errors";
 
 function freshDb() {
   const db = openDb(":memory:");

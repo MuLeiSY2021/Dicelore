@@ -8,7 +8,7 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import type { DB } from "./db.js";
-import { DiceloreError } from "../errors.js";
+import { DiceloreError } from "@dicelore/errors";
 
 export interface HasCond { col: string; op: string; val: string; }
 

@@ -16,7 +16,7 @@ import { logAppend } from "../../store/record.js";
 import { stagePendingRoll } from "../../store/pendingRoll.js";
 import { commitPendingRoll } from "../../resolve/commitRoll.js";
 import { getRollGate } from "../rollGate.js";
-import { DiceloreError } from "../../errors.js";
+import { DiceloreError } from "@dicelore/errors";
 import type { ToolDef } from "../tooldef.js";
 import {
   resolveChoiceIn, resolveChoiceOut,

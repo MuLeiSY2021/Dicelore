@@ -14,7 +14,7 @@ import { stateGet, stateSet, type StateKind } from "./state.js";
 import { logAppend } from "./record.js";
 import { recomputeWatchers } from "./watcher.js";
 import { makeEvalCtx } from "./evalCtx.js";
-import { DiceloreError } from "../errors.js";
+import { DiceloreError } from "@dicelore/errors";
 
 export type MutOp = "+" | "-" | "=";
 

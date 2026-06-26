@@ -9,7 +9,7 @@
 
 import { describe, it, expect } from "vitest";
 import { resolveOutcome } from "./outcome.js";
-import { DiceloreError } from "../errors.js";
+import { DiceloreError } from "@dicelore/errors";
 
 const bands = [
   { label: "失败", min: 1, max: 50, consequence: "有后果" },

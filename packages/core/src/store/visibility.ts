@@ -10,7 +10,7 @@
 import type { DB } from "./db.js";
 import { stateGet, stateSet } from "./state.js";
 import { logAppend } from "./record.js";
-import { DiceloreError } from "../errors.js";
+import { DiceloreError } from "@dicelore/errors";
 
 // 可见性变更审计:kind=note、visible=0(对玩家隐),供 L3 / 回看(§4.2)。返回 audit event seq。
 function auditNote(db: DB, content: string): number {

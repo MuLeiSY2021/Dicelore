@@ -17,6 +17,7 @@
     "dicelore:mcp": "tsx src/mcp/main.ts"
   },
   "dependencies": {
+    "@dicelore/errors": "*",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@node-rs/jieba": "^2.0.1",
     "better-sqlite3": "^12.11.1",

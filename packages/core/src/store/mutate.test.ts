@@ -13,7 +13,7 @@ import { stateGet, stateSet } from "./state.js";
 import { applyMutations } from "./mutate.js";
 import { watcherSet } from "./watcher.js";
 import { logSince } from "./record.js";
-import { DiceloreError } from "../errors.js";
+import { DiceloreError } from "@dicelore/errors";
 
 let db: DB;
 beforeEach(() => { db = openDb(":memory:"); initSchema(db); });

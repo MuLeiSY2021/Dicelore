@@ -9,7 +9,7 @@
 
 export type TermKind = "dice" | "int" | "ref";
 
-import { DiceloreError } from "../errors.js";
+import { DiceloreError } from "@dicelore/errors";
 
 export interface Term {
   kind: TermKind;

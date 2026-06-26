@@ -9,7 +9,7 @@
 
 import { describe, expect, it, test } from "vitest";
 import { parseExpr } from "./parse.js";
-import { DiceloreError } from "../errors.js";
+import { DiceloreError } from "@dicelore/errors";
 
 describe("parseExpr", () => {
   test("骰子 + 引用 - 整数", () => {

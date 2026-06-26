@@ -10,7 +10,7 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
 import { classify, successEnvelope, errorEnvelope } from "./envelope.js";
-import { DiceloreError } from "../errors.js";
+import { DiceloreError } from "@dicelore/errors";
 
 describe("classify", () => {
   it("DiceloreError → 透传 code/message/hint", () => {

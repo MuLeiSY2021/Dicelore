@@ -8,7 +8,7 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import type { DB } from "../store/db.js";
-import { DiceloreError } from "../errors.js";
+import { DiceloreError } from "@dicelore/errors";
 import { assertReadOnlySelect } from "./sqlGuard.js";
 
 export interface ReadToolDecl {

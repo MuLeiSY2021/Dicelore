@@ -11,7 +11,7 @@ import { describe, it, expect } from "vitest";
 import { z } from "zod";
 import { runTool } from "./runTool.js";
 import type { ToolDef } from "./tooldef.js";
-import { DiceloreError } from "../errors.js";
+import { DiceloreError } from "@dicelore/errors";
 
 const anns = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false };
 const db = {} as any;

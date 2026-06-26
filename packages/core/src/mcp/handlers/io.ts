@@ -13,7 +13,7 @@ import { sheetShow, worldShow, revealOnce } from "../../store/visibility.js";
 import { loreGet } from "../../store/world.js";
 import { logAppend } from "../../store/record.js";
 import { metaSet } from "../../session/resolve.js";
-import { DiceloreError } from "../../errors.js";
+import { DiceloreError } from "@dicelore/errors";
 import type { ToolDef } from "../tooldef.js";
 import {
   sheetShowIn, sheetShowOut,

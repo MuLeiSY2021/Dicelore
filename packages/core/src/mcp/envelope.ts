@@ -8,7 +8,7 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import { ZodError } from "zod";
-import { DiceloreError, type DiceloreErrorCode } from "../errors.js";
+import { DiceloreError, type DiceloreErrorCode } from "@dicelore/errors";
 
 export interface ErrShape {
   code: DiceloreErrorCode;

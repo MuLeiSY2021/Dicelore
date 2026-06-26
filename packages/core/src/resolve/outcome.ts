@@ -8,7 +8,7 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import { rollDice, rangeMap, type Band, type Rng } from "../dice/index.js";
-import { DiceloreError } from "../errors.js";
+import { DiceloreError } from "@dicelore/errors";
 
 export interface OutcomeResult {
   roll: number;

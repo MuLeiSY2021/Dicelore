@@ -9,7 +9,7 @@
 
 import { rollDice, type Rng } from "../dice/index.js";
 import { parseExpr, type TermKind } from "./parse.js";
-import { DiceloreError } from "../errors.js";
+import { DiceloreError } from "@dicelore/errors";
 import type { HasCond } from "../store/existsMatch.js";
 
 export type RefGetter = (entity: string, attr: string) => string | undefined;

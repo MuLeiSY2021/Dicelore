@@ -9,7 +9,7 @@
 
 import { describe, expect, it, test } from "vitest";
 import { evalExpr } from "./evaluate.js";
-import { DiceloreError } from "../errors.js";
+import { DiceloreError } from "@dicelore/errors";
 
 const refs: Record<string, string> = { "张三|力量": "7", "张三|状态": "活着" };
 const getRef = (e: string, a: string) => refs[`${e}|${a}`];

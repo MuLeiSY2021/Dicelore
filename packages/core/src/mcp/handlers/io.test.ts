@@ -15,7 +15,7 @@ import { loreUpsert } from "../../store/world.js";
 import { logSince } from "../../store/record.js";
 import { metaGet } from "../../session/resolve.js";
 import { ioTools } from "./io.js";
-import { DiceloreError } from "../../errors.js";
+import { DiceloreError } from "@dicelore/errors";
 
 function freshDb() { const db = openDb(":memory:"); initSchema(db); return db; }
 const byName = (n: string) => ioTools.find((t) => t.name === n)!;

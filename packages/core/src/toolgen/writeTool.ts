@@ -8,7 +8,7 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import type { DB } from "../store/db.js";
-import { DiceloreError } from "../errors.js";
+import { DiceloreError } from "@dicelore/errors";
 import { applyMutations } from "../store/mutate.js";
 import type { StateKind } from "../store/state.js";
 import { frontSetStatus, frontUpsert } from "../store/front.js";

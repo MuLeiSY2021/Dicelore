@@ -13,7 +13,7 @@ import { stateGet, stateSet } from "./state.js";
 import { logSince } from "./record.js";
 import { loreUpsert, poolAdd } from "./world.js";
 import { revealOnce, sheetShow, worldShow } from "./visibility.js";
-import { DiceloreError } from "../errors.js";
+import { DiceloreError } from "@dicelore/errors";
 
 let db: DB;
 beforeEach(() => { db = openDb(":memory:"); initSchema(db); });

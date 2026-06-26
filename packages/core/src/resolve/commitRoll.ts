@@ -13,7 +13,7 @@ import { logAppend, logSince } from "../store/record.js";
 import { getPendingRoll, markRollCommitted } from "../store/pendingRoll.js";
 import { resolveOutcome } from "./outcome.js";
 import { resolveContest } from "./contest.js";
-import { DiceloreError } from "../errors.js";
+import { DiceloreError } from "@dicelore/errors";
 
 export type RollResult =
   | { eventId: number; shape: "outcome"; verdictSeq: number; roll: number; die: string; band: { label: string; consequence: string } }

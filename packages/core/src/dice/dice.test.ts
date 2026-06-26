@@ -9,7 +9,7 @@
 
 import { describe, expect, it, test } from "vitest";
 import { rangeMap, rollDice, type Band } from "./index.js";
-import { DiceloreError } from "../errors.js";
+import { DiceloreError } from "@dicelore/errors";
 
 describe("rollDice", () => {
   test("注入定种子 rng → 确定性", () => {

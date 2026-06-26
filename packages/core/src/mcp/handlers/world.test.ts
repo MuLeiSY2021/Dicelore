@@ -13,7 +13,7 @@ import { openDb, initSchema } from "../../store/db.js";
 import { loreGet } from "../../store/world.js";
 import { ruleUpsert } from "../../store/rule.js";
 import { worldTools } from "./world.js";
-import { DiceloreError } from "../../errors.js";
+import { DiceloreError } from "@dicelore/errors";
 
 function freshDb() { const db = openDb(":memory:"); initSchema(db); return db; }
 const byName = (n: string) => worldTools.find((t) => t.name === n)!;
