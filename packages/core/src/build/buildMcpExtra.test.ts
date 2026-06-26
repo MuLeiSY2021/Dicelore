@@ -399,6 +399,219 @@ describe("dicelore_build_add_front", () => {
   });
 });
 
+// ── add_plotline ──────────────────────────────────────────────────────────────
+describe("dicelore_build_add_plotline", () => {
+  it("写出 plotlines/main.csv，含 id/title/summary/status 列", () => {
+    const c = ctx();
+    const r = invokeBuildTool(c, "add_plotline", {
+      rows: [{ id: "p1", title: "黄枫谷危机", summary: "妖兽袭谷", status: "open" }],
+    });
+    expect(r.isError).toBeFalsy();
+    const out = JSON.parse(r.content[0].text) as { ok: boolean };
+    expect(out.ok).toBe(true);
+    const file = c.draft.toPackFiles().find((f) => f.path === "plotlines/main.csv");
+    expect(file).toBeDefined();
+    // 首行列头固定为 id,title,summary,status
+    expect(file!.content).toMatch(/^id,title,summary,status\n/);
+    expect(file!.content).toContain("p1");
+    expect(file!.content).toContain("黄枫谷危机");
+    expect(file!.content).toContain("妖兽袭谷");
+    c.catalog.close();
+    c.retrievalDb!.close();
+  });
+
+  it("summary/status 可省略", () => {
+    const c = ctx();
+    const r = invokeBuildTool(c, "add_plotline", { rows: [{ id: "p2", title: "只有标题" }] });
+    expect(r.isError).toBeFalsy();
+    const file = c.draft.toPackFiles().find((f) => f.path === "plotlines/main.csv");
+    expect(file!.content).toContain("p2");
+    expect(file!.content).toContain("只有标题");
+    c.catalog.close();
+    c.retrievalDb!.close();
+  });
+
+  it("多次调用追加行（非幂等）", () => {
+    const c = ctx();
+    invokeBuildTool(c, "add_plotline", { rows: [{ id: "a", title: "甲" }] });
+    invokeBuildTool(c, "add_plotline", { rows: [{ id: "b", title: "乙" }] });
+    const file = c.draft.toPackFiles().find((f) => f.path === "plotlines/main.csv");
+    expect(file!.content).toContain("甲");
+    expect(file!.content).toContain("乙");
+    c.catalog.close();
+    c.retrievalDb!.close();
+  });
+
+  it("缺必填字段 title → isError", () => {
+    const c = ctx();
+    const r = invokeBuildTool(c, "add_plotline", { rows: [{ id: "x" }] });
+    expect(r.isError).toBe(true);
+    c.catalog.close();
+    c.retrievalDb!.close();
+  });
+
+  it("空 rows → isError", () => {
+    const c = ctx();
+    const r = invokeBuildTool(c, "add_plotline", { rows: [] });
+    expect(r.isError).toBe(true);
+    c.catalog.close();
+    c.retrievalDb!.close();
+  });
+
+  it("validate 不报 plotlines CSV 列错误", () => {
+    const c = ctx();
+    invokeBuildTool(c, "set_prologue", { text: "开场。" });
+    invokeBuildTool(c, "add_plotline", { rows: [{ id: "p1", title: "主线" }] });
+    const vr = invokeBuildTool(c, "validate", {});
+    const vout = JSON.parse(vr.content[0].text) as { ok: boolean; issues: { level: string; file: string }[] };
+    expect(vout.issues.some((i) => i.level === "error" && i.file.startsWith("plotlines/"))).toBe(false);
+    c.catalog.close();
+    c.retrievalDb!.close();
+  });
+});
+
+// ── add_foreshadow ──────────────────────────────────────────────────────────────
+describe("dicelore_build_add_foreshadow", () => {
+  it("写出 foreshadows/main.csv，含 id/content/status 列", () => {
+    const c = ctx();
+    const r = invokeBuildTool(c, "add_foreshadow", {
+      rows: [{ id: "f1", content: "墙上挂着一柄古剑", status: "planted" }],
+    });
+    expect(r.isError).toBeFalsy();
+    const out = JSON.parse(r.content[0].text) as { ok: boolean };
+    expect(out.ok).toBe(true);
+    const file = c.draft.toPackFiles().find((f) => f.path === "foreshadows/main.csv");
+    expect(file).toBeDefined();
+    expect(file!.content).toMatch(/^id,content,status\n/);
+    expect(file!.content).toContain("f1");
+    expect(file!.content).toContain("墙上挂着一柄古剑");
+    c.catalog.close();
+    c.retrievalDb!.close();
+  });
+
+  it("status 可省略", () => {
+    const c = ctx();
+    const r = invokeBuildTool(c, "add_foreshadow", { rows: [{ id: "f2", content: "无状态伏笔" }] });
+    expect(r.isError).toBeFalsy();
+    const file = c.draft.toPackFiles().find((f) => f.path === "foreshadows/main.csv");
+    expect(file!.content).toContain("无状态伏笔");
+    c.catalog.close();
+    c.retrievalDb!.close();
+  });
+
+  it("多次调用追加行（非幂等）", () => {
+    const c = ctx();
+    invokeBuildTool(c, "add_foreshadow", { rows: [{ id: "f1", content: "一" }] });
+    invokeBuildTool(c, "add_foreshadow", { rows: [{ id: "f2", content: "二" }] });
+    const file = c.draft.toPackFiles().find((f) => f.path === "foreshadows/main.csv");
+    expect(file!.content).toContain("一");
+    expect(file!.content).toContain("二");
+    c.catalog.close();
+    c.retrievalDb!.close();
+  });
+
+  it("缺必填字段 content → isError", () => {
+    const c = ctx();
+    const r = invokeBuildTool(c, "add_foreshadow", { rows: [{ id: "x" }] });
+    expect(r.isError).toBe(true);
+    c.catalog.close();
+    c.retrievalDb!.close();
+  });
+
+  it("空 rows → isError", () => {
+    const c = ctx();
+    const r = invokeBuildTool(c, "add_foreshadow", { rows: [] });
+    expect(r.isError).toBe(true);
+    c.catalog.close();
+    c.retrievalDb!.close();
+  });
+
+  it("validate 不报 foreshadows CSV 列错误", () => {
+    const c = ctx();
+    invokeBuildTool(c, "set_prologue", { text: "开场。" });
+    invokeBuildTool(c, "add_foreshadow", { rows: [{ id: "f1", content: "伏笔" }] });
+    const vr = invokeBuildTool(c, "validate", {});
+    const vout = JSON.parse(vr.content[0].text) as { ok: boolean; issues: { level: string; file: string }[] };
+    expect(vout.issues.some((i) => i.level === "error" && i.file.startsWith("foreshadows/"))).toBe(false);
+    c.catalog.close();
+    c.retrievalDb!.close();
+  });
+});
+
+// ── add_anchor ──────────────────────────────────────────────────────────────────
+describe("dicelore_build_add_anchor", () => {
+  it("写出 anchors/main.csv，含 owner/target/role 列", () => {
+    const c = ctx();
+    const r = invokeBuildTool(c, "add_anchor", {
+      rows: [{ owner_table: "npc", owner_id: "墨大夫", target_table: "plotline", target_id: "p1", role: "推动者" }],
+    });
+    expect(r.isError).toBeFalsy();
+    const out = JSON.parse(r.content[0].text) as { ok: boolean };
+    expect(out.ok).toBe(true);
+    const file = c.draft.toPackFiles().find((f) => f.path === "anchors/main.csv");
+    expect(file).toBeDefined();
+    expect(file!.content).toMatch(/^owner_table,owner_id,target_table,target_id,role\n/);
+    expect(file!.content).toContain("墨大夫");
+    expect(file!.content).toContain("推动者");
+    c.catalog.close();
+    c.retrievalDb!.close();
+  });
+
+  it("role 可省略", () => {
+    const c = ctx();
+    const r = invokeBuildTool(c, "add_anchor", {
+      rows: [{ owner_table: "npc", owner_id: "甲", target_table: "foreshadow", target_id: "f1" }],
+    });
+    expect(r.isError).toBeFalsy();
+    const file = c.draft.toPackFiles().find((f) => f.path === "anchors/main.csv");
+    expect(file!.content).toContain("foreshadow");
+    c.catalog.close();
+    c.retrievalDb!.close();
+  });
+
+  it("多次调用追加行（非幂等）", () => {
+    const c = ctx();
+    invokeBuildTool(c, "add_anchor", { rows: [{ owner_table: "npc", owner_id: "甲", target_table: "plotline", target_id: "p1" }] });
+    invokeBuildTool(c, "add_anchor", { rows: [{ owner_table: "npc", owner_id: "乙", target_table: "plotline", target_id: "p2" }] });
+    const file = c.draft.toPackFiles().find((f) => f.path === "anchors/main.csv");
+    expect(file!.content).toContain("p1");
+    expect(file!.content).toContain("p2");
+    c.catalog.close();
+    c.retrievalDb!.close();
+  });
+
+  it("缺必填字段 target_id → isError", () => {
+    const c = ctx();
+    const r = invokeBuildTool(c, "add_anchor", {
+      rows: [{ owner_table: "npc", owner_id: "甲", target_table: "plotline" }],
+    });
+    expect(r.isError).toBe(true);
+    c.catalog.close();
+    c.retrievalDb!.close();
+  });
+
+  it("空 rows → isError", () => {
+    const c = ctx();
+    const r = invokeBuildTool(c, "add_anchor", { rows: [] });
+    expect(r.isError).toBe(true);
+    c.catalog.close();
+    c.retrievalDb!.close();
+  });
+
+  it("validate 不报 anchors CSV 列错误", () => {
+    const c = ctx();
+    invokeBuildTool(c, "set_prologue", { text: "开场。" });
+    invokeBuildTool(c, "add_anchor", {
+      rows: [{ owner_table: "npc", owner_id: "甲", target_table: "plotline", target_id: "p1" }],
+    });
+    const vr = invokeBuildTool(c, "validate", {});
+    const vout = JSON.parse(vr.content[0].text) as { ok: boolean; issues: { level: string; file: string }[] };
+    expect(vout.issues.some((i) => i.level === "error" && i.file.startsWith("anchors/"))).toBe(false);
+    c.catalog.close();
+    c.retrievalDb!.close();
+  });
+});
+
 // ── set_prologue ──────────────────────────────────────────────────────────────
 describe("dicelore_build_set_prologue", () => {
   it("返回 { ok: true }，draft 产出 prologue.md", () => {
