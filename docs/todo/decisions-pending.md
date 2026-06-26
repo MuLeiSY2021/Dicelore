@@ -28,6 +28,9 @@
 
 - **[漂移A · logger]**（可逆，已自决+已沉 wiki）：core 已有 `log.ts`（pino node-only）、后端已接入、前端 0 console 不依赖 core → O1「同构 shared/logger」前提不成立。O-前端 moot、O1 宜降级。已落 backlog-core O2 + 路线图第三批注记，待 fix-wiki/organize-wiki 改措辞。
 - **[漂移B · eval harness 路径]**（可逆，已沉 wiki）：真 harness 是 `packages/core/eval/{run,grade,batch,tool}.ts`（offline runTool），非 `src/eval/play-mcp.ts`；choose/roll/browse 是独立 dicelore-play MCP 包。已落 backlog-core F-harness-test + 路线图第一批注记。
+- **[用户指示 · lore/构建侧 eval MCP]**（2026-06-26）：建 build-mcp.ts（对称 dice play-mcp，连 build HTTP/LoreSession，CC 当作者驱动构建 GM）+ 注册 `dicelore-build` 进 `.mcp.json` + `enabledMcpjsonServers`，让跑团+构建两侧都能 CC 驱动 eval。**时序：第三批剩余未完成（CO-采集/RT-1/O-后端）推完后做**。落 nodes.jsonl n20。
+- **[SNAP-1 follow-up · 重开重载团本工具]**：v1 团本 tools 仅首次 import 装载，重开已存在 session 不重载（catalog 不在场）。持久化 toolDefs 或重开从 catalog 重derive 留 follow-up。
+- **[团本tools 产品残余]**：作者声明工具是否需服务端可关开关（关联 FE-mcp-config v1 不接入裁决、ADR-0017 ⑤）。攒着，非阻塞。
 
 ---
 
