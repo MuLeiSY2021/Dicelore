@@ -8,7 +8,9 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { getPresentation, listSessions, postMessage, postRoll, testModel, testMcp } from "./client.js";
+import {
+  getPresentation, listSessions, postMessage, postRoll, postChoice, startGame, testModel, testMcp,
+} from "./client.js";
 
 afterEach(() => { vi.restoreAllMocks(); });
 
@@ -50,18 +52,85 @@ describe("listSessions", () => {
 });
 
 describe("postMessage / postRoll", () => {
-  it("postMessage 命中 /sessions/:id/messages(POST)", async () => {
+  it("postMessage 命中 /sessions/:id/messages(POST，body 带 text)", async () => {
     const f = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ turnId: "t" }) });
     vi.stubGlobal("fetch", f);
-    await postMessage("s1", "我推门");
+    const got = await postMessage("s1", "我推门");
     expect(f).toHaveBeenCalledWith("/sessions/s1/messages", expect.objectContaining({ method: "POST" }));
+    expect(JSON.parse(f.mock.calls[0][1].body)).toEqual({ text: "我推门" });
+    expect(got).toEqual({ turnId: "t" });
   });
 
-  it("postRoll 命中 /sessions/:id/roll(POST)", async () => {
+  it("postRoll 命中 /sessions/:id/roll(POST，body 带 eventId)", async () => {
     const f = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ turnId: "t" }) });
     vi.stubGlobal("fetch", f);
     await postRoll("s1", 12);
     expect(f).toHaveBeenCalledWith("/sessions/s1/roll", expect.objectContaining({ method: "POST" }));
+    expect(JSON.parse(f.mock.calls[0][1].body)).toEqual({ eventId: 12 });
+  });
+});
+
+// ── 主线①：掷骰 — postRoll 的 409 错误码翻译(玩家可执行提示) ────────────────
+describe("主线① postRoll 错误码翻译", () => {
+  it("409 no_pending_roll → 可读中文(没有待掷的骰子)", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 409, json: async () => ({ code: "no_pending_roll" }) }));
+    await expect(postRoll("s1", 5)).rejects.toThrow("没有待掷的骰子");
+  });
+
+  it("409 turn_in_progress → 可读中文(上一回合还在进行中)", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 409, json: async () => ({ code: "turn_in_progress" }) }));
+    await expect(postRoll("s1", 5)).rejects.toThrow("还在进行中");
+  });
+
+  it("非 409(500) → 通用「掷骰失败：500」", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 500, json: async () => ({}) }));
+    await expect(postRoll("s1", 5)).rejects.toThrow("掷骰失败：500");
+  });
+});
+
+// ── 主线②：选择 — postChoice 命中端点 + 409 翻译 ────────────────────────────
+describe("主线② postChoice", () => {
+  it("命中 /sessions/:id/choices(POST，body 带 eventId+optionIndex)", async () => {
+    const f = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ turnId: "t-c" }) });
+    vi.stubGlobal("fetch", f);
+    const got = await postChoice("s1", 3, 1);
+    expect(f).toHaveBeenCalledWith("/sessions/s1/choices", expect.objectContaining({ method: "POST" }));
+    expect(JSON.parse(f.mock.calls[0][1].body)).toEqual({ eventId: 3, optionIndex: 1 });
+    expect(got).toEqual({ turnId: "t-c" });
+  });
+
+  it("409 no_pending_choice → 可读中文(没有待选择的选项)", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 409, json: async () => ({ code: "no_pending_choice" }) }));
+    await expect(postChoice("s1", 3, 0)).rejects.toThrow("没有待选择的选项");
+  });
+});
+
+// ── kickoff：startGame 走 /start 或 404 优雅回退到喂开场 cue ──────────────────
+// 注：缝B startGame 响应契约正由另一线统一，本组只断言「打到哪个端点 / 回退发生」，
+// 不硬断言响应体形状(避开 {sessionId,started} vs {turnId} 之争)。
+describe("startGame kickoff（端点与回退，不断言响应体形状）", () => {
+  it("/start 在线(2xx) → 命中 /sessions/:id/start，不回退", async () => {
+    const f = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ turnId: "t-start" }) });
+    vi.stubGlobal("fetch", f);
+    await startGame("s1");
+    expect(f).toHaveBeenCalledTimes(1);
+    expect(f).toHaveBeenCalledWith("/sessions/s1/start", expect.objectContaining({ method: "POST" }));
+  });
+
+  it("/start 未上线(404) → 回退 POST /messages 喂开场 cue", async () => {
+    const f = vi.fn()
+      .mockResolvedValueOnce({ ok: false, status: 404 })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ turnId: "t-fallback" }) });
+    vi.stubGlobal("fetch", f);
+    await startGame("s1");
+    expect(f).toHaveBeenCalledTimes(2);
+    expect(f.mock.calls[0][0]).toBe("/sessions/s1/start");
+    expect(f.mock.calls[1][0]).toBe("/sessions/s1/messages"); // 回退路径
+  });
+
+  it("/start 其它错误(500) → 抛错(不回退)", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 500 }));
+    await expect(startGame("s1")).rejects.toThrow("500");
   });
 });
 
@@ -76,7 +145,6 @@ describe("testModel / testMcp", () => {
   });
 
   it("testModel 非 2xx 抛带状态码错误,不把错误体当成功解析", async () => {
-    // 关键回归:4xx/5xx 时 json() 不应被调用,必须抛错。
     const json = vi.fn();
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 502, json }));
     await expect(testModel({ baseUrl: "http://x", key: "k", gm: "g" })).rejects.toThrow("502");
