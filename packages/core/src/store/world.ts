@@ -7,7 +7,7 @@
 // Software Foundation, either version 3 of the License, or (at your option)
 // any later version. See <https://www.gnu.org/licenses/>.
 
-import type { Rng } from "../dice/index.js";
+import type { Rng } from "@dicelore/dice";
 import type { DB } from "./db.js";
 import { ftsIndex, ftsSearch } from "./fts.js";
 

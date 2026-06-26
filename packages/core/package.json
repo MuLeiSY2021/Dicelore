@@ -17,6 +17,7 @@
     "dicelore:mcp": "tsx src/mcp/main.ts"
   },
   "dependencies": {
+    "@dicelore/dice": "*",
     "@dicelore/errors": "*",
     "@dicelore/logs": "*",
     "@modelcontextprotocol/sdk": "^1.29.0",

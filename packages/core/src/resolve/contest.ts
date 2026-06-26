@@ -10,7 +10,7 @@
 import { evalExpr, type ExprLedger, type RefGetter } from "../expr/evaluate.js";
 import { stateGet } from "../store/state.js";
 import type { DB } from "../store/db.js";
-import type { Rng } from "../dice/index.js";
+import type { Rng } from "@dicelore/dice";
 
 export interface ContestSide {
   name: string;

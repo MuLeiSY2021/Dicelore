@@ -7,7 +7,7 @@
 // Software Foundation, either version 3 of the License, or (at your option)
 // any later version. See <https://www.gnu.org/licenses/>.
 
-import { rollDice, rangeMap, type Band, type Rng } from "../dice/index.js";
+import { rollDice, rangeMap, type Band, type Rng } from "@dicelore/dice";
 import { DiceloreError } from "@dicelore/errors";
 
 export interface OutcomeResult {

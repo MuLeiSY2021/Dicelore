@@ -8,7 +8,7 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import type { DB } from "../store/db.js";
-import type { Rng } from "../dice/index.js";
+import type { Rng } from "@dicelore/dice";
 import { logAppend, logSince } from "../store/record.js";
 import { getPendingRoll, markRollCommitted } from "../store/pendingRoll.js";
 import { resolveOutcome } from "./outcome.js";

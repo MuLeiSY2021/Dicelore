@@ -7,7 +7,7 @@
 // Software Foundation, either version 3 of the License, or (at your option)
 // any later version. See <https://www.gnu.org/licenses/>.
 
-import { rollDice, type Rng } from "../dice/index.js";
+import { rollDice, type Rng } from "@dicelore/dice";
 import { parseExpr, type TermKind } from "./parse.js";
 import { DiceloreError } from "@dicelore/errors";
 import type { HasCond } from "../store/existsMatch.js";
