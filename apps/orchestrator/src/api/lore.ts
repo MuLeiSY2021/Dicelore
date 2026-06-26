@@ -67,6 +67,19 @@ export function createLoreApp(deps: LoreDeps): Hono {
     return c.json({ turnId }, 202);
   });
 
+  // 读未 commit 的 Draft 当前态(构建中途产物)。
+  // 由来:RT-5 后 lore 是 REST only——POST /lore-sessions/:id/messages 把构建 GM 跑到 turn_end 即收尾,
+  // 只返回 {turnId},不回传 GM 散文(不广播/不落 narration)。构建 GM 改的是 LoreSession 持有的 in-memory
+  // Draft(经 dicelore_build_* 工具),commit 前 catalog 里查不到。故作者(eval 经 build-mcp,或前端构建台)
+  // 要看"这一轮构建 GM 把 Draft 改成了什么"只能读这里。additive GET:不改 messages/commit 等既有端点行为,
+  // 仅暴露既有 LoreSession.draft 的只读视图(toPackFiles=将提交的包文件;snapshot=分域结构化回读)。
+  // 会话不存在(从未 POST 过 messages)→ 404,与"已存在但 Draft 空"区分。
+  app.get("/lore-sessions/:id/draft", (c) => {
+    const host = getLoreSession(c.req.param("id"));
+    if (!host) return c.json({ error: { code: "NO_SESSION", message: "lore 会话不存在(尚未发过构建指令)" } }, 404);
+    return c.json({ files: host.draft.toPackFiles(), snapshot: host.draft.snapshot() });
+  });
+
   return app;
 }
 

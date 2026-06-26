@@ -12,7 +12,7 @@ import { openCatalog, openDb, initSchema, type DB } from "@dicelore/core";
 import { createLoreApp } from "./lore.js";
 import { createLiveApp } from "./dice.js";
 import { FakeDiceGm } from "../dice/FakeDiceGm.js";
-import type { SkillRef } from "../pkg/agent.js";
+import type { Agent, AgentInit, SkillRef, TurnEvent } from "../pkg/agent.js";
 
 const PACK = [
   { path: "manifest.md", content: "# 凡人\n\n- id: f" },
@@ -106,6 +106,59 @@ describe("createLoreApp: skills 传入", () => {
     });
     expect(res.status).toBe(202);
     expect(capturedSkills[0]).toEqual([]);
+    catalog.close();
+  });
+});
+
+// GET /lore-sessions/:id/draft —— additive 检视端点:看未 commit 的 Draft 当前态。
+// 由来:RT-5 后 lore 是 REST only,POST messages 只回 {turnId} 不回传 GM 散文;构建 GM 改的是 in-memory
+// Draft,commit 前 catalog 查不到。此端点暴露 LoreSession.draft 的只读视图(toPackFiles + snapshot),
+// 供作者(eval build-mcp / 前端构建台)判断构建 GM 这一轮干了什么。
+describe("GET /lore-sessions/:id/draft 检视未 commit 的 Draft", () => {
+  // 脚本化构建 agent:经 mcpServer 上注册的真 dicelore_build_* 工具改 Draft(不烧 LLM)。
+  class FakeBuilder implements Agent {
+    constructor(private init: AgentInit) {}
+    async *runTurn(): AsyncIterable<TurnEvent> {
+      const reg = (this.init.mcpServer as unknown as { _registeredTools: Record<string, { handler: (a: unknown) => Promise<unknown> }> })._registeredTools;
+      await reg["dicelore_build_set_manifest"].handler({ name: "草稿团本", id: "caogao" });
+      await reg["dicelore_build_write_lore"].handler({ name: "背景", content: "一段世界观文本。" });
+      yield { type: "turn_end" };
+    }
+  }
+
+  it("会话不存在 → 404 NO_SESSION", async () => {
+    const catalog = openCatalog(":memory:");
+    const lore = createLoreApp({ catalog, agentFactory: (init) => new FakeBuilder(init) });
+    const res = await lore.request("/lore-sessions/never-started/draft");
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as { error: { code: string } };
+    expect(body.error.code).toBe("NO_SESSION");
+    catalog.close();
+  });
+
+  it("发指令驱动构建 GM 改 Draft 后,GET draft 看到 files + snapshot(commit 前 catalog 仍空)", async () => {
+    const catalog = openCatalog(":memory:");
+    const lore = createLoreApp({ catalog, agentFactory: (init) => new FakeBuilder(init) });
+
+    const send = await lore.request("/lore-sessions/d1/messages", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ text: "写点设定", name: "草稿团本" }),
+    });
+    expect(send.status).toBe(202);
+
+    const draftRes = await lore.request("/lore-sessions/d1/draft");
+    expect(draftRes.status).toBe(200);
+    const draft = (await draftRes.json()) as {
+      files: { path: string; content: string }[];
+      snapshot: { manifest: { name?: string }; world: Record<string, string> };
+    };
+    expect(draft.snapshot.manifest.name).toBe("草稿团本");
+    expect(draft.snapshot.world["背景"]).toContain("世界观");
+    expect(draft.files.map((f) => f.path)).toEqual(expect.arrayContaining(["manifest.md", "lore/背景.md"]));
+
+    // commit 前:catalog 仍空(Draft 未落)。
+    const cat = (await (await lore.request("/catalog")).json()) as { tuanben: unknown[] };
+    expect(cat.tuanben.length).toBe(0);
     catalog.close();
   });
 });
