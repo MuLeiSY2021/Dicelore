@@ -14,6 +14,7 @@
 | [`docs/wiki/06-里程碑与问题/路线图.md`](docs/wiki/06-里程碑与问题/路线图.md) | **有序批次**：从三池挑出来排「先做哪批」(第一批/第二批…) | **AI 维护**·可重排 |
 | [`docs/wiki/06-里程碑与问题/里程碑.md`](docs/wiki/06-里程碑与问题/里程碑.md) | 已达成节点时间线 | **人工维护·AI 不得自行改动**（仅在人明确指导下编辑） |
 | [`docs/todo/`](docs/todo/) | **在途交接**：本 session 做不完 / 下一 part 的活，指回 backlog 条目 | 临时·解决即删 |
+| [`docs/delivery/`](docs/delivery/) | **并发交付运行记录**：每轮「推路线图」一目录（`YYYY-MM-DD-路线图-推进/`），含 DAG 设计 / 每波 roster / 每波复盘。由 `parallel-roadmap-delivery` 产出 | 长存·事后可回溯 |
 | [`docs/superpowers/{specs,plans}`](docs/superpowers/) | superpowers 流程的草稿产物（spec / plan） | 临时·用完即删 |
 
 ---
