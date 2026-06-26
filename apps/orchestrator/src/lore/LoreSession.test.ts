@@ -13,25 +13,25 @@ import { LoreSession } from "./LoreSession.js";
 import { FakeDiceGm } from "../dice/FakeDiceGm.js";
 
 describe("LoreSession", () => {
-  it("挂构建 MCP、无跑团插件字段;handleMessage 流式收尾", async () => {
+  it("挂构建 MCP、无跑团插件字段;handleMessage 跑完一轮(REST,不广播)", async () => {
     const catalog = openCatalog(":memory:");
+    let ran = 0;
     const host = new LoreSession("b1", {
       catalog, name: "凡人",
-      agentFactory: () => new FakeDiceGm(() => [{ type: "narration", text: "已写入设定。" }, { type: "turn_end" }]),
+      agentFactory: () => new FakeDiceGm(() => { ran += 1; return [{ type: "narration", text: "已写入设定。" }, { type: "turn_end" }]; }),
     });
     expect(host.mcpServer).toBeTruthy();
     expect(host.kind).toBe("lore");
     expect((host as unknown as { gate?: unknown }).gate).toBeUndefined();
     expect((host as unknown as { db?: unknown }).db).toBeUndefined();
+    // v1 REST only:无 WS 设施(hub/attachWs/detachWs 死代码已删)。
+    expect((host as unknown as { hub?: unknown }).hub).toBeUndefined();
+    expect((host as unknown as { attachWs?: unknown }).attachWs).toBeUndefined();
 
-    const sent: { type: string }[] = [];
-    host.attachWs({ send: (d: string) => sent.push(JSON.parse(d)), readyState: 1 });
+    // REST 语义:handleMessage 把 driver 跑完整轮(narration→turn_end)即收尾,resolve {turnId}。
     const { turnId } = await host.handleMessage("把第一章设定写进去");
+    expect(ran).toBe(1);
     expect(turnId).toMatch(/^b1-l\d+$/);
-    const types = sent.map((m) => m.type);
-    expect(types).toContain("turn_started");
-    expect(types).toContain("narration_commit");
-    expect(types.at(-1)).toBe("turn_ended");
     catalog.close();
   });
 

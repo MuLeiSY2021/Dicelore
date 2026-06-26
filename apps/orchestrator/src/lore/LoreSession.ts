@@ -9,9 +9,6 @@
 
 import { createBuildMcpServer, Draft, type CatalogDB } from "@dicelore/core";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { CLIENT_PROTOCOL } from "@dicelore/shared";
-import { WsHub, type WsLike } from "../pkg/wsHub.js";
-import { streamDriverTurn } from "../pkg/streamTurn.js";
 import type { AgentFactory, SkillRef } from "../pkg/agent.js";
 import type { Session } from "../pkg/session.js";
 
@@ -28,17 +25,15 @@ export interface LoreSessionDeps {
 
 // lore 构建运行单元:挂构建 MCP(BUILD_TOOLS over Draft+Catalog),无 rollGate/turn-end/canon-notify。
 // 刻意不持有 gate/db —— 跑团插件结构上不在场(物理隔离)。
+// v1 lore 构建是 REST only:无 WS 端点接入(见 api/lore.ts,只 POST /lore-sessions/:id/messages),
+// 故不持 hub/不广播——handleMessage 直接把 driver 跑到 turn_end、轮询/等待返回 {turnId}。
 export class LoreSession implements Session {
   readonly kind = "lore" as const;
-  readonly hub = new WsHub();
   readonly draft = new Draft();
   readonly mcpServer: McpServer;
   constructor(public sessionId: string, private deps: LoreSessionDeps) {
     this.mcpServer = createBuildMcpServer({ catalog: deps.catalog, draft: this.draft, name: deps.name });
   }
-
-  attachWs(ws: WsLike): void { this.hub.add(this.sessionId, ws); }
-  detachWs(ws: WsLike): void { this.hub.remove(this.sessionId, ws); }
 
   async handleMessage(text: string): Promise<{ turnId: string }> {
     const turnId = nextTurnId(this.sessionId);
@@ -47,9 +42,10 @@ export class LoreSession implements Session {
       openingPrompt: this.deps.buildPrompt ?? process.env.DICELORE_BUILD_PROMPT ?? "",
       skills: this.deps.skills ?? [],
     });
-    const { seq } = await streamDriverTurn({ driver, hub: this.hub, sessionId: this.sessionId, turnId }, { text });
-    // 构建无 turn-end hook / choice / canon-notify —— 直接收尾。
-    this.hub.broadcast(this.sessionId, { protocol: CLIENT_PROTOCOL, type: "turn_ended", turnId, seq });
+    // REST 语义:跑完整轮构建反馈(narration/turn_end/error)即收尾,不向任何 WS 广播。
+    for await (const ev of driver.runTurn({ text, turnId })) {
+      if (ev.type === "turn_end" || ev.type === "error") break;
+    }
     return { turnId };
   }
 }
