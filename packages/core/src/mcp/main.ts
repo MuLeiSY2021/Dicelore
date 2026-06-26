@@ -8,17 +8,23 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { dirname } from "node:path";
 import { openSession } from "../session/resolve.js";
+import { initGlobalLogger, getLogger } from "../log.js";
 import { createMcpServer } from "./server.js";
 
 async function main() {
-  const { db } = openSession(); // env: DICELORE_SESSION / DICELORE_SESSIONS_DIR
+  const { db, path } = openSession(); // env: DICELORE_SESSION / DICELORE_SESSIONS_DIR
+  // stdio server:日志必须走文件/stderr,绝不能进 stdout(会污染 JSON-RPC 协议流)。
+  // 把全局 logger 切到会话文件夹的分级文件(createFileLogger 只写 *.log,不碰 stdout)。
+  initGlobalLogger(dirname(path));
   const server = createMcpServer(db, {}); // stdio 路径无 onCanonWrite/rollGate(行为不变)
   await server.connect(new StdioServerTransport());
 }
 
 main().catch((e) => {
-  // stdio server:错误打到 stderr,不污染 stdout 的 JSON-RPC 流。
-  console.error("dicelore mcp 启动失败:", e);
+  // stdio server:启动失败错误经 logger 落文件 + stderr 兜底,均不进 stdout 的 JSON-RPC 流。
+  getLogger().error({ err: e }, "dicelore mcp 启动失败");
+  console.error("dicelore mcp 启动失败:", e); // logger 若在 init 前就抛(罕见),stderr 仍可见
   process.exit(1);
 });

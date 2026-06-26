@@ -11,7 +11,7 @@ import { Hono } from "hono";
 import type { DB, CatalogDB } from "@dicelore/core";
 import type { SessionInfo, SessionSummary } from "@dicelore/shared";
 import { MessageRequestSchema, ChoiceRequestSchema, RollRequestSchema } from "@dicelore/shared";
-import { loreSearch, ruleSearch, logSince, getLogger } from "@dicelore/core";
+import { loreSearch, ruleSearch, logSince, getLogger, metaGet } from "@dicelore/core";
 import { buildSnapshot } from "../dice/presentation.js";
 import { getOrCreateHost, getHost, removeHost } from "../dice/registry.js";
 import { TurnInProgressError } from "../dice/DiceSession.js";
@@ -35,10 +35,12 @@ export function createApp(deps: ServerDeps): Hono {
     return c.json(buildSnapshot(db, id));
   });
 
-  // 会话元信息(接口页 §2)。v1：终局/标题占位，待写侧接线后回填。
+  // 会话元信息(接口页 §2)。ended 读 session_meta「ended」(由 MCP game_end 工具落)——
+  // 与 WS game_end 信号同源(DiceSession 亦读同 key),避免 REST 与 WS 终局态矛盾(RT-4)。
   app.get("/sessions/:id", (c) => {
     const id = c.req.param("id");
-    const info: SessionInfo = { sessionId: id, ended: false, title: id };
+    const db = deps.openSession(id);
+    const info: SessionInfo = { sessionId: id, ended: metaGet(db, "ended") !== undefined, title: id };
     return c.json(info);
   });
 
@@ -148,9 +150,11 @@ export function createLiveApp(deps: LiveDeps): Hono {
     return c.json({ source, entries });
   });
 
+  // 会话元信息(接口页 §2)。ended 同 createApp:读 session_meta「ended」与 WS game_end 同源(RT-4)。
   app.get("/sessions/:id", (c) => {
     const id = c.req.param("id");
-    const info: SessionInfo = { sessionId: id, ended: false, title: id };
+    const db = getOrCreateHost(id, hostDeps(id)).db;
+    const info: SessionInfo = { sessionId: id, ended: metaGet(db, "ended") !== undefined, title: id };
     return c.json(info);
   });
 

@@ -11,7 +11,7 @@ import { describe, it, expect } from "vitest";
 import { mkdtempSync, writeFileSync, rmSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { openDb, initSchema, type DB } from "@dicelore/core";
+import { openDb, initSchema, metaSet, type DB } from "@dicelore/core";
 import { createApp } from "./api/dice.js";
 import { listSessionSummaries } from "./dice/sessions.js";
 
@@ -19,6 +19,14 @@ function memSessionFactory(): (id: string) => DB {
   const db = openDb(":memory:");
   initSchema(db);
   db.prepare("INSERT INTO state (entity, attr, value, visible) VALUES ('张三','HP','12',1)").run();
+  return () => db;
+}
+
+// 终局会话:session_meta 写「ended」(MCP game_end 工具落)→ GET /sessions/:id 应返回 ended:true。
+function endedSessionFactory(): (id: string) => DB {
+  const db = openDb(":memory:");
+  initSchema(db);
+  metaSet(db, "ended", JSON.stringify({ reason: "you_death", outcome: "战死", seq: 7 }));
   return () => db;
 }
 
@@ -39,6 +47,14 @@ describe("orchestrator 只读 REST", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toMatchObject({ sessionId: "s1", ended: false });
+  });
+
+  it("GET /sessions/:id 终局会话(meta ended 已落)→ ended:true(RT-4,与 WS game_end 同源)", async () => {
+    const app = createApp({ openSession: endedSessionFactory(), listSessions: () => [] });
+    const res = await app.request("/sessions/dead");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toMatchObject({ sessionId: "dead", ended: true });
   });
 
   it("GET /sessions 返回会话列表", async () => {

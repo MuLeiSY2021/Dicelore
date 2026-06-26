@@ -58,7 +58,7 @@ export function startServer(port: number): void {
 
   const server = serve({ fetch: app.fetch, port });
   attachWsUpgrade(server, { openSession, agentFactory, skills: diceSkills, baseline, debug, sessionsDir: dir });
-  console.log(`[orchestrator] live :${port}`);
+  // 启动 banner 走 logger(已 initGlobalLogger → 分级文件),不再裸 console.log 重复一行(O2)。
   getLogger().info({ port, fakeGm: fake, debug, sessionsDir: dir, catalog: catalogPath }, `orchestrator live :${port}`);
 }
 
