@@ -22,6 +22,8 @@
   "scripts": {
     "test": "npm run test -w @dicelore/core",
     "typecheck": "npm run typecheck -w @dicelore/core",
+    "test:all": "npm run test --workspaces --if-present",
+    "typecheck:all": "npm run typecheck --workspaces --if-present",
     "dicelore": "npm run dicelore -w @dicelore/core",
     "dicelore:mcp": "npm run dicelore:mcp -w @dicelore/core"
   },

@@ -1,0 +1,37 @@
+name: CI
+
+# 三包(core/orchestrator/web)+shared 的 test + typecheck 门禁。
+# push 到 main 与所有指向 main 的 PR 触发——既守 main 绿,也作并发 subagent 交付的安全网。
+# 发版闸(路线图第五批)的 gate 脚本将挂在本 workflow 上。
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# 同一 ref 的旧运行在新 push 时取消,省 runner。
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20 # 对齐 engines.node >=20
+          cache: npm
+
+      - name: Install (clean, from lockfile)
+        run: npm ci
+
+      - name: Typecheck (all workspaces)
+        run: npm run typecheck:all
+
+      - name: Test (all workspaces)
+        run: npm run test:all

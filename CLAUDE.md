@@ -31,6 +31,7 @@
 | `organize-wiki` | 重排 / 扩张 wiki 结构层级（纯文档） |
 | `spec-to-wiki` | superpowers spec/plan 知识沉淀进 wiki + 清草稿 |
 | `autonomous-delivery-loop` | 上面 4 个推进 / 重构 skill 共用的 a→g 自主闭环骨架（也可单调） |
+| `parallel-roadmap-delivery` | 把路线图**多条无依赖线并发**推到底、决策卡点压到最少（决策账本 + 波次 fan-out + SendMessage 续接 + CI/PR 门禁）；每条线内部仍走 `autonomous-delivery-loop` |
 
 **主线（口诀）**：问题进 backlog 池（`/groom-backlog`）→ 在途进 `docs/todo/` / 草稿进 `docs/superpowers/` → 推进走 `advance-milestone`·`refactor-*` → 完事走 `spec-to-wiki`（先沉淀 wiki 才清草稿）。commit 先开分支、提交后 ff 合并回 main（不 push；push 由人单独指令）。
 
