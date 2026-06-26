@@ -52,11 +52,17 @@ export class DiceSession implements Session {
   constructor(public sessionId: string, private deps: DiceSessionDeps) {
     this.db = deps.db ?? (() => { const d = openDb(":memory:"); initSchema(d); return d; })();
     // 开局物化:从 Catalog import 选定团本版本(信任闸门重验)→ 本局运行库。仅空库时(避免重复 import)。
+    // 团本声明的自定义工具(tools/*.json → toolgen 编译)。首次 import 时由 importPack 回传,
+    // 经下面 createMcpServer 的 extraTools 装载进本 session 的 MCP(守 DT-9:作者只能声明式 SQL 工具)。
+    // ⚠️ v1 仅首次 import(db 空)装载;重开已存在 session 不重载团本工具(catalog 此时不在场)——
+    // 持久化/重开重载留 follow-up(见 backlog 主题A′)。
+    let extraTools: Parameters<typeof createMcpServer>[2] = [];
     if (deps.importFrom) {
       const empty = (this.db.prepare("SELECT COUNT(*) n FROM log").get() as { n: number }).n === 0;
       if (empty) {
         const { catalog, tuanbenId, ref } = deps.importFrom;
         const res = importPack(catalog, this.db, tuanbenId, ref);
+        extraTools = res.toolDefs;
         // 写 session_meta:团本关联 + prologue + 未开场。供 Play 列表/kickoff/开场prompt。
         metaSet(this.db, "tuanben_id", tuanbenId);
         metaSet(this.db, "ref", ref);
@@ -73,7 +79,7 @@ export class DiceSession implements Session {
     this.mcpServer = createMcpServer(this.db, {
       onCanonWrite: (e) => this.onCanonWrite(e),
       ...(this.gate ? { rollGate: this.gate.gate } : {}),
-    });
+    }, extraTools);
   }
 
   onCanonWrite(evt: CanonWriteEvent): void {
