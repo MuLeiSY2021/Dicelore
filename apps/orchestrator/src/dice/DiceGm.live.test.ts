@@ -10,6 +10,8 @@
 import { describe, it, expect } from "vitest";
 
 // 真 Agent SDK 冒烟：默认 skip(烧 LLM);RUN_LIVE=1 + relay env 才跑。
+// 非 LLM 的装配逻辑(query options：MCP 挂载 / settingSources·allowedTools 门控 / model·systemPrompt)
+// 的 offline 回归网在 gmAssembly.test.ts(抽出的纯函数 buildQueryOptions)——本文件只管真连 LLM 的端到端冒烟。
 const LIVE = process.env.RUN_LIVE === "1";
 
 describe.skipIf(!LIVE)("DiceGm 真 SDK 冒烟", () => {

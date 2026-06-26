@@ -11,6 +11,7 @@ import { query } from "@anthropic-ai/claude-agent-sdk";
 import type { Logger } from "pino";
 import type { Agent, TurnInput, TurnEvent, AgentInit } from "../pkg/agent.js";
 import { stageSkills, cleanupSkills } from "./skillStage.js";
+import { buildQueryOptions } from "./gmAssembly.js";
 import { getLogger, createFileLogger } from "@dicelore/core";
 import { appendFileSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -127,15 +128,15 @@ export class DiceGm implements Agent {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(new Error(`GM turn timeout (${timeoutMs / 1000}s)`)), timeoutMs);
     try {
-      const options = {
+      // SDK options 装配抽成纯函数(gmAssembly.buildQueryOptions),offline 可跑装配断言(TB-2)。
+      // 这里仅把结构化结果 as 成 SDK 复杂签名 + 调 query()/消费消息流(副作用部分留 runTurn)。
+      const options = buildQueryOptions({
         model,
-        settingSources: staged ? ["project"] : [], // staged 时读副本 cwd 的 .claude;否则不读本地
-        ...(staged ? { cwd: staged } : {}),
-        mcpServers: { dicelore: { type: "sdk", name: "dicelore", instance: this.init.mcpServer } },
-        systemPrompt: this.init.openingPrompt,
-        allowedTools: staged ? ["mcp__dicelore", "Skill", "Read"] : ["mcp__dicelore"],
+        mcpServer: this.init.mcpServer,
+        openingPrompt: this.init.openingPrompt,
+        staged,
         abortController: controller,
-      } as Parameters<typeof query>[0]["options"];
+      }) as unknown as Parameters<typeof query>[0]["options"];
 
       let msgIdx = 0;
       for await (const msg of query({ prompt: input.text, options })) {
