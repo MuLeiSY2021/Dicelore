@@ -311,6 +311,14 @@
 .play .gen .lucide { width: 14px; height: 14px; color: var(--acc); }
 .play .err { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--err); background: var(--surface); border: 1px solid var(--err); border-radius: 6px; padding: 8px 11px; margin: 12px 0; }
 .play .err .lucide { width: 14px; height: 14px; flex: none; }
+/* RT-1 GM 超时兜底：可区分的超时块 + 重试/跳过入口 */
+.play .err.timeout { flex-direction: column; align-items: stretch; gap: 8px; }
+.play .err.timeout .t { display: flex; align-items: center; gap: 8px; }
+.play .err.timeout .m { opacity: .85; }
+.play .err.timeout .acts { display: flex; gap: 8px; }
+.play .err.timeout .acts button { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 12px; color: var(--err); background: var(--surface2); border: 1px solid var(--err); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+.play .err.timeout .acts button:hover { background: var(--surface); }
+.play .err.timeout .h { opacity: .65; }
 .play .end { display: flex; align-items: center; gap: 10px; padding: 14px 18px; margin-bottom: 16px; background: linear-gradient(160deg, var(--surface2), var(--surface)); border: 1px solid var(--acc); border-radius: 10px; }
 .play .end .lucide { width: 20px; height: 20px; color: var(--acc); flex: none; }
 .play .end b { font-family: var(--serif); font-size: 17px; color: var(--text); }

@@ -14,7 +14,7 @@ export interface TurnInput { text: string; turnId?: string }
 export type TurnEvent =
   | { type: "narration"; text: string } // 一段散文(Phase 1 = narrate 工具调用粒度)
   | { type: "turn_end" } // GM 本回合自然结束
-  | { type: "error"; message: string }; // 驱动/SDK 错误
+  | { type: "error"; message: string; code?: string }; // 驱动/SDK 错误(code 可区分:gm_timeout 等;省略→streamTurn 默认 gm_error)
 
 export interface Agent {
   runTurn(input: TurnInput): AsyncIterable<TurnEvent>;

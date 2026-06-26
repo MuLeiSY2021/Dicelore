@@ -11,7 +11,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import type { PresentationSnapshot, PendingRoll, StreamMessage } from "@dicelore/shared";
 import {
   getPresentation, postMessage as apiPostMessage, postRoll as apiPostRoll, postChoice as apiPostChoice,
-  postRewind as apiPostRewind,
+  postRewind as apiPostRewind, startGame as apiStartGame,
 } from "../api/client.js";
 
 export interface RevealCard { seq: number; target: string; text: string }
@@ -25,9 +25,15 @@ export function useSession(sessionId: string) {
   const [pendingRoll, setPendingRoll] = useState<PendingRoll | null>(null);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // RT-1：错误 code 与 error 并列暴露——前端据 code 区分超时(gm_timeout，给重试/跳过入口)与其它错误。
+  const [errorCode, setErrorCode] = useState<string | null>(null);
   const [gameEnd, setGameEnd] = useState<GameEnd | null>(null);
   const [reveals, setReveals] = useState<RevealCard[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
+  // RT-1 重试：记最近一次驱动 GM 回合的玩家输入（自由文本 / 选项点选 / 开场）。
+  // 超时后「重试」= 重发它；「跳过」= 仅清错误不重发，玩家继续下一步。
+  type LastInput = { kind: "message"; text: string } | { kind: "choice"; eventId: number; optionIndex: number } | { kind: "start" };
+  const lastInputRef = useRef<LastInput | null>(null);
   // 当前会话 id 的 ref：迟到的旧会话异步回调（refetch / WS 消息）据此守卫，不污染新会话状态。
   const sidRef = useRef(sessionId);
 
@@ -43,6 +49,7 @@ export function useSession(sessionId: string) {
     setPendingRoll(null);
     setGenerating(false);
     setError(null);
+    setErrorCode(null);
     setGameEnd(null);
     setReveals([]);
     refetch();
@@ -55,7 +62,7 @@ export function useSession(sessionId: string) {
       let msg: StreamMessage;
       try { msg = JSON.parse(e.data) as StreamMessage; } catch { return; }
       switch (msg.type) {
-        case "turn_started": setGenerating(true); setError(null); break;
+        case "turn_started": setGenerating(true); setError(null); setErrorCode(null); break;
         case "narration_commit": setNarration((n) => [...n, msg.text]); break;
         case "presentation_delta":
           for (const r of msg.delta.changes.reveal ?? []) {
@@ -68,7 +75,7 @@ export function useSession(sessionId: string) {
         case "roll_committed": setPendingRoll(null); refetch(); break;
         case "turn_ended": setGenerating(false); break;
         case "game_end": setGenerating(false); setGameEnd({ reason: msg.reason, outcome: msg.outcome }); break;
-        case "error": setGenerating(false); setError(msg.message || msg.code); break;
+        case "error": setGenerating(false); setError(msg.message || msg.code); setErrorCode(msg.code); break;
         default: break;
       }
     };
@@ -92,17 +99,41 @@ export function useSession(sessionId: string) {
     return () => { closed = true; if (timer) clearTimeout(timer); ws?.close(); };
   }, [sessionId, refetch]);
 
-  const postMessage = useCallback((text: string) => { setGenerating(true); setError(null); return apiPostMessage(sessionId, text).catch((e: Error) => { setGenerating(false); setError(e.message); throw e; }); }, [sessionId]);
-  const roll = useCallback((eventId: number) => { setError(null); return apiPostRoll(sessionId, eventId).catch((e: Error) => { setError(e.message); throw e; }); }, [sessionId]);
-  const choose = useCallback((eventId: number, optionIndex: number) => { setGenerating(true); setError(null); return apiPostChoice(sessionId, eventId, optionIndex).catch((e: Error) => { setGenerating(false); setError(e.message); throw e; }); }, [sessionId]);
+  const postMessage = useCallback((text: string) => {
+    lastInputRef.current = { kind: "message", text };
+    setGenerating(true); setError(null); setErrorCode(null);
+    return apiPostMessage(sessionId, text).catch((e: Error) => { setGenerating(false); setError(e.message); throw e; });
+  }, [sessionId]);
+  const roll = useCallback((eventId: number) => { setError(null); setErrorCode(null); return apiPostRoll(sessionId, eventId).catch((e: Error) => { setError(e.message); throw e; }); }, [sessionId]);
+  const choose = useCallback((eventId: number, optionIndex: number) => {
+    lastInputRef.current = { kind: "choice", eventId, optionIndex };
+    setGenerating(true); setError(null); setErrorCode(null);
+    return apiPostChoice(sessionId, eventId, optionIndex).catch((e: Error) => { setGenerating(false); setError(e.message); throw e; });
+  }, [sessionId]);
+  // 开场：记为 lastInput 供超时后「重试」复发（startGame 内部 404 降级走 messages，前端无感）。
+  const start = useCallback(() => {
+    lastInputRef.current = { kind: "start" };
+    setGenerating(true); setError(null); setErrorCode(null);
+    return apiStartGame(sessionId).catch((e: Error) => { setGenerating(false); setError(e.message); throw e; });
+  }, [sessionId]);
+  // RT-1 重试：清错误后重发上一条驱动输入（自由文本 / 选项 / 开场）。无记录则等同跳过（仅清错误）。
+  const retry = useCallback(() => {
+    const last = lastInputRef.current;
+    if (!last) { setError(null); setErrorCode(null); return Promise.resolve(); }
+    if (last.kind === "message") return postMessage(last.text).then(() => undefined);
+    if (last.kind === "choice") return choose(last.eventId, last.optionIndex).then(() => undefined);
+    return start().then(() => undefined);
+  }, [postMessage, choose, start]);
+  // RT-1 跳过：放弃本回合，仅清错误态继续（不重发）。inflight 后端早已 finally 释放，可直接下一步。
+  const skip = useCallback(() => { setError(null); setErrorCode(null); setGenerating(false); }, []);
   // 读档（SNAP-1 v1）：后端自动恢复最近快照（整表覆写 sheet/world/watcher），成功后 refetch 全量呈现对账。
   // 同时清掉残留的待掷/选项/终局/揭示——读回的是快照那一刻的「干净」回合边界态。
   const rewind = useCallback(() =>
     apiPostRewind(sessionId).then((r) => {
-      setError(null); setPendingRoll(null); setGameEnd(null); setReveals([]); refetch();
+      setError(null); setErrorCode(null); setPendingRoll(null); setGameEnd(null); setReveals([]); refetch();
       return r;
     }).catch((e: Error) => { setError(e.message); throw e; }), [sessionId, refetch]);
   const dismissReveal = useCallback((seq: number) => setReveals((prev) => prev.filter((r) => r.seq !== seq)), []);
 
-  return { snapshot, narration, pendingRoll, generating, error, gameEnd, reveals, postMessage, roll, choose, rewind, dismissReveal };
+  return { snapshot, narration, pendingRoll, generating, error, errorCode, gameEnd, reveals, postMessage, start, roll, choose, rewind, retry, skip, dismissReveal };
 }

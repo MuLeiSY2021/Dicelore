@@ -28,9 +28,11 @@ const snap: PresentationSnapshot = {
 
 function mockSession(over: Partial<ReturnType<typeof useSession>> = {}) {
   (useSession as Mock).mockReturnValue({
-    snapshot: snap, narration: [], pendingRoll: null, generating: false, error: null, gameEnd: null, reveals: [],
-    postMessage: vi.fn().mockResolvedValue({ turnId: "t" }), roll: vi.fn().mockResolvedValue({ turnId: "t" }),
-    choose: vi.fn().mockResolvedValue({ turnId: "t" }), rewind: vi.fn().mockResolvedValue({ snapshotId: 1 }), dismissReveal: vi.fn(),
+    snapshot: snap, narration: [], pendingRoll: null, generating: false, error: null, errorCode: null, gameEnd: null, reveals: [],
+    postMessage: vi.fn().mockResolvedValue({ turnId: "t" }), start: vi.fn().mockResolvedValue({ turnId: "t" }),
+    roll: vi.fn().mockResolvedValue({ turnId: "t" }),
+    choose: vi.fn().mockResolvedValue({ turnId: "t" }), rewind: vi.fn().mockResolvedValue({ snapshotId: 1 }),
+    retry: vi.fn().mockResolvedValue(undefined), skip: vi.fn(), dismissReveal: vi.fn(),
     ...over,
   });
 }
@@ -79,4 +81,24 @@ it("未开场时不显示读档入口(v1 是存档/读档,跑过回合才有存�
   mockSession({ narration: [], snapshot: { ...snap, narrativeCursor: 0 } });
   renderPlay();
   expect(screen.queryByTestId("rewind")).toBeNull();
+});
+
+it("RT-1：errorCode=gm_timeout 时显示重试/跳过入口；点击调 retry/skip", async () => {
+  const { fireEvent } = await import("@testing-library/react");
+  const retry = vi.fn().mockResolvedValue(undefined);
+  const skip = vi.fn();
+  mockSession({ narration: ["门开了。"], error: "GM 回合超时(180s)中止,已脱困", errorCode: "gm_timeout", retry, skip });
+  renderPlay();
+  expect(screen.getByTestId("gm-timeout")).toBeInTheDocument();
+  fireEvent.click(screen.getByTestId("timeout-retry"));
+  expect(retry).toHaveBeenCalled();
+  fireEvent.click(screen.getByTestId("timeout-skip"));
+  expect(skip).toHaveBeenCalled();
+});
+
+it("RT-1：普通错误(非 gm_timeout)仍走朴素错误条,不显示重试/跳过", () => {
+  mockSession({ narration: ["门开了。"], error: "别的错误", errorCode: "gm_error" });
+  renderPlay();
+  expect(screen.queryByTestId("gm-timeout")).toBeNull();
+  expect(screen.getByText("别的错误")).toBeInTheDocument();
 });

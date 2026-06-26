@@ -85,3 +85,16 @@ export {
   type SnapshotRow,
   type CheckpointOpts,
 } from "./store/snapshot.js";
+
+// ===== token 用量计量(CO-采集 / store/usage.ts)=====
+// DiceGm 消费到 result.usage → recordUsage 落库;查询按 turn/agent/session 聚合(可视化另起 CO-前端线)。
+export {
+  recordUsage,
+  listUsage,
+  usageByTurn,
+  usageByAgent,
+  usageBySession,
+  type UsageInput,
+  type UsageRow,
+  type UsageTotals,
+} from "./store/usage.js";

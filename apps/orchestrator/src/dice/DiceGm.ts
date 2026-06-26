@@ -12,11 +12,28 @@ import type { Logger } from "pino";
 import type { Agent, TurnInput, TurnEvent, AgentInit } from "../pkg/agent.js";
 import { stageSkills, cleanupSkills } from "./skillStage.js";
 import { buildQueryOptions } from "./gmAssembly.js";
-import { getLogger, createFileLogger } from "@dicelore/core";
+import { getLogger, createFileLogger, openDb, initSchema, recordUsage, sessionDbPath, type UsageInput } from "@dicelore/core";
 import { appendFileSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 
 let stageSeq = 0; // staged 目录命名,避免并发回合碰撞(不依赖随机/时间)
+
+// CO-采集:Agent SDK result.usage 字段名 → UsageInput 数字字段（纯函数,可 offline 单测）。
+// SDK NonNullableUsage 形:{input_tokens, output_tokens, cache_read_input_tokens, cache_creation_input_tokens, …}。
+// 缺省/非数字一律归零(SDK 偶尔不回 cache 维度);返回 token 计数子集,归因标签(turn/session/agent)由调用点补。
+export interface ParsedUsage {
+  inputTokens: number; outputTokens: number; cacheReadTokens: number; cacheCreationTokens: number;
+}
+export function parseUsage(usage: unknown): ParsedUsage {
+  const u = (usage ?? {}) as Record<string, unknown>;
+  const n = (v: unknown): number => (typeof v === "number" && Number.isFinite(v) ? v : 0);
+  return {
+    inputTokens: n(u.input_tokens),
+    outputTokens: n(u.output_tokens),
+    cacheReadTokens: n(u.cache_read_input_tokens),
+    cacheCreationTokens: n(u.cache_creation_input_tokens),
+  };
+}
 
 // 真 GM 驱动：@anthropic-ai/claude-agent-sdk query()，in-process 挂 dicelore MCP。
 // 鉴权沿用 env ANTHROPIC_BASE_URL/ANTHROPIC_AUTH_TOKEN(SDK 原生读)。不进单测(烧 LLM)。
@@ -47,6 +64,30 @@ export class DiceGm implements Agent {
 
   private logReady = false;
   private curTurnId = "?";
+
+  // CO-采集:把本回合 result.usage 落进 session db 的 usage_log（per-turn + per-agent 双采,agent='gm'）。
+  // 取 db 路径用 sessionDbPath(sessionId)——与 server.ts 的 openCoreSession 同口径(均走 appDataRoot()),
+  // 故落的是 MCP server 写的同一 db 文件,而非 init.sessionsDir(那是 GM raw 日志根,与 db 根分属两处)。
+  // 独立短连接 INSERT(WAL 下多连接安全),写完即关;采集失败只记日志,绝不阻断回合(计量是带外旁路)。
+  private recordTurnUsage(usage: unknown): void {
+    const { sessionId } = this.init;
+    if (!sessionId) return; // 无会话身份(lore/裸测试)不采集
+    const parsed = parseUsage(usage);
+    const model = this.init.model ?? process.env.DICELORE_GM_MODEL ?? "glm-5.2";
+    const input: UsageInput = { sessionId, turnId: this.curTurnId, agent: "gm", model, ...parsed };
+    let db: ReturnType<typeof openDb> | undefined;
+    try {
+      const dbPath = sessionDbPath(sessionId, "dice");
+      mkdirSync(dirname(dbPath), { recursive: true }); // 防御:库目录通常已由 openCoreSession 建,缺则补
+      db = openDb(dbPath);
+      initSchema(db); // 幂等:确保 usage_log 表在(库已存在则无副作用)
+      recordUsage(db, input);
+    } catch (e) {
+      getLogger().error({ err: e, turnId: this.curTurnId }, "采集 usage 落库失败(不阻断回合)");
+    } finally {
+      try { db?.close(); } catch { /* 关连接失败忽略 */ }
+    }
+  }
   // 对话记录:每行一 JSON 事件(turn/msg/turn_end/error/stage_error),CC transcript 风格,可回放/迁移。
   private appendConversation(obj: unknown): void {
     const p = this.conversationPath;
@@ -146,6 +187,8 @@ export class DiceGm implements Agent {
         // → onCanonWrite → mapCanonWrite → narration_commit(接口页 §5.1/§10.1 A1)。
         // 这里只消费流到 result 为止取回合结束信号,不再 yield narration(避免 GM 思考泄漏进 narrate)。
         if (msg.type === "result") {
+          // CO-采集:result 含本回合 usage(input/output/cache token)——采出落 usage_log。
+          this.recordTurnUsage((msg as { usage?: unknown }).usage);
           break; // 回合结束
         }
       }
@@ -153,13 +196,14 @@ export class DiceGm implements Agent {
       this.sessionLogger.info({ turnId, msgs: msgIdx }, `TURN ${turnId} end`);
       this.appendConversation({ _: "turn_end", turnId, msgs: msgIdx });
     } catch (e) {
-      // 超时 abort 优先按超时报(更可读);否则原样抛错信息。
-      const message = controller.signal.aborted
+      // 超时 abort 优先按超时报(更可读 + 可区分 code=gm_timeout,让前端识别「超时·可重试」);否则原样抛错信息。
+      const isTimeout = controller.signal.aborted;
+      const message = isTimeout
         ? `GM 回合超时(${timeoutMs / 1000}s)中止,已脱困`
         : (e instanceof Error ? e.message : String(e));
-      this.sessionLogger.error({ err: e, turnId, aborted: controller.signal.aborted }, "GM runTurn 异常");
-      this.appendConversation({ _: "error", turnId, message });
-      yield { type: "error", message };
+      this.sessionLogger.error({ err: e, turnId, aborted: isTimeout }, "GM runTurn 异常");
+      this.appendConversation({ _: "error", turnId, message, code: isTimeout ? "gm_timeout" : undefined });
+      yield { type: "error", message, code: isTimeout ? "gm_timeout" : undefined };
     } finally {
       clearTimeout(timer);
       if (staged) cleanupSkills(staged);

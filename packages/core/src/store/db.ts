@@ -108,6 +108,22 @@ export function initSchema(db: DB): void {
       blob_json TEXT NOT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+    -- ===== token 用量计量(CO-采集 / store/usage.ts)=====
+    -- 带外计量明细表：每条 = 一次 Agent SDK result 回传的 usage 采样。
+    -- 归因双采：turn_id(per-turn) + agent(per-agent) + session_id，按需聚合不预聚合。
+    -- 与 snapshot 表互相独立(不进快照/回滚/FTS)——各自 CREATE，不冲突。
+    CREATE TABLE IF NOT EXISTS usage_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_id TEXT NOT NULL,
+      turn_id TEXT NOT NULL,
+      agent TEXT NOT NULL,
+      model TEXT,
+      input_tokens INTEGER NOT NULL DEFAULT 0,
+      output_tokens INTEGER NOT NULL DEFAULT 0,
+      cache_read_tokens INTEGER NOT NULL DEFAULT 0,
+      cache_creation_tokens INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
 
   // ===== FTS5 全文检索虚表(Plan 2)=====

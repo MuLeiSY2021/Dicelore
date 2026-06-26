@@ -27,7 +27,7 @@ type Script = TurnEvent[] | ((input: TurnInput) => TurnEvent[]);
 // 一条「GM 在回合内做的事」——可以是产出一段流事件，也可以是一次 canon 写入。
 export type CanonAction =
   | { type: "narration"; text: string }
-  | { type: "error"; message: string }
+  | { type: "error"; message: string; code?: string }
   // 明骰：暂存待掷 + await rollGate(玩家在客户端点掷才解开)。flow 等同 resolve_outcome_open。
   | { type: "roll"; context: string; die?: string; bands?: { label: string; min: number; max: number }[] }
   // 选择：落一条 kind=choice event，回合末由 runTurnEnd/buildPresentationModel 物化成 choices。
@@ -67,7 +67,7 @@ export class FakeDiceGm implements Agent {
             yield { type: "narration", text: a.text };
             break;
           case "error":
-            yield { type: "error", message: a.message };
+            yield { type: "error", message: a.message, code: a.code };
             return;
           case "roll": {
             // 暂存待掷 → await rollGate(eventId)。

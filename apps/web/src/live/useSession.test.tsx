@@ -326,3 +326,70 @@ it("旧会话的迟到 refetch 不覆盖新会话快照（sessionId 守卫）", 
   await act(async () => { await Promise.resolve(); await Promise.resolve(); });
   expect(result.current.snapshot?.sessionId).toBe("s2");
 });
+
+// ── RT-1：GM 超时兜底(可区分 code=gm_timeout + 重试/跳过) ────────────────────
+describe("RT-1 GM 超时兜底", () => {
+  it("error code=gm_timeout → errorCode 暴露 gm_timeout(与普通 gm_error 可区分)", async () => {
+    const instances = installWs();
+    stubFetchOk();
+    const { result } = renderHook(() => useSession("s1"));
+    await act(async () => { await Promise.resolve(); });
+
+    act(() => { instances[0].emit({ protocol: CLIENT_PROTOCOL, type: "turn_started", turnId: "t1" }); });
+    act(() => { instances[0].emit({ protocol: CLIENT_PROTOCOL, type: "error", code: "gm_timeout", message: "GM 回合超时(180s)中止,已脱困" }); });
+    expect(result.current.errorCode).toBe("gm_timeout");
+    expect(result.current.error).toContain("超时");
+    expect(result.current.generating).toBe(false);
+
+    // 普通错误 errorCode 为该 code，前端不当超时处理。
+    act(() => { instances[0].emit({ protocol: CLIENT_PROTOCOL, type: "error", code: "gm_error", message: "别的错" }); });
+    expect(result.current.errorCode).toBe("gm_error");
+  });
+
+  it("retry 重发上一条玩家输入(message)；turn_started 清 errorCode", async () => {
+    const instances = installWs();
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+      if (typeof url === "string" && url.includes("/presentation")) return Promise.resolve({ ok: true, json: async () => SNAP });
+      return Promise.resolve({ ok: true, json: async () => ({ turnId: "t" }) });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const { result } = renderHook(() => useSession("s1"));
+    await act(async () => { await Promise.resolve(); });
+
+    await act(async () => { await result.current.postMessage("我推门"); });
+    act(() => { instances[0].emit({ protocol: CLIENT_PROTOCOL, type: "error", code: "gm_timeout", message: "超时" }); });
+    expect(result.current.errorCode).toBe("gm_timeout");
+
+    const before = fetchMock.mock.calls.filter((c) => String(c[0]).includes("/messages")).length;
+    await act(async () => { await result.current.retry(); });
+    const after = fetchMock.mock.calls.filter((c) => String(c[0]).includes("/messages"));
+    expect(after.length).toBe(before + 1);
+    // 重发的就是上一条文本。
+    expect(JSON.parse((after.at(-1)![1] as { body: string }).body).text).toBe("我推门");
+    // 重试进入生成态后，turn_started 回来清错误码。
+    act(() => { instances[0].emit({ protocol: CLIENT_PROTOCOL, type: "turn_started", turnId: "t2" }); });
+    expect(result.current.errorCode).toBeNull();
+    expect(result.current.error).toBeNull();
+  });
+
+  it("skip 仅清错误态、不重发任何请求(放弃本回合继续)", async () => {
+    const instances = installWs();
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+      if (typeof url === "string" && url.includes("/presentation")) return Promise.resolve({ ok: true, json: async () => SNAP });
+      return Promise.resolve({ ok: true, json: async () => ({ turnId: "t" }) });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const { result } = renderHook(() => useSession("s1"));
+    await act(async () => { await Promise.resolve(); });
+
+    await act(async () => { await result.current.postMessage("我推门"); });
+    act(() => { instances[0].emit({ protocol: CLIENT_PROTOCOL, type: "error", code: "gm_timeout", message: "超时" }); });
+    const callsBefore = fetchMock.mock.calls.length;
+    act(() => { result.current.skip(); });
+    expect(result.current.error).toBeNull();
+    expect(result.current.errorCode).toBeNull();
+    expect(result.current.generating).toBe(false);
+    expect(fetchMock.mock.calls.length).toBe(callsBefore); // 无新请求
+  });
+});
+

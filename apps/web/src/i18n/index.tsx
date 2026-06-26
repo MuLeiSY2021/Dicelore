@@ -115,6 +115,9 @@ const ZH: Dict = {
   "play.session.empty.sub": "去团本目录选一个团本开始游戏。", "play.session.empty.cta": "去团本目录",
   "play.rewind": "读档", "play.rewind.hint": "恢复到最近一次自动存档（每回合末自动存）",
   "play.rewind.confirm": "读档将把本局恢复到最近一个回合末的自动存档，此回合后的状态变更会被覆盖。确定？",
+  "play.timeout.title": "GM 这一回合超时了",
+  "play.timeout.retry": "重试", "play.timeout.skip": "跳过本回合",
+  "play.timeout.hint": "可重发上一步让 GM 再试，或跳过继续。",
 };
 
 const EN: Dict = {
@@ -204,6 +207,9 @@ const EN: Dict = {
   "play.session.empty.sub": "Pick a campaign in Campaigns to start.", "play.session.empty.cta": "Go to Campaigns",
   "play.rewind": "Load save", "play.rewind.hint": "Restore to the latest autosave (saved at each turn end)",
   "play.rewind.confirm": "Loading will restore this session to the latest end-of-turn autosave; state changes after that turn will be overwritten. Continue?",
+  "play.timeout.title": "The GM timed out on this turn",
+  "play.timeout.retry": "Retry", "play.timeout.skip": "Skip this turn",
+  "play.timeout.hint": "Resend your last action to let the GM try again, or skip to continue.",
 };
 
 const DICTS: Record<Lang, Dict> = { zh: ZH, en: EN };

@@ -18,7 +18,7 @@ import {
 import { useSession } from "../live/useSession.js";
 import { Markdown } from "../play/Markdown.js";
 import { useT } from "../i18n/index.js";
-import { browse, listSessions, startGame, deleteSession, type BrowseEntry } from "../api/client.js";
+import { browse, listSessions, deleteSession, type BrowseEntry } from "../api/client.js";
 import { Link } from "react-router-dom";
 import type { SessionSummary } from "@dicelore/shared";
 
@@ -59,7 +59,7 @@ export default function PlayPage() {
   const navigate = useNavigate();
   const { sessionId } = useParams();
   const sid = sessionId ?? DEMO_SESSION;
-  const { snapshot, narration, pendingRoll, generating, error, gameEnd, reveals, postMessage, roll, choose, rewind, dismissReveal } = useSession(sid);
+  const { snapshot, narration, pendingRoll, generating, error, errorCode, gameEnd, reveals, postMessage, start, roll, choose, rewind, retry, skip, dismissReveal } = useSession(sid);
   const [draft, setDraft] = useState("");
   const [chosen, setChosen] = useState<number | null>(null);
 
@@ -149,7 +149,7 @@ export default function PlayPage() {
 
   async function kickoff() {
     setKicked(true);
-    try { await startGame(sid); } catch { setKicked(false); }
+    try { await start(); } catch { setKicked(false); }
   }
   async function removeSession(id: string) {
     await deleteSession(id);
@@ -359,7 +359,23 @@ export default function PlayPage() {
               </div>
             )}
             {(generating || (kicked && narration.length === 0)) && !gameEnd && <div className="gen"><Loader2 className="lucide spin" />{t("play.generating")}</div>}
-            {error && <div className="err"><AlertTriangle className="lucide" />{error}</div>}
+            {error && (
+              errorCode === "gm_timeout" ? (
+                // RT-1 短期方案：超时(可区分 code=gm_timeout)给「重试 / 跳过」入口。
+                // 重试=重发上一步玩家输入；跳过=放弃本回合继续。中期事务回滚/长期快照恢复另立。
+                <div className="err timeout" role="alert" data-testid="gm-timeout">
+                  <div className="t"><Timer className="lucide" /><b>{t("play.timeout.title")}</b></div>
+                  <div className="m">{error}</div>
+                  <div className="acts">
+                    <button data-testid="timeout-retry" onClick={() => retry().catch(() => {})}><RotateCcw className="lucide" />{t("play.timeout.retry")}</button>
+                    <button data-testid="timeout-skip" onClick={skip}><X className="lucide" />{t("play.timeout.skip")}</button>
+                  </div>
+                  <span className="h">{t("play.timeout.hint")}</span>
+                </div>
+              ) : (
+                <div className="err"><AlertTriangle className="lucide" />{error}</div>
+              )
+            )}
           </div>
 
           <div className="split" />

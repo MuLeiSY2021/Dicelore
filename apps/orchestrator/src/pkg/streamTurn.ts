@@ -34,7 +34,8 @@ export async function streamDriverTurn(deps: StreamTurnDeps, input: TurnInput): 
         seq += 1;
         send({ protocol: CLIENT_PROTOCOL, type: "narration_commit", seq, text: ev.text });
       } else if (ev.type === "error") {
-        send({ protocol: CLIENT_PROTOCOL, type: "error", code: "gm_error", message: ev.message });
+        // ev.code 由驱动给出可区分码(如 gm_timeout，让前端识别「超时·可重试」);省略则默认 gm_error。
+        send({ protocol: CLIENT_PROTOCOL, type: "error", code: ev.code ?? "gm_error", message: ev.message });
         return { seq, errored: true };
       } else if (ev.type === "turn_end") {
         break;
