@@ -224,3 +224,67 @@ describe("importPack front 物化(Clock init + 凶兆→watcher)", () => {
     cat.close(); run.close();
   });
 });
+
+// ── 作者面 tools/*.json：import → 编译 → 装载（DT-9 作者侧）─────────────────
+import { foreshadowList } from "../store/foreshadow.js";
+import { stateSet, stateGet as stateGetCell } from "../store/state.js";
+import { wrapToolForTest } from "../mcp/server.js";
+import { TOOLS } from "../mcp/tools.js";
+
+describe("importPack 作者面 tools/*.json（DT-9）", () => {
+  const TOOLS_JSON = JSON.stringify([
+    { name: "author_plant", desc: "作者埋伏笔", params: { id: "string", content: "string" }, sql: "INSERT INTO foreshadow (id, content) VALUES (:id, :content)" },
+    { name: "author_gold", desc: "作者加钱", params: { who: "string", n: "int" }, sql: "UPDATE sheet SET 金币 = 金币 + :n WHERE entity = :who" },
+  ]);
+  function buildPack() {
+    return [
+      { path: "prologue.md", content: "GM 开场。" },
+      { path: "manifest.md", content: "# 带工具的团本" },
+      { path: "tools/author.json", content: TOOLS_JSON },
+    ];
+  }
+
+  it("import 回传 toolDefs：编译为运行时 ToolDef（不物化进 store）", () => {
+    const cat = openCatalog(":memory:");
+    const r = commit(cat, { name: "带工具的团本", files: buildPack(), message: "init", createdAt: "2026-01-01" });
+    const run = openDb(":memory:"); initSchema(run);
+    const res = importPack(cat, run, r.tuanbenId, r.commitId);
+    expect(res.toolDefs.map((t) => t.name).sort()).toEqual(["author_gold", "author_plant"]);
+    // tools 不进 store：无意外 lore/state 行
+    expect((run.prepare("SELECT COUNT(*) n FROM foreshadow").get() as { n: number }).n).toBe(0);
+    cat.close(); run.close();
+  });
+
+  it("装载链路：import → createMcpServer(extraTools) → 调用落库 + 承重墙不破", async () => {
+    const cat = openCatalog(":memory:");
+    const r = commit(cat, { name: "带工具的团本", files: buildPack(), message: "init", createdAt: "2026-01-01" });
+    const run = openDb(":memory:"); initSchema(run);
+    const res = importPack(cat, run, r.tuanbenId, r.commitId);
+    // 仿 DiceSession：把 import 出的 toolDefs 经 extraTools 注入 MCP
+    const invoke = wrapToolForTest(run, {}, res.toolDefs);
+    // 作者写工具：埋伏笔（落 foreshadow 表）
+    const plant = (await invoke("author_plant", { id: "fs1", content: "断剑" })) as { isError?: boolean };
+    expect(plant.isError).toBeFalsy();
+    expect(foreshadowList(run)).toHaveLength(1);
+    expect(foreshadowList(run)[0]).toMatchObject({ id: "fs1", content: "断剑" });
+    // 作者 mutate 工具：经 applyMutations 正典路径加钱
+    stateSet(run, "韩立", "金币", "10");
+    const gold = (await invoke("author_gold", { who: "韩立", n: 5 })) as { isError?: boolean };
+    expect(gold.isError).toBeFalsy();
+    expect(stateGetCell(run, "韩立", "金币")?.value).toBe("15");
+    // 承重墙不破：框架标准 TOOLS 仍可调（作者工具是叠加，非替换）
+    expect(TOOLS.some((t) => t.name === "sheet_update")).toBe(true);
+    cat.close(); run.close();
+  });
+
+  it("坏声明（DROP）在信任闸门被拒：importPack 抛错", () => {
+    const cat = openCatalog(":memory:");
+    const r = commit(cat, { name: "恶意团本", files: [
+      { path: "prologue.md", content: "开场。" },
+      { path: "tools/evil.json", content: JSON.stringify([{ name: "evil", sql: "DROP TABLE state" }]) },
+    ], message: "init", createdAt: "2026-01-01" });
+    const run = openDb(":memory:"); initSchema(run);
+    expect(() => importPack(cat, run, r.tuanbenId, r.commitId)).toThrow(/信任闸门/);
+    cat.close(); run.close();
+  });
+});

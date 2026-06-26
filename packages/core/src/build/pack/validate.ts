@@ -8,6 +8,7 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import type { PackFile } from "../../catalog/catalog.js";
+import { compileTool, type ToolDecl } from "../../toolgen/compile.js";
 
 // ── 公开类型 ────────────────────────────────────────────────────────────────
 export interface ValidateIssue { level: "error" | "warn"; file: string; msg: string; hint?: string }
@@ -17,6 +18,7 @@ export interface ValidateReport { ok: boolean; issues: ValidateIssue[] }
 const KNOWN_TOP = new Set([
   "lore", "rules", "world", "pools", "params", "sheets", "fronts",
   "plotlines", "foreshadows", "anchors", // 叙事域 CSV
+  "tools",          // 作者面：tools/*.json 携带声明式 toolgen 工具声明(DT-9 作者侧)
   "state",          // legacy: Draft.toPackFiles() 生成的旧格式
   "manifest.md",    // legacy: Draft.toPackFiles() 生成的旧格式
   "manifest.yaml",  // 新格式
@@ -124,9 +126,7 @@ export interface ParsedFront {
   visible?: number;
   name: string;
   omens: { threshold: number; payload: string }[];
-}
-
-export function parseFront(content: string): ParsedFront | null {
+}export function parseFront(content: string): ParsedFront | null {
   const parsed = parseFrontmatter(content);
   if (!parsed) return null;
   const { meta, body } = parsed;
@@ -167,6 +167,58 @@ function collectSheetAttrs(files: PackFile[]): Set<string> {
 
 // ── semver 宽松校验（major.minor.patch）──────────────────────────────────
 const SEMVER_RE = /^\d+\.\d+\.\d+(-[\w.]+)?(\+[\w.]+)?$/;
+
+// ── 作者面 tools/*.json：声明式 toolgen 工具声明 ──────────────────────────
+// DT-9 作者侧。团本作者在 pack 的 tools/<name>.json 写 ToolDecl[]，import/开局时经
+// toolgenToToolDef 编译装进本 session 的 MCP。安全边界：**复用 toolgen 的 compileTool 校验**
+// （读=assertReadOnlySelect 只读 SELECT；写=matchWrite 三封闭模式 mutate/setStatus/insert），
+// 拒绝任意 handler / 危险 SQL（DROP/ATTACH/PRAGMA、多语句、JOIN/OR/子查询、非叙事表 INSERT）。
+// 单源：此处只解析 + 调 compileTool 收集错误；编译规则的权威在 toolgen，绝不在此另造弱校验。
+
+/** 一个 tools/*.json 的解析结果：合法则 decls 为声明数组，非法（JSON 坏 / 非数组）则 error 描述。 */
+export interface ParsedToolsFile {
+  decls?: ToolDecl[];
+  error?: string;
+}
+
+/** 解析单个 tools/*.json 文件内容为 ToolDecl[]。供 validate + import 共用（单源）。 */
+export function parseToolsFile(content: string): ParsedToolsFile {
+  let json: unknown;
+  try {
+    json = JSON.parse(content);
+  } catch (e) {
+    return { error: `JSON 解析失败: ${(e as Error).message}` };
+  }
+  if (!Array.isArray(json)) {
+    return { error: "tools 文件须为 ToolDecl 数组（JSON array）" };
+  }
+  const decls: ToolDecl[] = [];
+  for (const [i, raw] of json.entries()) {
+    if (typeof raw !== "object" || raw === null) {
+      return { error: `第 ${i} 项不是对象` };
+    }
+    const d = raw as Record<string, unknown>;
+    if (typeof d.name !== "string" || d.name.trim() === "") {
+      return { error: `第 ${i} 项缺 name（字符串）` };
+    }
+    if (typeof d.sql !== "string" || d.sql.trim() === "") {
+      return { error: `工具「${d.name}」缺 sql（字符串）` };
+    }
+    if (d.desc !== undefined && typeof d.desc !== "string") {
+      return { error: `工具「${d.name}」的 desc 须为字符串` };
+    }
+    if (d.params !== undefined) {
+      if (typeof d.params !== "object" || d.params === null || Array.isArray(d.params)) {
+        return { error: `工具「${d.name}」的 params 须为 {名:类型} 对象` };
+      }
+      for (const [k, v] of Object.entries(d.params)) {
+        if (typeof v !== "string") return { error: `工具「${d.name}」参数「${k}」类型须为字符串字面量` };
+      }
+    }
+    decls.push(d as unknown as ToolDecl);
+  }
+  return { decls };
+}
 
 // ── 主校验函数 ────────────────────────────────────────────────────────────
 export function validatePack(files: PackFile[]): ValidateReport {
@@ -236,9 +288,39 @@ export function validatePack(files: PackFile[]): ValidateReport {
     }
   }
 
+  // ── Rule 8: 作者面 tools/*.json 声明式工具（DT-9 安全闸门）─────────────
+  // 复用 toolgen 的 compileTool 做编译期校验——任何危险 SQL / 不可映射形状直接 throw → 转 error。
+  const seenToolNames = new Map<string, string>(); // name → 首次出现的 file，查重
+  for (const f of files) {
+    if (topSegOf(f.path) !== "tools") continue;
+    if (!f.path.endsWith(".json")) {
+      err(f.path, "tools/ 下只接受 .json 声明文件", "把工具声明写成 tools/<name>.json（ToolDecl 数组）");
+      continue;
+    }
+    const parsed = parseToolsFile(f.content);
+    if (parsed.error || !parsed.decls) {
+      err(f.path, `tools 声明解析失败: ${parsed.error}`, '格式: [{ "name": "...", "desc": "...", "params": {"k":"string"}, "sql": "..." }]');
+      continue;
+    }
+    for (const decl of parsed.decls) {
+      // 查重：同名工具（跨文件）拒绝，避免装载时后者覆盖前者。
+      const prev = seenToolNames.get(decl.name);
+      if (prev) {
+        err(f.path, `tools 工具名「${decl.name}」重复（已在 ${prev} 声明）`, "工具名须在团本内唯一");
+        continue;
+      }
+      seenToolNames.set(decl.name, f.path);
+      // 安全闸门：交给 toolgen 唯一权威校验。读=只读 SELECT；写=三封闭模式。任何逃逸都在此被拒。
+      try {
+        compileTool(decl);
+      } catch (e) {
+        err(f.path, `工具「${decl.name}」声明非法（toolgen 拒绝）: ${(e as Error).message}`, "只允许声明式工具：只读 SELECT，或 mutate/setStatus/insert 三模式；禁任意 SQL/DROP/ATTACH/多语句/JOIN/子查询");
+      }
+    }
+  }
+
   // ── manifest.yaml 校验（Rules 1-4）────────────────────────────────────
-  const manifestYamlFile = files.find((f) => f.path === "manifest.yaml");
-  if (manifestYamlFile) {
+  const manifestYamlFile = files.find((f) => f.path === "manifest.yaml");  if (manifestYamlFile) {
     const m = parseManifestYaml(manifestYamlFile.content);
     const mPath = "manifest.yaml";
 
@@ -366,6 +448,11 @@ export function validatePack(files: PackFile[]): ValidateReport {
 }
 
 // ── helpers ────────────────────────────────────────────────────────────────
+
+function topSegOf(path: string): string {
+  const i = path.indexOf("/");
+  return i === -1 ? path : path.slice(0, i);
+}
 
 function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

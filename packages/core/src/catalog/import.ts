@@ -19,7 +19,9 @@ import { stateSetClock } from "../store/state.js";
 import { watcherSet } from "../store/watcher.js";
 import { checkout, type PackFile } from "./catalog.js";
 import type { CatalogDB } from "./db.js";
-import { validatePack as validatePackFull, parseFrontmatter, parseFront, type ValidateIssue } from "../build/pack/validate.js";
+import { validatePack as validatePackFull, parseFrontmatter, parseFront, parseToolsFile, type ValidateIssue } from "../build/pack/validate.js";
+import { toolgenToToolDef } from "../toolgen/toToolDef.js";
+import type { ToolDef } from "../mcp/tooldef.js";
 
 // 团本包 → per-session 运行库的物化映射(对齐 数据层 spec §9)。
 // 包路径约定: lore/<n>.md、rules/<n>.md、pools/<n>.csv、state/<n>.csv、manifest.md
@@ -33,6 +35,12 @@ export interface ImportResult {
   fronts: number; plotlines: number; foreshadows: number; anchors: number;
   prologue?: string;     // 包根 prologue.md 正文(团本开场 prompt;不物化进 store,回传供 session_meta)
   tuanbenName?: string;  // manifest.md H1(团本名,session_meta 兜底)
+  /**
+   * 作者面声明式工具（DT-9 作者侧）。pack 的 tools/*.json 声明经 toolgenToToolDef 编译为运行时 ToolDef，
+   * 不物化进 store——回传供创建本 session 的 createMcpServer(db, deps, extraTools) 经 extraTools 注入。
+   * 安全已在 validatePack（信任闸门）经 toolgen compileTool 守住；坏声明在 import 前就抛错，永不到这。
+   */
+  toolDefs: ToolDef[];
 }
 
 // 信任闸门:永不信任来源,跑起来前重验包结构。坏包 → ok:false。
@@ -82,7 +90,7 @@ export function importPack(catalogDB: CatalogDB, runDB: DB, tuanbenId: string, r
   if (!v.ok) {
     throw new Error(`团本包校验失败(信任闸门): ${v.issues.filter((i) => i.level === "error").map((i) => `${i.file}: ${i.msg}`).join("; ")}`);
   }
-  const res: ImportResult = { lore: 0, rules: 0, pools: 0, stateCells: 0, fronts: 0, plotlines: 0, foreshadows: 0, anchors: 0 };
+  const res: ImportResult = { lore: 0, rules: 0, pools: 0, stateCells: 0, fronts: 0, plotlines: 0, foreshadows: 0, anchors: 0, toolDefs: [] };
   const stateStmt = runDB.prepare(
     `INSERT INTO state (entity, kind, attr, value, visible) VALUES (?,?,?,?,?)
      ON CONFLICT(entity, attr) DO UPDATE SET kind=excluded.kind, value=excluded.value, visible=excluded.visible`,
@@ -169,6 +177,13 @@ export function importPack(catalogDB: CatalogDB, runDB: DB, tuanbenId: string, r
         if (m) res.tuanbenName = m[1].trim();
       } else if (f.path === "prologue.md") {
         res.prologue = f.content; // 团本开场 prompt:不物化进 store,回传供 session_meta
+      } else if (top === "tools" && f.path.endsWith(".json")) {
+        // 作者面声明式工具：不物化进 store。validatePack 已守安全闸门(compileTool 全过)，
+        // 此处把声明经 toolgenToToolDef 编译为运行时 ToolDef，回传供 createMcpServer(extraTools) 注入。
+        const parsed = parseToolsFile(f.content);
+        for (const decl of parsed.decls ?? []) {
+          res.toolDefs.push(toolgenToToolDef(decl));
+        }
       }
     }
   });

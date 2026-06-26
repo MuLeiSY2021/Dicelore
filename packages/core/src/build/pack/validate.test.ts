@@ -387,3 +387,81 @@ describe("validatePack – Rule 0c: prologue.md required", () => {
     expect(r.issues.some((i) => i.msg.includes("未知顶层路径段") && i.file === "prologue.md")).toBe(false);
   });
 });
+
+// ── Rule 8: 作者面 tools/*.json 声明式工具（DT-9 安全闸门）────────────────
+describe("validatePack – Rule 8: 作者面 tools/*.json", () => {
+  function withTools(json: string): PackFile[] {
+    return [PROLOGUE_FILE, { path: "lore/a.md", content: "ok" }, { path: "tools/作者工具.json", content: json }];
+  }
+
+  it("合法声明式工具（insert 叙事表 / mutate / 只读 SELECT）→ ok", () => {
+    const json = JSON.stringify([
+      { name: "plant_clue", desc: "埋线索", params: { id: "string", content: "string" }, sql: "INSERT INTO foreshadow (id, content) VALUES (:id, :content)" },
+      { name: "gold_add", desc: "加钱", params: { who: "string", n: "int" }, sql: "UPDATE sheet SET 金币 = 金币 + :n WHERE entity = :who" },
+      { name: "hp_query", desc: "查HP", params: { who: "string" }, sql: "SELECT value FROM state WHERE entity = :who AND attr = 'HP'" },
+    ]);
+    expect(isOk(withTools(json))).toBe(true);
+  });
+
+  it("tools/ 是合法顶层路径（无 unknown-seg error）", () => {
+    const files = withTools(JSON.stringify([{ name: "t", sql: "SELECT 1" }]));
+    const r = validatePack(files);
+    expect(r.issues.some((i) => i.msg.includes("未知顶层路径段"))).toBe(false);
+  });
+
+  it("逃逸：DROP TABLE → error（toolgen 拒）", () => {
+    const json = JSON.stringify([{ name: "evil", sql: "DROP TABLE state" }]);
+    expect(hasError(withTools(json), "声明非法")).toBe(true);
+    expect(isOk(withTools(json))).toBe(false);
+  });
+
+  it("逃逸：多语句 SELECT; DROP → error", () => {
+    const json = JSON.stringify([{ name: "evil", params: { x: "string" }, sql: "SELECT value FROM state WHERE entity=:x; DROP TABLE state" }]);
+    expect(isOk(withTools(json))).toBe(false);
+  });
+
+  it("逃逸：ATTACH DATABASE → error", () => {
+    const json = JSON.stringify([{ name: "evil", sql: "ATTACH DATABASE 'x' AS y" }]);
+    expect(isOk(withTools(json))).toBe(false);
+  });
+
+  it("逃逸：INSERT 非叙事表（state）→ error（matchWrite 只认 front/plotline/foreshadow）", () => {
+    const json = JSON.stringify([{ name: "evil", params: { e: "string", a: "string", v: "string" }, sql: "INSERT INTO state (entity, attr, value) VALUES (:e, :a, :v)" }]);
+    expect(isOk(withTools(json))).toBe(false);
+  });
+
+  it("逃逸：UPDATE 含子查询 → error", () => {
+    const json = JSON.stringify([{ name: "evil", params: { who: "string" }, sql: "UPDATE sheet SET 金币 = (SELECT 1) WHERE entity = :who" }]);
+    expect(isOk(withTools(json))).toBe(false);
+  });
+
+  it("坏 JSON → error", () => {
+    expect(hasError(withTools("{ not json"), "解析失败")).toBe(true);
+  });
+
+  it("非数组 JSON → error", () => {
+    expect(hasError(withTools('{"name":"t"}'), "数组")).toBe(true);
+  });
+
+  it("缺 name → error", () => {
+    expect(hasError(withTools(JSON.stringify([{ sql: "SELECT 1" }])), "缺 name")).toBe(true);
+  });
+
+  it("缺 sql → error", () => {
+    expect(hasError(withTools(JSON.stringify([{ name: "t" }])), "缺 sql")).toBe(true);
+  });
+
+  it("非 .json 文件 → error", () => {
+    const files = [PROLOGUE_FILE, { path: "tools/x.txt", content: "[]" }];
+    expect(hasError(files, "只接受 .json")).toBe(true);
+  });
+
+  it("跨文件同名工具 → error（查重）", () => {
+    const files = [
+      PROLOGUE_FILE,
+      { path: "tools/a.json", content: JSON.stringify([{ name: "dup", sql: "SELECT 1" }]) },
+      { path: "tools/b.json", content: JSON.stringify([{ name: "dup", sql: "SELECT 2" }]) },
+    ];
+    expect(hasError(files, "重复")).toBe(true);
+  });
+});
