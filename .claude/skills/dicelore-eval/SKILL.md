@@ -1,9 +1,11 @@
 ---
 name: dicelore-eval
-description: Dicelore GM 教条 eval。当要评估 dicelore GM(带 gm-core 教条)跑得如何、对照 baseline 看教条价值、经 play-mcp 连真后端跑 eval 场景出报告时用。触发词:跑 eval、评估 GM 教条、play-mcp eval、doctrine vs baseline 对照、兽人/恶龙/抽卡/探索压价场景 eval、看 GM 表现。哪怕用户只说"跑一局看看 GM 表现""教条有没有用"也用它——别手动一步步调 HTTP。
+description: Dicelore GM 教条 eval。当要评估 dicelore GM(带 gm-core 教条)跑得如何、对照 docs/research 真实案例看 GM 表现、经 play-mcp 连真后端跑 eval 场景出报告时用。触发词:跑 eval、评估 GM 教条、play-mcp eval、兽人/恶龙/抽卡/探索压价场景 eval、看 GM 表现。哪怕用户只说"跑一局看看 GM 表现""教条有没有用"也用它——别手动一步步调 HTTP。⚠️ 旧 doctrine-vs-baseline 双档流程已废(ADR-0025 修订)、待按真实案例对照重新设计。
 ---
 
 # Dicelore GM eval(经 play-mcp 连真后端)
+
+> ⚠️ **2026-06-29 待重新设计**：本 skill 写的是旧 **doctrine-vs-baseline 双档 A/B** 流程，已废除（[ADR-0025 修订](../../../docs/wiki/05-决策记录-ADR/README.md)：eval 对照系改为 `docs/research` **真实案例**——把真实安价案例喂构建库建团本 → 跑团 → 对照真实案例**定性**评判；量化以目前认知不可行→定性报告）。下文双档 / `DICELORE_BASELINE` 步骤**仅供历史参考**，新的真实案例对照流程待设计。另：文中 `packages/core/eval/*` 路径受 eval 框架重构影响（`grader.md` 已迁 `apps/orchestrator/eval/legacy/`），待一并更新。
 
 > **本 skill 定「怎么 eval」,不解释 GM 教条本身**——教条全文在 `packages/core/skills/dicelore-gm-core/SKILL.md`,评估者口径在 `packages/core/eval/grader.md`,历史 finding 在 `packages/core/eval/findings.md`。eval 前先读这三份。
 

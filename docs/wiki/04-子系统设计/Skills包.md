@@ -221,9 +221,9 @@ description: Use when resolving a contested action or skill check —
 - **core 标准 / 装载绑定的边界**（[跨agent §1](../03-架构/跨agent与适配层.md)）：**教条内容（markdown）是 core 标准件、未来可搬**；**装载机制绑 Claude Code skill**。换基底时教条本身不动，重做装载层。
 - **被动 rule 召回 ≠ Principles**：rule 是 **rule 数据域**、由 hook 被动注入（[跨agent §3](../03-架构/跨agent与适配层.md)）；Principles 是 L2 静态教条。别混。
 
-### 6.1 措辞迭代：eval-loop（with/without baseline）
+### 6.1 措辞迭代：eval-loop（对照真实案例）
 
-Principles / Moves / 措辞表的**最终措辞**不在本页拍死——按 skill-creator 的**评测循环**在实现期迭代：用带/不带 skill 的 baseline 对比、量化打分。**F1/F2/F3 是可客观验证的失败**（项目本就有 L3 审计：**掷骰绕过率、后果-叙事一致性**），故 **L3 审计信号可直接复用作 eval assertions**（"该掷处真掷了吗？坏结果软着陆了吗？该 choice 处替玩家骰了吗？"）。本页定 **content-area 与结构**，留终稿措辞给实现期评测。
+Principles / Moves / 措辞表的**最终措辞**不在本页拍死——按 skill-creator 的**评测循环**在实现期迭代：**对照 `docs/research` 真实案例**定性评判（[ADR-0025 修订](../05-决策记录-ADR/README.md)：废 with/without baseline A/B、量化不可行→定性报告）。**F1/F2/F3 是可客观验证的失败**（项目本就有 L3 审计：**掷骰绕过率、后果-叙事一致性**），故 **L3 审计信号可直接复用作 eval assertions**（"该掷处真掷了吗？坏结果软着陆了吗？该 choice 处替玩家骰了吗？"）。本页定 **content-area 与结构**，留终稿措辞给实现期评测。
 
 > **eval-loop 工装已落源码、方法已成蓝本** → [Skills eval-loop](Skills-eval.md)：玩家视图（`buildPlayerView`）当评分基准、机械断言（`src/eval/assertions`）当地板、**真人安价语料（[`docs/research/scraped`](../../research/scraped/)）当 grader 黄金标准**、4 场景各带语料 reference。未来每轮 gm-core 措辞迭代以此为据。
 
