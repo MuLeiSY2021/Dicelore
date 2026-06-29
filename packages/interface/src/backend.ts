@@ -37,7 +37,12 @@ import type {
   ContestResult,
   RevealTarget,
   Rng,
+  SnapshotRow,
+  CheckpointOpts,
+  PresentationModel,
+  ImportResult,
 } from "./domain.js";
+import type { DB } from "./index.js";
 
 /** sheet / event(log) / world / rule / watcher / pendingChoice / pendingRoll / mutations —— 会话存储的读写面。 */
 export interface Store {
@@ -131,9 +136,37 @@ export interface Meta {
   metaSet(key: string, value: string): void;
 }
 
+/** 回合快照(SNAP-1 / ADR-0017)：自动持久化、存档/读档。db 已绑定;不暴露自定义 participant(默认集)。 */
+export interface Snapshots {
+  /** 回合边界落一份全量快照,返回 snapshot id。 */
+  checkpoint(opts: CheckpointOpts): number;
+  /** 恢复到指定快照(默认 participant 集)。 */
+  restore(snapshotId: number): void;
+  /** 最近一份快照(无则 undefined)。 */
+  latestSnapshot(): SnapshotRow | undefined;
+  /** 按 id 升序列出全部快照。 */
+  listSnapshots(): SnapshotRow[];
+}
+
+/** 玩家视角展示模型(机械回声 / 状态菜单 / 待决选项)。db 已绑定。 */
+export interface Presentation {
+  buildPresentationModel(opts?: { turnStartSeq?: number }): PresentationModel;
+}
+
+/** 开局物化：从 Catalog(团本包库)checkout 选定版本 → 本局运行库(信任闸门重验)。
+ *  runDB 为端口实例已绑定的会话库;catalogDB 是外部团本库句柄(每次 import 传入)。 */
+export interface Catalog {
+  importPack(catalogDB: DB, tuanbenId: string, ref: string): ImportResult;
+}
+
 /**
  * 一个会话的存储端口聚合(db 已绑定)。ADR §3 的端口表面；
- * 本阶段聚合已圈定的 Store / Resolver / Meta 三束(mcp/adapter/integration 实际消费面)。
- * Snapshots / Catalog / Presentation / Toolgen 束待相应消费者迁经端口时并入。
+ * 聚合 Store / Resolver / Meta(基础读写) + Snapshots / Presentation / Catalog(随消费者迁经端口长出)。
+ * Toolgen 束(toolgenToToolDef)经判定为 backend 资产、不进端口(归属判断 2026-06-29 B)。
  */
-export type SessionBackend = Store & Resolver & Meta;
+export type SessionBackend = Store &
+  Resolver &
+  Meta &
+  Snapshots &
+  Presentation &
+  Catalog;

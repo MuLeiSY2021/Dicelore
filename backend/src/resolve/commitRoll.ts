@@ -9,9 +9,9 @@
 
 import type { DB } from "../store/db.js";
 import type { Rng } from "@dicelore/dice";
+import { resolveOutcome } from "@dicelore/dice";
 import { logAppend, logSince } from "../store/record.js";
 import { getPendingRoll, markRollCommitted } from "../store/pendingRoll.js";
-import { resolveOutcome } from "./outcome.js";
 import { resolveContest } from "./contest.js";
 import { DiceloreError } from "@dicelore/errors";
 

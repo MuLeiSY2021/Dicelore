@@ -40,3 +40,10 @@ export interface ToolDef {
 // 域类型(SessionBackend 方法面引用)与端口接口本体。见 domain.ts / backend.ts 头注。
 export * from "./domain.js";
 export * from "./backend.js";
+
+/** 纯零依赖字符串截断助手(无 db、无状态)。原住 backend/store/truncate.ts,被 mcp 工具面(harness)
+ *  消费——非存储端口操作、纯工具,归中立 interface 包(归属判断 2026-06-29:零域、零依赖)。 */
+export function truncateText(s: string, limit = 25000): { text: string; truncated: boolean } {
+  if (s.length <= limit) return { text: s, truncated: false };
+  return { text: s.slice(0, limit), truncated: true };
+}

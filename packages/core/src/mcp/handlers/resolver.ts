@@ -9,9 +9,9 @@
 
 // src/mcp/handlers/resolver.ts
 // ported ops(choice/contest/pendingRoll/commit/logAppend)经注入 SessionBackend 调用；
-// resolveOutcome(纯函数·无 db)保持直接 import @dicelore/backend(storage-port ADR §3 单骰串不进端口)。
+// resolveOutcome(纯函数·无 db)住中立叶包 @dicelore/dice(storage-port ADR §3 单骰串不进端口)。
 import type { SessionBackend } from "@dicelore/interface";
-import { resolveOutcome } from "@dicelore/backend";
+import { resolveOutcome } from "@dicelore/dice";
 import { getRollGate } from "../rollGate.js";
 import { DiceloreError } from "@dicelore/errors";
 import type { ToolDef } from "../tooldef.js";

@@ -9,7 +9,7 @@
 
 // packages/core/src/adapter/l3.test.ts
 import { describe, it, expect } from "vitest";
-import type { LogRow } from "@dicelore/backend";
+import type { LogRow } from "@dicelore/interface";
 import { auditTurn } from "./l3.js";
 
 function ev(kind: LogRow["kind"], data?: unknown): LogRow {

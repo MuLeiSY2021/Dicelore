@@ -17,6 +17,8 @@
 // 见 docs/重构/ADR-storage-port.md §2/§3。
 
 import type { Rng } from "@dicelore/dice";
+// ToolDef 定义在 index.ts(MCP 工具契约)；ImportResult.toolDefs 引用它。type-only import,无运行时环。
+import type { ToolDef } from "./index.js";
 
 // ===== store/state =====
 export type StateKind = "player" | "npc" | "world";
@@ -188,3 +190,51 @@ export type RollResult =
 // Rng 出现在若干 resolver/store 方法的可选 rng 参数里(测试注入种子)；从 @dicelore/dice 透出，
 // 供 SessionBackend 方法签名引用，使 interface 不必反向 import backend。
 export type { Rng };
+
+// ===== store/snapshot (Snapshots 端口) =====
+export interface SnapshotRow {
+  id: number;
+  parentId: number | null;
+  turnStartSeq: number | null;
+  turnEndSeq: number | null;
+  createdAt: string;
+}
+export interface CheckpointOpts {
+  /** 本回合末 log seq（turn_end_seq）。 */
+  turnSeq: number;
+}
+
+// ===== present/model (Presentation 端口) =====
+export interface EchoEntry { seq: number; kind: "verdict" | "mutation" | "watcher_fired"; text: string }
+export interface VisibleCell { entity: string; attr: string; value: string }
+export interface ChoiceView { prompt: string; options: { label: string; consequence: string }[]; seq: number }
+export interface PresentationModel {
+  mechanicalEcho: EchoEntry[];
+  statusMenu: VisibleCell[];
+  pendingChoice?: ChoiceView;
+}
+
+// ===== toolgen (声明式工具契约) =====
+/** 声明式工具声明：读/写同形 { name, desc?, params?, sql, kind? }。
+ *  纯数据契约(无行为)——编译动作(toolgenToToolDef) 是 backend 资产、不在此。 */
+export interface ToolDecl {
+  name: string;
+  desc?: string;
+  /** 参数声明: { paramName: "string" | "int" | "number" }。 */
+  params?: Record<string, string>;
+  sql: string;
+  /** 可选 state kind 标注（A1，仅 mutate 模式生效）。 */
+  kind?: StateKind;
+}
+
+// ===== catalog/import (Catalog 端口) =====
+/** 包校验 issue（与 backend ValidateIssue 同构）。 */
+export interface ImportIssue { level: "error" | "warn"; file: string; msg: string; hint?: string }
+export interface ImportResult {
+  lore: number; rules: number; pools: number; stateCells: number;
+  fronts: number; plotlines: number; foreshadows: number; anchors: number;
+  prologue?: string;
+  tuanbenName?: string;
+  /** 作者面声明式工具编译产出(DT-9)——回传供 createMcpServer 经 extraTools 注入。 */
+  toolDefs: ToolDef[];
+}

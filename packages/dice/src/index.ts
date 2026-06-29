@@ -39,3 +39,21 @@ export function rangeMap(value: number, bands: Band[]): Band {
   if (!hit) throw new DiceloreError("RANGE_INVALID", `rangeMap: 值 ${value} 落空(无覆盖档位)`);
   return hit;
 }
+
+export interface OutcomeResult {
+  roll: number;
+  die: string;
+  band: Band;
+}
+
+// 单骰串就地正则解析(不卷入 expr 文法);非此形状 → DIE_INVALID。
+// 纯函数·无 db,属骰子域内自洽封装(rollDice + rangeMap);storage-port ADR §3 单骰串不进 SessionBackend 端口,
+// 住中立叶包 @dicelore/dice 供 harness/backend 双侧直接消费(归属判断 2026-06-29 采纳 C)。
+export function resolveOutcome(die: string, bands: Band[], rng?: Rng): OutcomeResult {
+  const m = die.match(/^\s*(\d+)[dD](\d+)\s*$/);
+  if (!m) throw new DiceloreError("DIE_INVALID", `resolveOutcome: 单骰串非法 "${die}"(只支持 NdS)`);
+  const rolls = rollDice(Number(m[1]), Number(m[2]), rng); // count/sides 非法亦抛 DIE_INVALID
+  const roll = rolls.reduce((a, b) => a + b, 0);
+  const band = rangeMap(roll, bands); // 重叠/落空抛 RANGE_INVALID
+  return { roll, die, band };
+}

@@ -8,12 +8,12 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 // packages/core/src/adapter/hooks/session-start.ts
-// 薄入口:读 stdin(CC hook JSON,字段以实现期官方文档为准)→ openSession → 注 additionalContext。
-import { openSession } from "@dicelore/backend";
+// 薄入口(组合根):读 stdin(CC hook JSON,字段以实现期官方文档为准)→ openSession + openSessionBackend → 注 additionalContext。
+import { openSession, openSessionBackend } from "@dicelore/backend";
 import { buildSessionContext } from "../sessionContext.js";
 
 const { db } = openSession(); // env DICELORE_SESSION
-const additionalContext = buildSessionContext(db);
+const additionalContext = buildSessionContext(openSessionBackend(db));
 process.stdout.write(JSON.stringify({
   hookSpecificOutput: { hookEventName: "SessionStart", additionalContext },
 }));

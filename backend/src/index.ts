@@ -119,11 +119,10 @@ export { ruleUpsert } from "./store/rule.js";
 export { frontList } from "./store/front.js";
 export { plotlineList } from "./store/plotline.js";
 export { applyMutations } from "./store/mutate.js";
-export { truncateText } from "./store/truncate.js";
+export { truncateText } from "@dicelore/interface";
 export { sheetShow, worldShow, revealOnce } from "./store/visibility.js";
 export { watcherSet, recomputeWatchers } from "./store/watcher.js";
 export { makeEvalCtx } from "./store/evalCtx.js";
-export { resolveOutcome } from "./resolve/outcome.js";
 export { resolveContest } from "./resolve/contest.js";
 export { type ToolDecl } from "./toolgen/compile.js";
 

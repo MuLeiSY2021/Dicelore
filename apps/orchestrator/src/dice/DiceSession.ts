@@ -7,7 +7,8 @@
 // Software Foundation, either version 3 of the License, or (at your option)
 // any later version. See <https://www.gnu.org/licenses/>.
 
-import { openDb, initSchema, createMcpServer, openSessionBackend, buildPresentationModel, runTurnEnd, importPack, metaSet, metaGet, checkpoint, restore, latestSnapshot, getLogger, type DB, type CanonWriteEvent, type CatalogDB } from "@dicelore/core";
+import { openDb, initSchema, createMcpServer, openSessionBackend, runTurnEnd, getLogger, type CanonWriteEvent, type CatalogDB } from "@dicelore/core";
+import type { DB, SessionBackend } from "@dicelore/interface";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WsHub, type WsLike } from "../pkg/wsHub.js";
 import { PlayerRollGate } from "./rollGate.js";
@@ -45,12 +46,15 @@ export interface DiceSessionDeps {
 export class DiceSession implements Session {
   readonly kind = "dice" as const;
   readonly db: DB;
+  /** 注入的会话存储端口(db 已绑定)——所有存储读写经它,不直连 backend 自由函数(storage-port ADR §4)。 */
+  readonly backend: SessionBackend;
   readonly hub = new WsHub();
   readonly gate?: PlayerRollGate;
   readonly mcpServer: McpServer;
   private inflight = false; // RT-2：本会话是否已有回合在跑（并发互斥标记）
   constructor(public sessionId: string, private deps: DiceSessionDeps) {
     this.db = deps.db ?? (() => { const d = openDb(":memory:"); initSchema(d); return d; })();
+    this.backend = openSessionBackend(this.db); // 组合根:绑定本局 db 的存储端口实例
     // 开局物化:从 Catalog import 选定团本版本(信任闸门重验)→ 本局运行库。仅空库时(避免重复 import)。
     // 团本声明的自定义工具(tools/*.json → toolgen 编译)。首次 import 时由 importPack 回传,
     // 经下面 createMcpServer 的 extraTools 装载进本 session 的 MCP(守 DT-9:作者只能声明式 SQL 工具)。
@@ -61,14 +65,14 @@ export class DiceSession implements Session {
       const empty = (this.db.prepare("SELECT COUNT(*) n FROM log").get() as { n: number }).n === 0;
       if (empty) {
         const { catalog, tuanbenId, ref } = deps.importFrom;
-        const res = importPack(catalog, this.db, tuanbenId, ref);
+        const res = this.backend.importPack(catalog, tuanbenId, ref);
         extraTools = res.toolDefs;
         // 写 session_meta:团本关联 + prologue + 未开场。供 Play 列表/kickoff/开场prompt。
-        metaSet(this.db, "tuanben_id", tuanbenId);
-        metaSet(this.db, "ref", ref);
-        if (res.tuanbenName) metaSet(this.db, "tuanben_name", res.tuanbenName);
-        if (res.prologue) metaSet(this.db, "prologue", res.prologue);
-        if (metaGet(this.db, "started") === undefined) metaSet(this.db, "started", "0");
+        this.backend.metaSet("tuanben_id", tuanbenId);
+        this.backend.metaSet("ref", ref);
+        if (res.tuanbenName) this.backend.metaSet("tuanben_name", res.tuanbenName);
+        if (res.prologue) this.backend.metaSet("prologue", res.prologue);
+        if (this.backend.metaGet("started") === undefined) this.backend.metaSet("started", "0");
         getLogger().info({ sessionId, tuanbenId, ref, tuanbenName: res.tuanbenName, extraTools: extraTools.length }, "会话开局:import 团本→运行库");
       }
     }
@@ -77,7 +81,7 @@ export class DiceSession implements Session {
     if (!deps.debug) {
       this.gate = new PlayerRollGate(this.db, this.hub, sessionId);
     }
-    this.mcpServer = createMcpServer(openSessionBackend(this.db), this.db, {
+    this.mcpServer = createMcpServer(this.backend, this.db, {
       onCanonWrite: (e) => this.onCanonWrite(e),
       ...(this.gate ? { rollGate: this.gate.gate } : {}),
     }, extraTools);
@@ -96,7 +100,7 @@ export class DiceSession implements Session {
       return { ...evt, output: { ...(evt.output as object ?? {}), content: r?.content ?? "" } };
     }
     if (evt.kind === "game_end") {
-      const raw = metaGet(this.db, "ended");
+      const raw = this.backend.metaGet("ended");
       const meta = raw ? (JSON.parse(raw) as { reason?: string; outcome?: string }) : {};
       return { ...evt, output: { ...(evt.output as object ?? {}), reason: meta.reason ?? "", outcome: meta.outcome ?? "" } };
     }
@@ -108,7 +112,7 @@ export class DiceSession implements Session {
 
   // 开场 prompt:baseline=纯 signpost+prologue(去教条);否则 signpost+教条+prologue。adapter 取它作 systemPrompt。
   get openingPrompt(): string {
-    return this.deps.baseline ? buildBaselinePrompt(this.db) : buildOpeningPrompt(this.db);
+    return this.deps.baseline ? buildBaselinePrompt(this.backend) : buildOpeningPrompt(this.backend);
   }
 
   // 据本会话状态组装 AgentInit(每回合新建一个 agent)。baseline 强制 skills 空(不 stage 教条)。
@@ -191,12 +195,12 @@ export class DiceSession implements Session {
   // 幂等再调:已开场则不重跑,回上次落库的开场 turnId(拿到 turnId 即已开局,无需 started 字段)。
   async start(): Promise<{ turnId: string }> {
     return this.runExclusive(async () => {
-      const prior = metaGet(this.db, "kickoff_turn");
-      if (metaGet(this.db, "started") === "1") {
+      const prior = this.backend.metaGet("kickoff_turn");
+      if (this.backend.metaGet("started") === "1") {
         getLogger().info({ sessionId: this.sessionId, turnId: prior ?? this.sessionId }, "kickoff 幂等:已开场,返回既有开场 turnId");
         return { turnId: prior ?? this.sessionId };
       }
-      const prologue = metaGet(this.db, "prologue") ?? "";
+      const prologue = this.backend.metaGet("prologue") ?? "";
       const turnId = nextTurnId(this.sessionId);
       const driver = this.deps.agentFactory(this.buildInit());
       getLogger().info({ sessionId: this.sessionId, turnId, kind: "kickoff" }, "回合开始(开场)");
@@ -209,8 +213,8 @@ export class DiceSession implements Session {
         getLogger().error({ sessionId: this.sessionId, turnId, kind: "kickoff", err: e }, "回合异常(开场)");
         throw e;
       }
-      metaSet(this.db, "started", "1");
-      metaSet(this.db, "kickoff_turn", turnId);
+      this.backend.metaSet("started", "1");
+      this.backend.metaSet("kickoff_turn", turnId);
       getLogger().info({ sessionId: this.sessionId, turnId, kind: "kickoff" }, "回合结束(开场)");
       return { turnId };
     });
@@ -223,24 +227,24 @@ export class DiceSession implements Session {
   // 串行进 runExclusive：restore 整表覆写与回合写 DB 不能并发（同 handleMessage 的并发互斥）。
   async rewind(): Promise<{ snapshotId: number } | null> {
     return this.runExclusive(async () => {
-      const snap = latestSnapshot(this.db);
+      const snap = this.backend.latestSnapshot();
       if (!snap) {
         getLogger().warn({ sessionId: this.sessionId }, "rewind:库内无快照(未跑过回合),返回 null");
         return null;
       }
-      restore(this.db, snap.id);
+      this.backend.restore(snap.id);
       getLogger().info({ sessionId: this.sessionId, snapshotId: snap.id }, "rewind:已恢复最近快照");
       return { snapshotId: snap.id };
     });
   }
 
-  private turnEnd(db: DB): TurnEndResult {
-    runTurnEnd(db, { transcriptHasText: true, stopHookActive: false }); // 物化 choice + L3 审计
+  private turnEnd(_db: DB): TurnEndResult {
+    runTurnEnd(this.backend, { transcriptHasText: true, stopHookActive: false }); // 物化 choice + L3 审计
     // SNAP-1：回合边界自动落一份全量快照（存档语义）。turnSeq = 当前最大 log seq（对齐 narrativeCursor 口径）。
     // 在 runTurnEnd 后取——choice 物化等回合末写已落库，快照覆盖完整回合态。
-    const maxSeq = (db.prepare("SELECT MAX(seq) s FROM log").get() as { s: number | null }).s ?? 0;
-    checkpoint(db, { turnSeq: maxSeq });
-    const pc = buildPresentationModel(db, { turnStartSeq: 0 }).pendingChoice;
+    const maxSeq = (this.db.prepare("SELECT MAX(seq) s FROM log").get() as { s: number | null }).s ?? 0;
+    this.backend.checkpoint({ turnSeq: maxSeq });
+    const pc = this.backend.buildPresentationModel({ turnStartSeq: 0 }).pendingChoice;
     if (!pc) return {};
     return {
       choices: { eventId: pc.seq, options: pc.options.map((o, index) => ({ index, label: o.label, consequence: o.consequence })) },

@@ -9,7 +9,7 @@
 
 // packages/core/src/adapter/ruleRecall.test.ts
 import { describe, it, expect } from "vitest";
-import { openDb, initSchema } from "@dicelore/backend";
+import { openDb, initSchema, openSessionBackend } from "@dicelore/backend";
 import { ruleUpsert } from "@dicelore/backend";
 import { logAppend } from "@dicelore/backend";
 import { metaGet } from "@dicelore/backend";
@@ -21,13 +21,13 @@ describe("rule 召回", () => {
   it("命中的 rule 内容进召回串", () => {
     const db = freshDb();
     ruleUpsert(db, { name: "战斗硬着陆", content: "战斗失败必须照后果结算,不得救场" });
-    const ctx = recallRules(db, "我要发起战斗");
+    const ctx = recallRules(openSessionBackend(db), "我要发起战斗");
     expect(ctx).toContain("照后果结算");
   });
 
   it("无命中 → 空串", () => {
     const db = freshDb();
-    expect(recallRules(db, "完全无关的闲聊")).toBe("");
+    expect(recallRules(openSessionBackend(db), "完全无关的闲聊")).toBe("");
   });
 });
 
@@ -35,13 +35,13 @@ describe("turn_start_seq 记录", () => {
   it("写当前 MAX(seq)", () => {
     const db = freshDb();
     logAppend(db, { kind: "narrate", content: "x" }); // seq1
-    const s = recordTurnStart(db);
+    const s = recordTurnStart(openSessionBackend(db), db);
     expect(s).toBe(1);
     expect(metaGet(db, "turn_start_seq")).toBe("1");
   });
 
   it("空 event 表 → 0", () => {
     const db = freshDb();
-    expect(recordTurnStart(db)).toBe(0);
+    expect(recordTurnStart(openSessionBackend(db), db)).toBe(0);
   });
 });

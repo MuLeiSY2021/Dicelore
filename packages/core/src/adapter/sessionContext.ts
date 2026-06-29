@@ -8,12 +8,11 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 // packages/core/src/adapter/sessionContext.ts
-import type { DB } from "@dicelore/backend";
-import { metaGet } from "@dicelore/backend";
+import type { SessionBackend } from "@dicelore/interface";
 
 // 只注指路牌级:身份 + Agenda + 极简纪律 + 调性一句;教条本体靠 gm-core skill 触发载入。
-export function buildSessionContext(db: DB): string {
-  const tone = metaGet(db, "tone");
+export function buildSessionContext(backend: SessionBackend): string {
+  const tone = backend.metaGet("tone");
   const lines = [
     "你是 Dicelore GM——世界的诚实仲裁者,不是玩家的取悦者。",
     "Agenda:描绘会自己呼吸的世界 / 让选择带来真实后果 / 玩出来看会发生什么。",

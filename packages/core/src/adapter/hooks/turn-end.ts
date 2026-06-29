@@ -8,9 +8,9 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 // packages/core/src/adapter/hooks/turn-end.ts
-// 薄入口:读 stdin(transcript_path / stop_hook_active,字段以实现期官方文档为准)→ 装配 → decision JSON。
+// 薄入口(组合根):读 stdin(transcript_path / stop_hook_active,字段以实现期官方文档为准)→ 装配 → decision JSON。
 import { readFileSync } from "node:fs";
-import { openSession } from "@dicelore/backend";
+import { openSession, openSessionBackend } from "@dicelore/backend";
 import { runTurnEnd } from "../turnEnd.js";
 import { getLogger } from "@dicelore/logs";
 
@@ -29,5 +29,5 @@ let transcriptHasText = true;
 try { if (input.transcript_path) transcriptHasText = readFileSync(input.transcript_path, "utf8").trim().length > 0; } catch (e) { getLogger().warn({ err: e, transcriptPath: input.transcript_path }, "读 transcript 失败,容错降级为有文本"); }
 
 const { db } = openSession();
-const r = runTurnEnd(db, { transcriptHasText, stopHookActive: Boolean(input.stop_hook_active) });
+const r = runTurnEnd(openSessionBackend(db), { transcriptHasText, stopHookActive: Boolean(input.stop_hook_active) });
 process.stdout.write(JSON.stringify(r.block ? { decision: "block", reason: r.block.reason } : {}));

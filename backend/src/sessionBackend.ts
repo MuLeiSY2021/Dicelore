@@ -34,6 +34,9 @@ import { stagePendingRoll } from "./store/pendingRoll.js";
 import { resolveContest } from "./resolve/contest.js";
 import { commitPendingRoll } from "./resolve/commitRoll.js";
 import { metaGet, metaSet } from "./session/resolve.js";
+import { checkpoint, restore, latestSnapshot, listSnapshots } from "./store/snapshot.js";
+import { buildPresentationModel } from "./present/model.js";
+import { importPack } from "./catalog/import.js";
 
 /** 构造一个 db 已绑定的会话存储端口实现。 */
 export function openSessionBackend(db: DB): SessionBackend {
@@ -85,5 +88,17 @@ export function openSessionBackend(db: DB): SessionBackend {
     // ===== Meta =====
     metaGet: (key) => metaGet(db, key),
     metaSet: (key, value) => metaSet(db, key, value),
+
+    // ===== Snapshots =====
+    checkpoint: (opts) => checkpoint(db, opts),
+    restore: (snapshotId) => restore(db, snapshotId),
+    latestSnapshot: () => latestSnapshot(db),
+    listSnapshots: () => listSnapshots(db),
+
+    // ===== Presentation =====
+    buildPresentationModel: (opts) => buildPresentationModel(db, opts ?? {}),
+
+    // ===== Catalog =====
+    importPack: (catalogDB, tuanbenId, ref) => importPack(catalogDB, db, tuanbenId, ref),
   };
 }

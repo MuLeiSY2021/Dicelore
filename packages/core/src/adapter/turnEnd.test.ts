@@ -9,7 +9,7 @@
 
 // packages/core/src/adapter/turnEnd.test.ts
 import { describe, it, expect } from "vitest";
-import { openDb, initSchema } from "@dicelore/backend";
+import { openDb, initSchema, openSessionBackend } from "@dicelore/backend";
 import { logAppend, logSince } from "@dicelore/backend";
 import { stagePendingChoice, getPendingChoice } from "@dicelore/backend";
 import { metaSet } from "@dicelore/backend";
@@ -23,7 +23,7 @@ describe("runTurnEnd(Stop 装配)", () => {
     metaSet(db, "turn_start_seq", "0");
     logAppend(db, { kind: "narrate", content: "剧情" });
     stagePendingChoice(db, "走?", [{ label: "进", consequence: "遇敌" }]);
-    const r = runTurnEnd(db, { transcriptHasText: true, stopHookActive: false });
+    const r = runTurnEnd(openSessionBackend(db), { transcriptHasText: true, stopHookActive: false });
     expect(r.block).toBeUndefined();
     expect(getPendingChoice(db)?.status).toBe("materialized");
     expect(logSince(db, 0).some((e) => e.kind === "choice")).toBe(true);
@@ -33,7 +33,7 @@ describe("runTurnEnd(Stop 装配)", () => {
     const db = freshDb();
     metaSet(db, "turn_start_seq", "0");
     logAppend(db, { kind: "narrate", content: "剧情" });
-    const r = runTurnEnd(db, { transcriptHasText: true, stopHookActive: false });
+    const r = runTurnEnd(openSessionBackend(db), { transcriptHasText: true, stopHookActive: false });
     expect(r.block?.reason).toContain("resolve_choice");
   });
 });

@@ -8,8 +8,8 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 // packages/core/src/adapter/hooks/turn-start.ts
-// 薄入口:读 stdin.prompt(字段以实现期官方文档为准)→ rule 召回 + 记 seq → 注 additionalContext。
-import { openSession } from "@dicelore/backend";
+// 薄入口(组合根):读 stdin.prompt(字段以实现期官方文档为准)→ rule 召回 + 记 seq → 注 additionalContext。
+import { openSession, openSessionBackend } from "@dicelore/backend";
 import { recallRules, recordTurnStart } from "../ruleRecall.js";
 import { getLogger } from "@dicelore/logs";
 
@@ -24,9 +24,10 @@ let prompt = "";
 try { prompt = (JSON.parse(raw || "{}") as { prompt?: string }).prompt ?? ""; } catch (e) { getLogger().warn({ err: e }, "JSON.parse stdin 失败,容错降级为空 prompt"); }
 
 const { db } = openSession();
-recordTurnStart(db);
+const backend = openSessionBackend(db);
+recordTurnStart(backend, db);
 // TODO(快照线): detectAndRestore(db, transcriptHead) —— 待并行 core 快照线落地接(adapter §8)。
-const additionalContext = recallRules(db, prompt);
+const additionalContext = recallRules(backend, prompt);
 process.stdout.write(JSON.stringify({
   hookSpecificOutput: { hookEventName: "UserPromptSubmit", additionalContext },
 }));

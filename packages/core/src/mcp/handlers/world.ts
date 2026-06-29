@@ -8,9 +8,8 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 // src/mcp/handlers/world.ts
-import type { SessionBackend } from "@dicelore/interface";
-import type { Lore, Rule } from "@dicelore/backend";
-import { truncateText } from "@dicelore/backend";
+import type { SessionBackend, Lore, Rule } from "@dicelore/interface";
+import { truncateText } from "@dicelore/interface";
 import { DiceloreError } from "@dicelore/errors";
 import type { ToolDef } from "../tooldef.js";
 import {

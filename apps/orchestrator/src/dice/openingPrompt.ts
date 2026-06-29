@@ -9,7 +9,8 @@
 
 import { createRequire } from "node:module";
 import { readFileSync, existsSync } from "node:fs";
-import { buildSessionContext, getLogger, metaGet, type DB } from "@dicelore/core";
+import { buildSessionContext, getLogger } from "@dicelore/core";
+import type { SessionBackend } from "@dicelore/interface";
 import type { SkillRef } from "../pkg/agent.js";
 
 // gm-core skill 源目录解析(供内联兜底读 SKILL.md + staged skill 取整目录)。
@@ -46,9 +47,9 @@ function gmCoreDoctrine(): string {
 let _doctrine: string | null = null;
 function doctrine(): string { return (_doctrine ??= gmCoreDoctrine()); }
 
-export function buildOpeningPrompt(db: DB): string {
-  const signpost = buildSessionContext(db);
-  const prologue = metaGet(db, "prologue");
+export function buildOpeningPrompt(backend: SessionBackend): string {
+  const signpost = buildSessionContext(backend);
+  const prologue = backend.metaGet("prologue");
   const core = doctrine();
   const head = core ? `${signpost}\n\n---\n\n${core}` : signpost;
   return prologue ? `${head}\n\n---\n\n# 团本开场\n\n${prologue}` : head;
@@ -56,8 +57,8 @@ export function buildOpeningPrompt(db: DB): string {
 
 // baseline 系统提示:signpost + prologue,**不含 gm-core 教条**(用于 harness baseline 对照,
 // 分离"教条有无")。与 buildOpeningPrompt 的区别仅是去掉 doctrine 段。
-export function buildBaselinePrompt(db: DB): string {
-  const signpost = buildSessionContext(db);
-  const prologue = metaGet(db, "prologue");
+export function buildBaselinePrompt(backend: SessionBackend): string {
+  const signpost = buildSessionContext(backend);
+  const prologue = backend.metaGet("prologue");
   return prologue ? `${signpost}\n\n---\n\n# 团本开场\n\n${prologue}` : signpost;
 }

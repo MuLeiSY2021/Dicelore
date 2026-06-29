@@ -9,9 +9,9 @@
 
 // src/mcp/handlers/sheet.ts
 // ported ops(state 读写/批改)经注入的 SessionBackend 端口调用，不再直连 @dicelore/backend 自由函数
-// (storage-port ADR §4)。纯函数 truncateText(无 db 首参)保持直接 import。
+// (storage-port ADR §4)。纯函数 truncateText(无 db 首参)住中立 @dicelore/interface。
 import type { SessionBackend } from "@dicelore/interface";
-import { truncateText } from "@dicelore/backend";
+import { truncateText } from "@dicelore/interface";
 import type { ToolDef } from "../tooldef.js";
 import {
   sheetGetIn,
