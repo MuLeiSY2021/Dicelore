@@ -14,17 +14,15 @@ import { getLogger } from "@dicelore/logs";
 import type { SkillRef } from "../runtime/agent.js";
 
 // dicelore-build-pack skill 源目录解析(供 staged skill 整目录拷入构建 agent 的临时 cwd)。
-// build-pack skill 真源本阶段仍在 packages/core/build-skills/(物理迁 harness/loregm/skills 留后续阶段);
-// 经 import.meta.url 上溯 monorepo 根定位,再 cwd 兜底——不再 require.resolve("@dicelore/core")
-// (5b 后无人消费 @dicelore/core barrel,好让 5c 干净溶解 core)。
+// skill 真源在 harness 包根 <pkg>/skills(本文件在 <pkg>/src/loregm,故上两级到包根),
+// 与跑团侧 gm-core 同放 harness/skills(对称,见 dicegm/openingPrompt gmCoreDir)。
 function buildPackDir(): string | null {
   const candidates: string[] = [];
   try {
-    // 本文件 harness/src/loregm/openingPrompt.ts → 上溯四级到 monorepo 根。
-    const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
-    candidates.push(join(root, "packages", "core", "build-skills", "dicelore-build-pack"));
-  } catch (e) { getLogger().warn({ err: e }, "resolve build-pack 源目录失败,走 cwd 兜底"); }
-  candidates.push(`${process.cwd()}/packages/core/build-skills/dicelore-build-pack`);
+    const here = dirname(fileURLToPath(import.meta.url));
+    candidates.push(join(here, "..", "..", "skills", "dicelore-build-pack"));
+  } catch (e) { getLogger().warn({ err: e }, "resolve harness skills 失败,走 cwd 兜底"); }
+  candidates.push(`${process.cwd()}/harness/skills/dicelore-build-pack`);
   for (const d of candidates) if (existsSync(`${d}/SKILL.md`)) return d;
   return null;
 }

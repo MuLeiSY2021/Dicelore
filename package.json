@@ -23,11 +23,11 @@
     "harness"
   ],
   "scripts": {
-    "test": "npm run test -w @dicelore/core",
-    "typecheck": "npm run typecheck -w @dicelore/core",
+    "test": "npm run test -w @dicelore/backend",
+    "typecheck": "npm run typecheck -w @dicelore/backend",
     "test:all": "npm run test --workspaces --if-present",
     "typecheck:all": "npm run typecheck --workspaces --if-present",
-    "dicelore": "npm run dicelore -w @dicelore/core",
+    "dicelore": "npm run dicelore -w @dicelore/backend",
     "dicelore:mcp": "npm run dicelore:mcp -w @dicelore/harness"
   },
   "devDependencies": {

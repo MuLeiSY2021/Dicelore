@@ -14,7 +14,7 @@ import { buildPackSkill } from "./openingPrompt.js";
 describe("buildPackSkill", () => {
   it("源目录存在时返回 SkillRef(name=dicelore-build-pack, srcDir 含 SKILL.md)", () => {
     const ref = buildPackSkill();
-    // CI 下 packages/core/build-skills/dicelore-build-pack 必须存在;若不存在返回 null
+    // CI 下 harness/skills/dicelore-build-pack 必须存在;若不存在返回 null
     if (ref === null) {
       // 目录不存在时合法退化(同 gmCoreSkill() 的处理)
       expect(ref).toBeNull();

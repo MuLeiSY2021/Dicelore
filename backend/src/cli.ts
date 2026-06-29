@@ -9,7 +9,7 @@
 
 import { readdirSync } from "node:fs";
 import { dirname } from "node:path";
-import { metaGet, openSession, sessionDbPath } from "@dicelore/backend";
+import { metaGet, openSession, sessionDbPath } from "./index.js";
 import { runInit } from "@dicelore/harness";
 import { getLogger } from "@dicelore/logs";
 
