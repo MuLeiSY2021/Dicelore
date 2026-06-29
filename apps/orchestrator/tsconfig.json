@@ -8,9 +8,7 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "types": ["node"],
-    "outDir": "dist",
-    "baseUrl": ".",
-    "paths": { "@dicelore/core": ["../../packages/core/src"] }
+    "outDir": "dist"
   },
-  "include": ["src"]
+  "include": ["eval"]
 }

@@ -136,3 +136,14 @@ export type { SessionBackend, Store, Resolver, Meta } from "@dicelore/interface"
 // 工具面（mcp server）经 harness 装配它们；core barrel 经裸 @dicelore/backend 转出 narration 部分。
 export { narrationStdlibTools, narrationToolDecls } from "./stdlib/narration.js";
 export { npcStdlibTools, npcToolDecls } from "./stdlib/npc.js";
+
+// ===== HTTP/WS 边 + 后端进程入口（api/server，阶段 5b 自 orchestrator 迁入）=====
+// 组合根:openSession→openDb→openSessionBackend 注入 harness 会话(harness 不自开库)。
+// eval harness(apps/orchestrator/eval play-mcp/build-mcp)经此装真后端 HTTP/WS 跑评测。
+export { createApp, createLiveApp, type ServerDeps, type LiveDeps } from "./api/dice.js";
+export { createLoreApp, getLoreSession, type LoreDeps } from "./api/lore.js";
+export { createDiagnosticsApp } from "./api/diagnostics.js";
+export { attachWsUpgrade, type WsUpgradeDeps } from "./api/ws.js";
+export { buildSnapshot } from "./api/presentation.js";
+export { listSessionSummaries } from "./api/sessions.js";
+export { startServer } from "./server.js";

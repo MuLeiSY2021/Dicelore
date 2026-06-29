@@ -34,6 +34,7 @@ import type {
   RollShape,
   RollSpec,
   RollResult,
+  PendingRollRow,
   ContestResult,
   RevealTarget,
   Rng,
@@ -41,6 +42,7 @@ import type {
   CheckpointOpts,
   PresentationModel,
   ImportResult,
+  UsageInput,
 } from "./domain.js";
 import type { DB } from "./index.js";
 
@@ -118,6 +120,8 @@ export interface Store {
 
   // --- pendingRoll (明骰暂存) ---
   stagePendingRoll(input: { shape: RollShape; spec: RollSpec }): number;
+  /** 读一条 pending_roll 行（明骰 gate 据 eventId 查规格 / 重启恢复路判存在后立即掷）。 */
+  getPendingRoll(eventId: number): PendingRollRow | undefined;
 }
 
 /** 裁决：对抗骰求值 + 明骰提交(单骰串 resolveOutcome 无 db、属纯函数，不进端口)。 */
@@ -134,6 +138,12 @@ export interface Resolver {
 export interface Meta {
   metaGet(key: string): string | undefined;
   metaSet(key: string, value: string): void;
+}
+
+/** token 用量计量（DiceSession 回合末经端口落库；db 已绑定）。
+ *  DiceGm 适配器只 parseUsage 经 TurnEvent 上抛、不碰存储；落库由会话经此端口做（ADR §3 Usage 束）。 */
+export interface Usage {
+  recordUsage(u: UsageInput): number;
 }
 
 /** 回合快照(SNAP-1 / ADR-0017)：自动持久化、存档/读档。db 已绑定;不暴露自定义 participant(默认集)。 */
@@ -161,12 +171,13 @@ export interface Catalog {
 
 /**
  * 一个会话的存储端口聚合(db 已绑定)。ADR §3 的端口表面；
- * 聚合 Store / Resolver / Meta(基础读写) + Snapshots / Presentation / Catalog(随消费者迁经端口长出)。
+ * 聚合 Store / Resolver / Meta(基础读写) + Usage(计量) + Snapshots / Presentation / Catalog(随消费者迁经端口长出)。
  * Toolgen 束(toolgenToToolDef)经判定为 backend 资产、不进端口(归属判断 2026-06-29 B)。
  */
 export type SessionBackend = Store &
   Resolver &
   Meta &
+  Usage &
   Snapshots &
   Presentation &
   Catalog;

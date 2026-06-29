@@ -140,6 +140,16 @@ export interface RollSpec {
   b?: unknown;
 }
 
+// pendingRoll 行（getPendingRoll 端口方法返回）。原住 backend/store/pendingRoll.ts，
+// 因 Store 端口新增 getPendingRoll(eventId) 而下沉至此（backend 侧 re-export 保持公共面）。
+export interface PendingRollRow {
+  eventId: number;
+  shape: RollShape;
+  spec: RollSpec;
+  status: "awaiting" | "committed";
+  verdictSeq: number | null;
+}
+
 // ===== expr/parse + expr/evaluate (被 ContestResult 引用) =====
 export type TermKind = "dice" | "int" | "ref";
 
@@ -225,6 +235,20 @@ export interface ToolDecl {
   sql: string;
   /** 可选 state kind 标注（A1，仅 mutate 模式生效）。 */
   kind?: StateKind;
+}
+
+// ===== store/usage (Usage 端口：token 计量落库) =====
+/** 一条 usage 计量输入（DiceSession 在回合末经端口 recordUsage 落库）。
+ *  原住 backend/store/usage.ts，因 recordUsage 进端口而下沉至此（backend 侧 re-export 保持公共面）。 */
+export interface UsageInput {
+  sessionId: string;
+  turnId: string;
+  agent: string; // 归因标签：'gm' / 'build' / …（per-agent 维度）
+  model?: string;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens?: number;
+  cacheCreationTokens?: number;
 }
 
 // ===== catalog/import (Catalog 端口) =====

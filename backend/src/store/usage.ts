@@ -9,6 +9,10 @@
 
 import type { DB } from "./db.js";
 
+// UsageInput 下沉 @dicelore/interface(SessionBackend.recordUsage 端口方法面引用)；re-export 保持公共面。
+import type { UsageInput } from "@dicelore/interface";
+export type { UsageInput };
+
 // ═══════════════════════════════════════════════════════════════════════════
 // CO-采集：token 用量结构化（Agent SDK result 回传的 usage 采出落库）
 //
@@ -22,18 +26,7 @@ import type { DB } from "./db.js";
 // 与 log/snapshot 生命周期完全解耦——独立 CREATE，和 SNAP-1 的 snapshot 表互不干涉。
 // ═══════════════════════════════════════════════════════════════════════════
 
-// 写入一条 usage（DiceGm 消费到 result.usage 时调）。可选 cache token 缺省归零（SDK 偶尔不回）。
-export interface UsageInput {
-  sessionId: string;
-  turnId: string;
-  agent: string; // 归因标签：'gm' / 'build' / …（per-agent 维度）
-  model?: string;
-  inputTokens: number;
-  outputTokens: number;
-  cacheReadTokens?: number;
-  cacheCreationTokens?: number;
-}
-
+// 写入一条 usage（DiceSession 回合末经端口落库）。可选 cache token 缺省归零（SDK 偶尔不回）。
 export interface UsageRow {
   id: number;
   sessionId: string;

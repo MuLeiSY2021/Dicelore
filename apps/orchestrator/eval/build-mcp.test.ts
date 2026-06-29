@@ -13,9 +13,9 @@
 // 改 Draft / commit,完全复刻真 CC 构建 GM 的产物路径,只是把 LLM 决策换成固定指令序列。
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { serve } from "@hono/node-server";
-import { openCatalog, resolveId, type CatalogDB } from "@dicelore/core";
-import type { Agent, AgentInit, TurnEvent } from "../src/pkg/agent.js";
-import { createLoreApp } from "../src/api/lore.js";
+import { openCatalog, resolveId, type CatalogDB } from "@dicelore/backend";
+import type { Agent, AgentInit, TurnEvent } from "@dicelore/harness";
+import { createLoreApp } from "@dicelore/backend";
 import { doOpenBuildSession, doSendToBuilder, doGetDraft, doListCatalog, doGetPackFiles } from "./build-mcp.js";
 
 // 脚本化构建 agent:不烧 LLM,经 mcpServer 上注册的真 dicelore_build_* 工具改 Draft。

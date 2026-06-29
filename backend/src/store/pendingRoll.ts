@@ -9,17 +9,9 @@
 
 import type { DB } from "./db.js";
 
-// RollShape / RollSpec 定义下沉 @dicelore/interface(SessionBackend 方法面引用)；re-export 保持公共面。
-import type { RollShape, RollSpec } from "@dicelore/interface";
-export type { RollShape, RollSpec };
-
-export interface PendingRollRow {
-  eventId: number;
-  shape: RollShape;
-  spec: RollSpec;
-  status: "awaiting" | "committed";
-  verdictSeq: number | null;
-}
+// RollShape / RollSpec / PendingRollRow 定义下沉 @dicelore/interface(SessionBackend 方法面引用)；re-export 保持公共面。
+import type { RollShape, RollSpec, PendingRollRow } from "@dicelore/interface";
+export type { RollShape, RollSpec, PendingRollRow };
 
 // 暂存明骰规格(无结果),返回自增 event_id 作客户端句柄(契约 pendingRoll.eventId / POST /roll {eventId})。
 export function stagePendingRoll(db: DB, input: { shape: RollShape; spec: RollSpec }): number {

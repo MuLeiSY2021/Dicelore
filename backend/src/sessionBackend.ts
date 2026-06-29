@@ -30,10 +30,11 @@ import {
   getPendingChoice,
   materializePendingChoice,
 } from "./store/choice.js";
-import { stagePendingRoll } from "./store/pendingRoll.js";
+import { stagePendingRoll, getPendingRoll } from "./store/pendingRoll.js";
 import { resolveContest } from "./resolve/contest.js";
 import { commitPendingRoll } from "./resolve/commitRoll.js";
 import { metaGet, metaSet } from "./session/resolve.js";
+import { recordUsage } from "./store/usage.js";
 import { checkpoint, restore, latestSnapshot, listSnapshots } from "./store/snapshot.js";
 import { buildPresentationModel } from "./present/model.js";
 import { importPack } from "./catalog/import.js";
@@ -80,6 +81,7 @@ export function openSessionBackend(db: DB): SessionBackend {
 
     // ===== Store: pendingRoll =====
     stagePendingRoll: (input) => stagePendingRoll(db, input),
+    getPendingRoll: (eventId) => getPendingRoll(db, eventId),
 
     // ===== Resolver =====
     resolveContest: (a, b, rng) => resolveContest(db, a, b, rng),
@@ -88,6 +90,9 @@ export function openSessionBackend(db: DB): SessionBackend {
     // ===== Meta =====
     metaGet: (key) => metaGet(db, key),
     metaSet: (key, value) => metaSet(db, key, value),
+
+    // ===== Usage =====
+    recordUsage: (u) => recordUsage(db, u),
 
     // ===== Snapshots =====
     checkpoint: (opts) => checkpoint(db, opts),

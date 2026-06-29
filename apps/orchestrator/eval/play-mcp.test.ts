@@ -10,13 +10,13 @@
 // play-mcp 集成测:起 FakeDiceGm 后端 + 调 handler 验 open→start→send→presentation 闭环。不烧 LLM。
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { serve } from "@hono/node-server";
-import { createLiveApp } from "../src/api/dice.js";
-import { attachWsUpgrade } from "../src/api/ws.js";
-import { FakeDiceGm } from "../src/dice/FakeDiceGm.js";
+import { createLiveApp } from "@dicelore/backend";
+import { attachWsUpgrade } from "@dicelore/backend";
+import { FakeDiceGm } from "@dicelore/harness";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { openDb, initSchema } from "@dicelore/core";
+import { openDb, initSchema } from "@dicelore/backend";
 import { doOpenSession, doStartGame, doSendMessage } from "./play-mcp.js";
 
 let server: ReturnType<typeof serve>;

@@ -7,17 +7,20 @@
   "author": "MuLeiSY2021 <mulei_sy@qq.com>",
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "echo 'orchestrator 5b 后为纯 eval 脚本包(eval/* 经 tsx 跑、历来不进 typecheck);src 已迁 backend/harness' && exit 0",
     "dev": "tsx src/server.ts"
   },
   "dependencies": {
-    "@dicelore/core": "*",
+    "@dicelore/backend": "*",
+    "@dicelore/harness": "*",
     "@dicelore/interface": "*",
     "@dicelore/shared": "*",
     "@anthropic-ai/claude-agent-sdk": "^0.3.185",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "hono": "^4.6.0",
     "@hono/node-server": "^1.13.0",
-    "ws": "^8.21.0"
+    "ws": "^8.21.0",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
