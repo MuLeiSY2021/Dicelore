@@ -13,11 +13,12 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { claudeMdPointer, settingsJson, mcpJson } from "./templates.js";
 
-// 包根 = src/adapter/ 上两级。skills 真源在 <pkg>/skills,hook 入口在 <pkg>/src/adapter/hooks。
+// 本文件在 src/dicegm/adapter/。dice 线 skills 真源在角色线根 src/dicegm/skills(ADAPTER_DIR/../skills),
+// hook 入口在 src/dicegm/adapter/hooks(ADAPTER_DIR/hooks)。
 const ADAPTER_DIR = dirname(fileURLToPath(import.meta.url));
-const PKG_ROOT = join(ADAPTER_DIR, "..", "..");
-const SKILLS_SRC = join(PKG_ROOT, "skills");
-const HOOKS_SRC = join(PKG_ROOT, "src", "adapter", "hooks");
+const DICEGM_DIR = join(ADAPTER_DIR, "..");
+const SKILLS_SRC = join(DICEGM_DIR, "skills");
+const HOOKS_SRC = join(ADAPTER_DIR, "hooks");
 
 const FLOWS = ["gacha", "contest", "anka", "explore"];
 

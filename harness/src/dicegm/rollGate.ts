@@ -8,7 +8,7 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import type { SessionBackend, PendingRollRow, RollResult } from "@dicelore/interface";
-import type { RollGate } from "../mcp/rollGate.js";
+import type { RollGate } from "./mcp/rollGate.js";
 import { CLIENT_PROTOCOL, type PendingRoll, type StreamMessage } from "@dicelore/shared";
 import type { WsHub } from "../runtime/wsHub.js";
 

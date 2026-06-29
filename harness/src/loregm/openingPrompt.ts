@@ -14,15 +14,15 @@ import { getLogger } from "@dicelore/logs";
 import type { SkillRef } from "../runtime/agent.js";
 
 // dicelore-build-pack skill 源目录解析(供 staged skill 整目录拷入构建 agent 的临时 cwd)。
-// skill 真源在 harness 包根 <pkg>/skills(本文件在 <pkg>/src/loregm,故上两级到包根),
-// 与跑团侧 gm-core 同放 harness/skills(对称,见 dicegm/openingPrompt gmCoreDir)。
+// skill 真源随 lore 线归位在本角色线根 <pkg>/src/loregm/skills(本文件在 src/loregm,故同级 ./skills),
+// 与跑团侧 gm-core 对称(见 dicegm/openingPrompt gmCoreDir,各线根 ./skills)。
 function buildPackDir(): string | null {
   const candidates: string[] = [];
   try {
     const here = dirname(fileURLToPath(import.meta.url));
-    candidates.push(join(here, "..", "..", "skills", "dicelore-build-pack"));
+    candidates.push(join(here, "skills", "dicelore-build-pack"));
   } catch (e) { getLogger().warn({ err: e }, "resolve harness skills 失败,走 cwd 兜底"); }
-  candidates.push(`${process.cwd()}/harness/skills/dicelore-build-pack`);
+  candidates.push(`${process.cwd()}/harness/src/loregm/skills/dicelore-build-pack`);
   for (const d of candidates) if (existsSync(`${d}/SKILL.md`)) return d;
   return null;
 }

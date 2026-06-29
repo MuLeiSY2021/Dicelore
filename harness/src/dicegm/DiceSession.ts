@@ -7,8 +7,8 @@
 // Software Foundation, either version 3 of the License, or (at your option)
 // any later version. See <https://www.gnu.org/licenses/>.
 
-import { createMcpServer, type CanonWriteEvent } from "../mcp/server.js";
-import { runTurnEnd } from "../adapter/turnEnd.js";
+import { createMcpServer, type CanonWriteEvent } from "./mcp/server.js";
+import { runTurnEnd } from "./adapter/turnEnd.js";
 import { getLogger } from "@dicelore/logs";
 import type { DB, SessionBackend } from "@dicelore/interface";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";

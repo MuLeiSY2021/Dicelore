@@ -8,7 +8,7 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import { CLIENT_PROTOCOL, type StreamMessage } from "@dicelore/shared";
-import type { CanonWriteEvent } from "../mcp/server.js";
+import type { CanonWriteEvent } from "./mcp/server.js";
 
 // 缝 A 单一映射器(接口页 §5.1)：按 CanonWriteEvent.kind 显式分发成客户端流消息。
 // 三流单源：narrate→narration_commit(流③叙事)、明骰→roll_committed、game_end→game_end、

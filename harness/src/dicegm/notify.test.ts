@@ -9,7 +9,7 @@
 
 import { describe, it, expect } from "vitest";
 import { mapCanonWrite } from "./notify.js";
-import type { CanonWriteEvent } from "../mcp/server.js";
+import type { CanonWriteEvent } from "./mcp/server.js";
 
 describe("mapCanonWrite", () => {
   it("resolve_contest_open(明骰 verdict) → roll_committed", () => {

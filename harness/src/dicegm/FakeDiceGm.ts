@@ -8,7 +8,7 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import type { SessionBackend } from "@dicelore/interface";
-import { getRollGate } from "../mcp/rollGate.js";
+import { getRollGate } from "./mcp/rollGate.js";
 import type { Agent, TurnInput, TurnEvent } from "../runtime/agent.js";
 
 // 脚本化 GM 驱动：测试用，不烧 LLM。

@@ -13,7 +13,8 @@ import { readFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
-const SKILLS_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "skills");
+// 本文件在 src/dicegm/adapter/;dice 线 skills(gm-core + flow)在角色线根 src/dicegm/skills(../skills)。
+const SKILLS_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "skills");
 
 function frontmatter(md: string): Record<string, string> {
   const m = /^---\n([\s\S]*?)\n---/.exec(md);

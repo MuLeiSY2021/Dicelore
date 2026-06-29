@@ -14,7 +14,7 @@
 // 唯组合根 mcp/main.ts 与 adapter/hooks/* 经 @dicelore/backend 开库/注入（入口允许）。
 
 // 玩家闸控明骰 gate（供 orchestrator / 组件7 注入 gate、触发 commit）。
-export { setRollGate, getRollGate, type RollGate } from "./mcp/rollGate.js";
+export { setRollGate, getRollGate, type RollGate } from "./dicegm/mcp/rollGate.js";
 
 // in-process MCP 工厂 + 写后回调接缝（组件7 orchestrator 用）。
 export {
@@ -22,20 +22,20 @@ export {
   wrapToolForTest,
   type CanonWriteEvent,
   type McpServerDeps,
-} from "./mcp/server.js";
+} from "./dicegm/mcp/server.js";
 // 内置工具工厂 + 元数据（组件7 配置页展示真实工具数）。
-export { makeTools, BUILTIN_TOOL_NAMES, BUILTIN_TOOL_COUNT } from "./mcp/tools.js";
+export { makeTools, BUILTIN_TOOL_NAMES, BUILTIN_TOOL_COUNT } from "./dicegm/mcp/tools.js";
 // 工具执行入口（集成/harness 测试经此跑工具）。
-export { runTool } from "./mcp/runTool.js";
+export { runTool } from "./dicegm/mcp/runTool.js";
 // 工具定义契约（自 @dicelore/interface 转出，供消费方拿类型）。
-export type { ToolDef, ToolAnnotations } from "./mcp/tooldef.js";
+export type { ToolDef, ToolAnnotations } from "./dicegm/mcp/tooldef.js";
 
 // 回合末 hook（choice 物化 + L3 审计）——组件4，供 orchestrator turn-end 复用。
-export { runTurnEnd } from "./adapter/turnEnd.js";
+export { runTurnEnd } from "./dicegm/adapter/turnEnd.js";
 // 开场/系统 prompt 组装（组件4，供 orchestrator 装会话上下文）。
-export { buildSessionContext } from "./adapter/sessionContext.js";
+export { buildSessionContext } from "./dicegm/adapter/sessionContext.js";
 // 项目初始化（写 .mcp.json / settings.json / 装 skills；core cli 的 `init` 子命令经此）。
-export { runInit } from "./adapter/init.js";
+export { runInit } from "./dicegm/adapter/init.js";
 
 // ===== runtime（会话骨架，组合根/api 注入与驱动用）=====
 export type { Session } from "./runtime/session.js";

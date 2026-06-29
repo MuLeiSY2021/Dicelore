@@ -10,20 +10,20 @@
 import { fileURLToPath } from "node:url";
 import { readFileSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
-import { buildSessionContext } from "../adapter/sessionContext.js";
+import { buildSessionContext } from "./adapter/sessionContext.js";
 import { getLogger } from "@dicelore/logs";
 import type { SessionBackend } from "@dicelore/interface";
 import type { SkillRef } from "../runtime/agent.js";
 
 // gm-core skill 源目录解析(供内联兜底读 SKILL.md + staged skill 取整目录)。
-// skill 真源在 harness 包根 <pkg>/skills(本文件在 <pkg>/src/dicegm,故上两级到包根)。
+// skill 真源随 dice 线归位在本角色线根 <pkg>/src/dicegm/skills(本文件在 src/dicegm,故同级 ./skills)。
 function gmCoreDir(): string | null {
   const candidates: string[] = [];
   try {
     const here = dirname(fileURLToPath(import.meta.url));
-    candidates.push(join(here, "..", "..", "skills", "dicelore-gm-core"));
+    candidates.push(join(here, "skills", "dicelore-gm-core"));
   } catch (e) { getLogger().warn({ err: e }, "resolve harness skills 失败,走 cwd 兜底"); }
-  candidates.push(`${process.cwd()}/harness/skills/dicelore-gm-core`);
+  candidates.push(`${process.cwd()}/harness/src/dicegm/skills/dicelore-gm-core`);
   for (const d of candidates) if (existsSync(`${d}/SKILL.md`)) return d;
   return null;
 }

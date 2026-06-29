@@ -10,7 +10,7 @@
   "scripts": {
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit",
-    "dicelore:mcp": "tsx src/mcp/main.ts"
+    "dicelore:mcp": "tsx src/dicegm/mcp/main.ts"
   },
   "dependencies": {
     "@dicelore/backend": "*",
