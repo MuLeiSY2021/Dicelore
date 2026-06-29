@@ -12,7 +12,7 @@
 | [`docs/wiki/`](docs/wiki/) | **唯一权威知识库**：业务(01)/概念(02)/架构(03)/设计(04)/决策ADR(05)/里程碑(06) | 长存·稳定 |
 | [`docs/wiki/06-里程碑与问题/backlog-{前端,后端,core}.md`](docs/wiki/06-里程碑与问题/) | **分层问题池**：所有未解决「欠账」按层(前端/后端/core)×类型(fix/feat)归类、去重、聚类成主题 | 长存·直到解决 |
 | [`docs/wiki/06-里程碑与问题/路线图.md`](docs/wiki/06-里程碑与问题/路线图.md) | **有序批次**：从三池挑出来排「先做哪批」(第一批/第二批…) | **AI 维护**·可重排 |
-| [`docs/wiki/06-里程碑与问题/里程碑.md`](docs/wiki/06-里程碑与问题/里程碑.md) | 已达成节点时间线 | **人工维护·AI 不得自行改动**（仅在人明确指导下编辑） |
+| [`docs/wiki/06-里程碑与问题/里程碑.md`](docs/wiki/06-里程碑与问题/里程碑.md) | **宏大目标/愿景**：每个里程碑拆块、记怎么实现与进度（含未来 ⬜ 项） | 人工维护 · **AI 不得在无人干预下自行改动**；仅在人明确指导/调 `idea-to-roadmap` 抛点子时可追加未来目标块（⬜），不标 ✅、不改写已达成历史 |
 | [`docs/todo/`](docs/todo/) | **在途交接**：本 session 做不完 / 下一 part 的活，指回 backlog 条目 | 临时·解决即删 |
 | [`docs/superpowers/{specs,plans}`](docs/superpowers/) | superpowers 流程的草稿产物（spec / plan） | 临时·用完即删 |
 
@@ -24,7 +24,7 @@
 
 | skill | 何时调 |
 |-------|--------|
-| `groom-backlog` | 散点子归类落三池 + 编排路线图（问题入账起点） |
+| `idea-to-roadmap` | 任何想法先归里程碑海拔、再一路下沉到三池 + 路线图（点子入账起点） |
 | `advance-milestone` | 推进里程碑 / 路线图下一批 |
 | `refactor-frontend` / `refactor-backend` | 整理前端(`apps/web`) / 后端(`apps/orchestrator`)架构 |
 | `fix-wiki-issues` | 修 wiki 内容问题（推导链断节 / 单源违例 / 页职责漂移 / 设计-实现漂移） |
@@ -33,7 +33,7 @@
 | `autonomous-delivery-loop` | 上面 4 个推进 / 重构 skill 共用的 a→g 自主闭环骨架（也可单调） |
 | `parallel-roadmap-delivery` | 把一批路线图项**不打扰用户地推到底**：编排者只分析/分解/对答/检查/合并、**永远派 subagent 执行**（能并行就 fan-out、纯串行也串行派 subagent 链）；决策账本 + nodes.jsonl DAG + subagent 自交 PR + 编排者检查合并。每个 subagent 内部跑 `autonomous-delivery-loop` |
 
-**主线（口诀）**：问题进 backlog 池（`/groom-backlog`）→ 在途进 `docs/todo/` / 草稿进 `docs/superpowers/` → 推进走 `advance-milestone`·`refactor-*` → 完事走 `spec-to-wiki`（先沉淀 wiki 才清草稿）。commit 先开分支、提交后 ff 合并回 main（不 push；push 由人单独指令）。
+**主线（口诀）**：想法先归里程碑海拔、一路下沉进 backlog 三池 + 路线图（`/idea-to-roadmap`）→ 在途进 `docs/todo/` / 草稿进 `docs/superpowers/` → 推进走 `advance-milestone`·`refactor-*` → 完事走 `spec-to-wiki`（先沉淀 wiki 才清草稿）。commit 先开分支、提交后 ff 合并回 main（不 push；push 由人单独指令）。
 
 > 单源维护：流程契约只在 skill 的 `SKILL.md` 里是权威；改流程改对应 skill，别在本文件另起一套散文。
 

@@ -7,11 +7,11 @@ description: 项目体检 / 评估项目漏洞 / 全面健康度检查 / 审计 
 
 用**推导链多角色 subagent** 给项目做全面体检。每个角色产出一个**文档落盘**，下游读上游文档继续推导——和 wiki「单向推导」同构，和 superpowers 文档驱动同风格。末端把漏洞落 backlog + 重排路线图。
 
-只读评估——不动代码，不动 wiki 内容；只产评估文档 + 落 backlog + 重排路线图。末端接 `groom-backlog`。
+只读评估——不动代码，不动 wiki 内容；只产评估文档 + 落 backlog + 重排路线图。末端接 `idea-to-roadmap`。
 
 ## 何时用
 
-用户想摸项目底子、找漏洞/欠账/风险、做健康度体检时。**不**用于：单点 bug 修复（走 `systematic-debugging`）、单层重构（走 `refactor-*`）、已知点子归类（走 `groom-backlog`）。
+用户想摸项目底子、找漏洞/欠账/风险、做健康度体检时。**不**用于：单点 bug 修复（走 `systematic-debugging`）、单层重构（走 `refactor-*`）、已知点子归类（走 `idea-to-roadmap`）。
 
 ## 输入
 
@@ -96,10 +96,10 @@ docs/audits/YYYY-MM-DD-<主题>/
 基于 `findings.yaml`，按 `layer` 字段落 backlog 三池 `docs/wiki/06-里程碑与问题/backlog-<层>.md`：
 - `前端`→backlog-前端、`后端`→backlog-后端、`core`→backlog-core
 - `跨层`/`文档`/`流程`/`推导断节` 类 → 归最相关池，条目标注「跨层/推导断节」
-- 与既有条目比对去重，别重开（复用 `groom-backlog` 口径）
+- 与既有条目比对去重，别重开（复用 `idea-to-roadmap` 口径）
 
 ### 阶段 4·重排路线图
-**调用 `groom-backlog` skill** 把新落账条目编进/重排 `路线图.md`：推导断节 + 随规模恶化的 = 最高优先级，进靠前批次。
+**调用 `idea-to-roadmap` skill** 把新落账条目编进/重排 `路线图.md`：推导断节 + 随规模恶化的 = 最高优先级，进靠前批次。
 
 ### 阶段 5·收尾
 开分支提交（`git checkout -b docs/audit-<日期>`，message `docs(audit): ...`），切回 main `git merge --ff-only`、删分支。**不问"要提交吗"，不 push。** git 一律 `--no-pager`。评估文档目录随本次提交一起入库。
@@ -268,7 +268,7 @@ docs/audits/YYYY-MM-DD-<主题>/
 - **文档驱动推导**：每个角色必须把产出落盘成文档；下游必须读上游文档推导，不许主流程在内存传话。文档单向引用（下游引上游）。
 - **推导链不可乱序**：产品必须先跑出 `00-锚定-产品.md`；下游按链顺序读上游文档。平级并行只允许前端∥后端。
 - **推导断节必查**：每个角色文档必须有「推导断节」小节，不可只扫领域漏洞。
-- **末端接 `groom-backlog`**：阶段 3-4 复用 groom-backlog 的去重聚类口径和路线图编排规则，别另起一套。
+- **末端接 `idea-to-roadmap`**：阶段 3-4 复用 idea-to-roadmap 的去重聚类口径和路线图编排规则，别另起一套。
 - **落盘即提交合并 main，不 push**：不问"要提交吗"；git 一律 `--no-pager`。评估文档目录随提交入库。
 - `路线图.md` AI 维护可重排；`里程碑.md` 人工维护、AI 不动。
 - 派 subagent 用 Agent 工具；前端/后端在同一消息内并行派发以节省墙钟时间。
