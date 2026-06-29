@@ -14,7 +14,6 @@
 | [`docs/wiki/06-里程碑与问题/路线图.md`](docs/wiki/06-里程碑与问题/路线图.md) | **有序批次**：从三池挑出来排「先做哪批」(第一批/第二批…) | **AI 维护**·可重排 |
 | [`docs/wiki/06-里程碑与问题/里程碑.md`](docs/wiki/06-里程碑与问题/里程碑.md) | 已达成节点时间线 | **人工维护·AI 不得自行改动**（仅在人明确指导下编辑） |
 | [`docs/todo/`](docs/todo/) | **在途交接**：本 session 做不完 / 下一 part 的活，指回 backlog 条目 | 临时·解决即删 |
-| [`docs/delivery/`](docs/delivery/) | **并发交付运行记录**：每轮「推路线图」一目录（`YYYY-MM-DD-路线图-推进/`），含 DAG 设计 / 每波 roster / 每波复盘。由 `parallel-roadmap-delivery` 产出 | 长存·事后可回溯 |
 | [`docs/superpowers/{specs,plans}`](docs/superpowers/) | superpowers 流程的草稿产物（spec / plan） | 临时·用完即删 |
 
 ---
@@ -32,7 +31,7 @@
 | `organize-wiki` | 重排 / 扩张 wiki 结构层级（纯文档） |
 | `spec-to-wiki` | superpowers spec/plan 知识沉淀进 wiki + 清草稿 |
 | `autonomous-delivery-loop` | 上面 4 个推进 / 重构 skill 共用的 a→g 自主闭环骨架（也可单调） |
-| `parallel-roadmap-delivery` | 把路线图**多条无依赖线并发**推到底、决策卡点压到最少（决策账本 + 波次 fan-out + SendMessage 续接 + CI/PR 门禁）；每条线内部仍走 `autonomous-delivery-loop` |
+| `parallel-roadmap-delivery` | 把一批路线图项**不打扰用户地推到底**：编排者只分析/分解/对答/检查/合并、**永远派 subagent 执行**（能并行就 fan-out、纯串行也串行派 subagent 链）；决策账本 + nodes.jsonl DAG + subagent 自交 PR + 编排者检查合并。每个 subagent 内部跑 `autonomous-delivery-loop` |
 
 **主线（口诀）**：问题进 backlog 池（`/groom-backlog`）→ 在途进 `docs/todo/` / 草稿进 `docs/superpowers/` → 推进走 `advance-milestone`·`refactor-*` → 完事走 `spec-to-wiki`（先沉淀 wiki 才清草稿）。commit 先开分支、提交后 ff 合并回 main（不 push；push 由人单独指令）。
 
