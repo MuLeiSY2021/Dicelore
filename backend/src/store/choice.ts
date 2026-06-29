@@ -10,10 +10,9 @@
 import type { DB } from "./db.js";
 import { logAppend } from "./record.js";
 
-export interface ChoiceOption {
-  label: string;
-  consequence: string;
-}
+// ChoiceOption 定义下沉 @dicelore/interface(SessionBackend 方法面引用)；re-export 保持公共面。
+import type { ChoiceOption } from "@dicelore/interface";
+export type { ChoiceOption };
 
 // 轮内反复调用末次覆盖(id=1 单行 upsert),status='staged'。不落 event。
 export function stagePendingChoice(db: DB, prompt: string, options: ChoiceOption[]): void {

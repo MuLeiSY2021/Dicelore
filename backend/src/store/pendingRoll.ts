@@ -9,8 +9,10 @@
 
 import type { DB } from "./db.js";
 
-export type RollShape = "outcome" | "contest";
-export interface RollSpec { context: string; die?: string; bands?: unknown[]; a?: unknown; b?: unknown }
+// RollShape / RollSpec 定义下沉 @dicelore/interface(SessionBackend 方法面引用)；re-export 保持公共面。
+import type { RollShape, RollSpec } from "@dicelore/interface";
+export type { RollShape, RollSpec };
+
 export interface PendingRollRow {
   eventId: number;
   shape: RollShape;

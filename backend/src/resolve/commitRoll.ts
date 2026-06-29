@@ -15,9 +15,9 @@ import { resolveOutcome } from "./outcome.js";
 import { resolveContest } from "./contest.js";
 import { DiceloreError } from "@dicelore/errors";
 
-export type RollResult =
-  | { eventId: number; shape: "outcome"; verdictSeq: number; roll: number; die: string; band: { label: string; consequence: string } }
-  | { eventId: number; shape: "contest"; verdictSeq: number; a: { name: string; total: number; rolls: number[] }; b: { name: string; total: number; rolls: number[] }; winner: "a" | "b" | "tie" };
+// RollResult 定义下沉 @dicelore/interface(SessionBackend 方法面引用)；re-export 保持公共面。
+import type { RollResult } from "@dicelore/interface";
+export type { RollResult };
 
 // 点击时掷:读规格 → 复用 resolveOutcome/resolveContest 掷 → 写 kind=verdict → 槽 committed → 返回。
 // 幂等:已 committed 据 verdict event 重建(宕机恢复/重投不重掷)。

@@ -10,13 +10,9 @@
 import type { DB } from "./db.js";
 import { ftsIndex, ftsSearch } from "./fts.js";
 
-export interface Rule {
-  rowid: number;
-  name: string;
-  content: string;
-  category: string | null;
-  version: number;
-}
+// Rule 定义下沉 @dicelore/interface(SessionBackend 方法面引用)；re-export 保持公共面。
+import type { Rule } from "@dicelore/interface";
+export type { Rule };
 
 // 作者灌注 / 版本化热更新(§4.4)。AI 不可写 → 本文件不暴露 register/ai 接口。
 export function ruleUpsert(db: DB, r: { name: string; content: string; category?: string }): number {

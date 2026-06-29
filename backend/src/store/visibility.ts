@@ -34,9 +34,9 @@ export function worldShow(db: DB, table: "lore" | "pool", rowid: number): number
   return auditNote(db, `揭示:${table}#${rowid}`);
 }
 
-export type RevealTarget =
-  | { kind: "sheet"; entity: string; attr: string }
-  | { kind: "lore"; rowid: number };
+// RevealTarget 定义下沉 @dicelore/interface(SessionBackend 方法面引用)；re-export 保持公共面。
+import type { RevealTarget } from "@dicelore/interface";
+export type { RevealTarget };
 
 // reveal_once:append 一条 kind=reveal 的可见 event,内容=目标此刻冻结副本;不碰目标自身 visible(底层仍隐)。
 export function revealOnce(db: DB, target: RevealTarget): number {

@@ -8,7 +8,7 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import { rollDice, type Rng } from "@dicelore/dice";
-import { parseExpr, type TermKind } from "./parse.js";
+import { parseExpr } from "./parse.js";
 import { DiceloreError } from "@dicelore/errors";
 import type { HasCond } from "../store/existsMatch.js";
 
@@ -19,19 +19,9 @@ export interface EvalCtx {
   existsMatch?: (ns: string, conds: HasCond[], sinceSeq?: number) => boolean;
 }
 
-export interface ExprTerm {
-  kind: TermKind;
-  raw: string;
-  sign: 1 | -1;
-  rolls?: number[];
-  refValue?: number;
-  value: number;
-}
-
-export interface ExprLedger {
-  total: number;
-  terms: ExprTerm[];
-}
+// ExprTerm / ExprLedger 定义下沉 @dicelore/interface(经 ContestResult 进 SessionBackend 方法面)；re-export 保持公共面。
+import type { ExprTerm, ExprLedger } from "@dicelore/interface";
+export type { ExprTerm, ExprLedger };
 
 export function evalExpr(expr: string, ctx: EvalCtx): ExprLedger {
   const terms: ExprTerm[] = parseExpr(expr).map((t) => {

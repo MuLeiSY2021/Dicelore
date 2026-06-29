@@ -7,7 +7,9 @@
 // Software Foundation, either version 3 of the License, or (at your option)
 // any later version. See <https://www.gnu.org/licenses/>.
 
-export type TermKind = "dice" | "int" | "ref";
+// TermKind 定义下沉 @dicelore/interface(经 ExprTerm→ContestResult 进 SessionBackend 方法面)；re-export 保持公共面。
+import type { TermKind } from "@dicelore/interface";
+export type { TermKind };
 
 import { DiceloreError } from "@dicelore/errors";
 

@@ -16,31 +16,9 @@ import { recomputeWatchers } from "./watcher.js";
 import { makeEvalCtx } from "./evalCtx.js";
 import { DiceloreError } from "@dicelore/errors";
 
-export type MutOp = "+" | "-" | "=";
-
-export interface Mutation {
-  attr: string;
-  op: MutOp;
-  expr: string;
-}
-
-export interface MutationApplied {
-  attr: string;
-  op: MutOp;
-  expr: string;
-  kind: "rolled" | "set";
-  old: string | null;
-  rolls?: number[];
-  delta?: number;
-  new: string;
-}
-
-export interface MutationResult {
-  entity: string;
-  applied: MutationApplied[];
-  fired_watchers: { id: number; payload: string }[];
-  event_id: number;
-}
+// MutOp / Mutation / MutationApplied / MutationResult 定义下沉 @dicelore/interface(SessionBackend 方法面引用)；re-export 保持公共面。
+import type { MutOp, Mutation, MutationApplied, MutationResult } from "@dicelore/interface";
+export type { MutOp, Mutation, MutationApplied, MutationResult };
 
 // 词条字面量:形如 "药水*3"(成员名*数量)或 "药水"(数量默认 1)
 function parseMember(expr: string): { name: string; qty: number } | null {

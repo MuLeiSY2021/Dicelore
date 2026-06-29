@@ -14,6 +14,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@dicelore/dice": "*",
     "better-sqlite3": "^12.11.1",
     "zod": "^3.25.76"
   },

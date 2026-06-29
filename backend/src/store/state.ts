@@ -9,20 +9,9 @@
 
 import type { DB } from "./db.js";
 
-export type StateKind = "player" | "npc" | "world";
-
-export interface StateCell {
-  entity: string;
-  attr: string;
-  value: string;
-  visible: number;
-  kind: StateKind;
-  rel_object: string | null;
-  rel_dim: string | null;
-  clock_min: number | null;
-  clock_max: number | null;
-  clock_mode: string | null;
-}
+// StateKind / StateCell 定义下沉 @dicelore/interface(SessionBackend 方法面引用)；此处 re-export 保持本模块公共面不变。
+import type { StateKind, StateCell } from "@dicelore/interface";
+export type { StateKind, StateCell };
 
 const SELECT_COLS =
   "entity, attr, value, visible, kind, rel_object, rel_dim, clock_min, clock_max, clock_mode";

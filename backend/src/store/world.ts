@@ -11,14 +11,9 @@ import type { Rng } from "@dicelore/dice";
 import type { DB } from "./db.js";
 import { ftsIndex, ftsSearch } from "./fts.js";
 
-export interface Lore {
-  rowid: number;
-  name: string;
-  content: string;
-  category: string | null;
-  tags: string | null;
-  visible: number;
-}
+// Lore 定义下沉 @dicelore/interface(SessionBackend 方法面引用)；re-export 保持公共面。
+import type { Lore } from "@dicelore/interface";
+export type { Lore };
 
 // 按 name 寻址(灌注不重名;AI/作者再写同名 = 覆盖)。name 无 UNIQUE 约束,代码层保证。
 export function loreUpsert(

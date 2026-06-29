@@ -36,3 +36,7 @@ export interface ToolDef {
   annotations: ToolAnnotations;
   handler: (db: DB, input: any) => any;
 }
+
+// 域类型(SessionBackend 方法面引用)与端口接口本体。见 domain.ts / backend.ts 头注。
+export * from "./domain.js";
+export * from "./backend.js";

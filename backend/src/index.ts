@@ -126,3 +126,8 @@ export { makeEvalCtx } from "./store/evalCtx.js";
 export { resolveOutcome } from "./resolve/outcome.js";
 export { resolveContest } from "./resolve/contest.js";
 export { type ToolDecl } from "./toolgen/compile.js";
+
+// ===== storage-port 端口实现(阶段3，纯加法) =====
+// openSessionBackend(db) 组装 SessionBackend(Store & Resolver & Meta)；接口契约 + 域类型在 @dicelore/interface。
+export { openSessionBackend } from "./sessionBackend.js";
+export type { SessionBackend, Store, Resolver, Meta } from "@dicelore/interface";

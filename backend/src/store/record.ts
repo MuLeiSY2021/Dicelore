@@ -10,29 +10,9 @@
 import type { DB } from "./db.js";
 import { escapeLike, ftsIndex, ftsSearch } from "./fts.js";
 
-export type LogKind = "narrate" | "verdict" | "mutation" | "note" | "watcher_fired" | "reveal" | "choice";
-
-export interface LogInput {
-  content?: string;
-  kind: LogKind;
-  data_json?: unknown;
-  tags?: string;
-  visible?: number;
-  game_time?: string;
-  is_moment?: number;
-}
-
-export interface LogRow {
-  seq: number;
-  content: string | null;
-  kind: LogKind;
-  data_json: string | null;
-  tags: string | null;
-  visible: number;
-  game_time: string | null;
-  is_moment: number;
-  created_at: string;
-}
+// LogKind / LogInput / LogRow 定义下沉 @dicelore/interface(SessionBackend 方法面引用)；re-export 保持公共面。
+import type { LogKind, LogInput, LogRow } from "@dicelore/interface";
+export type { LogKind, LogInput, LogRow };
 
 function defaultVisible(kind: LogKind): number {
   return kind === "note" ? 0 : 1;

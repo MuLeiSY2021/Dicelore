@@ -13,16 +13,9 @@ import { logAppend } from "./record.js";
 import { makeExistsMatch } from "./existsMatch.js";
 import type { DB } from "./db.js";
 
-export interface WatcherRow {
-  id: number;
-  condition: string;
-  payload: string;
-  mode: "once" | "repeat";
-  armed: number;
-  status: string;
-  source: string;
-  last_fired_seq: number | null;
-}
+// WatcherRow 定义下沉 @dicelore/interface(SessionBackend 方法面引用)；re-export 保持公共面。
+import type { WatcherRow } from "@dicelore/interface";
+export type { WatcherRow };
 
 export function watcherSet(
   db: DB,
