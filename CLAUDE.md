@@ -30,8 +30,7 @@
 | `fix-wiki-issues` | 修 wiki 内容问题（推导链断节 / 单源违例 / 页职责漂移 / 设计-实现漂移） |
 | `organize-wiki` | 重排 / 扩张 wiki 结构层级（纯文档） |
 | `spec-to-wiki` | superpowers spec/plan 知识沉淀进 wiki + 清草稿 |
-| `autonomous-delivery-loop` | 上面 4 个推进 / 重构 skill 共用的 a→g 自主闭环骨架（也可单调） |
-| `parallel-roadmap-delivery` | 把一批路线图项**不打扰用户地推到底**：编排者只分析/分解/对答/检查/合并、**永远派 subagent 执行**（能并行就 fan-out、纯串行也串行派 subagent 链）；决策账本 + nodes.jsonl DAG + subagent 自交 PR + 编排者检查合并。每个 subagent 内部跑 `autonomous-delivery-loop` |
+| `parallel-roadmap-delivery` | 把一批路线图项**不打扰用户地推到底**：编排者只分析/分解/对答/检查/合并、**永远派 subagent 执行**（能并行就 fan-out、纯串行也串行派 subagent 链）；决策账本 + nodes.jsonl DAG + subagent 自交 PR + 编排者检查合并。**下层「一条线内部怎么干」的 a→g 自主交付闭环已并入本 skill**，每个 subagent 在自己那条线里跑它；也可当单线自主闭环单独调用（只跑 a→g） |
 
 **主线（口诀）**：想法先归里程碑海拔、一路下沉进 backlog 三池 + 路线图（`/idea-to-roadmap`）→ 在途进 `docs/todo/` / 草稿进 `docs/superpowers/` → 推进走 `advance-milestone`·`refactor-*` → 完事走 `spec-to-wiki`（先沉淀 wiki 才清草稿）。commit 先开分支、提交后 ff 合并回 main（不 push；push 由人单独指令）。
 
