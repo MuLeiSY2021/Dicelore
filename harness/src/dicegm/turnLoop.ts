@@ -9,6 +9,7 @@
 
 import type { DB } from "@dicelore/interface";
 import { CLIENT_PROTOCOL, type StreamMessage } from "@dicelore/shared";
+import { turnStartSeq, rollbackAfterSeq } from "@dicelore/backend";
 import type { Agent, TurnInput, TurnUsage } from "../runtime/agent.js";
 import type { WsHub } from "../runtime/wsHub.js";
 import { streamDriverTurn } from "../runtime/streamTurn.js";
@@ -31,8 +32,22 @@ export interface RunTurnDeps {
 // B4：turn_ended.seq 取「全局 log event seq」(MAX(seq))而非 streamDriverTurn 的回合内计数器,
 // 与 §1 快照 narrativeCursor 同口径,重连去重才可靠(narration_commit.seq 现由 onCanonWrite 用 evt.seq 全局对齐)。
 export async function runTurn(deps: RunTurnDeps, input: TurnInput): Promise<void> {
+  // RT-1 中期：回合级事务。开跑前记 turn_start_seq（当前全局 log MAX(seq)）；
+  // 超时/error 时回滚到此起点，而非裸 return 把回合停在「GM 跑了一半被杀」的中间态。
+  const startSeq = turnStartSeq(deps.db);
   const { errored } = await streamDriverTurn(deps, input);
-  if (errored) return;
+  if (errored) {
+    // 删本回合落的 log 段 + 尽力逆回本回合 sheet 变更（轻量 DELETE，非快照 restore）。
+    // residue = 无可逆信号的副作用残余（pending_roll/watcher 运行时态等）——不静默吞掉：
+    // 记一条 warn 供运维/日志核对；结构化推给前端属 UI 接线（backlog-前端 CROSS-ERR），不在此处挂。
+    const report = rollbackAfterSeq(deps.db, startSeq);
+    if (report.residue.length > 0) {
+      console.warn(
+        `[turnLoop] 回合 ${deps.turnId} 超时/error 已回滚（删 ${report.deletedLogCount} 条 log、逆 ${report.stateReverted} 处 state），但下列副作用未自动回滚：\n  - ${report.residue.join("\n  - ")}`,
+      );
+    }
+    return;
+  }
   const send = (m: StreamMessage) => deps.hub.broadcast(deps.sessionId, m);
   const res = deps.runTurnEnd(deps.db);
   if (res.choices) send({ protocol: CLIENT_PROTOCOL, type: "choices", choices: res.choices });

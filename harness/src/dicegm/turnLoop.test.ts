@@ -11,7 +11,8 @@ import { describe, it, expect } from "vitest";
 import { runTurn } from "./turnLoop.js";
 import { FakeDiceGm } from "./FakeDiceGm.js";
 import { WsHub } from "../runtime/wsHub.js";
-import { openDb, initSchema } from "@dicelore/backend";
+import type { Agent } from "../runtime/agent.js";
+import { openDb, initSchema, applyMutations } from "@dicelore/backend";
 
 function capture() {
   const msgs: any[] = [];
@@ -62,5 +63,52 @@ describe("runTurn", () => {
       runTurnEnd: () => ({}) }, { text: "x" });
     expect(msgs.find((m) => m.type === "error")?.message).toBe("boom");
     expect(msgs.find((m) => m.type === "turn_ended")).toBeUndefined();
+  });
+
+  // RT-1 中期：回合级事务。GM 跑一半（落了 log + 改了 state）后 error → 回滚到回合起点。
+  // 用内联 Agent 在回合内写 DB，再 yield error，断言 log 段删净 + state 逆回起点。
+  it("error 回合回滚：本回合落的 log 删净、sheet 变更逆回起点", async () => {
+    const db = openDb(":memory:"); initSchema(db);
+    // 回合前：HP=10 + 一条历史叙事（起点态）。
+    applyMutations(db, "你", [{ attr: "HP", op: "=", expr: "10" }]);
+    db.prepare("INSERT INTO log (content, kind, visible) VALUES ('回合前叙事','narrate',1)").run();
+    const startSeq = (db.prepare("SELECT MAX(seq) s FROM log").get() as { s: number }).s;
+
+    // GM 跑一半：扣血 + 落半条叙事，然后超时 error。
+    const halfThenError: Agent = {
+      async *runTurn() {
+        applyMutations(db, "你", [{ attr: "HP", op: "-", expr: "7" }]);
+        db.prepare("INSERT INTO log (content, kind, visible) VALUES ('半条叙事','narrate',1)").run();
+        yield { type: "error", message: "gm timeout", code: "gm_timeout" } as const;
+      },
+    };
+    const { hub, msgs } = capture();
+    await runTurn({ db, driver: halfThenError, hub, sessionId: "s1", turnId: "t1", runTurnEnd: () => ({}) }, { text: "x" });
+
+    // error 流给了前端
+    expect(msgs.find((m) => m.type === "error")?.code).toBe("gm_timeout");
+    // 本回合 log 段删净，回到起点 seq
+    expect((db.prepare("SELECT MAX(seq) s FROM log").get() as { s: number }).s).toBe(startSeq);
+    // HP 逆回起点 10（含本回合 mutation 事件也被删）
+    expect((db.prepare("SELECT value FROM state WHERE entity='你' AND attr='HP'").get() as { value: string }).value).toBe("10");
+    // 不发 turn_ended（回合作废）
+    expect(msgs.find((m) => m.type === "turn_ended")).toBeUndefined();
+  });
+
+  // 正常回合不受影响：成功回合不回滚，log/state 全保留，照常发 turn_ended。
+  it("正常回合不回滚：成功回合 state 变更保留、照常 turn_ended", async () => {
+    const db = openDb(":memory:"); initSchema(db);
+    applyMutations(db, "你", [{ attr: "HP", op: "=", expr: "10" }]);
+    const okThenMutate: Agent = {
+      async *runTurn() {
+        applyMutations(db, "你", [{ attr: "HP", op: "-", expr: "4" }]);
+        yield { type: "turn_end" } as const;
+      },
+    };
+    const { hub, msgs } = capture();
+    await runTurn({ db, driver: okThenMutate, hub, sessionId: "s1", turnId: "t1", runTurnEnd: () => ({}) }, { text: "x" });
+    // 成功回合 state 变更保留（HP=6），照常 turn_ended
+    expect((db.prepare("SELECT value FROM state WHERE entity='你' AND attr='HP'").get() as { value: string }).value).toBe("6");
+    expect(msgs.at(-1)?.type).toBe("turn_ended");
   });
 });

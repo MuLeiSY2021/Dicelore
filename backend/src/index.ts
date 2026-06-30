@@ -12,6 +12,8 @@
 // resolve/present/catalog/build/toolgen/eval/session 的部分）；core 经裸 @dicelore/backend 转出。
 export { openDb, initSchema, type DB } from "./store/db.js";
 export { initViews } from "./store/views.js";
+// RT-1 回合级事务回滚原语（turnLoop 超时/error 兜底用；轻量 DELETE，非快照 restore）
+export { turnStartSeq, rollbackAfterSeq, type RollbackReport } from "./store/turnRollback.js";
 // 声明式工具生成层接线（叙事层 dogfooding，spec §8 + DT-9 step③）
 export { toolgenToToolDef } from "./toolgen/toToolDef.js";
 export {
