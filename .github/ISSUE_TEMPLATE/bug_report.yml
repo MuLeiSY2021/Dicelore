@@ -1,0 +1,69 @@
+name: 🐛 Bug 报告
+description: 报告一个缺陷，帮助 Dicelore 变得更可靠
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢报告问题!请先搜索[已有 issue](https://github.com/MuLeiSY2021/Dicelore/issues) 避免重复。
+        **安全漏洞请勿在此公开**——见 [安全策略](../../SECURITY.md)。
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 发生了什么
+      description: 清楚描述这个 bug 的现象。
+      placeholder: 我做了 X，期望 Y，实际发生了 Z。
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: 复现步骤
+      description: 一步步怎么触发。
+      placeholder: |
+        1. 启动 backend 与 frontend
+        2. 开局团本 '...'
+        3. 玩家输入 '...'
+        4. 看到错误 '...'
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: 涉及哪一层
+      description: 不确定可留空。
+      options:
+        - 前端 frontend
+        - 后端 backend
+        - core（引擎/store/resolve/build/eval 等）
+        - GM 行为 / 教条
+        - 团本构建
+        - 文档 / wiki
+        - 其它 / 不确定
+    validations:
+      required: false
+  - type: textarea
+    id: env
+    attributes:
+      label: 环境
+      description: OS、Node 版本、相关模型 / 配置（**勿粘贴任何 API key**）。
+      placeholder: |
+        - OS: WSL2 Ubuntu
+        - Node: v20.x
+        - 模型: ...
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志 / 截图
+      description: 相关报错日志或截图（粘贴前请脱敏，移除 key 等敏感信息）。
+      render: shell
+    validations:
+      required: false
