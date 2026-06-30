@@ -10,8 +10,7 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "noEmit": true,
-    "types": ["vitest/globals", "@testing-library/jest-dom"],
-    "baseUrl": ".",
+    "types": ["vitest/globals"],
     "paths": { "@/*": ["./src/*"] }
   },
   "include": ["src"]
