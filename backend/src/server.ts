@@ -11,11 +11,14 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { rmSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
-import { openCatalog, sessionDir, openSession as openCoreSession } from "@dicelore/backend";
+import { openCatalog, sessionDir, openSession as openCoreSession, openDb, initSchema } from "@dicelore/backend";
 import { initGlobalLogger, getLogger } from "@dicelore/logs";
 import { createLiveApp } from "./api/dice.js";
 import { createLoreApp } from "./api/lore.js";
 import { createDiagnosticsApp } from "./api/diagnostics.js";
+import { createUsageApp } from "./api/usage.js";
+import { createKeysApp } from "./api/keys.js";
+import { createRateLimit } from "./api/rateLimit.js";
 import { attachWsUpgrade } from "./api/ws.js";
 import { listSessionSummaries } from "./api/sessions.js";
 import { gmCoreSkill, buildPackSkill, DiceGm, FakeDiceGm, type AgentFactory, type SkillRef } from "@dicelore/harness";
@@ -45,6 +48,8 @@ export function startServer(port: number): void {
   const loreSkills: SkillRef[] = bp ? [bp] : [];
 
   const app = new Hono();
+  // per-session 基础限流(宽松默认 60s/120 次,env DICELORE_RATELIMIT_* 收紧/关闭)——在路由前挂。
+  app.use("*", createRateLimit());
   app.route("/", createLiveApp({
     agentFactory, skills: diceSkills, openSession, catalog, baseline, debug, sessionsDir: dir,
     listSessions: () => listSessionSummaries(join(dir, "dice", "sessions")),
@@ -52,6 +57,12 @@ export function startServer(port: number): void {
   }));
   app.route("/", createLoreApp({ catalog, agentFactory, buildPrompt: process.env.DICELORE_BUILD_PROMPT, skills: loreSkills }));
   app.route("/", createDiagnosticsApp({ port, fakeGm: fake }));
+  // CO 可视化:GET /sessions/:id/usage 只读投影,复用本局 db 端口。
+  app.route("/", createUsageApp({ openSession }));
+  // SEC2 key 托管:全局 keys.db(非 per-session;api_key 表随 initSchema),主密钥经 env 延迟读、缺则端点 503。
+  const keysDb = openDb(join(dir, "keys.db"));
+  initSchema(keysDb);
+  app.route("/", createKeysApp({ db: keysDb, master: () => process.env.DICELORE_KEY_MASTER ?? "" }));
 
   const server = serve({ fetch: app.fetch, port });
   attachWsUpgrade(server, { openSession, agentFactory, skills: diceSkills, baseline, debug, sessionsDir: dir });
