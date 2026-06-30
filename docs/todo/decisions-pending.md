@@ -1,4 +1,4 @@
-# 决策账本（2026-06-26 扫描 · parallel-roadmap-delivery）
+# 决策账本（2026-06-26 扫描 · roadmap-delivery-workflow）
 
 > 起手扫路线图剩余项 + 三池产出。可逆的自决记默认值；不可逆的攒批问用户。
 > 维护：随波次推进回填；实现中浮现的新决策追加到 §浮现。
@@ -9,7 +9,7 @@
 
 - **[工作流：本地变体 vs GitHub PR]** 取**本地变体**：subagent 在 worktree 只编辑+自测、**不碰 git**；编排者做全部 git（建分支/提交/本地 ff 合并），**不 push、不开 PR**。理由：CLAUDE.md 明令「不 push；push 由人单独指令、提交后 ff 合并回 main」，**用户指令优先于 skill** 的 PR 模型。skill 的「CI 绿」闸由编排者本地跑 `test:all`+`typecheck:all` 替代。
 - **[worktree node_modules]** symlink 主仓库 node_modules（root + 相关包）进 worktree，**不 npm install**。理由：避免重写 package-lock（教训 `[worktree npm lock 坑]`）+ 省装包时间。
-- **[O1 同构 shared/logger 是否新建]** **不新建**。理由（实证）：core 已有 `packages/core/src/log.ts`（pino，node-only）、后端已接入；前端 `apps/web` **0 处裸 console** 且 web 不依赖 core——「同构、浏览器+node 通用」的前提不成立（无前端 console 要迁）。O-后端 ~80% 已接入，O2 仅剩 `mcp/main.ts` 1~2 处裸 console 待迁（cli.ts 面向终端**保留**）。⚠️ 路线图第三批 O1/O2/O-前端 的描述已对实现漂移——**待沉淀**：fix-wiki / organize-wiki 修正这段（设计-实现漂移）。
+- **[O1 同构 shared/logger 是否新建]** **不新建**。理由（实证）：core 已有 `packages/core/src/log.ts`（pino，node-only）、后端已接入；前端 `apps/web` **0 处裸 console** 且 web 不依赖 core——「同构、浏览器+node 通用」的前提不成立（无前端 console 要迁）。O-后端 ~80% 已接入，O2 仅剩 `mcp/main.ts` 1~2 处裸 console 待迁（cli.ts 面向终端**保留**）。⚠️ 路线图第三批 O1/O2/O-前端 的描述已对实现漂移——**待沉淀**：`roadmap-delivery-workflow`（wiki 内容修复变体） / `roadmap-delivery-workflow`（wiki 结构整理变体） 修正这段（设计-实现漂移）。
 - **[wave-1 节点选择]** 取「决策-free + 文件不重叠 + 可逆」三线：core-eval 深化 / 前端散点 fix+清理 / 后端 RT-4+logger 收尾。理由：先验证本地并发流水线，meaty 但无产品决策。
 - **[FE-start-contract 谁改]** 暂**不入 wave-1**。理由：缝 B `startGame` 契约（后端 `{turnId}` vs 前端 `{sessionId,started}`）跨前后端两文件、需协调，留 wave-2 由单线一并改（倾向后端统一回 turnId）。
 
@@ -26,7 +26,7 @@
 
 ## 浮现（subagent 干活时回报；可逆即自决回填、不可逆攒下批）
 
-- **[漂移A · logger]**（可逆，已自决+已沉 wiki）：core 已有 `log.ts`（pino node-only）、后端已接入、前端 0 console 不依赖 core → O1「同构 shared/logger」前提不成立。O-前端 moot、O1 宜降级。已落 backlog-core O2 + 路线图第三批注记，待 fix-wiki/organize-wiki 改措辞。
+- **[漂移A · logger]**（可逆，已自决+已沉 wiki）：core 已有 `log.ts`（pino node-only）、后端已接入、前端 0 console 不依赖 core → O1「同构 shared/logger」前提不成立。O-前端 moot、O1 宜降级。已落 backlog-core O2 + 路线图第三批注记，待 `roadmap-delivery-workflow`（wiki 内容修复变体）/`roadmap-delivery-workflow`（wiki 结构整理变体） 改措辞。
 - **[漂移B · eval harness 路径]**（可逆，已沉 wiki）：真 harness 是 `packages/core/eval/{run,grade,batch,tool}.ts`（offline runTool），非 `src/eval/play-mcp.ts`；choose/roll/browse 是独立 dicelore-play MCP 包。已落 backlog-core F-harness-test + 路线图第一批注记。
 - **[用户指示 · lore/构建侧 eval MCP]**（2026-06-26）：建 build-mcp.ts（对称 dice play-mcp，连 build HTTP/LoreSession，CC 当作者驱动构建 GM）+ 注册 `dicelore-build` 进 `.mcp.json` + `enabledMcpjsonServers`，让跑团+构建两侧都能 CC 驱动 eval。**时序：第三批剩余未完成（CO-采集/RT-1/O-后端）推完后做**。落 nodes.jsonl n20。
 - **[SNAP-1 follow-up · 重开重载团本工具]**：v1 团本 tools 仅首次 import 装载，重开已存在 session 不重载（catalog 不在场）。持久化 toolDefs 或重开从 catalog 重derive 留 follow-up。

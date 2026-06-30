@@ -25,14 +25,9 @@
 | skill | 何时调 |
 |-------|--------|
 | `idea-to-roadmap` | 任何想法先归里程碑海拔、再一路下沉到三池 + 路线图（点子入账起点） |
-| `advance-milestone` | 推进里程碑 / 路线图下一批 |
-| `refactor-frontend` / `refactor-backend` | 整理前端(`apps/web`) / 后端(`apps/orchestrator`)架构 |
-| `fix-wiki-issues` | 修 wiki 内容问题（推导链断节 / 单源违例 / 页职责漂移 / 设计-实现漂移） |
-| `organize-wiki` | 重排 / 扩张 wiki 结构层级（纯文档） |
-| `spec-to-wiki` | superpowers spec/plan 知识沉淀进 wiki + 清草稿 |
-| `parallel-roadmap-delivery` | 把一批路线图项**不打扰用户地推到底**：编排者只分析/分解/对答/检查/合并、**永远派 subagent 执行**（能并行就 fan-out、纯串行也串行派 subagent 链）；决策账本 + nodes.jsonl DAG + subagent 自交 PR + 编排者检查合并。**下层「一条线内部怎么干」的 a→g 自主交付闭环已并入本 skill**，每个 subagent 在自己那条线里跑它；也可当单线自主闭环单独调用（只跑 a→g） |
+| `roadmap-delivery-workflow` | **路线图/里程碑交付与 wiki 维护的统一 skill**——旧 `advance-milestone` / `refactor-frontend` / `refactor-backend` / `fix-wiki-issues` / `organize-wiki` / `spec-to-wiki` 六个已**全部并入**，按需求挑 [`references/`](.claude/skills/roadmap-delivery-workflow/references/) 差异点。调用后主 agent 不手搓派发，而是编写并运行一个 Workflow 脚本跑并发交付。三段式——阶段1(交互)决策账本+一次问完不可逆决策+沿缝切 DAG 落 nodes.jsonl；阶段2(后台 Workflow)对一个就绪波次 pipeline 每节点[worktree 隔离实现跑 a→g→对抗测试→自验]、缺依赖/不可逆决策一律冒泡；阶段3(交互)逐节点检查(typecheck/test 绿+diff+契约)通过才 ff 合本地 main+沉 wiki+清场、释放下游起下一波。合并权独占主 agent，不 push。下层 a→g 闭环作 implement agent 的 prompt 内核；wiki 结构重排 / spec 沉淀走轻量纯文档分支；也可单线单独跑 |
 
-**主线（口诀）**：想法先归里程碑海拔、一路下沉进 backlog 三池 + 路线图（`/idea-to-roadmap`）→ 在途进 `docs/todo/` / 草稿进 `docs/superpowers/` → 推进走 `advance-milestone`·`refactor-*` → 完事走 `spec-to-wiki`（先沉淀 wiki 才清草稿）。commit 先开分支、提交后 ff 合并回 main（不 push；push 由人单独指令）。
+**主线（口诀）**：想法先归里程碑海拔、一路下沉进 backlog 三池 + 路线图（`/idea-to-roadmap`）→ 在途进 `docs/todo/` / 草稿进 `docs/superpowers/` → 推进 / 重构 / 修 wiki / 沉淀**都走 `roadmap-delivery-workflow`**（按需求挑 `references/` 差异点；wiki 结构重排与 spec 沉淀走其轻量纯文档分支，先沉淀 wiki 才清草稿）。commit 先开分支、提交后 ff 合并回 main（不 push；push 由人单独指令）。
 
 > 单源维护：流程契约只在 skill 的 `SKILL.md` 里是权威；改流程改对应 skill，别在本文件另起一套散文。
 

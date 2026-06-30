@@ -1,6 +1,6 @@
 # docs/delivery —— 并发路线图交付的运行记录
 
-> 本目录由 [`parallel-roadmap-delivery`](../../.claude/skills/parallel-roadmap-delivery/SKILL.md) skill 产出与维护。
+> 本目录由 [`roadmap-delivery-workflow`](../../.claude/skills/roadmap-delivery-workflow/SKILL.md) skill 产出与维护。
 > 这里存的是**每一轮「推路线图」的事后可回溯记录**——和 [`docs/todo/`](../todo/)（在途交接·解决即删）性质不同，**长存、不随波结束删除**。
 
 ## 一轮一个目录
