@@ -1,7 +1,7 @@
 <p align="right"><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a></p>
 
 <p align="center">
-  <img src="docs/wiki/04-子系统设计/玩家客户端-视觉草图/dicelore-logo-dark.png" alt="Dicelore" width="440">
+  <img src="docs/wiki/设计/04-子系统设计/玩家客户端-视觉草图/dicelore-logo-dark.png" alt="Dicelore" width="440">
 </p>
 
 <p align="center"><strong><em>A rose without thorns is too perfect to be true.</em></strong></p>
@@ -59,10 +59,13 @@ Dicelore is dedicated to serving players who want to play text-adventure games a
 
 There are two player entry points planned for v1 — pick whichever fits you:
 
-- **Multi-platform bundle** (Android / Windows first; macOS, Linux, and iOS to follow): a single download containing the client UI plus a local backend sidecar. Just fill in your **API key + base URL** and play — no command line, no separate server to run. *(In development — see [Milestones](docs/wiki/06-里程碑与问题/里程碑.md) for progress.)*
-- **Self-hosted backend + browser**: run the `server` backend yourself via docker-compose (good for remote / multi-tenant hosting), then play through the web client in your browser. Fill in your **API key + base URL** the same way. *(Deployment guide in the [wiki](docs/wiki/).)*
+- **Multi-platform bundle** (Android / Windows first; macOS, Linux, and iOS to follow): a single download containing the client UI plus a local backend sidecar. Just fill in your **API key + base URL** and play — no command line, no separate server to run. *(In development — see [Milestones](docs/wiki/设计/05-现状与计划/里程碑.md) for progress.)*
+- **Self-hosted backend + browser**: run the `backend` yourself via docker-compose (good for remote / multi-tenant hosting), then play through the web client in your browser. Fill in your **API key + base URL** the same way. *(Step-by-step in the [Player Guide](docs/wiki/指南/玩家指南.md).)*
 
 The framework enforces dice rolls and option-giving, maintains character sheets and story state, and the AI narrates from the result — no soft landings.
+
+> **New here?** Start with the **[Guides](docs/wiki/指南/)** — task-oriented walkthroughs for the three kinds of people who use Dicelore:
+> [**Player Guide**](docs/wiki/指南/玩家指南.md) (install · run · play a session) · [**Author Guide**](docs/wiki/指南/作者指南.md) (build an Adventure · DIY a custom MCP) · [**Developer Guide**](docs/wiki/指南/开发者指南.md) (DIY plugins · interface specs · dev examples).
 
 > **Note on the CLI:** the `dicelore` CLI is a **developer / session-management tool** (`new` / `list` / `inspect` / `init`), **not** a player entry point — it has no `play` command. If you want to try Dicelore today without waiting for the bundle, see [Installation](#installation-in-progress) below for the developer path (run the backend + web locally).
 
@@ -70,7 +73,7 @@ The framework enforces dice rolls and option-giving, maintains character sheets 
 
 ## Questions or Suggestions?
 
-The design wiki lives at [`docs/wiki/`](docs/wiki/): business analysis → domain model → architecture → subsystem design → decision records (ADR). Everything about what Dicelore is, why it works the way it does, and how it is designed is documented there.
+The [`docs/wiki/`](docs/wiki/) is split into two domains: **[Guides](docs/wiki/指南/)** (task-oriented, for players / authors / developers) and **[Design](docs/wiki/设计/)** (the for-maintainers derivation chain: business → domain model → architecture → subsystem design → status). Design rationale lives inline in each design page's *Decisions & Trade-offs* section (with a thin [change log](docs/wiki/设计/决策变更日志.md); historical records are archived). The single source for terminology is the top-level [glossary](docs/wiki/术语表.md).
 
 Questions, suggestions, or want to contribute? Open an [issue](../../issues), or read [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow and conventions.
 
@@ -80,23 +83,23 @@ Questions, suggestions, or want to contribute? Open an [issue](../../issues), or
 
 > The complete standalone web player client (Component 7): a VSCode-style draggable-component workspace with the **"Ink & Gold" theme** (deep ink-green + gold trim, skinnable, light/dark modes, optional accent color). Below are the finalized design sketches (implementation in progress).
 
-![Play page](docs/wiki/04-子系统设计/玩家客户端-视觉草图/play.png)
+![Play page](docs/wiki/设计/04-子系统设计/玩家客户端-视觉草图/play.png)
 
 <p align="center"><sub>Play page · left activity rail · center narrative/typing combined · d10 dice roll · right "Stage" panel (grid-docked panels) · circular PbtA countdown clock</sub></p>
 
-![Home page](docs/wiki/04-子系统设计/玩家客户端-视觉草图/home.png)
+![Home page](docs/wiki/设计/04-子系统设计/玩家客户端-视觉草图/home.png)
 
-<p align="center"><sub>Home page · welcome screen · <a href="docs/wiki/04-子系统设计/玩家客户端-视觉草图/home.html">runnable sketch</a></sub></p>
+<p align="center"><sub>Home page · welcome screen · <a href="docs/wiki/设计/04-子系统设计/玩家客户端-视觉草图/home.html">runnable sketch</a></sub></p>
 
-![Adventure builder](docs/wiki/04-子系统设计/玩家客户端-视觉草图/build.png)
+![Adventure builder](docs/wiki/设计/04-子系统设计/玩家客户端-视觉草图/build.png)
 
-<p align="center"><sub>Adventure builder · build workbench · <a href="docs/wiki/04-子系统设计/玩家客户端-视觉草图/build.html">runnable sketch</a></sub></p>
+<p align="center"><sub>Adventure builder · build workbench · <a href="docs/wiki/设计/04-子系统设计/玩家客户端-视觉草图/build.html">runnable sketch</a></sub></p>
 
-![Settings](docs/wiki/04-子系统设计/玩家客户端-视觉草图/config.png)
+![Settings](docs/wiki/设计/04-子系统设计/玩家客户端-视觉草图/config.png)
 
-<p align="center"><sub>Settings · MCP / model / theme · <a href="docs/wiki/04-子系统设计/玩家客户端-视觉草图/config.html">runnable sketch</a></sub></p>
+<p align="center"><sub>Settings · MCP / model / theme · <a href="docs/wiki/设计/04-子系统设计/玩家客户端-视觉草图/config.html">runnable sketch</a></sub></p>
 
-<p align="center"><sub>Design language and four-page IA → <a href="docs/wiki/04-子系统设计/玩家客户端-视觉.md">Player client — visuals</a></sub></p>
+<p align="center"><sub>Design language and four-page IA → <a href="docs/wiki/设计/04-子系统设计/玩家客户端-视觉.md">Player client — visuals</a></sub></p>
 
 ---
 
@@ -111,7 +114,7 @@ npm run typecheck        # type check
 npm run dicelore -- new <session-name>   # CLI: create / open a session (dev / session management)
 ```
 
-To actually play during development you also need to start the `orchestrator` backend and the `web` dev server, then open the web client in a browser — the CLI alone does not run a game.
+To actually play during development you also need to start the `backend` and the `frontend` dev server, then open the web client in a browser — the CLI alone does not run a game.
 
 Sessions are saved under the platform's app-data directory at `dicelore/sessions/<name>.db`. The environment variable `DICELORE_SESSIONS_DIR` overrides the root directory; `DICELORE_SESSION` sets the default session name.
 
