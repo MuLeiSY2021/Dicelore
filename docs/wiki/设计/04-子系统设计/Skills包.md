@@ -54,7 +54,7 @@
 skill-creator：**`description` 是 skill 被不被调用的首要机制，且模型倾向 under-trigger，描述要"pushy"**。故两类 skill 的描述写法分明：
 
 - **GM 核心（要"每轮都在"）**：描述写成**覆盖全部 GM 动作**的常驻式，例：
-  > "Use on **every turn** of running an anko/anki (dice/vote-driven interactive fiction) session as GM: deciding whether to offer the player a choice or roll dice and which roll, respecting roll results without soft-landing, managing what the player can see. Consult this even when the GM action seems simple."
+  > "Use on **every turn** of running an anko/anka (dice/vote-driven interactive fiction) session as GM: deciding whether to offer the player a choice or roll dice and which roll, respecting roll results without soft-landing, managing what the player can see. Consult this even when the GM action seems simple."
 - **流程 skill（要"genre 相关才触发"）**：描述锚定该 genre 的触发语境，例（抽卡流）：
   > "Use when the game involves drawing from a card/loot/gacha pool — rolling for rarity, fabricating drawn-card content, fusing or chaining card effects."
 

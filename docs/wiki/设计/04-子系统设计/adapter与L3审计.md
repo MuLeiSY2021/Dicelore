@@ -217,7 +217,7 @@ CC 的对话记录（transcript jsonl）本身是 **UUID 父子链树**（/rewin
 
 - **吃 CC transcript 内部结构**（UUID 父子树；compact / `--clear` 后 UUID 是否存续、检测点确切 stdin 字段）→ 按本页惯例标**实现期官方文档核实**。
 - **兜底 = 人类侧 CLI**：保留 `dicelore rewind [n]` / `dicelore checkpoints`（同源扩展 [内层 §6](内层能力库.md) 的瘦 CLI new/list/inspect），作 transcript 关联不可靠时的手动逃生口 + headless/调试入口。**auto-sync 是主 UX、CLI 是逃生阀**。
-- **rule 带外不随回滚**：rule 不注册为快照 participant（[内层 §4.5.2](内层能力库.md)）→ 回滚永不碰 `rule_doc`，会话中途热更的 rule 自动留存；restore 出的状态始终跑**当前** rule。
+- **rule 带外不随回滚**：rule 不注册为快照 participant（[内层 §4.5.2](内层能力库.md)）→ 回滚永不碰 `rule` 表，会话中途热更的 rule 自动留存；restore 出的状态始终跑**当前** rule。
 
 ---
 
@@ -292,7 +292,7 @@ CC 的对话记录（transcript jsonl）本身是 **UUID 父子链树**（/rewin
 - **两个既有 hook 承重（不新增 hook）**：**Stop**（§3.3 ③）回合末 `checkpoint()`、锚定 head UUID、parent = 原 head；**UserPromptSubmit**（§3.2）读 transcript head，若非 `current_snapshot` 后代（玩家 /rewind 过或切了分支）→ `restore` 到最近祖先快照再处理 prompt。
 - **检测点为何在 UserPromptSubmit**：/rewind 本身可能不触发任何 hook，但玩家回退后总要再说一句话 → turn-start 必跑，那一刻比对 transcript head ↔ store 位置即可发现错位并对齐。
 - **兜底 = 人类侧 CLI**：`dicelore rewind` / `checkpoints` 作 transcript 关联不可靠时的逃生口；auto-sync 是主 UX、CLI 是逃生阀。**比「人类 CLI 回滚」更精确的 ADR-0008 对冲**（换基底只重写关联 hook、不动快照 core）。
-- **rule 带外不随回滚**：rule 不注册为快照 participant → restore 永不碰 `rule_doc`，会话中途热更的 rule 自动留存。
+- **rule 带外不随回滚**：rule 不注册为快照 participant → restore 永不碰 `rule` 表，会话中途热更的 rule 自动留存。
 - **被否（本层相关面）**：把回滚绑死 CC 自带 file checkpoint（回滚不了 store；本层让二者正交、各管各——CC 管对话/文件、我们管 store）。
 
 </details>

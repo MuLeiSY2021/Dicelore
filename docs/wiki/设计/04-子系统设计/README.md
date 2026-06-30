@@ -22,7 +22,7 @@
 |---|---|---|
 | [内层能力库](内层能力库.md) | 骰子引擎 + 四域 store 的**表 schema / 取数语法 / 可见性列 / watcher / 快照** | 状态骰下沉、watcher、快照回滚 |
 | [MCP 工具面](MCP工具面.md) | 全部工具 + `narrate` 的**入参/出参 schema（Zod）**、可见性工具、明/暗骰分流、补刀形态 | narrate stream、明骰分流、工厂+写后接缝 |
-| [Skills 包](Skills包.md) | L2 塑形层本体：Agenda 议程 + Moves 决策表 + Principles 教条 + 流程 skill 库 | guideline 焊 skill、PbtA 对齐/Agenda/Front |
+| [Skills 包](Skills包.md) | L2 塑形层本体：Agenda 议程 + Moves 决策表 + Principles 教条 + 流程 skill 库 | Principles 焊 skill、PbtA 对齐/Agenda/Front |
 | [Skills eval-loop](Skills-eval.md) | gm-core 定向优化：玩家视图 + 两层评分 + 真实案例对照 + play-mcp 跑法 | eval 经 play-mcp 连真后端 + 真实案例对照 |
 | [adapter 与 L3 审计](adapter与L3审计.md) | `.claude/` 装法、常驻保证、三 hook（SessionStart/UserPromptSubmit/Stop）、L3 两档、输出层呈现模型 | L3 两档烈度、hook 时序、快照接线 |
 
