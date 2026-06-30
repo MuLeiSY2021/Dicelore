@@ -1,6 +1,6 @@
 ---
 name: roadmap-delivery-workflow
-description: Dicelore 路线图/里程碑交付与 wiki 维护的统一上层 skill——调用后主 agent 不手搓派发,而是编写并运行一个 Workflow 脚本跑并发交付。当要「推进里程碑/路线图、整理前端(frontend)或后端(backend)架构、修 wiki 内容问题(链断/单源违例/设计-实现漂移)、重排 wiki 结构、沉淀 spec 进 wiki、把这几批做完、尽量别问我」时用。六个旧独立 skill(advance-milestone/refactor-frontend/refactor-backend/fix-wiki-issues/organize-wiki/spec-to-wiki)已全部并入本 skill,按需求挑 references/ 差异点文档。三段式:阶段1(交互)决策账本+一次问完不可逆决策+沿缝切 DAG 落 nodes.jsonl;阶段2(后台 Workflow)对一个就绪波次 pipeline 每节点[worktree 隔离实现跑 a→g→对抗测试→自验],缺依赖/不可逆决策一律冒泡;阶段3(交互)逐节点检查通过才 ff 合本地 main+沉 wiki,释放下游起下一波。合并权独占主 agent,不 push。下层 a→g 闭环作每个 implement agent 的 prompt 内核,也可单线单独跑。
+description: Dicelore 路线图/里程碑交付与 wiki 维护的统一上层 skill——调用后主 agent 不手搓派发,而是编写并运行一个 Workflow 脚本跑并发交付。当要「推进里程碑/路线图、整理前端(frontend)或后端(backend)架构、修 wiki 内容问题(链断/单源违例/设计-实现漂移)、重排 wiki 结构、沉淀 spec 进 wiki、把这几批做完、尽量别问我」时用。六个旧独立 skill(advance-milestone/refactor-frontend/refactor-backend/fix-wiki-issues/organize-wiki/spec-to-wiki)已全部并入本 skill,按需求挑 references/ 差异点文档。三段式:阶段1(交互)决策账本+一次问完不可逆决策+按需求切 DAG 落 nodes.jsonl(一需求一节点,不按文件);阶段2(后台 Workflow)对一个就绪波次 pipeline 每节点[worktree 隔离实现跑 a→g→对抗测试→自验],缺依赖/不可逆决策一律冒泡;阶段3(交互)逐节点检查通过才合进本地 main(文件重叠的冲突主 agent 集成时解)+沉 wiki,释放下游起下一波。合并权独占主 agent,不 push。下层 a→g 闭环作每个 implement agent 的 prompt 内核,也可单线单独跑。
 ---
 
 # 路线图交付工作流（roadmap-delivery-workflow）
@@ -46,7 +46,7 @@ description: Dicelore 路线图/里程碑交付与 wiki 维护的统一上层 sk
   扫路线图+三池 → 决策账本 docs/todo/decisions-pending.md
      ├ 可逆：自己拍，记默认值
      └ 不可逆：攒一批 → 一次 AskUserQuestion → 用户拍 → 回灌
-  沿文件缝切 DAG → docs/todo/nodes.jsonl（兄弟节点文件不重叠）
+  按需求切 DAG → docs/todo/nodes.jsonl（一需求一节点；文件可重叠，集成时主 agent 解冲突）
   挑出「就绪波次」= 依赖已全合进 main 的节点
         ↓ 把 {wave, 已拍不可逆决策} 作 args
 阶段2（后台 Workflow）— 主 agent 调 Workflow({script, args})
@@ -66,7 +66,7 @@ description: Dicelore 路线图/里程碑交付与 wiki 维护的统一上层 sk
   全程不 push（push 由用户单独指令）
 ```
 
-贯穿全程的分工：**主 agent 管「两头 + 跨波的事」（决策、分解、问用户、检查、合并、沉淀），Workflow 的 agent 管「一个节点内的事」（设计、写码、自测、对抗测试）**。合并权独占主 agent——那是质量闸，也是用户的信任边界（用户最终面对的是 main）。**主 agent 永远不亲自写实现代码**：它只编排 Workflow、检查结果、合并。
+贯穿全程的分工：**主 agent 管「两头 + 跨需求的事」（决策、分解、问用户、检查、集成合并、沉淀），Workflow 的 agent 管「一个需求内的事」（设计、写码、自测、对抗测试）**。合并权独占主 agent——那是质量闸，也是用户的信任边界（用户最终面对的是 main）。**主 agent 不亲自 author 功能实现**（那是各需求 agent 的活），但**集成是它的核心职责**：把各分支合进 main、解重叠改动的冲突、补跨切面接线（如 `server.ts` 挂路由）。它的 review = 合并结果正确 + 每个需求真交付。
 
 ## 灵魂：可逆性判据——决定一个卡点该不该打扰用户
 
@@ -102,27 +102,32 @@ description: Dicelore 路线图/里程碑交付与 wiki 维护的统一上层 sk
 
 **不全量前置写 spec/plan**。Fowler 实测过那个坑——给 47 个路线图项全写 spec，文档比代码还多、大半返工。spec/plan 交给做那条线的 agent 在 Workflow 里自己写（a→g 的第④步）。
 
-### DAG 分解：把路线图项拆成「沿缝切的原子节点」
+### DAG 分解：把路线图项拆成「一个需求一个节点」
 
-路线图上一项本身是个子 DAG（改 schema → 实现 → 业务级测试 → 文档）。摊平它，让叶子都是「一个节点 = 一个 agent 的小负担」。节点越原子，agent 上下文越轻、diff 越好审、波内并行度越高。**分解只能主 agent 做**（要全局文件归属视角，单个 agent 看不到别人动哪些文件）。三条会反咬的前提必须守：
+**分解单位是功能 / 需求，不是文件。** 一个原子需求 = 一个节点 = 一个 agent = 一个 worktree，独立从设计到自测干到底。路线图上一项往往是个需求簇（如「后端 API 硬化」= usage 端点 / key 托管 / SSRF 白名单 / 限流 四个独立需求）——摊平成一个个**能独立陈述、独立验收**的原子需求，每个派一个 agent。**分解只能主 agent 做**（要全局需求视角 + 需求间依赖关系）。三条前提：
 
-**① 沿文件/模块的缝切，不是凭感觉切细。** 「拆细 → 并行/合并简单」只在**兄弟节点不碰同一文件**时成立。反例：把一个 feat 拆 5 节点但都改 `server.ts`——你没让并行变简单，你制造了 5 次冲突。第一约束是**给每节点划清文件归属（`owns`）、同波兄弟节点文件不重叠**。这正是「一个波次能 worktree 隔离并发跑」的前提。
+**① 切到「单一原子需求」粒度——太重就再拆细需求，绝不按文件打包。** 一个节点应恰好是「一个能独立陈述、独立验收的需求」。需求太重（一个 agent 扛不动 / 验收口径裹了好几件事）→ **继续拆成更细的子需求**，按依赖排进 DAG。**绝不要因为「几个需求会碰同一个文件」就把它们捏成一个节点**——那是把本该并行的独立需求人为耦合、diff 难审、职责糊成一团（反面教训：把 usage/key/SSRF/限流 四需求并成一个「后端节点」只因它们都在 `server.ts` 挂路由）。文件重叠是**集成时**的事（见下「文件冲突」），不是分解时的约束。可以有几十个 worktree，一需求一个，互不等待。
 
 **② 测试节点分两种，只有一种能独立拆出去。**
    - **TDD 单测**（红-绿-重构）→ **不能拆**，和实现同节点（同一个 `implement` agent 在 a→g 里红绿一起长）。
    - **对抗性/业务级/集成测试** → **能且应该**拆成 pipeline 下游 stage（`test`，依赖 `implement` 先完成）。换个 agent 脑子才有对抗性。这正是 a→g 第⑥步。
 
-**③ 别拆过头——检查+合并是串行的，给粒度设了地板。** 写能并行，但「主 agent 检查 + 合并」串行（合并权独占）。拆 50 个原子节点 = 50 次串行检查合并，编排开销会超过节点本身的活。**缓解**：Workflow 内每个 agent 自跑 `test:all`+`typecheck`、`test` stage 再补对抗用例，主 agent 的检查主要看 diff + 契约。**节点要小到 diff 一眼能审完**，而不是小到无意义。
+**③ 别拆到「单一需求」以下——那才是负收益。** 原子需求是地板：比「一个完整需求」更细的切分（把一个端点拆成「写函数」+「写测试」两节点）只增集成开销、零收益。**需求多没关系**（几十个并发跑、主 agent 逐个集成），但每个节点都得是个**完整需求**、diff 一眼能审完，不是半拉子。Workflow 内每个 agent 自跑 `test:all`+`typecheck`，主 agent 的检查看 diff + 契约 + 合并结果。
 
-分解产出落成 `docs/todo/nodes.jsonl`（一行一个节点）：
+**文件冲突怎么办：集成时由主 agent 解，不靠拆分规避。** 兄弟需求各在自己 worktree 改文件，**即使碰同一文件也互不干扰**（worktree 隔离）。它们各自交付一条分支；主 agent 在阶段3 把分支**逐条**集成进 main，**重叠改动产生的合并冲突由主 agent 当场解**——这是集成的正常一环、主 agent 的核心职责，不是设计时要用「打包成一个节点」去躲的东西。跨切面的接线（如往 `server.ts` 挂多条新路由）天然落在集成点，正好归主 agent 在合并时统一做。
+
+分解产出落成 `docs/todo/nodes.jsonl`（一行一个**需求**）：
 
 ```jsonl
-{"id":"n1","title":"视图层投影","depends_on":[],"owns":["backend/src/store/views.ts","...views.test.ts"],"status":"ready"}
-{"id":"n2","title":"业务工具声明+接线","depends_on":["n1"],"owns":["backend/src/stdlib/*"],"status":"blocked"}
-{"id":"n3","title":"叙事工具业务级测试","depends_on":["n2"],"owns":["...dogfooding.test.ts"],"status":"blocked"}
+{"id":"usage-api","title":"GET /sessions/:id/usage 查询端点","depends_on":[],"owns":["backend/src/api/usage.ts","...test"],"status":"ready"}
+{"id":"key-host","title":"SEC2 后端 key 托管端点","depends_on":[],"owns":["backend/src/api/keys.ts","backend/src/store/keys.ts","db.ts"],"status":"ready"}
+{"id":"ssrf","title":"model-test/mcp-test SSRF 白名单","depends_on":[],"owns":["backend/src/api/diagnostics.ts"],"status":"ready"}
+{"id":"co-viz","title":"前端 token 可视化","depends_on":["usage-api"],"owns":["frontend/src/..."],"status":"blocked"}
 ```
 
-`status` 由主 agent 随合并推进维护（`blocked`→`ready`→`in_flight`→`merged`），是调度真相源。**就绪波次** = 所有 `depends_on` 都已 `merged` 的 `ready` 节点；一波喂给一个 Workflow。
+- **`owns` = 这个需求预期触及的文件**（供主 agent 集成时预判冲突点），**不是独占**——兄弟需求可与它重叠，重叠处合并时解。
+- **`depends_on` = 需求 / 契约依赖**（如前端可视化依赖后端 usage 端点的契约先定），**不是文件依赖**。
+- `status` 由主 agent 随合并推进维护（`blocked`→`ready`→`in_flight`→`merged`），是调度真相源。**就绪波次** = 所有 `depends_on` 都已 `merged` 的 `ready` 节点；一波喂给一个 Workflow。
 
 ## 阶段2（后台 Workflow）：一个就绪波次的 pipeline
 
@@ -170,9 +175,10 @@ const VERDICT_SCHEMA = {
 
 const results = await pipeline(
   NODES,
-  // stage implement —— 沿缝切 → 各节点 worktree 隔离,放心并发
+  // stage implement —— 一需求一 worktree 隔离,放心并发(文件重叠的冲突留主 agent 集成时解)
   (node) => agent(
-    `你独占文件 ${JSON.stringify(node.owns)}。目标:${node.goal}。验收:${node.acceptance}。
+    `你负责这一个需求:${node.title}。目标:${node.goal}。验收:${node.acceptance}。
+     预期碰这些文件(非独占,兄弟需求可能也碰、重叠由主 agent 集成时解):${JSON.stringify(node.owns)}。
      已拍板的不可逆决策(照做,别重拍):${JSON.stringify(DECISIONS)}。
      在你的 worktree 里跑下面 a→g 的设计→TDD 实现→自测,提交到分支 ${node.id}。
      缺依赖就在 blockedOnDependency 里报、绝不自造;浮现不可逆决策塞进 surfacedDecisions、绝不自拍。
@@ -195,7 +201,7 @@ return { perNode: results.filter(Boolean) }
 **为什么是 `pipeline` 不是先 `parallel` 再 `parallel`**：pipeline 无 stage 间 barrier——节点 A 的实现一完成就立刻进它的对抗测试，不用等节点 B 的实现。波内最慢的单节点链决定墙钟，而不是「最慢实现 + 最慢测试」之和。这正是「出生即就绪、不 await」在 Workflow 里的原生表达。
 
 **几条 Workflow 内的硬规矩**（写进脚本/prompt）：
-- **每个 implement agent `isolation:'worktree'`**：同波节点并发改文件，靠各自 worktree 隔离零冲突。沿缝切保证它们本就不碰同一文件。
+- **每个 implement agent `isolation:'worktree'`**：一需求一 worktree，各自并发改文件，**即使碰同一文件也互不干扰**（worktree 隔离）。重叠改动的合并冲突**不在这里规避**，留给主 agent 阶段3 集成时解。
 - **不能问用户**：Workflow 后台跑、`AskUserQuestion` 用不了。不可逆决策一律 `surfacedDecisions` 冒泡，可逆的自决。
 - **缺依赖不自造**：报 `blockedOnDependency`、原样返回。自造 = 和另一节点重复造、合并时撞车。这是运行时 DAG 修正的信号（有些依赖只在写码时才浮现），主 agent 收到后修 nodes.jsonl。
 - **agent 不碰共享 git**：只在自己 worktree 提交到自己分支。合并权、main 仍独占主 agent。这是 memory 铁律 `[禁止 subagent 碰 git]` 的精确化（不是推翻）：worktree 内提交自己分支 ≠ 碰共享 main/注册表。**记得据此更新那条 memory。**
@@ -206,8 +212,8 @@ return { perNode: results.filter(Boolean) }
 Workflow 返回 `{perNode:[...]}` 后，主 agent **逐节点**走质量闸（合并权独占在这，是人类信任边界）：
 
 1. **缺依赖的节点**（`blockedOnDependency != null`）→ 不合，修 nodes.jsonl（补节点 / 改依赖序），下一波重排。
-2. **三关检查**：① 自验绿（`selfTest.typecheck && unit` + `verdict==='pass'`）② diff 审（范围对不对、没越界改别节点文件、没 stub/假实现；可挂 `requesting-code-review` / `/code-review`）③ 契约符合（达成派单验收口径，web 改动走 `/webapp-testing`）。
-3. 三关过 → `git merge --ff-only <节点分支>` 进**本地** main（顺序由依赖图定；沿缝切则各分支自动干净，真撞了起接力 agent 解）→ nodes.jsonl 标 `merged`。
+2. **三关检查**：① 自验绿（`selfTest.typecheck && test` + `verdict==='pass'`）② diff 审（改动范围贴合需求、没顺手改无关东西、没 stub/假实现；可挂 `requesting-code-review` / `/code-review`）③ 契约符合（达成派单验收口径，web 改动走 `/webapp-testing`）。
+3. 三关过 → **集成进本地 main**（顺序由依赖图定）：首条可 `git merge --ff-only`；后续分支若与已合内容有重叠改动会分叉，用 `git merge <分支>` 真合并、**主 agent 当场解冲突**（冲突是集成常态，不是异常；跨切面接线如 `server.ts` 挂新路由也在此一并补）。合完跑一次 `typecheck:all`+`test:all` 确认集成后仍绿 → nodes.jsonl 标 `merged`。
 4. 三关不过 → 起接力 subagent 按失败项改（Workflow 已返回、agent 已退，所以是新起 subagent 靠返回结果接力），改完重检。
 
 **冒泡的不可逆决策**（各节点 `surfacedDecisions` 汇总）→ 攒一批 `AskUserQuestion` 问用户 → 回灌账本 + 落 ADR/backlog → 影响到的节点下一波带着新决策重跑。
