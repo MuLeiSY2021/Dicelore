@@ -15,20 +15,20 @@ resolver = 把未定局面产出一个「叙述者无法伪造」的结果并推
 | **玩家选** | `resolve_choice` | — | — | —（挑卡＝choice 变体） |
 | **随机选** | `resolve_outcome`（档位） | `resolve_contest`（比表达式；**DC＝比常数**） | `sheet_update` 带骰（状态骰下沉） | `world_sample`（卡池） |
 
-> DC 不是独立 judge，是 contest 一边退化成常数；number 形状＝`sheet_update` 带骰；卡池抽＝`world_sample`。明/暗骰二轴（`_open`/`_hidden`）见 ADR-0019。
+> DC 不是独立 judge，是 contest 一边退化成常数；number 形状＝`sheet_update` 带骰；卡池抽＝`world_sample`。明/暗骰二轴（`_open`/`_hidden`）见 [MCP工具面](MCP工具面.md) 决策节。
 
 ## 各组件沉淀落点（历史索引）
 
 | 组件 / 主题 | 现落点 |
 |------------|--------|
-| 组件1 内层能力库 | [内层能力库.md](内层能力库.md) + ADR-0007 |
-| event/watcher schema、timer→watcher | [内层能力库.md](内层能力库.md) + ADR-0013 |
-| 组件3 Skills 包 | [Skills包.md](Skills包.md) + ADR-0012 |
+| 组件1 内层能力库 | [内层能力库.md](内层能力库.md)（决策见其「决策与权衡」节） |
+| event/watcher schema、timer→watcher | [内层能力库.md](内层能力库.md)（决策见其「决策与权衡」节） |
+| 组件3 Skills 包 | [Skills包.md](Skills包.md)（决策见其「决策与权衡」节） |
 | 工具面（前缀/裁决族/mutation/可见性工具/契约） | [MCP工具面.md](MCP工具面.md) |
-| 团本构建台（组件5/6） | [团本与manifest.md](团本与manifest.md) / [团本构建工具链.md](团本构建工具链.md) + ADR-0015 |
-| PbtA 对齐 + Agenda + Front/Clock | [Skills包.md](Skills包.md) + ADR-0016 |
-| 组件4 adapter + L3 + 输出层 | [adapter与L3审计.md](adapter与L3审计.md) + ADR-0014 |
-| 玩家闸控明骰（后端引擎侧） | [MCP工具面.md](MCP工具面.md) + ADR-0019 |
+| 团本构建台（组件5/6） | [团本与manifest.md](团本与manifest.md) / [团本构建工具链.md](团本构建工具链.md)（决策见各页「决策与权衡」节） |
+| PbtA 对齐 + Agenda + Front/Clock | [Skills包.md](Skills包.md)（决策见其「决策与权衡」节） |
+| 组件4 adapter + L3 + 输出层 | [adapter与L3审计.md](adapter与L3审计.md)（决策见其「决策与权衡」节） |
+| 玩家闸控明骰（后端引擎侧） | [MCP工具面.md](MCP工具面.md)（决策见其「决策与权衡」节） |
 | Skills eval-loop 工装 | [Skills-eval.md](Skills-eval.md) |
 
 ## 未结 / 在途项（已迁 06）

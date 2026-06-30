@@ -2,13 +2,13 @@
 
 > **本页职责**：回答"v1 骑哪个 agent 基底、core 与基底绑定怎么切、hook 怎么承重、未来怎么演进到 GUI"。
 > **上游依赖**：[总体架构](总体架构.md)、[技术选型 §6 基底 / §6.1 分发](技术选型.md)、[01 卡位重述](../01-业务与定位/问题域.md)。
-> **状态**：🟢 已成型（2026-06-01；**2026-06-02 据定位重述重写**；**2026-06-20 修订 §6**：呈现层轴二从"未来层"提前为组件7「玩家客户端」、机制定为 Agent SDK headless host，ADR-0018）。
+> **状态**：🟢 已成型（2026-06-01；**2026-06-02 据定位重述重写**；**2026-06-20 修订 §6**：呈现层轴二从"未来层"提前为组件7「玩家客户端」、机制定为 Agent SDK headless host，见本页「决策与权衡」节）。
 
 ---
 
 ## 0. 一句话
 
-**core 是标准件，v1 骑定 Claude Code 基底、承重地用它的 hook / skill / subagent。** 框架的塑形能力，一部分活在与基底无关的标准载体里（MCP + markdown skill + SQLite + 团本），一部分**有意地、承重地**交给 Claude Code 的专属机制（hook 注入、subagent 裁判、skill 装载）。可移植性兑现在**模型层**（Claude Code model-agnostic，可接各种大模型，含国产）而非 agent 层。经玩家客户端（组件7、ADR-0018）用 GUI 隐藏终端 / Claude Code（呈现层从未来层提前、机制 ＝ Agent SDK headless host）。这是 [01 卡位重述](../01-业务与定位/问题域.md) + [技术选型 §6](技术选型.md) 的落地。
+**core 是标准件，v1 骑定 Claude Code 基底、承重地用它的 hook / skill / subagent。** 框架的塑形能力，一部分活在与基底无关的标准载体里（MCP + markdown skill + SQLite + 团本），一部分**有意地、承重地**交给 Claude Code 的专属机制（hook 注入、subagent 裁判、skill 装载）。可移植性兑现在**模型层**（Claude Code model-agnostic，可接各种大模型，含国产）而非 agent 层。经玩家客户端（组件7、见本页「决策与权衡」节）用 GUI 隐藏终端 / Claude Code（呈现层从未来层提前、机制 ＝ Agent SDK headless host）。这是 [01 卡位重述](../01-业务与定位/问题域.md) + [技术选型 §6](技术选型.md) 的落地。
 
 > **与旧版的根本变化（2026-06-02）**：旧版把"可嫁接任意 agent、hook 仅可选优化、绝不依赖某 agent 专属能力"当立身。重述后——**可移植不是目标，效果 / 分发 / 低开发成本才是**：core 保持标准不锁死，但 v1 明确骑 Claude Code，**hook 从"可选降级"升为"承重"**（详见 §5）。
 
@@ -33,7 +33,7 @@
 |---|---|---|---|
 | **L1 工具强制** | MCP 工具 schema | **core 标准** | MCP 标准，结构强制随工具走 |
 | **L2 skill 教** | markdown 教条 | 内容 core 标准、**装载走 Claude Code skill 机制** | 教条本身可搬；放 `.claude/skills/` 由 Claude Code 装载 |
-| **L3 + 被动注入** | Claude Code hook | **绑 Claude Code、v1 承重** | 被动 rule 召回、掷骰绕过 / 后果-叙事审计——靠 hook（watcher 到期已下沉为 `sheet_update` 就地触发、非 hook，ADR-0013；裁判 subagent 降为未来，ADR-0014） |
+| **L3 + 被动注入** | Claude Code hook | **绑 Claude Code、v1 承重** | 被动 rule 召回、掷骰绕过 / 后果-叙事审计——靠 hook（watcher 到期已下沉为 `sheet_update` 就地触发、非 hook，见设计页决策节；裁判 subagent 降为未来，见设计页决策节） |
 
 → 与旧版差别：旧版说"L3 可缺、优雅降级"。**重述后 hook 承重**——被动 rule 召回是核心玩法的一部分（[内层 §4.4](../04-子系统设计/内层能力库.md)），不是可有可无的事后审计。我们用"绑 Claude Code"换"这些承重机制白嫖、不自研"。
 
@@ -44,9 +44,9 @@
 Claude Code 的 hook 承担两类**核心**活（实现落 [04 adapter 与 L3 审计](../04-子系统设计/adapter与L3审计.md)）：
 
 1. **被动 rule 召回**（回合开始 ＝ UserPromptSubmit）：AI 描述某情节时，hook 把相关 rule 约束注入本轮提示词（rule 被动拉取、AI 只读，[内层 §4.4](../04-子系统设计/内层能力库.md)）。
-2. **L3 审计**（回合末 ＝ Stop）：物化暂存 choice；掷骰绕过率、后果-叙事一致性（机械层比对本轮——一个 agent 回合——的 verdict / mutation vs narrate；语义疑点 `block` ＋ reason 让主 agent 自纠，**不 spawn 独立裁判 subagent**，ADR-0014）。
+2. **L3 审计**（回合末 ＝ Stop）：物化暂存 choice；掷骰绕过率、后果-叙事一致性（机械层比对本轮——一个 agent 回合——的 verdict / mutation vs narrate；语义疑点 `block` ＋ reason 让主 agent 自纠，**不 spawn 独立裁判 subagent**，见本页「决策与权衡」节）。
 
-> **watcher 到期不在 hook**：旧版列的"timer 到期注入"已由 ADR-0013 改为 `sheet_update` 写完就地触发（内层 / MCP 的 core 能力、不绑 Claude Code）——hook 承重因此再缩一项。
+> **watcher 到期不在 hook**：旧版列的"timer 到期注入"已改为 `sheet_update` 写完就地触发（内层 / MCP 的 core 能力、不绑 Claude Code，见本页「决策与权衡」节）——hook 承重因此再缩一项。
 
 **跨端约束**（因 npm 包跨 Win/Mac/Linux 分发，[技术选型 §6.1](技术选型.md)）：
 - **hook 脚本一律用 Node 写、不用 bash**——否则 Windows 跑不了。
@@ -68,7 +68,7 @@ L2 教条内容是 core 标准件，但**装载走 Claude Code 的 skill 机制*
 
 - **可移植不是目标**（[01](../01-业务与定位/问题域.md) / [技术选型 §6](技术选型.md)）：为"嫁接任意 agent"做工程，是为不需要的东西付费、还牺牲效果。
 - **绑 harness ≠ 绑模型 ≠ 闭环产品**：Claude Code model-agnostic（模型层仍可移植）；core 是开源标准件（未来可搬、不自跑模型）。绑的只是"用哪套 hook / skill / subagent 机制"。
-- **承重 hook 白嫖**：被动 rule 召回、L3 审计这些自研太重（违低开发成本），Claude Code 现成（watcher 到期 / 裁判已分别下沉 sheet 引擎 / 降为未来，见 ADR-0013 / ADR-0014）。
+- **承重 hook 白嫖**：被动 rule 召回、L3 审计这些自研太重（违低开发成本），Claude Code 现成（watcher 到期 / 裁判已分别下沉 sheet 引擎 / 降为未来，见本页「决策与权衡」节）。
 - **底线仍在**：core（MCP / Skill / SQLite / 团本）保持标准、不锁死——这是"未来想搬就能搬"的保险，也是和闭环产品的实质区别。
 
 ---
@@ -82,7 +82,7 @@ L2 教条内容是 core 标准件，但**装载走 Claude Code 的 skill 机制*
 ```
 
 - **轴一**：core 标准、交付绑基底——但"绑"是**有意承重**，非旧版"可选装法"。
-- **轴二 · 呈现层 = 玩家客户端（组件7，ADR-0018）**：v1 终端（`dicelore play` / `claude`）仍在，**并行推进 web 玩家客户端**——机制 ＝ **Agent SDK headless host**（用 `@anthropic-ai/claude-agent-sdk` ＝ 程序化 Claude Code 把 GM 作为库嵌进自建 Node 服务），而非 Tauri 包交互式终端。**这不离开轴一"骑定 Claude Code"**：三 hook / 进程内 MCP / skill 装载原样复用，只换宿主外壳（TUI → web）。一个编排契约（REST + 流式）套两种分发壳：**Tauri（个人向头等分发、开箱即用，壳内捎带后端的 Node sidecar）** / **Web（企业·多人向托管 ＝ [场景 B](../01-业务与定位/用户与场景.md)）**。GUI 仍读 SQLite store / `narrate` 展示人物卡 / 剧情 / 卡池，**与"哪个模型当 GM"正交**；与 core 则**单向依赖 + 一条变更通知缝**（core/MCP 写规范态时发信号、后端订阅推呈现增量，为反应式 / 性能，详见 [04 玩家客户端](../04-子系统设计/玩家客户端.md)）。详见 [总体架构 §7 组件7](总体架构.md)。
+- **轴二 · 呈现层 = 玩家客户端（组件7，见本页「决策与权衡」节）**：v1 终端（`dicelore play` / `claude`）仍在，**并行推进 web 玩家客户端**——机制 ＝ **Agent SDK headless host**（用 `@anthropic-ai/claude-agent-sdk` ＝ 程序化 Claude Code 把 GM 作为库嵌进自建 Node 服务），而非 Tauri 包交互式终端。**这不离开轴一"骑定 Claude Code"**：三 hook / 进程内 MCP / skill 装载原样复用，只换宿主外壳（TUI → web）。一个编排契约（REST + 流式）套两种分发壳：**Tauri（个人向头等分发、开箱即用，壳内捎带后端的 Node sidecar）** / **Web（企业·多人向托管 ＝ [场景 B](../01-业务与定位/用户与场景.md)）**。GUI 仍读 SQLite store / `narrate` 展示人物卡 / 剧情 / 卡池，**与"哪个模型当 GM"正交**；与 core 则**单向依赖 + 一条变更通知缝**（core/MCP 写规范态时发信号、后端订阅推呈现增量，为反应式 / 性能，详见 [04 玩家客户端](../04-子系统设计/玩家客户端.md)）。详见 [总体架构 §7 组件7](总体架构.md)。
 
 ---
 
