@@ -8,6 +8,7 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import type { DB } from "./db.js";
+import { ftsDelete } from "./fts.js";
 
 // ===== RT-1 中期：回合级事务回滚原语（轻量 DELETE，非快照 restore）=====
 //
@@ -77,7 +78,12 @@ export function rollbackAfterSeq(db: DB, startSeq: number): RollbackReport {
         continue; // 损坏的 data_json 不阻断回滚；进不了 residue 但 log 仍会被删净
       }
       const entity = parsed.entity;
-      for (const a of parsed.applied ?? []) {
+      // CONCERN-3：同一 event 的 applied[] 内同一 attr 可能出现多次（mutate.ts 一次调用多步同 attr）。
+      // 跨 event 已按 seq DESC，event 内必须也倒序回放——否则正序会落到末项 old 而非该 event 的首项 old，
+      // 偏离回合起点值。倒序遍历使该 attr 最后写入的是数组首项的 old，即起点态。
+      const applied = parsed.applied ?? [];
+      for (let i = applied.length - 1; i >= 0; i--) {
+        const a = applied[i];
         if (a.old === null || a.old === undefined) {
           db.prepare("DELETE FROM state WHERE entity=? AND attr=?").run(entity, a.attr);
         } else {
@@ -93,21 +99,20 @@ export function rollbackAfterSeq(db: DB, startSeq: number): RollbackReport {
     // 2) 探测本回合内被改动、但本原语无可逆信号的副作用表，记入 residue（冒泡，不静默）。
     //    判据：表自带 seq/created_seq 锚点的，按 > startSeq 计数；否则只能保守提示「可能含回合内态」。
     const residue: string[] = [];
-    // pending_roll：event_id AUTOINCREMENT 即 seq 序，回合内新挂起的明骰 > startSeq 的对应起点。
-    // 无精确 seq 锚点（event_id 与 log.seq 不同序），保守：若回合内 log 段非空且存在 awaiting 行则提示。
+    // pending_roll：event_id AUTOINCREMENT 自成一序，与 log.seq 不同序，无 per-row 的 log seq 锚点，
+    // 故无法精确判定某 awaiting 明骰是否本回合内挂起（CONCERN-2 已知近似）。保守口径：仅当本回合确实
+    // 落了 log 段（turnLogCount>0）才提示，且文案明记「可能含上一回合遗留」，避免把跨回合残留误断为本回合产物
+    // 误导 user。精确锚定需在 turnStartSeq 时一并捕获 pending_roll MAX(event_id)（待 v2 快照/schema 扩展）。
     const pendingAwaiting = (
       db.prepare("SELECT COUNT(*) c FROM pending_roll WHERE status='awaiting'").get() as { c: number }
     ).c;
-    if (pendingAwaiting > 0 && mutationRows.length >= 0) {
-      // 仅当本回合确实删了 log 段时才可能是回合内产物；用删除前的 log 段是否非空判定。
-      const turnLogCount = (
-        db.prepare("SELECT COUNT(*) c FROM log WHERE seq > ?").get(startSeq) as { c: number }
-      ).c;
-      if (turnLogCount > 0) {
-        residue.push(
-          `pending_roll: ${pendingAwaiting} 行挂起明骰（status=awaiting）未回滚——本原语不逆明骰挂起态，需 v2 快照或人工核对`,
-        );
-      }
+    const turnLogCount = (
+      db.prepare("SELECT COUNT(*) c FROM log WHERE seq > ?").get(startSeq) as { c: number }
+    ).c;
+    if (pendingAwaiting > 0 && turnLogCount > 0) {
+      residue.push(
+        `pending_roll: ${pendingAwaiting} 行挂起明骰（status=awaiting，可能含上一回合遗留——本表无 log seq 锚点无法精确归属本回合）未回滚——本原语不逆明骰挂起态，需 v2 快照或人工核对`,
+      );
     }
     // watcher 运行时态（armed/last_fired_seq/status）回合内可能被 recomputeWatchers 改写，
     // 但无 per-change 逆信号 —— 若回合内有 watcher_fired 事件即提示其 last_fired/status 漂移未逆。
@@ -121,6 +126,15 @@ export function rollbackAfterSeq(db: DB, startSeq: number): RollbackReport {
     }
 
     // 3) 删本回合 log 段（最后做：state 逆放与 residue 探测都依赖它还在）。
+    //    CONCERN-1：log 有伴随 FTS5 索引表 log_fts（record.ts logAppend 凡 content 非空即
+    //    ftsIndex(db,"log_fts",seq,content)，故 log_fts.rowid === log.seq）。删 log 行必须在同事务里
+    //    删掉对应 log_fts 行，否则回滚后留孤儿索引——① logRecall/FTS 仍搜得到已删内容；② log_fts 随
+    //    每次回滚无界增长。先按 rowid>startSeq 取本回合在 log_fts 里有索引的 seq，逐行 ftsDelete。
+    const orphanFtsRows = db
+      .prepare("SELECT rowid FROM log_fts WHERE rowid > ?")
+      .all(startSeq) as { rowid: number }[];
+    for (const r of orphanFtsRows) ftsDelete(db, "log_fts", r.rowid);
+
     const turnLog = db.prepare("DELETE FROM log WHERE seq > ?").run(startSeq);
     const deletedLogCount = turnLog.changes;
 

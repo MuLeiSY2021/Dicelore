@@ -11,6 +11,7 @@ import { describe, it, expect } from "vitest";
 import { openDb, initSchema, type DB } from "./db.js";
 import { turnStartSeq, rollbackAfterSeq } from "./turnRollback.js";
 import { applyMutations } from "./sheet/mutate.js";
+import { logAppend, logRecall } from "./event/record.js";
 
 function freshDb(): DB {
   const db = openDb(":memory:");
@@ -126,5 +127,64 @@ describe("rollbackAfterSeq：删本回合 log 段 + 逆 state 变更", () => {
     expect(() => rollbackAfterSeq(db, start)).not.toThrow();
     expect(sheet(db, "你", "HP")).toBe("10");
     expect(maxSeq(db)).toBe(start);
+  });
+});
+
+describe("CONCERN-1：回滚同步清 log_fts 孤儿索引（FTS 一致性）", () => {
+  function ftsRowCount(db: DB): number {
+    return (db.prepare("SELECT COUNT(*) c FROM log_fts").get() as { c: number }).c;
+  }
+
+  it("回合内 narrate 写 log_fts 后回滚 → logRecall/FTS 搜不到本回合内容（孤儿已清）", () => {
+    const db = freshDb();
+    // 回合前的内容：保留，回滚后仍应可搜
+    logAppend(db, { kind: "narrate", content: "回合前的旧叙述提到了古老的灯塔" });
+    const start = turnStartSeq(db);
+    expect(logRecall(db, "灯塔").length).toBe(1);
+    const ftsBefore = ftsRowCount(db);
+
+    // 本回合 GM 落了若干 narrate（content 非空 → 写入 log_fts），随后回滚
+    logAppend(db, { kind: "narrate", content: "本回合一条会被回滚的独特咒语阿巴拉卡达布拉" });
+    logAppend(db, { kind: "narrate", content: "本回合另一条神秘符文齐格弗里德" });
+    expect(logRecall(db, "阿巴拉卡达布拉").length).toBe(1); // 回滚前搜得到
+    expect(ftsRowCount(db)).toBe(ftsBefore + 2);
+
+    rollbackAfterSeq(db, start);
+
+    // 回滚后：本回合内容的 FTS 索引已清，搜不到
+    expect(logRecall(db, "阿巴拉卡达布拉")).toEqual([]);
+    expect(logRecall(db, "齐格弗里德")).toEqual([]);
+    // log_fts 不残留孤儿行，回到起点态
+    expect(ftsRowCount(db)).toBe(ftsBefore);
+    // 起点前的内容仍可搜（未误删）
+    expect(logRecall(db, "灯塔").length).toBe(1);
+  });
+
+  it("空 content 的 event 不写 log_fts，回滚也不报错", () => {
+    const db = freshDb();
+    const start = turnStartSeq(db);
+    logAppend(db, { kind: "mutation", data_json: { entity: "你", applied: [] } }); // 无 content
+    expect(() => rollbackAfterSeq(db, start)).not.toThrow();
+    expect((db.prepare("SELECT COUNT(*) c FROM log_fts").get() as { c: number }).c).toBe(0);
+  });
+});
+
+describe("CONCERN-3：单 event 内同一 attr 重复变更，逆放回最早（首项）old", () => {
+  it("一次 applyMutations 多步同 attr（HP 10→8→3）回滚后回到起点 10，而非末项 old", () => {
+    const db = freshDb();
+    applyMutations(db, "你", [{ attr: "HP", op: "=", expr: "10" }]);
+    const start = turnStartSeq(db);
+    // 同一 event 的 applied[] 含同一 attr 多次：HP -2(10→8) 再 -5(8→3)
+    applyMutations(db, "你", [
+      { attr: "HP", op: "-", expr: "2" },
+      { attr: "HP", op: "-", expr: "5" },
+    ]);
+    expect(sheet(db, "你", "HP")).toBe("3");
+
+    // 该 event 的 applied[] = [{attr:HP, old:"10"}, {attr:HP, old:"8"}]
+    // 正序回放会落到末项 old=8（错）；倒序回放落到首项 old=10（对，起点值）
+    const report = rollbackAfterSeq(db, start);
+    expect(sheet(db, "你", "HP")).toBe("10");
+    expect(report.stateReverted).toBeGreaterThan(0);
   });
 });
