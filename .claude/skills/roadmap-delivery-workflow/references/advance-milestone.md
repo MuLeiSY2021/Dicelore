@@ -4,7 +4,7 @@
 
 | 维度 | 取值 |
 |------|------|
-| 问题从哪来 | `docs/wiki/06-里程碑与问题/路线图.md` 的**下一批** + 三个 backlog 池 |
+| 问题从哪来 | `docs/wiki/设计/05-现状与计划/路线图.md` 的**下一批** + 三个 backlog 池 |
 | 扫描范围 | 全项目（前端 + 后端 + core） |
 | 专属关注点 | 现状↔`里程碑.md` 的差距；把差距转成 feat 落池/排批；跨包 DAG |
 | 验收口径 | `npm test` + `npm run typecheck`；涉 web 则 `/webapp-testing` |

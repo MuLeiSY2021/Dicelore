@@ -4,8 +4,8 @@
 
 | 维度 | 取值 |
 |------|------|
-| 问题从哪来 | `docs/wiki/06-里程碑与问题/backlog-前端.md` |
-| 扫描范围 | `apps/web` |
+| 问题从哪来 | `docs/wiki/设计/05-现状与计划/backlog-前端.md` |
+| 扫描范围 | `frontend` |
 | 专属关注点 | 组件边界 / 渲染路径 / 路由 / i18n（硬编码中文走 i18n）/ 墨金视觉 token 一致性 |
 | 验收口径 | web 单测 + Playwright e2e，**必须**走 `/webapp-testing`（example-skills:webapp-testing） |
 

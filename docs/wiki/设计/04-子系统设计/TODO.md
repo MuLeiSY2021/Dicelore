@@ -1,7 +1,7 @@
 # 04-子系统设计 TODO（已归档 → 06）
 
 > **本页已归档（2026-06-21）**。原为「每页填充进度 + 已 locked 决策账本」草稿，内容已沉淀：
-> - **已接受决策** → [05-决策记录 ADR](../归档/历史决策日志.md)；
+> - **已接受决策** → 对应设计页「决策与权衡」节；
 > - **设计正文** → 04 各正式页（内层能力库 / MCP工具面 / Skills包 / adapter与L3审计 / 团本与manifest / 团本构建工具链 / 玩家客户端*）；
 > - **未结 / 在途 / 未来项** → [05-现状与计划 · 问题总账](../05-现状与计划/问题总账.md)。
 > 保留本页仅为不断旧链（含下方 resolver 二轴速查）。**新内容勿写这里**，进 06。
@@ -15,14 +15,14 @@ resolver = 把未定局面产出一个「叙述者无法伪造」的结果并推
 | **玩家选** | `resolve_choice` | — | — | —（挑卡＝choice 变体） |
 | **随机选** | `resolve_outcome`（档位） | `resolve_contest`（比表达式；**DC＝比常数**） | `sheet_update` 带骰（状态骰下沉） | `world_sample`（卡池） |
 
-> DC 不是独立 judge，是 contest 一边退化成常数；number 形状＝`sheet_update` 带骰；卡池抽＝`world_sample`。明/暗骰二轴（`_open`/`_hidden`）见 [ADR-0019](../归档/历史决策日志.md)。
+> DC 不是独立 judge，是 contest 一边退化成常数；number 形状＝`sheet_update` 带骰；卡池抽＝`world_sample`。明/暗骰二轴（`_open`/`_hidden`）见 ADR-0019。
 
 ## 各组件沉淀落点（历史索引）
 
 | 组件 / 主题 | 现落点 |
 |------------|--------|
 | 组件1 内层能力库 | [内层能力库.md](内层能力库.md) + ADR-0007 |
-| event/watcher schema、timer→watcher | [内层能力库.md](内层能力库.md) + [ADR-0013](../归档/历史决策日志.md) |
+| event/watcher schema、timer→watcher | [内层能力库.md](内层能力库.md) + ADR-0013 |
 | 组件3 Skills 包 | [Skills包.md](Skills包.md) + ADR-0012 |
 | 工具面（前缀/裁决族/mutation/可见性工具/契约） | [MCP工具面.md](MCP工具面.md) |
 | 团本构建台（组件5/6） | [团本与manifest.md](团本与manifest.md) / [团本构建工具链.md](团本构建工具链.md) + ADR-0015 |

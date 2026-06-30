@@ -1,7 +1,7 @@
 # backlog · core 层
 
 > **本页职责**：core 层（引擎 / 数据层 / MCP 工具面 / gm-core / 团本构建引擎 / eval harness）的 **issue 池**——落点散在 `backend/`（store/resolve/present/catalog/build/toolgen/expr/eval）、`harness/`（mcp 工具面/dicegm/loregm/eval-*）、`packages/*`（纯库）。按**主题**聚类、按 **fix/feat** 标注，广度无序（先还哪个见 [路线图](路线图.md)）。
-> **单源（勿重复）**：eval 细节仍在 [`harness/eval-dicegm/findings.md`](../../../harness/eval-dicegm/findings.md)，本页按主题**卷上来**；拍了方案 → 写 [ADR](../归档/历史决策日志.md)，条目改标 `→ ADR-00xx` 关闭；已达成 → 进 [里程碑](里程碑.md)。
+> **单源（勿重复）**：eval 细节仍在 [`harness/eval-dicegm/findings.md`](../../../harness/eval-dicegm/findings.md)，本页按主题**卷上来**；拍了方案 → 写 ADR，条目改标 `→ ADR-00xx` 关闭；已达成 → 进 [里程碑](里程碑.md)。
 
 ## 状态图例
 - ✅**确认** — 客观/架构事实，与「谁驱动」无关（已实测）。
@@ -20,17 +20,17 @@
 
 > **路由**：F 是 meta 闸——**先建它，再跑剧本2/3 eval**，否则继续产污染数据。建好后，全项目所有 ⚠️ 项才可重新评定。
 >
-> **进度（2026-06-24 核对 → 闭环达成）**：faithful 真引擎工具链**已备**（`harness/eval-dicegm/` 下 `tool.ts`/`batch.ts`/`run.ts`/`grade.ts`/`grader.md`/`findings.md`）。自动闭环**已补**——经 **play-mcp**（CC 经它连真后端 play HTTP 当玩家+评估者，见 [ADR-0025](../归档/历史决策日志.md)），非原"子代理当 GM"方案。RUN_LIVE 通路验证通过（[reports](../../../reports/)）。F1 闭环；F2 终局观测待多轮跑。
+> **进度（2026-06-24 核对 → 闭环达成）**：faithful 真引擎工具链**已备**（`harness/eval-dicegm/` 下 `tool.ts`/`batch.ts`/`run.ts`/`grade.ts`/`grader.md`/`findings.md`）。自动闭环**已补**——经 **play-mcp**（CC 经它连真后端 play HTTP 当玩家+评估者，见 ADR-0025），非原"子代理当 GM"方案。RUN_LIVE 通路验证通过（[reports](../../../reports/)）。F1 闭环；F2 终局观测待多轮跑。
 >
 > **覆盖范围（2026-06-25 用户点出）**：现 harness **只覆盖跑团(dice/play)侧**——跑一个剧本看 GM 行为。**构建团本(lore)侧零 eval**（F3）：作者经构建 GM 建团本 / import 映射 / 构建工具面可用性，全无客观验证。F3 是 F1 在 lore 侧的对称缺口，**编入第二批——接构建工具补全（H-build-tools）后接本项**；评估基建不齐则 lore 侧行为类结论同样不可信。
 >
-> **🔑 2026-06-29 方法论决策（待写 ADR，将修订 [ADR-0025](../归档/历史决策日志.md)）**：eval 的**对照系 = `docs/research/` 真实案例**（兽人冒险/抽卡/恶龙团→喂进团本构建库、和 lore GM 对话建出团本→人工认可→Claude skill+MCP 拿团本跑 eval→落盘 eval 报告）。**废 doctrine-vs-baseline A/B 对照**——不再以"去教条档"作教条价值的证据系。**量化以目前认知不可行 → 闭环产出定性报告**（量化口径待探索）。波及 ADR-0025 + wiki 01 成功标准 / 04 Skills-eval·Skills包·团本构建工具链 + `harness/eval-dicegm/grader.md` + `dicelore-eval` skill，**走决策→ADR→传播**（ADR 定稿后由它单源传播，下方 baseline 欠账项一并作废）。
+> **🔑 2026-06-29 方法论决策（待写 ADR，将修订 ADR-0025）**：eval 的**对照系 = `docs/research/` 真实案例**（兽人冒险/抽卡/恶龙团→喂进团本构建库、和 lore GM 对话建出团本→人工认可→Claude skill+MCP 拿团本跑 eval→落盘 eval 报告）。**废 doctrine-vs-baseline A/B 对照**——不再以"去教条档"作教条价值的证据系。**量化以目前认知不可行 → 闭环产出定性报告**（量化口径待探索）。波及 ADR-0025 + wiki 01 成功标准 / 04 Skills-eval·Skills包·团本构建工具链 + `harness/eval-dicegm/grader.md` + `dicelore-eval` skill，**走决策→ADR→传播**（ADR 定稿后由它单源传播，下方 baseline 欠账项一并作废）。
 
 | # | 类型 | 问题 | 来源 | 恶化 | 下一步 |
 |---|------|------|------|:--:|--------|
-| F1 | feat | **eval 是单人自导自演**（同一个我兼任即兴玩家 + GM），不是 mock 玩家 ↔ 独立 Claude-GM。后果：凡「GM 行为好不好 / gm-core 措辞够不够 / 缺口有多痛」的结论**全部不可信**（我不会违反自己内化的规则）；只有「架构能不能表达」的客观缺口幸存 | 用户指正 + session | — | ✅ 已闭环（方案改：CC 经 play-mcp 连真后端当玩家+评估者，非"子代理当GM"——见 [ADR-0025](../归档/历史决策日志.md)）；RUN_LIVE 通路验证通过（[reports](../../../reports/)） |
+| F1 | feat | **eval 是单人自导自演**（同一个我兼任即兴玩家 + GM），不是 mock 玩家 ↔ 独立 Claude-GM。后果：凡「GM 行为好不好 / gm-core 措辞够不够 / 缺口有多痛」的结论**全部不可信**（我不会违反自己内化的规则）；只有「架构能不能表达」的客观缺口幸存 | 用户指正 + session | — | ✅ 已闭环（方案改：CC 经 play-mcp 连真后端当玩家+评估者，非"子代理当GM"——见 ADR-0025）；RUN_LIVE 通路验证通过（[reports](../../../reports/)） |
 | F2 | feat | **game_end 由谁敲、何时敲** 未定：本局 game_end 是「driver 知道回合预算后的人为收尾」，污染；且忠实 gm-core AI 被教「别朝结局叙事」→ 真实下大概率**不主动收局**（只在死亡收）。终局判据缺失 | 用户追问 + session | — | 🟡 harness 闭环已建（play-mcp），待多轮跑测「真 GM 收不收局」；首份报告见 [reports](../../../reports/) |
-| F3 | feat | **团本构建(lore)侧零 eval**：现 eval harness 只覆盖跑团(dice)侧（play-mcp 连真后端当玩家跑剧本），构建团本侧（LoreSession/构建 GM/组件5·6 import/构建工具面）无任何评估。后果：构建流程「作者↔构建 GM」交互质量、import 映射正确性、构建工具可用性**全无客观验证**——与 play 侧 F1 同等不可信 | 用户指正 | ✓（随构建能力扩展越痛） | 🟡 offline 部分 ✅ 达成（2026-06-26）：`backend/src/eval/loreScenario.ts`+`backend/src/eval/loreAssertions.ts`+`harness/eval-loregm/loreRun.ts`+`harness/eval-loregm/loreScenarios/frontier-saga.json`+`harness/eval-loregm/loreGrader.md`——确定性 mock 作者 `buildCalls`→`runBuildTool`→commit→`importPack`→`gradeLoreRun` 判运行库（零 LLM，7 测）。**真构建 GM 真 LLM 一局留「待测试」**——CC 驱动对称路径见 [N20-lore-eval-MCP](#)（本页主题F 新增）。终局场景 eval 随后补（依赖 [E2 ADR-0026](../归档/历史决策日志.md) 定稿落地） |
+| F3 | feat | **团本构建(lore)侧零 eval**：现 eval harness 只覆盖跑团(dice)侧（play-mcp 连真后端当玩家跑剧本），构建团本侧（LoreSession/构建 GM/组件5·6 import/构建工具面）无任何评估。后果：构建流程「作者↔构建 GM」交互质量、import 映射正确性、构建工具可用性**全无客观验证**——与 play 侧 F1 同等不可信 | 用户指正 | ✓（随构建能力扩展越痛） | 🟡 offline 部分 ✅ 达成（2026-06-26）：`backend/src/eval/loreScenario.ts`+`backend/src/eval/loreAssertions.ts`+`harness/eval-loregm/loreRun.ts`+`harness/eval-loregm/loreScenarios/frontier-saga.json`+`harness/eval-loregm/loreGrader.md`——确定性 mock 作者 `buildCalls`→`runBuildTool`→commit→`importPack`→`gradeLoreRun` 判运行库（零 LLM，7 测）。**真构建 GM 真 LLM 一局留「待测试」**——CC 驱动对称路径见 [N20-lore-eval-MCP](#)（本页主题F 新增）。终局场景 eval 随后补（依赖 E2 ADR-0026 定稿落地） |
 | F4 | feat | **真 GM 不遵守开局 r 六维教条**：eval 重跑（debug 模式明骰降级 L3 已修卡死炸弹）暴露——GM(glm-5.2)读了 SKILL.md「开局必须 r 六维明骰、禁 sheet_update 硬编数值」仍建世界空转（world_register×4 / sheet_update / world_search），0 次明骰，180s 超时。骰子链路虽修了卡死（L3）但 GM 不调=没激活。根因待分：教条措辞不够强制 vs 模型(glm-5.2)不遵守教条 vs 开局建世界优先级 | eval 重跑诊断 | ✓（骰子链路永远激活不了） | 🟡 待诊断：①教条更强措辞（开局第一步 r 六维、禁先建世界）②切真 Claude 模型隔离「模型行为 vs 教条」③多轮跑 |
 
 > **2026-06-25 全量体检实证**（[findings](../../../audits/2026-06-25-全量体检/findings.yaml)）：主题F 被体检 P0/P2 多条命中——
@@ -56,7 +56,7 @@
 >
 > **一句话病根**：同一概念在**团本作者层**有、在**运行时跑团层**塌缩成底层存储原语，AI 拿不到「以这个概念为单位」的**读（聚合视图）+ 写（生命周期操作）**。这是 conceptual integrity 问题，**跨多 session 反复命中、随回合数线性恶化** = 全项目头号架构债。建议**一个 ADR + 一个设计周期**统一解，**勿往 gm-core 提示词硬塞**。
 >
-> **想要**：`NPC` / `Front` / `plotline` / `foreshadow` 的运行时一等抽象（开/进行/收口状态 + 关联锚点 + 到点浮现提醒）+ **一张「未结张力」聚合视图**。Front/Clock（[ADR-0016](../归档/历史决策日志.md)）与 watcher（[ADR-0013](../归档/历史决策日志.md)）是部分地基，需评估**扩展 vs 新建**。
+> **想要**：`NPC` / `Front` / `plotline` / `foreshadow` 的运行时一等抽象（开/进行/收口状态 + 关联锚点 + 到点浮现提醒）+ **一张「未结张力」聚合视图**。Front/Clock（ADR-0016）与 watcher（ADR-0013）是部分地基，需评估**扩展 vs 新建**。
 >
 > **进度（2026-06-24 核对）·存储地基已完、工具面暴露未做**：A2-A5 的物理表 + store CRUD + `tensionBoard`/`frontOmenList` 聚合**均已建**（见主题A′ 进度）。**A1-A5 现在统一的真缺口不是"缺存储"，是"没暴露成 MCP 工具给 GM"**——聚合函数躺在 `present/` 层却没接进 `buildMcp`，GM 仍调不到「以概念为单位」的读；NPC 连一等表都没有。这把 A 主题从"建存储"收窄为"补视图层投影 + 暴露工具 + NPC 升一等"，依赖与路线见主题A′。
 
@@ -89,16 +89,16 @@
 - **路由**：开 ADR（两侧术语统一表 + store 重构方案），**与团本构建（组件5/6，里程碑一在建）协同设计**，别两侧继续分叉。
 - **落地方向（用户提案）**：给 MCP 加「叙事层」(几张表)、**废弃通用 `sheet`**，改为一组一等 kind/表：`player` / `npc` / `world` / `rule` / `watcher` / `front` / `pool`——每类有自己的表与工具，而非全塞进 `(entity,attr,value)` 通用格，直解「sheet 临时空间误当人物卡」根因。**待商榷**：① 与现四域(sheet/event/world/rule)如何重映射(world/rule/pool/watcher 已有、npc/player/front 需升一等)；② 原 sheet 的「临时空间」真实职责是否单列一类；③ 与团本 import(组件5/6)对齐。
 - **进度（2026-06-24 重评）🚧 地基已完、工具面暴露未做**：方案见 spec [运行时数据层重构-叙事层](../../../superpowers/specs/2026-06-21-运行时数据层重构-叙事层-design.md)（拱心石＝物理表精简 + kind 视图 + 业务工具；非"每概念一张物理表"，relation/flag/clock 是 `state` 的行形态）。
-  - ✅ **改名段**已落 `main`：`sheet→state`(+`kind`/`rel_*`/`clock_*` 列)、`event→log`(+`is_moment`)、`world_doc→lore`、fts 随改（[ADR-0021](../归档/历史决策日志.md)）。
+  - ✅ **改名段**已落 `main`：`sheet→state`(+`kind`/`rel_*`/`clock_*` 列)、`event→log`(+`is_moment`)、`world_doc→lore`、fts 随改（ADR-0021）。
   - ✅ **补充改名** `rule_doc→rule`/`world_pool→pool` 已落。
   - ✅ **叙事/记忆物理表** `front`/`plotline`/`foreshadow`/`history`(+`anchor`) **已建** + store CRUD + `tensionBoard`/`frontOmenList` 聚合（present 层）。
   - ✅ **声明式工具生成层引擎** `toolgen/`（SQL 闸/视图定义/读写工具编译/写匹配防泄露）已建，6 模块 981 行 + 6 测试绿。
   - ✅ **视图层投影（①，2026-06-25 落地）**：spec §4 的 6 命名视图（`player`/`npc`/`world`/`relation`/`clock`/`tension_board`）经 `store/views.ts` `initViews(db)` 用 `defineView` 投影、接进 `initSchema` 末尾（全仓 freshDb 自动获得视图）；`tension_board` SQL UNION 四表（front/plotline/foreshadow/watcher → 统一 `kind/id/label/status`）。present 层 JS 聚合保留作上层业务面，SQL 视图作下游 toolgen 稳定列契约，单源不同层。core 405 测试 + tsc 全绿。**toolgen 读工具的前置闸已拆除**。
   - ✅ **②③ 接线 + 叙事层 dogfooding（2026-06-25 落地）**：① 适配层 `toolgen/toToolDef.ts` `toolgenToToolDef(decl)` 把 `compileTool` 产物适配成 MCP `ToolDef`（zod schema、出参包 `{result}`、读 `readOnlyHint=true`）；② 标准库声明 `mcp/stdlib/narration.ts`（front_open/plotline_open·advance·close/foreshadow_plant·recall·abandon/tension_board 八工具，**全用声明、零硬编码 handler**）；③ `createMcpServer(db, deps, extraTools?)` 加可选 `extraTools` 入口（DT-9 守约：现有 19 工具零改动），生成工具与 `TOOLS` 并列注册。dogfooding 集成测试验证经 server 端到端落库 + 承重墙不破（写经正典原语）+ 坏声明编译期被拒。core 425 测试 + tsc 全绿。**spec DT-9「新工具=新声明、框架 core 零改动」契约在框架标准库侧已兑现**。
     - ⚠️ **front_advance 撞 DSL 天花板（已知限制）**：推进 Front 的 clock 需跨 `state`(clock 行)↔`front`(clock_ref) JOIN，writeMatch 三模式（mutate/setStatus/insert）不支持 JOIN 写 → 无法纯声明。正是 spec §8 预言的「撞 DSL 天花板」。v1 不声明 `front_advance`；解法候选（留后续）：① 加 writeMatch 第四模式（clock 推进专用，绑 `front.clock_ref` 解析）；② 给 front_advance 留硬编码 handler（破 DT-9，下策）；③ 团本 flow skill 内分两步（先 query clock_ref 再 state mutate，但跨两次调用非原子）。记 backlog 待 DSL 扩展周期。
-  - ✅ **团本侧声明装载（A′③ 收口，2026-06-26 落地）**：团本 pack `tools/*.json`（`ToolDecl[]`）→ `validatePack` Rule 8 守 DT-9（复用 toolgen `compileTool` 校验，拒 DROP/ATTACH/多语句/非叙事表 INSERT/子查询/同名/非 json）→ `catalog/import.ts` `importPack` 回传 `toolDefs` → `DiceSession` 经 `createMcpServer` extraTools 装载（**首次 import** 时）。core 501 测。**follow-up（产品残余，记本页主题A′ ④）**：作者声明工具是否需服务端可关开关（关联 [FE-mcp-config](backlog-前端.md) v1 不接入、[ADR-0017](../归档/历史决策日志.md) ⑤）。
+  - ✅ **团本侧声明装载（A′③ 收口，2026-06-26 落地）**：团本 pack `tools/*.json`（`ToolDecl[]`）→ `validatePack` Rule 8 守 DT-9（复用 toolgen `compileTool` 校验，拒 DROP/ATTACH/多语句/非叙事表 INSERT/子查询/同名/非 json）→ `catalog/import.ts` `importPack` 回传 `toolDefs` → `DiceSession` 经 `createMcpServer` extraTools 装载（**首次 import** 时）。core 501 测。**follow-up（产品残余，记本页主题A′ ④）**：作者声明工具是否需服务端可关开关（关联 [FE-mcp-config](backlog-前端.md) v1 不接入、ADR-0017 ⑤）。
   - **依赖链（单向）**：叙事层总纲(定视图契约) → 谓词扩展(step①建表✅) → toolgen(step②引擎✅) → 视图层投影✅(①拆闸) → **业务工具声明✅(②③ 框架标准库 dogfooding 跑通)** → 团本侧 tools 段装载✅(A′③ 收口)。
-  - **④（follow-up，新增 2026-06-26）** feat：**作者声明工具的服务端开关**——团本作者在 manifest 声明的自定义 `tools:` 是否需服务端可配「接受/拒绝/开安全扫描」开关（v1 直接首次 import 装载、无开关）。关联 [FE-mcp-config](backlog-前端.md) v1 不接入运行时（推迟池）+ [ADR-0017](../归档/历史决策日志.md) ⑤ MCP 包安全扫描规划。**v2 周期做**。
+  - **④（follow-up，新增 2026-06-26）** feat：**作者声明工具的服务端开关**——团本作者在 manifest 声明的自定义 `tools:` 是否需服务端可配「接受/拒绝/开安全扫描」开关（v1 直接首次 import 装载、无开关）。关联 [FE-mcp-config](backlog-前端.md) v1 不接入运行时（推迟池）+ ADR-0017 ⑤ MCP 包安全扫描规划。**v2 周期做**。
   - A6 裁决侧正交、留 resolver spec。
 
 ---
@@ -106,48 +106,48 @@
 ## 主题 · 裁决 / 披露 / 终局 增强 💡
 
 > **2026-06-25 全量体检实证**：**CROSS-END（P0）** = E1/E2 的体检反指——成功标准定总判据为"F1/F2/F3 被治住"但未定"一局何时算终局"；ADR-0009 定了 game_end/you_death 唯二出口但"何时敲、由谁敲"未定；core `gameEndHandler`（`io.ts` L74-82）只落 note event + `metaSet(db,"ended")`——无任何触发条件校验（GM 调即终局）。eval harness 跑多少轮都无法回答"做成了"。违"AI 有讨好本能、不可信"立项前提。注：BE-007 的 `GET /sessions/:id` ended 硬编码 bug 是独立 fix（在 [backlog-后端](backlog-后端.md)），不依赖 E2 ADR。见 [体检汇总 P0-2](../../../audits/2026-06-25-全量体检/06-汇总-合并.md)。
-> **✅ 已裁决（2026-06-25 → 2026-06-26 PO 复核定稿，见 [ADR-0026](../归档/历史决策日志.md) 定稿）**：① 终局触发=**GM 自调 `game_end`**（gm-core 教条教"何时收场正当"，框架不硬拦——避免框架据 HP<=0 等硬条件误判"复活"等可逆状态触发终局）；② **软判据**（gm-core 教条用"Front 钟满 / 主线收束 / 玩家死亡"等叙事判据引 GM 自收，不用硬条件触发器），复活的交互靠 GM 教条自己判、不靠框架死规则；③ **玩家主动结束权**——玩家可随时主动结束游戏防 GM 永不收局（GM 讨好本能下真实风险）；④（**2026-06-26 PO 复核修改**）**game_end 后直接进复盘模式**——v1 **删除"结束游戏"按钮**，终局后进入复盘模式（GM 复盘 + 给行动建议，原"要 AI 建议"升为默认去向），从复盘模式可重开新局；**回溯续命留 v2**（状态回退到死亡前叙事继续，**非对话撤回**，依赖快照 [ADR-0017](../归档/历史决策日志.md)）。落 [ADR-0026 定稿](../归档/历史决策日志.md)。
+> **✅ 已裁决（2026-06-25 → 2026-06-26 PO 复核定稿，见 ADR-0026 定稿）**：① 终局触发=**GM 自调 `game_end`**（gm-core 教条教"何时收场正当"，框架不硬拦——避免框架据 HP<=0 等硬条件误判"复活"等可逆状态触发终局）；② **软判据**（gm-core 教条用"Front 钟满 / 主线收束 / 玩家死亡"等叙事判据引 GM 自收，不用硬条件触发器），复活的交互靠 GM 教条自己判、不靠框架死规则；③ **玩家主动结束权**——玩家可随时主动结束游戏防 GM 永不收局（GM 讨好本能下真实风险）；④（**2026-06-26 PO 复核修改**）**game_end 后直接进复盘模式**——v1 **删除"结束游戏"按钮**，终局后进入复盘模式（GM 复盘 + 给行动建议，原"要 AI 建议"升为默认去向），从复盘模式可重开新局；**回溯续命留 v2**（状态回退到死亡前叙事继续，**非对话撤回**，依赖快照 ADR-0017）。落 ADR-0026 定稿。
 
 | # | 类型 | 问题 | 现状 | 来源 | 恶化 |
 |---|------|------|------|------|:--:|
 | B7 | feat | **「带修正 ∧ 分级」检定无原语**：`resolve_outcome`（分级 bands）die 只吃纯 `NdS`、加不了修正；`resolve_contest`（吃修正）只回二元胜负。GM 想「掷+加值→超出难度多少决定后果程度」两个工具都不趁手 | 把加值**手算烘进每条 band 阈值**，玩家明骰看到裸骰，加值一变就重算整表 | eval（兽人局**几乎每个明骰**都踩）✅ | ✓（随属性成长越痛） |
 | C1 | feat | **分级线索披露**：`reveal_once` 只能整格快照（全有/全无）；「按检定档给不同信息量」表达不了 | 分级线索全塞进 outcome band consequence；50 回合探索局 **reveal_once 一次没用上** | eval B4 ✅ | ✗ |
-| E1 | feat | **终局判据**：gm-core 教「别朝结局叙事」却没教「何时收局正当」→ 真 GM 可能永不收局或只死亡收 | ✅ 已裁决（[ADR-0026](../归档/历史决策日志.md) 定稿）：gm-core 加"终局判据"软教条；教条措辞仍待 F2 harness 多轮校准 | F2 + 用户 | — |
-| E2 | feat | **终局机制（数据层）未设计**：缺让团本作者**在 rule 里配置终局条件**的机制；候选 watcher 谓词，但**「复活」如何算待商榷**（以死亡/HP≤0 作终局 watcher，遇复活 / 快照回滚就矛盾） | ✅ 已裁决（[ADR-0026](../归档/历史决策日志.md) 定稿）：不用硬条件触发器、走 GM 自调 + 软判据 + 玩家主动结束权 | 用户 | — |
+| E1 | feat | **终局判据**：gm-core 教「别朝结局叙事」却没教「何时收局正当」→ 真 GM 可能永不收局或只死亡收 | ✅ 已裁决（ADR-0026 定稿）：gm-core 加"终局判据"软教条；教条措辞仍待 F2 harness 多轮校准 | F2 + 用户 | — |
+| E2 | feat | **终局机制（数据层）未设计**：缺让团本作者**在 rule 里配置终局条件**的机制；候选 watcher 谓词，但**「复活」如何算待商榷**（以死亡/HP≤0 作终局 watcher，遇复活 / 快照回滚就矛盾） | ✅ 已裁决（ADR-0026 定稿）：不用硬条件触发器、走 GM 自调 + 软判据 + 玩家主动结束权 | 用户 | — |
 
 **B7 解法草案**：`resolve_outcome` 增 `modifier?: expr`（引擎求值 `{ref}`+常数加到 roll 再 rangeMap），出参回 `roll/modifier/total/band`，玩家视图显「裸骰+加值=总值→档」。评估与 contest 合并为「掷值→(对抗线|档表)」单一抽象。
 **C1 解法草案**：「按检定档披露分级线索散文」原语（线索 ≠ 实体属性 ≠ 世界条目）。
-**E1 裁决（[ADR-0026](../归档/历史决策日志.md) 定稿·2026-06-26 PO 复核）**：gm-core 加"终局判据"软教条——Front 钟满 / 主线收束 / 玩家死亡作**引 GM 自收的判据**（非框架硬触发），教条措辞待 F2 harness 多轮跑测校准。
-**E2 裁决（[ADR-0026](../归档/历史决策日志.md) 定稿·2026-06-26 PO 复核）**：**不用硬条件触发器**（避免复活等可逆状态误判触发终局），走 GM 自调 `game_end` + 软判据 + 玩家主动结束权；团本作者可在 rule 里写"终局判据"作 GM 教条输入（非自动触发 watcher）。**game_end 后直接进复盘模式**——v1 删"结束游戏"按钮，终局后进复盘模式（GM 复盘 + 行动建议）+ 重开新局入口；**回溯续命**（状态回退到死亡前叙事继续，**非对话撤回**，依赖 [ADR-0017](../归档/历史决策日志.md) 快照）**留 v2**。与 E1 配套：**E2 = 机制上何时算终局，E1 = GM 叙事上何时收局**。
+**E1 裁决（ADR-0026 定稿·2026-06-26 PO 复核）**：gm-core 加"终局判据"软教条——Front 钟满 / 主线收束 / 玩家死亡作**引 GM 自收的判据**（非框架硬触发），教条措辞待 F2 harness 多轮跑测校准。
+**E2 裁决（ADR-0026 定稿·2026-06-26 PO 复核）**：**不用硬条件触发器**（避免复活等可逆状态误判触发终局），走 GM 自调 `game_end` + 软判据 + 玩家主动结束权；团本作者可在 rule 里写"终局判据"作 GM 教条输入（非自动触发 watcher）。**game_end 后直接进复盘模式**——v1 删"结束游戏"按钮，终局后进复盘模式（GM 复盘 + 行动建议）+ 重开新局入口；**回溯续命**（状态回退到死亡前叙事继续，**非对话撤回**，依赖 ADR-0017 快照）**留 v2**。与 E1 配套：**E2 = 机制上何时算终局，E1 = GM 叙事上何时收局**。
 
 ---
 
 ## 主题 · 快照/回滚（CROSS-SNAP）💡
 
 > **2026-06-25 全量体检实证**：**CROSS-SNAP（P1）**——快照/回滚机制三层全断：① DB 层 `snapshot` 表未建（`db.ts` L23-102 initSchema 建表清单无 snapshot 表，L100 注释明示"并行未 rebase 进来"）；② 引擎无 `checkpoint()`/`restore(snapshotId)` 原语 + 无 `SnapshotParticipant` 注册表；③ 会话宿主 `DiceSession.turnEnd` 不调 `checkpoint()`、`UserPromptSubmit` hook 在 Phase 1 根本没接 Agent SDK；④ 前端 PlayPage 无回滚 UI（grep save/load/存档/读档/回滚/rollback/快照/undo/redo 零命中）。架构层（§3.2 + ADR-0017 + 内层 §4.5 + adapter §8）设计自洽（快照表树形+transcript 锚、IoC 注册表、event 脊柱不入快照、branch 是 transcript 树自然产物），但实现零接线——"设计自洽但实现零接线"的活体断节。见 [体检汇总 P1-6](../../../audits/2026-06-25-全量体检/06-汇总-合并.md)。
-> **✅ 已裁决（2026-06-25，见 [ADR-0017](../归档/历史决策日志.md) v1 降预期补注）**：**v1 降预期**——v1 做**自动持久化（存档/读档）**，**手动回滚 / branch 留 v2**。终局续命（[E2](#) 回溯续命）、死错反悔、超时恢复（[RT-1](backlog-后端.md) 长期 restore）都留未来/v2。理由：v1 开放手动回滚需补 snapshot 表 + core 原语 + hook 接线 + REST 端点 + UI 五层，scope 过大且与终局机制（[ADR-0026](../归档/历史决策日志.md) 定稿）耦合；v1 先把"存档/读档"自动持久化做掉守"随时能玩"卖点，回滚/branch 等交互留 v2。
+> **✅ 已裁决（2026-06-25，见 ADR-0017 v1 降预期补注）**：**v1 降预期**——v1 做**自动持久化（存档/读档）**，**手动回滚 / branch 留 v2**。终局续命（[E2](#) 回溯续命）、死错反悔、超时恢复（[RT-1](backlog-后端.md) 长期 restore）都留未来/v2。理由：v1 开放手动回滚需补 snapshot 表 + core 原语 + hook 接线 + REST 端点 + UI 五层，scope 过大且与终局机制（ADR-0026 定稿）耦合；v1 先把"存档/读档"自动持久化做掉守"随时能玩"卖点，回滚/branch 等交互留 v2。
 > **关联**：与 CROSS-TIMEOUT（[backlog-后端](backlog-后端.md)）超时半途状态叠加——超时后无 restore 兜底（长期方案 v2 依赖快照接线）；与 USER-002（[backlog-前端](backlog-前端.md)）终局后流程——v1 去掉"回滚"按钮只留三按钮（见 [FE-end-lock](backlog-前端.md)）。
 
 | # | 类型 | 问题 | 来源 | 恶化 | 下一步/依赖 |
 |---|------|------|------|:--:|--------|
-| SNAP-1 | feat | **快照回滚三层全断**：snapshot 表未建、core 无 checkpoint/restore 原语、Stop 不写快照、前端无回滚 UI。玩家死错了想回上一回合无入口——"尊重骰子、不崩坏"卖点在"骰错了想反悔"诉求上落空；branch/swipe（ADR-0017 上修进 v1）无法实现 | 2026-06-25 全量体检 | ✓（随回滚诉求越痛） | ✅ 已达成（2026-06-26）·已裁决（[ADR-0017](../归档/历史决策日志.md) v1 降预期补注）：**v1 自动持久化已落**——core `store/snapshot.ts`（snapshot 表全量整表 dump/回合 + `checkpoint()`/`restore()` + `SnapshotParticipant` IoC 注册表，v1 注册 sheet/world/watcher、rule 不注册、world restore 重建 `lore_fts`）；orch `DiceSession.turnEnd` 自动 checkpoint + `rewind()` 串行 + `POST /sessions/:id/rewind`（无快照 409）；web `client.postRewind` + `useSession.rewind` + PlayPage 读档按钮 + i18n。三包绿（core 477+/orch/web）。**v2 留**——手动回滚按钮 + branch/swipe + 终局续命 + 死错反悔 + 超时 restore 接线。**follow-up（记本表 SNAP-1-reload）**：v1 团本 tools/快照仅**首次 import 装载**，重开已存在 session **不重载团本工具**（catalog 不在场）——持久化/重开重载留 follow-up |
+| SNAP-1 | feat | **快照回滚三层全断**：snapshot 表未建、core 无 checkpoint/restore 原语、Stop 不写快照、前端无回滚 UI。玩家死错了想回上一回合无入口——"尊重骰子、不崩坏"卖点在"骰错了想反悔"诉求上落空；branch/swipe（ADR-0017 上修进 v1）无法实现 | 2026-06-25 全量体检 | ✓（随回滚诉求越痛） | ✅ 已达成（2026-06-26）·已裁决（ADR-0017 v1 降预期补注）：**v1 自动持久化已落**——core `store/snapshot.ts`（snapshot 表全量整表 dump/回合 + `checkpoint()`/`restore()` + `SnapshotParticipant` IoC 注册表，v1 注册 sheet/world/watcher、rule 不注册、world restore 重建 `lore_fts`）；orch `DiceSession.turnEnd` 自动 checkpoint + `rewind()` 串行 + `POST /sessions/:id/rewind`（无快照 409）；web `client.postRewind` + `useSession.rewind` + PlayPage 读档按钮 + i18n。三包绿（core 477+/orch/web）。**v2 留**——手动回滚按钮 + branch/swipe + 终局续命 + 死错反悔 + 超时 restore 接线。**follow-up（记本表 SNAP-1-reload）**：v1 团本 tools/快照仅**首次 import 装载**，重开已存在 session **不重载团本工具**（catalog 不在场）——持久化/重开重载留 follow-up |
 | SNAP-1-reload | feat | **重开 session 不重载团本工具**：SNAP-1 v1 团本自定义工具仅在**首次 import** 时经 `createMcpServer` extraTools 装载；重开一个已存在（已持久化）的 session 时 catalog 不在场，团本声明工具不重载——重开后 GM 调不到团本自定义工具 | SNAP-1 实现 follow-up（2026-06-26） | ✓（随团本工具普及越痛） | 🆕 待开发：session 重开路径需重新解析团本 manifest `tools:` 段并经 extraTools 重载（或把 toolDefs 随 session 持久化）。依赖 [A′③](#) 装载机制（✅） |
 
 ---
 
 ## 主题 · 多会话并发隔离（gate 进程单例）💡
 
-> **2026-06-30 113-agent review 延后项**：`rollGate` 与明骰 gate 是**进程级模块单例**，与 [ADR-0028](../归档/历史决策日志.md) per-session 注入设计直接矛盾——backend 端口已按会话注入，唯独 gate 这条缝仍是全局。[ADR-0020](../归档/历史决策日志.md) 已裁 **v1 单人 stdio、多人 per-instance gate 留未来**，本主题把该欠账落成 concrete 条目（review 确认这是真竞态、非纯理论）。与 [主题S · S2](#主题s--战略风险--claude-code-承重绑定-) port 契约、[backlog-后端 G-后端-Phase2](backlog-后端.md) per-instance gate 硬化同源。
+> **2026-06-30 113-agent review 延后项**：`rollGate` 与明骰 gate 是**进程级模块单例**，与 ADR-0028 per-session 注入设计直接矛盾——backend 端口已按会话注入，唯独 gate 这条缝仍是全局。ADR-0020 已裁 **v1 单人 stdio、多人 per-instance gate 留未来**，本主题把该欠账落成 concrete 条目（review 确认这是真竞态、非纯理论）。与 [主题S · S2](#主题s--战略风险--claude-code-承重绑定-) port 契约、[backlog-后端 G-后端-Phase2](backlog-后端.md) per-instance gate 硬化同源。
 
 | # | 类型 | 问题 | 位置 | 来源 | 恶化 | 下一步/依赖 |
 |---|------|------|------|------|:--:|--------|
-| CONCURRENCY-gate | feat | **明骰 gate 进程级单例、多会话并发互相覆盖**：`PlayerRollGate` 本是 per-`DiceSession` 实例（闭包捕获本会话 hub/sessionId/waiters），但经 `createMcpServer→setRollGate(deps.rollGate)` 注入到 `mcp/rollGate.ts` 的进程级模块单例 `_gate`；resolver 明骰 handler（`outcomeOpenHandler`/`contestOpenHandler`）读的是全局 `getRollGate()`。后端 registry 同进程托管多会话，每个 `new DiceSession` 构造时 `setRollGate` 覆盖全局 → 最后构造的会话 gate 顶掉先建会话：A 会话明骰 `roll_staged` 广播进 B 的 hub、A 点掷骰落到 B 的 waiters。现有测试 `beforeEach(setRollGate(undefined))` 串行复位掩盖了这条生产竞态 | `harness/src/dicegm/mcp/rollGate.ts:15-17` + `mcp/server.ts:71` + `handlers/resolver.ts:65,74` + `DiceSession.ts:87-90` | 2026-06-30 113-agent review（Wave1 延后，跨 harness/backend、属 [ADR-0020](../归档/历史决策日志.md) 已裁未来项） | ✓✓（多租户/eval 多会话并发放大） | 去模块级 `_gate`：`createMcpServer` 把 `rollGate` 闭包进 handler 工厂（`makeResolverTools(backend, rollGate)`）随会话注入，或 gate 签名带 sessionId 路由；补「两并发会话各自明骰互不串台」回归测试。**[ADR-0020](../归档/历史决策日志.md) 已裁 v1 单人可接受、多人必做**——随 per-instance gate 硬化（[backlog-后端 G-后端-Phase2](backlog-后端.md)）一并解 |
+| CONCURRENCY-gate | feat | **明骰 gate 进程级单例、多会话并发互相覆盖**：`PlayerRollGate` 本是 per-`DiceSession` 实例（闭包捕获本会话 hub/sessionId/waiters），但经 `createMcpServer→setRollGate(deps.rollGate)` 注入到 `mcp/rollGate.ts` 的进程级模块单例 `_gate`；resolver 明骰 handler（`outcomeOpenHandler`/`contestOpenHandler`）读的是全局 `getRollGate()`。后端 registry 同进程托管多会话，每个 `new DiceSession` 构造时 `setRollGate` 覆盖全局 → 最后构造的会话 gate 顶掉先建会话：A 会话明骰 `roll_staged` 广播进 B 的 hub、A 点掷骰落到 B 的 waiters。现有测试 `beforeEach(setRollGate(undefined))` 串行复位掩盖了这条生产竞态 | `harness/src/dicegm/mcp/rollGate.ts:15-17` + `mcp/server.ts:71` + `handlers/resolver.ts:65,74` + `DiceSession.ts:87-90` | 2026-06-30 113-agent review（Wave1 延后，跨 harness/backend、属 ADR-0020 已裁未来项） | ✓✓（多租户/eval 多会话并发放大） | 去模块级 `_gate`：`createMcpServer` 把 `rollGate` 闭包进 handler 工厂（`makeResolverTools(backend, rollGate)`）随会话注入，或 gate 签名带 sessionId 路由；补「两并发会话各自明骰互不串台」回归测试。**ADR-0020 已裁 v1 单人可接受、多人必做**——随 per-instance gate 硬化（[backlog-后端 G-后端-Phase2](backlog-后端.md)）一并解 |
 
 ---
 
 ## 主题 · storage-port 端口补缺（消除顶层裸 SQL）🔧
 
-> **2026-06-30 113-agent review 延后项**：[ADR-0028](../归档/历史决策日志.md) §2 定「harness 只依赖端口、backend 不暴露原始 db」，§4 接受的 4 处直连**仅限组合根**（`mcp/main.ts` + 3 hook 脚本）。但 harness 顶层会话路径（DiceSession/turnLoop/recovery/ruleRecall）与 backend `browse` 空 q 分支多处仍跑**裸 SQL**，根因＝**Store 端口面不全**：缺 `logHead/maxSeq`、`listPendingRolls(status)`、`narrativeCursor`、`loreList/ruleList`。端口补齐后这些裸 SQL 才能消除，否则 harness 焊死在 SQLite 表名/列名上，换存储/加 cache（端口核心收益）时全断。Wave1 各区报告此项「缺端口、修不动」而延后。与 [ADR-0028](../归档/历史决策日志.md) §2 承诺直接相悖。
+> **2026-06-30 113-agent review 延后项**：ADR-0028 §2 定「harness 只依赖端口、backend 不暴露原始 db」，§4 接受的 4 处直连**仅限组合根**（`mcp/main.ts` + 3 hook 脚本）。但 harness 顶层会话路径（DiceSession/turnLoop/recovery/ruleRecall）与 backend `browse` 空 q 分支多处仍跑**裸 SQL**，根因＝**Store 端口面不全**：缺 `logHead/maxSeq`、`listPendingRolls(status)`、`narrativeCursor`、`loreList/ruleList`。端口补齐后这些裸 SQL 才能消除，否则 harness 焊死在 SQLite 表名/列名上，换存储/加 cache（端口核心收益）时全断。Wave1 各区报告此项「缺端口、修不动」而延后。与 ADR-0028 §2 承诺直接相悖。
 
 | # | 类型 | 问题 | 位置 | 来源 | 恶化 | 下一步/依赖 |
 |---|------|------|------|------|:--:|--------|
@@ -177,11 +177,11 @@
 
 | # | 类型 | 问题 | 来源 | 下一步 |
 |---|------|------|------|--------|
-| M1 | docs | **wiki 空间因快速迭代变乱**：多 session 高速迭代下，推导链页/ADR/设计页/06 出现冗余、过期、交叉错位（旧 TODO 锚点、计数/状态散落、设计页与实现漂移等；如 2026-06-23 定位升维后，愿景陈述在 ADR-0022 与 用户与场景 §4 轻微重复、待收拢单源） | 用户 | **由 ``roadmap-delivery-workflow`（wiki 结构整理变体）` skill 处理**（去重、对齐单源、修过期链接与计数、补设计-实现漂移）。**长期任务、持续进行**，非一次性。**需 `roadmap-delivery-workflow`（wiki 结构整理变体） 加注**：用户与场景 §1 D 分型加"v1 不实现、仅理论锚点"（[TB-4](#主题--测试边界体检新增) 裁决，见 [ADR-0026](../归档/历史决策日志.md) 定稿关联） |
+| M1 | docs | **wiki 空间因快速迭代变乱**：多 session 高速迭代下，推导链页/ADR/设计页/06 出现冗余、过期、交叉错位（旧 TODO 锚点、计数/状态散落、设计页与实现漂移等；如 2026-06-23 定位升维后，愿景陈述在 ADR-0022 与 用户与场景 §4 轻微重复、待收拢单源） | 用户 | **由 ``roadmap-delivery-workflow`（wiki 结构整理变体）` skill 处理**（去重、对齐单源、修过期链接与计数、补设计-实现漂移）。**长期任务、持续进行**，非一次性。**需 `roadmap-delivery-workflow`（wiki 结构整理变体） 加注**：用户与场景 §1 D 分型加"v1 不实现、仅理论锚点"（[TB-4](#主题--测试边界体检新增) 裁决，见 ADR-0026 定稿关联） |
 | M1-a | docs | **玩家分型单源违例**（PROD-006）：术语表/调研页仍用旧"替代派/相棒派"二分，未跟用户与场景 §1 四类切面升维 | 2026-06-25 全量体检 | `roadmap-delivery-workflow`（wiki 结构整理变体） 专项：术语表"替代派/相棒派"词条改为"历史分型、已被四类切面取代（见用户与场景 §1）"；调研-期待与预测 §四 加注"本节为历史调研记录、现行分型见用户与场景 §1"。权威单源 = 用户与场景 §1 |
 | M1-b | docs | **wiki 死链批量清理**（CROSS-DEADLINK + 2026-06-30 113-review W6 校验补全）：两类死链——**(甲) `问题总账.md`**（已被 backlog 三池取代）：113-review 实测确认 **7 处**指向 `05-现状与计划/问题总账.md`，落在 `03-架构/TODO.md`(L6/L22)、`04-子系统设计/TODO.md`(L6/L35)、`04-子系统设计/MCP工具面.md`(L218)、`04-子系统设计/团本构建工具链.md`(L111/L113)、`04-子系统设计/玩家客户端-接口.md`(L283)。**(乙) eval 文件死链**：`harness/eval-dicegm/grader.md` 与 `harness/eval-dicegm/findings.md` **实测不存在**（`ls` 确认），但 `04-子系统设计/Skills-eval.md`(L37/L65/L66 指 `grader.md`)、`backlog-core` 本页 L4/L23 头注（指 `findings.md`/`grader.md`）、归档 ADR-0025 后果段（指 `packages/core/eval/findings.md` 旧路径）仍引用——eval 工具链迁 `harness/` 后这两个 .md 未随迁或已删，引用悬空 | 2026-06-25 全量体检 + 2026-06-30 113-agent review W6 校验 | `roadmap-delivery-workflow`（wiki 结构整理变体） 专项：(甲) 7 处 `问题总账.md` → 按语境改指 `backlog-{core,前端,后端}.md`/`路线图.md`；(乙) eval 死链——先核实 `grader.md`/`findings.md` 是否应存在（若 eval 评测口径已并入 `dicelore-eval` skill + `docs/research` 对照，则删引用；若仍是单源则补建文件并修路径）。两类一次专项清完 |
 | M1-c | docs | **定位漂移**（PROD-010）：ADR-0022 品类词统一为"文字冒险游戏"、安科/安价升维为"载体"，但下游（安科安价是什么页、术语表）仍以安科/安价为"玩法/品类"定义 | 2026-06-25 全量体检 | `roadmap-delivery-workflow`（wiki 结构整理变体） 专项：安科安价是什么页顶部加定位注记"本页定安科/安价这一载体的背景；品类词统一为文字冒险游戏、安科/安价是其首发载体，见 ADR-0022"；术语表"安科/安价"词条加"载体"定性；不改玩法定义本身只升维定位层级 |
-| M1-d | docs | **愿景 §4 无承接**（PROD-011）：用户与场景 §4 愿景（美观/移动端/社区生态）无 backlog 承接、无验收口径 | 2026-06-25 全量体检 | `roadmap-delivery-workflow`（wiki 结构整理变体） 专项：在用户与场景 §4 为每条愿景加"v1 边界"（美观现代 UI v1 做到墨金 token 全量已落地、社区生态 v1 不做里程碑四、移动端 v1 不做长期愿景 backlog 显式推迟）；**移动端从长期愿景提前到发版优先（安卓+Win）**（[ADR-0027](../归档/历史决策日志.md) 定稿裁决），需 `roadmap-delivery-workflow`（wiki 结构整理变体） 改用户与场景 §4 把"移动端适配长期愿景"改为"移动端 v1 发版优先（安卓+Win）、见 ADR-0027"；客制化/社区生态进里程碑四占位拆块（人工维护） |
+| M1-d | docs | **愿景 §4 无承接**（PROD-011）：用户与场景 §4 愿景（美观/移动端/社区生态）无 backlog 承接、无验收口径 | 2026-06-25 全量体检 | `roadmap-delivery-workflow`（wiki 结构整理变体） 专项：在用户与场景 §4 为每条愿景加"v1 边界"（美观现代 UI v1 做到墨金 token 全量已落地、社区生态 v1 不做里程碑四、移动端 v1 不做长期愿景 backlog 显式推迟）；**移动端从长期愿景提前到发版优先（安卓+Win）**（ADR-0027 定稿裁决），需 `roadmap-delivery-workflow`（wiki 结构整理变体） 改用户与场景 §4 把"移动端适配长期愿景"改为"移动端 v1 发版优先（安卓+Win）、见 ADR-0027"；客制化/社区生态进里程碑四占位拆块（人工维护） |
 | M1-e | docs | **设计-实现漂移：stripReasoning 已删、wiki 仍描述为生效机制**（2026-06-30 113-review W6）：Wave1 已删 `harness/runtime/reasoning.ts`（`stripReasoning` 死代码，narration 改走 narrate event 后无生效点，见 [backlog-后端 BE-stripReasoning-wire](backlog-后端.md)），但 `04-子系统设计/后端双路径架构.md` 仍三处描述该函数为活机制：L29 目录注解列 `runtime/...reasoning`、L94 §9「`stripReasoning` 剥 think、接在 DiceGm narration 抽取」、L114 §⑧「`stripReasoning` 剥 think 段」（ADR README §⑧ 同步）。代码已无、wiki 单源页仍宣称「有此机制且接在某处」 | 2026-06-30 113-agent review（Wave1 删码后 wiki 未回改） | `fix-wiki-issues` 变体：改写 §9/§⑧/目录注解为「`stripReasoning` 已废弃/未接入——narration 改从 narrate event 来后无生效点；多模型 think 过滤若仍需，在真接入点（provider 适配层）重接并补集成测试」；与 [backlog-后端 BE-stripReasoning-wire](backlog-后端.md) 同步关闭（删码 + 改 wiki 一把过） |
 | M1-f | docs | **设计-实现漂移：hook 文件形态 .mjs ↔ .ts**（2026-06-30 113-review W6）：`04-子系统设计/adapter与L3审计.md` §1 目录树（L39-41 `session-start.mjs`/`turn-start.mjs`/`turn-end.mjs`）+ settings.json 示意（L55-59 `node` 跑 `*.mjs`）+ §3.1/3.2/3.3 全程 `.mjs`，理由「Node 写、无 build step、避 .cmd shim」；但 `adapter/templates.ts:26` 实际生成 `command:"node" args:["--import","tsx",<abs>.ts]`，init 拷的也是 `.ts`。这对 `npx dicelore` 发布形态是真实运行期依赖前提（须把 tsx 列 dependency），wiki 权威页未记此形态变更 | 2026-06-30 113-agent review（实现改形态、上游页未回改） | `fix-wiki-issues` 变体二选一对齐：① tsx 入口定案 → 回改 adapter§1 `.mjs→.ts` + 命令形态 + 记 tsx 运行期依赖前提（发布包 tsx 须 dependency 非 devDependency）；② 发布形态应纯 `.mjs`（无 tsx）→ init/templates 改拷编译后 `.mjs`。无论哪条，消除 wiki↔代码形态分叉 |
 | M1-g | docs | **单源张力：Skills-eval.md 内部对 buildPlayerView 自相矛盾**（2026-06-30 113-review W6）：同页两处口径打架——L13/L86「`buildPlayerView` 的 mock 契约现由真后端 WS+presentation **兑现**」「裸 CC harness 路线已弃」（即已被取代、退役）vs L19「`buildPlayerView(db)` = 玩家**应该看到的全部**」、L75「行为对错由 `buildPlayerView` **已固化**（玩家只见 narrate）」（即仍是活的评分契约）。读者无从判断 buildPlayerView 是退役 mock 还是现行权威；与 [backlog-后端 tensionBoard/playerView 孤儿模块](backlog-后端.md) 实证「present 层 playerView 当前无运行时消费者」叠加——若已被 WS+presentation 取代，wiki 应统一表述为「历史 mock 契约、现由真后端兑现，行为口径已迁 presentation」 | 2026-06-30 113-agent review | `fix-wiki-issues` 变体：统一 Skills-eval.md 对 buildPlayerView 的表述（退役 mock vs 活契约二选一并单源化），与 present 层 playerView 是否删（见 backlog-后端孤儿模块条）联动定 |
@@ -222,12 +222,12 @@
 >
 > **一句话病根**：v1 把 L3 审计 / 被动 rule 召回押在 Claude Code hook 上（[技术选型 §6](../03-架构/技术选型.md) / [跨agent §3](../03-架构/跨agent与适配层.md) 定为"承重"）。core 虽称标准可搬，但"承重"即承认**实际不可搬**——CC 改 hook 语义 / SDK v2 breaking（已 pre-alpha）/ 付费策略 / 国内可用性任一变动都能让框架命门失重。这是用低开发成本换来的单点依赖，**对发版 / 商业化语境是供应商锁定风险**，当前未定价。
 >
-> **路由**：开 ADR 定**解绑触发条件** + 把承重层抽成 **port（adapter 接口契约，v1 单 Claude Code 实现、多 agent sdk 列未来）**——核心是回答 **L3 承重怎么跨 agent 表达**（被动 rule 召回 + 回合末审计，正是 [ADR-0008](../归档/历史决策日志.md) 否①「hook 类塑形难跨 agent 承重」的理由），并禁 `adapter/` 之外代码直接调 CC 专属 API。**不阻塞头号债链路，但发版前必决。**
+> **路由**：开 ADR 定**解绑触发条件** + 把承重层抽成 **port（adapter 接口契约，v1 单 Claude Code 实现、多 agent sdk 列未来）**——核心是回答 **L3 承重怎么跨 agent 表达**（被动 rule 召回 + 回合末审计，正是 ADR-0008 否①「hook 类塑形难跨 agent 承重」的理由），并禁 `adapter/` 之外代码直接调 CC 专属 API。**不阻塞头号债链路，但发版前必决。**
 
 | # | 类型 | 问题 | 来源 | 恶化 | 下一步/依赖 |
 |---|------|------|------|:--:|--------|
 | S1 | feat | **承重绑定无解绑预案 + 无抽象边界**：hook 承重但未写"何时该解绑"触发条件（CC 改 X / 商业化 Y / SLA Z）；`adapter/hooks/*` 已隔离但无契约保证业务代码不穿透。core"理论上可搬" ≠ 实际可搬 | 首席架构师评估 2026-06-25 | — | 💡 开 ADR：① 定解绑触发条件；② 立 hook 抽象接口位（v1 单实现、禁业务穿透）；③ 把"承重绑定"显式列为最高级架构风险。与 [跨agent §5](../03-架构/跨agent与适配层.md) 取舍对齐 |
-| S2 | feat | **承重层 port 契约 + L3 跨 agent 承重未定**：用户提议把 hook/skill/subagent 承重层抽成 port，当前单 Claude Code adapter、多 agent sdk 列未来（harness 思想 L1/L2/L3 + 团本/SQLite store 不变，只把"绑哪个 agent"从硬绑松弛成 port + 默认 adapter）。病根＝**L3 承重（被动 rule 召回 + 回合末审计）跨 agent 无统一表达**——这正是 [ADR-0008](../归档/历史决策日志.md) 否①「hook 类塑形难跨 agent 承重」的理由，port 契约须正面解，否则 port 是空壳。是 [ADR-0017](../归档/历史决策日志.md) 快照对冲思路从快照一项延到整个承重层；**不翻 ADR-0008**（v1 单实现、多实现明确推迟）、不违 [跨agent §5](../03-架构/跨agent与适配层.md) 取舍（可移植兑现在模型层、port 是"未来想搬就能搬"的保险非 v1 目标） | 用户提议 2026-06-25（"从单点 Claude agent 改成适配多 agent；harness 思想确定，用适配器适配不同 agent sdk"） | ✗ | 💡 与 S1 同 ADR：定 port 契约边界 + **L3 跨 agent 表达**（被动 rule 召回 + 回合末审计的 adapter 接口形状，与 [ADR-0017](../归档/历史决策日志.md) 快照 adapter 对齐）；**当前不实现**，只立方向 |
+| S2 | feat | **承重层 port 契约 + L3 跨 agent 承重未定**：用户提议把 hook/skill/subagent 承重层抽成 port，当前单 Claude Code adapter、多 agent sdk 列未来（harness 思想 L1/L2/L3 + 团本/SQLite store 不变，只把"绑哪个 agent"从硬绑松弛成 port + 默认 adapter）。病根＝**L3 承重（被动 rule 召回 + 回合末审计）跨 agent 无统一表达**——这正是 ADR-0008 否①「hook 类塑形难跨 agent 承重」的理由，port 契约须正面解，否则 port 是空壳。是 ADR-0017 快照对冲思路从快照一项延到整个承重层；**不翻 ADR-0008**（v1 单实现、多实现明确推迟）、不违 [跨agent §5](../03-架构/跨agent与适配层.md) 取舍（可移植兑现在模型层、port 是"未来想搬就能搬"的保险非 v1 目标） | 用户提议 2026-06-25（"从单点 Claude agent 改成适配多 agent；harness 思想确定，用适配器适配不同 agent sdk"） | ✗ | 💡 与 S1 同 ADR：定 port 契约边界 + **L3 跨 agent 表达**（被动 rule 召回 + 回合末审计的 adapter 接口形状，与 ADR-0017 快照 adapter 对齐）；**当前不实现**，只立方向 |
 
 ---
 
@@ -235,7 +235,7 @@
 
 - **NPC 关系图谱（D-NPC-3 v2）**：把 npc 关系从 v1 的 relation 视图行**提成关系图谱**——成为独立承重节点（可查询的 anchor 边表），需升级数据形态。v1 走 relation 视图行不进 anchor（[A1 旁 D-NPC-3 裁决](#a1-旁--npc-产品决策wave2-浮现--2026-06-26-po-复核裁决)，2026-06-26 PO 复核）。
 - **状态回滚/分支**：反刷骰 config 旋钮（稳定键播种）；「进行中存档遇 rule 版本热更」的 `schema_version`/团本版本迁移语义（深 diff/merge）。来源：03 TODO G。
-- **自研 agent runtime**：[ADR-0008](../归档/历史决策日志.md) 被否项，对冲＝快照/core agent 无关；迟早面临，记未来。承重层 port 防腐方向见 [主题S · S2](#主题s--战略风险--claude-code-承重绑定-)。
+- **自研 agent runtime**：ADR-0008 被否项，对冲＝快照/core agent 无关；迟早面临，记未来。承重层 port 防腐方向见 [主题S · S2](#主题s--战略风险--claude-code-承重绑定-)。
 - **团本构建台未来**：语义向量检索（FTS 起步够）、深版本化迁移。来源：04 TODO 组件5/6。
 - **eval-loop 工装**：headless `claude -p` 多回合驱动确切 flag（实现期核实）——但**主线改走子代理 GM harness（主题F），此项大概率作废**。
 - **`shop_pool` 视图 + `shop_buy` 工具**（数据层不阻塞）：当下走 choice 式文本菜单即可（团本富前端组件本体在 [backlog-前端](backlog-前端.md) 未来池）。来源：用户 + [声明式工具生成层 spec](../../../superpowers/specs/2026-06-22-声明式工具生成层-design.md)（2026-06-22）。

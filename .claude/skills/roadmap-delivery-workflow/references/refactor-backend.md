@@ -4,8 +4,8 @@
 
 | 维度 | 取值 |
 |------|------|
-| 问题从哪来 | `docs/wiki/06-里程碑与问题/backlog-后端.md` |
-| 扫描范围 | `apps/orchestrator` |
+| 问题从哪来 | `docs/wiki/设计/05-现状与计划/backlog-后端.md` |
+| 扫描范围 | `backend` |
 | 专属关注点 | 包边界 / HTTP·WS 接口契约 / Play 会话生命周期 / 进程编排（缝 B 后端↔web 可远程，缝 A MCP↔后端进程内回调） |
 | 验收口径 | `npm test` + `npm run typecheck` |
 
