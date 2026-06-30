@@ -143,6 +143,8 @@ export { npcStdlibTools, npcToolDecls } from "./stdlib/npc.js";
 export { createLiveApp, type LiveDeps } from "./api/dice.js";
 export { createLoreApp, type LoreDeps } from "./api/lore.js";
 export { createDiagnosticsApp } from "./api/diagnostics.js";
+export { createKeysApp, type KeysDeps } from "./api/keys.js";
+export { storeKey, getKeyMeta, listKeyMeta, deleteKey, revealKey, KeyMasterMissingError, type KeyMeta, type StoreKeyInput } from "./store/keys.js";
 export { attachWsUpgrade, type WsUpgradeDeps } from "./api/ws.js";
 export { buildSnapshot } from "./api/presentation.js";
 export { listSessionSummaries } from "./api/sessions.js";

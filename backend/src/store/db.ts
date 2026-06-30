@@ -124,6 +124,17 @@ export function initSchema(db: DB): void {
       cache_creation_tokens INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+    -- ===== 模型 API key 后端托管(SEC2 / ADR-0027 / store/keys.ts)=====
+    -- 加密落库不明文：ciphertext = ivHex:tagHex:cipherHex（AES-256-GCM，env 主密钥）。
+    -- 明文绝不落任何列；GET 元信息端点只回 key_id/label/provider/created_at。
+    -- 主密钥不落库（纯 env DICELORE_KEY_MASTER），与 snapshot/usage/FTS 各自独立 CREATE。
+    CREATE TABLE IF NOT EXISTS api_key (
+      key_id TEXT PRIMARY KEY,
+      label TEXT NOT NULL,
+      provider TEXT NOT NULL,
+      ciphertext TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
 
   // ===== FTS5 全文检索虚表(Plan 2)=====
