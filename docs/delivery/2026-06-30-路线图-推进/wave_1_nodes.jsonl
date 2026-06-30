@@ -1,0 +1,5 @@
+{"id":"usage-api","title":"GET /sessions/:id/usage 查询端点","depends_on":[],"owns":["backend/src/api/usage.ts","backend/src/api/usage.test.ts"]}
+{"id":"key-host","title":"SEC2 后端 key 托管端点(AES-256-GCM)","depends_on":[],"owns":["backend/src/api/keys.ts","backend/src/store/keys.ts","backend/src/store/db.ts","backend/src/index.ts"]}
+{"id":"ssrf","title":"model-test/mcp-test SSRF 白名单","depends_on":[],"owns":["backend/src/api/diagnostics.ts"]}
+{"id":"ratelimit","title":"per-session 基础限流中间件","depends_on":[],"owns":["backend/src/api/rateLimit.ts"]}
+{"id":"rt1","title":"RT-1 中期回合级事务(turn_start_seq+失败回滚)","depends_on":[],"owns":["harness/src/dicegm/turnLoop.ts","backend/src/store/turnRollback.ts"]}
