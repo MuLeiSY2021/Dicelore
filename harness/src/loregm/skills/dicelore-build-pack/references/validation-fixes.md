@@ -93,8 +93,8 @@ manifest 未声明 `flows`（用了哪些流程 skill）。
 如果团本确实不需要特定流程 skill，可以忽略。否则：
 
 ```
-# flows 在 manifest.yaml 的 frontmatter 中声明——
-# set_manifest 目前只接受 name/id，flows 需要直接写 write_lore 补一篇特殊文档，
+# set_manifest 目前只接受 name/id（产出 manifest.md，无 flows 字段）；
+# flows 需要直接写 write_lore 补一篇特殊文档声明，
 # 或在 commit 前确认 draft 已包含 flows 声明。
 # 如不确定，可忽略此 warn。
 ```
@@ -104,9 +104,9 @@ manifest 未声明 `flows`（用了哪些流程 skill）。
 ### `MANIFEST_NO_ENTRY`
 manifest 未设 `entry`（开局引子锚点）。
 
-若有 `world/设定.md` 并且文档中有 `## 引子` 一节，可在 manifest 里声明：
+若有 `lore/设定.md` 并且文档中有 `## 引子` 一节，可在 manifest 里声明：
 ```
-entry: world/设定.md#引子
+entry: lore/设定.md#引子
 ```
 若团本不需要特定引子，此 warn 可忽略（运行时 AI 会自行开局）。
 
@@ -118,10 +118,10 @@ entry: world/设定.md#引子
 这通常是占位符还没填：
 ```
 # 错：空内容
-write_lore({ name:"world/设定", content:"" })
+write_lore({ name:"lore/设定", content:"" })
 
 # 修：补充真实内容后覆写（同名再调一次 write_lore 会覆盖）
-write_lore({ name:"world/设定", content:"凡人修仙界，修仙者以灵根修行…" })
+write_lore({ name:"lore/设定", content:"凡人修仙界，修仙者以灵根修行…" })
 ```
 
 ---

@@ -23,7 +23,7 @@
 | 某具体地点 | `"黄枫谷 地点 描写 山川"` |
 | 修炼体系概览 | `"修炼境界 法力 灵力 灵根 灵石"` |
 
-抽到的世界观文档粒度建议：**一个地点/门派/阵营一篇**。层级太深则用子路径命名（`world/门派/黄枫谷`）。
+抽到的世界观文档粒度建议：**一个地点/门派/阵营一篇**。层级太深则用子路径命名（`lore/门派/黄枫谷`）。
 
 ### NPC
 
@@ -108,14 +108,14 @@ set_manifest({ name:"凡人修仙传", id:"fanren-xiuxian" })
 
 # 2. 世界观
 search({ query:"凡人修仙世界 修仙界 国家 大陆 七玄门 黄枫谷 地理" })
-→ write_lore({ name:"world/设定", content:"低武凡人流…" })
+→ write_lore({ name:"lore/设定", content:"低武凡人流…" })
 
 search({ query:"黄枫谷 门派 历史 长老 弟子制度" })
-→ write_lore({ name:"world/门派/黄枫谷", content:"…" })
+→ write_lore({ name:"lore/门派/黄枫谷", content:"…" })
 
 # 3. NPC
 search({ query:"墨大夫 人物性格 外貌 炼药师 身份 动机" })
-→ write_lore({ name:"world/npc/墨大夫", content:"…" })
+→ write_lore({ name:"lore/npc/墨大夫", content:"…" })
 
 # 4. 卡池
 search({ query:"灵根 天赋测试 灵根品级 稀有程度" })

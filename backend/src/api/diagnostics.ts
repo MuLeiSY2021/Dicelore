@@ -9,6 +9,7 @@
 
 import { Hono } from "hono";
 import { existsSync } from "node:fs";
+import { CLIENT_PROTOCOL } from "@dicelore/shared";
 import { BUILTIN_TOOL_COUNT } from "@dicelore/harness";
 import { getLogger } from "@dicelore/logs";
 
@@ -31,7 +32,7 @@ export interface HealthInfo {
   storage: { sessionsDir: string; ftsMode: string };
 }
 
-const PROTOCOL = "dicelore.client/1";
+const PROTOCOL = CLIENT_PROTOCOL;
 
 function withTimeout(ms: number): { signal: AbortSignal; cancel: () => void } {
   const ctrl = new AbortController();

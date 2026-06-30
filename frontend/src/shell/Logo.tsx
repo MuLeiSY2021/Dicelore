@@ -62,6 +62,8 @@ function Wordmark({ px }: { px: number }) {
 }
 
 export function Logo({ size = 30, variant = "lockup", className }: LogoProps) {
+  // 预留品牌 API：当前全仓仅用 lockup（见 TopBar）。mark/wordmark 两分支暂无消费者，
+  // 保留以备『仅标记 / 仅字标』放置点（如 favicon / 加载态）出现时直接复用。
   if (variant === "mark") return <span className={"logo " + (className ?? "")}><D20 px={size} /></span>;
   if (variant === "wordmark") return <span className={"logo " + (className ?? "")}><Wordmark px={size} /></span>;
   return (

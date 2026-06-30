@@ -10,7 +10,7 @@
 import { test, expect } from "@playwright/test";
 
 // 主页 + 顶栏：业务需求(欢迎/快速入口/最近会话/运行态/logo/语言/明暗)。
-// 前置:orchestrator 起在 :8787(DICELORE_FAKE_GM=1)。
+// 前置:backend 起在 :8787(DICELORE_FAKE_GM=1)。
 
 test.describe("主页 + 顶栏", () => {
   test("品牌 logo + 四导航 + 运行态指示", async ({ page }) => {

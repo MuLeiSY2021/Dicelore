@@ -56,7 +56,7 @@ export function makeSheetTools(backend: SessionBackend): ToolDef[] {
     title: "读单格",
     description:
       "读 entity.attr 单格(GM 全见,含 visible)。Args: entity、attr。Returns: {value:string|null, visible}。" +
-      "use: 取单个属性真值。don't: 批量取整卡(用 sheet_list)。错误: 入参非法→INTERNAL。",
+      "use: 取单个属性真值。don't: 批量取整卡(用 sheet_list)。错误: 入参非法→BAD_INPUT。",
     inputSchema: sheetGetIn,
     outputSchema: sheetGetOut,
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
@@ -67,7 +67,7 @@ export function makeSheetTools(backend: SessionBackend): ToolDef[] {
     title: "前缀扫描卡表",
     description:
       "按前缀扫 entity 的格(分页)。Args: entity、prefix(可选,如 \"库存:\")、limit(1-200,默认100)、offset(默认0)。" +
-      "Returns: {cells:[{attr,value,visible}], has_more, next_offset?, truncated}。use: 取整卡/整库存。don't: 取单格(用 sheet_get)。错误: 入参非法→INTERNAL。",
+      "Returns: {cells:[{attr,value,visible}], has_more, next_offset?, truncated}。use: 取整卡/整库存。don't: 取单格(用 sheet_get)。错误: 入参非法→BAD_INPUT。",
     inputSchema: sheetListIn,
     outputSchema: sheetListOut,
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },

@@ -19,43 +19,10 @@ import {
   type AdventureSummary, type PackFile, type ValidateIssue,
 } from "@/features/catalog/api.js";
 import { postBuildMessage } from "@/features/build/api.js";
+import { parsePack } from "@/features/build/parsePack.js";
 
 type CType = "world" | "npc" | "pool" | "rule" | "front" | "manifest";
-interface Entity { entity: string; kind: string; cells: { attr: string; value: string }[] }
-interface Model {
-  manifest: PackFile | null;
-  lore: PackFile[]; rules: PackFile[]; pools: PackFile[]; fronts: PackFile[];
-  entities: Entity[];
-}
 
-// 解析包文件为可读模型(state CSV → 实体；md → 设定/规则/卡池)。
-function parsePack(files: PackFile[]): Model {
-  const lore: PackFile[] = [], rules: PackFile[] = [], pools: PackFile[] = [], fronts: PackFile[] = [];
-  let manifest: PackFile | null = null;
-  const byEntity = new Map<string, Entity>();
-  for (const f of files) {
-    const p = f.path.toLowerCase();
-    if (p.includes("manifest")) manifest = f;
-    else if (p.startsWith("rule")) rules.push(f);
-    else if (p.startsWith("pool")) pools.push(f);
-    else if (p.startsWith("front")) fronts.push(f);
-    else if (p.endsWith(".csv")) {
-      const lines = f.content.split(/\r?\n/).filter((l) => l.trim());
-      const header = lines.shift()?.split(",").map((s) => s.trim()) ?? [];
-      const ix = (k: string) => header.indexOf(k);
-      for (const line of lines) {
-        const cols = line.split(",");
-        const entity = cols[ix("entity")]?.trim(); if (!entity) continue;
-        const kind = cols[ix("kind")]?.trim() || "player";
-        const attr = cols[ix("attr")]?.trim() ?? ""; const value = cols[ix("value")]?.trim() ?? "";
-        const e = byEntity.get(entity) ?? { entity, kind, cells: [] };
-        if (attr) e.cells.push({ attr, value });
-        byEntity.set(entity, e);
-      }
-    } else if (p.endsWith(".md")) lore.push(f);
-  }
-  return { manifest, lore, rules, pools, fronts, entities: [...byEntity.values()] };
-}
 
 interface ChatMsg { role: "u" | "a"; text: string }
 

@@ -7,7 +7,6 @@
 // Software Foundation, either version 3 of the License, or (at your option)
 // any later version. See <https://www.gnu.org/licenses/>.
 
-// packages/core/src/adapter/l3.ts
 import type { LogRow } from "@dicelore/interface";
 
 export interface L3Input {

@@ -27,6 +27,16 @@ export async function actionError(res: Response, what: string): Promise<Error> {
   return new Error(`${what}失败：${res.status}`);
 }
 
+// 通用写操作错误翻译(catalog/build 等非玩家动作)：把带 code 的 4xx 译成可读文案，
+// 其余回显状态码。与 actionError(play 域 409 专用、码表硬编码)区分：此处不绑具体业务码，
+// 但仍优先回显后端给的 code，避免调用点只拿到裸 status。
+export async function apiError(res: Response, what: string): Promise<Error> {
+  let code = "";
+  try { code = ((await res.json()) as { code?: string }).code ?? ""; } catch { /* 无 json 体 */ }
+  if (res.status >= 400 && res.status < 500 && code) return new Error(`${what}失败：${code}`);
+  return new Error(`${what}失败：${res.status}`);
+}
+
 // ===== 诊断/自检(缝B 真值；配置页 + 顶栏运行态) =====
 export interface HealthInfo {
   protocol: string; fakeGm: boolean; port: number;

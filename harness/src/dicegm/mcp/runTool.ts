@@ -15,7 +15,7 @@ import { remindersFor } from "./reminders.js";
 
 export async function runTool(db: DB, tool: ToolDef, rawInput: unknown): Promise<CallToolResult> {
   try {
-    const input = tool.inputSchema.parse(rawInput); // 防御 + 脱 SDK 单测;ZodError 走错误信封(INTERNAL)
+    const input = tool.inputSchema.parse(rawInput); // 防御 + 脱 SDK 单测;ZodError 走错误信封(BAD_INPUT,可自纠)
     const out = await tool.handler(db, input); // await:兼容 sync(直接值)与明骰 async(Promise)handler
     const reminders = remindersFor(tool.name, out, input);
     const sc = reminders.length ? { ...out, reminders } : out;

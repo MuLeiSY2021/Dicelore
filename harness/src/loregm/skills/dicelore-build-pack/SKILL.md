@@ -25,6 +25,9 @@ description: >
 | `add_pool {pool, rows}` | 追加卡池/随机表行 | — |
 | `set_state {cells}` | 追加开局状态格（entity/attr/value） | — |
 | `add_front {id,name,clock_attr,...,omens}` | 写阵线/倒计时钟 | — |
+| `add_plotline {rows}` | 追加故事线行（产 `plotlines/main.csv`，**非幂等追加**） | — |
+| `add_foreshadow {rows}` | 追加伏笔行（产 `foreshadows/main.csv`，**非幂等追加**） | — |
+| `add_anchor {rows}` | 追加关系锚点行（产 `anchors/main.csv`，**非幂等追加**） | — |
 | `commit {message}` | 把草稿提交为版本 | — |
 | `tag {commitId, label}` | 给版本打发布标签 | — |
 | `ingest {text}` | 把原著全文切块入检索库 | — |
@@ -47,6 +50,7 @@ description: >
 5. 卡池 / 随机表      search → add_pool
 6. 机制规则           search → write_rule
 7. 阵线 / 钟          search → add_front
+7b. 叙事线 / 伏笔 / 锚点  search → add_plotline / add_foreshadow / add_anchor（可选）
 8. 开局状态           set_state（player / world 初值）
 9. 收口               validate → read → commit → tag
 ```
@@ -100,22 +104,22 @@ set_manifest({ name: "凡人修仙传", id: "fanren-xiuxian" })
 
 ```
 search({ query: "修仙世界观 门派 地图 地理", k: 10 })
-→ 阅读 hits → write_lore({ name: "world/设定", content: "..." })
+→ 阅读 hits → write_lore({ name: "lore/设定", content: "..." })
 
 search({ query: "黄枫谷 门派历史 长老", k: 8 })
-→ write_lore({ name: "world/门派/黄枫谷", content: "..." })
+→ write_lore({ name: "lore/门派/黄枫谷", content: "..." })
 ```
 
 按原著中的组织粒度切文档——一个地点/门派一篇，不要堆成一大篇。
 
 ### 阶段 4：NPC
 
-人设/性格/动机/背景 → `write_lore`（进 world_doc，AI 运行时直读）；
+人设/性格/动机/背景 → `write_lore`（进 lore 域，AI 运行时直读）；
 只有"开局即在场、需要确定数值"的关键 NPC，才额外 `set_state` 预置机械数值（kind=npc）。
 
 ```
 search({ query: "墨大夫 人设 性格 能力", k: 8 })
-→ write_lore({ name: "world/npc/墨大夫", content: "..." })
+→ write_lore({ name: "lore/npc/墨大夫", content: "..." })
 
 # 若墨大夫开局即在场且有战力数值：
 set_state({ cells: [{ entity:"墨大夫", kind:"npc", attr:"战力", value:"70", visible:2 }] })
@@ -171,6 +175,18 @@ search({ query: "魔道入侵 威胁 进度 触发条件", k: 8 })
 
 若团本没有需要倒计时的威胁，此阶段可跳过。
 
+### 阶段 7b：叙事线 / 伏笔 / 锚点（可选）
+
+三个叙事域工具产出 `plotlines/`、`foreshadows/`、`anchors/` CSV，给团本预埋叙事脚手架（运行时 AI 据此推进/回收）。都是**非幂等追加**——多次调用追加行，不覆盖。
+
+```
+add_plotline({ rows: [{ id:"han-rise", 名称:"韩立崛起", 阶段:"黄枫谷入门→七玄门覆灭", 状态:"open" }] })
+add_foreshadow({ rows: [{ id:"green-bottle", 线索:"神秘小绿瓶", 何时回收:"催熟灵药/解毒关键时刻" }] })
+add_anchor({ rows: [{ id:"han-mo", a:"韩立", b:"墨大夫", 关系:"师徒（暗藏夺舍图谋）" }] })
+```
+
+列名自由、只要一致（同 `add_pool`）。无明确叙事线/伏笔/人物关系预设时此阶段可跳过——运行时 AI 也能即兴生成。
+
 ### 阶段 8：开局状态
 
 ```
@@ -196,7 +212,7 @@ read({})              # 全量回读（可选，内容多时选 section）
 
 # 3. 提交一个版本
 commit({ message: "凡人修仙传 v1.0 初建" })
-→ 返回 { tuanbenId, commitId }
+→ 返回 { adventureId, commitId }
 
 # 4. 打发布标签（dice 只认 tag 分发）
 tag({ commitId, label: "v1.0.0" })

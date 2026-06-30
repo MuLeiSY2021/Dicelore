@@ -7,7 +7,6 @@
 // Software Foundation, either version 3 of the License, or (at your option)
 // any later version. See <https://www.gnu.org/licenses/>.
 
-// packages/core/src/adapter/hooks/turn-start.ts
 // 薄入口(组合根):读 stdin.prompt(字段以实现期官方文档为准)→ rule 召回 + 记 seq → 注 additionalContext。
 import { openSession, openSessionBackend } from "@dicelore/backend";
 import { recallRules, recordTurnStart } from "../ruleRecall.js";

@@ -7,7 +7,6 @@
 // Software Foundation, either version 3 of the License, or (at your option)
 // any later version. See <https://www.gnu.org/licenses/>.
 
-// packages/core/src/adapter/hooks/turn-end.ts
 // 薄入口(组合根):读 stdin(transcript_path / stop_hook_active,字段以实现期官方文档为准)→ 装配 → decision JSON。
 import { readFileSync } from "node:fs";
 import { openSession, openSessionBackend } from "@dicelore/backend";

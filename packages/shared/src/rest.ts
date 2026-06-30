@@ -18,11 +18,14 @@ export const CreateSessionRequestSchema = z.object({
   resume: z.string().optional(),
 });
 export const CreateSessionResponseSchema = z.object({ sessionId: z.string() });
+// GET /sessions/:id 返回（dice.ts 直接构造 SessionInfo 对象、不经 Schema parse；
+// 故只 type 在用、Schema 暂未接线为校验器，保留作 wire 契约单源）。
 export const SessionInfoSchema = z.object({
   sessionId: z.string(),
   ended: z.boolean(),
   title: z.string(),
 });
+// GET /sessions/:id/events 的 wire 契约（dice.ts:127 端点；当前 body 内联构造、未经 Schema parse）。
 export const EventRowSchema = z.object({
   seq: z.number(),
   kind: z.string(),
@@ -55,7 +58,6 @@ export type CreateSessionResponse = z.infer<typeof CreateSessionResponseSchema>;
 export type SessionInfo = z.infer<typeof SessionInfoSchema>;
 export type EventRow = z.infer<typeof EventRowSchema>;
 export type EventsResponse = z.infer<typeof EventsResponseSchema>;
-export type SessionStatus = z.infer<typeof SessionStatusSchema>;
 export type SessionSummary = z.infer<typeof SessionSummarySchema>;
 export type SessionsListResponse = z.infer<typeof SessionsListResponseSchema>;
 export type RollRequest = z.infer<typeof RollRequestSchema>;

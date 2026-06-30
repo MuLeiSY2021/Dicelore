@@ -106,16 +106,21 @@ export function exportGit(catalogDB: CatalogDB, adventureId: string, outDir: str
   return { head };
 }
 
-function parseCommit(content: Buffer): { tree: string; parent: string | null; message: string } {
+function parseCommit(content: Buffer): { tree: string; parent: string | null; message: string; createdAt: string | null } {
   const text = content.toString("utf8");
   const blank = text.indexOf("\n\n");
   const headers = text.slice(0, blank).split("\n");
-  let tree = "", parent: string | null = null;
+  let tree = "", parent: string | null = null, createdAt: string | null = null;
   for (const h of headers) {
     if (h.startsWith("tree ")) tree = h.slice(5).trim();
     else if (h.startsWith("parent ")) parent = h.slice(7).trim();
+    // `committer <name> <email> <unix-ts> <tz>` → 还原 ISO 时间(round-trip 时间元数据)。
+    else if (h.startsWith("committer ")) {
+      const m = /\s(\d+)\s[-+]\d{4}\s*$/.exec(h);
+      if (m) createdAt = new Date(Number(m[1]) * 1000).toISOString();
+    }
   }
-  return { tree, parent, message: text.slice(blank + 2).replace(/\n$/, "") };
+  return { tree, parent, message: text.slice(blank + 2).replace(/\n$/, ""), createdAt };
 }
 function readTree(objectsDir: string, hex: string, prefix: string, out: PackFile[]): void {
   const { content } = readObject(objectsDir, hex);
@@ -137,12 +142,12 @@ export function importGit(gitDir: string, catalogDB: CatalogDB, name: string): {
   const objectsDir = join(gitDir, "objects");
   const headRef = readFileSync(join(gitDir, "refs", "heads", "main"), "utf8").trim();
   // 走 parent 链 newest→root,再反转 oldest→newest 逐个 commit。
-  const chain: { tree: string; message: string }[] = [];
+  const chain: { tree: string; message: string; createdAt: string | null }[] = [];
   let cur: string | null = headRef;
   while (cur) {
     const { content } = readObject(objectsDir, cur);
     const c = parseCommit(content);
-    chain.push({ tree: c.tree, message: c.message });
+    chain.push({ tree: c.tree, message: c.message, createdAt: c.createdAt });
     cur = c.parent;
   }
   chain.reverse();
@@ -150,7 +155,8 @@ export function importGit(gitDir: string, catalogDB: CatalogDB, name: string): {
   for (const c of chain) {
     const files: PackFile[] = [];
     readTree(objectsDir, c.tree, "", files);
-    const r = commit(catalogDB, { name, files, message: c.message, createdAt: "1970-01-01" });
+    // round-trip:用 git commit header 还原的时间;缺失才退化到 epoch 占位。
+    const r = commit(catalogDB, { name, files, message: c.message, createdAt: c.createdAt ?? "1970-01-01" });
     adventureId = r.adventureId;
   }
   // tags

@@ -22,36 +22,6 @@ type CatalogDB = DB;
 // 测试兜底:无注入 openSession 时建内存库(原 DiceSession 自开库逻辑上移至组合根)。
 function memoryDb(): DB { const d = openDb(":memory:"); initSchema(d); return d; }
 
-export interface ServerDeps {
-  openSession: (sessionId: string) => DB; // 读侧句柄(每会话一文件；测试可注入内存库)
-  listSessions: () => SessionSummary[]; // 会话列表(主页继续上次/最近)
-}
-
-export function createApp(deps: ServerDeps): Hono {
-  const app = new Hono();
-
-  // 会话列表(主页继续上次 / 最近 Session)
-  app.get("/sessions", (c) => c.json({ sessions: deps.listSessions() }));
-
-  // 首屏 / 重连：全量呈现快照(接口页 §2)
-  app.get("/sessions/:id/presentation", (c) => {
-    const id = c.req.param("id");
-    const db = deps.openSession(id);
-    return c.json(buildSnapshot(db, id));
-  });
-
-  // 会话元信息(接口页 §2)。ended 读 session_meta「ended」(由 MCP game_end 工具落)——
-  // 与 WS game_end 信号同源(DiceSession 亦读同 key),避免 REST 与 WS 终局态矛盾(RT-4)。
-  app.get("/sessions/:id", (c) => {
-    const id = c.req.param("id");
-    const db = deps.openSession(id);
-    const info: SessionInfo = { sessionId: id, ended: metaGet(db, "ended") !== undefined, title: id };
-    return c.json(info);
-  });
-
-  return app;
-}
-
 // 实时引擎面：动作进(POST messages/choices/roll) + 首屏快照，经 registry/DiceSession。
 export interface LiveDeps {
   agentFactory: AgentFactory;
@@ -166,7 +136,8 @@ export function createLiveApp(deps: LiveDeps): Hono {
     return c.json({ source, entries });
   });
 
-  // 会话元信息(接口页 §2)。ended 同 createApp:读 session_meta「ended」与 WS game_end 同源(RT-4)。
+  // 会话元信息(接口页 §2)。ended 读 session_meta「ended」(由 MCP game_end 工具落)——
+  // 与 WS game_end 信号同源(DiceSession 亦读同 key),避免 REST 与 WS 终局态矛盾(RT-4)。
   app.get("/sessions/:id", (c) => {
     const id = c.req.param("id");
     const db = getOrCreateHost(id, hostDeps(id)).db;
@@ -220,7 +191,9 @@ export function createLiveApp(deps: LiveDeps): Hono {
       getLogger().warn({ sessionId: id, eventId: body.eventId }, "roll:库内无此 pending_roll,返回 409 no_pending_roll");
       return c.json({ code: "no_pending_roll" }, 409);
     }
-    return c.json({ turnId: id }, 202);
+    // roll 不开新回合(handleRoll 只 resolve 已在 WS 驱动回合内的 pending_roll、返回 boolean),
+    // 故无真 turnId 可返——返 { ok: true } 而非把 sessionId 充作 turnId 误导调用方。
+    return c.json({ ok: true }, 202);
   });
 
   // SNAP-1 读档（ADR-0017 v1：自动恢复最近快照，非手动回滚按钮/branch/续命——那些 v2）。

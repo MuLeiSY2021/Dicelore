@@ -14,10 +14,15 @@ describe("remindersFor", () => {
   it("resolve_choice 恒提醒后果已锁", () => {
     expect(remindersFor("resolve_choice", { staged: true }, {})).toEqual(["后续叙述须与已锁后果一致"]);
   });
-  it("resolve_outcome_hidden 命中最低档才提醒", () => {
-    const input = { bands: [{ min: 1 }, { min: 51 }] };
-    expect(remindersFor("resolve_outcome_hidden", { band: { min: 1 } }, input)).toEqual(["尊重结果,别软着陆"]);
-    expect(remindersFor("resolve_outcome_hidden", { band: { min: 51 } }, input)).toEqual([]);
+  it("resolve_outcome_hidden 命中最低档才提醒(按 out.roll 反查 input.bands)", () => {
+    // 真实 handler 出参:band 被裁成 {label,consequence}(无 min),靠 out.roll 反查命中档。
+    const input = { bands: [{ label: "败", min: 1, max: 50 }, { label: "成", min: 51, max: 100 }] };
+    const lowHit = { roll: 30, band: { label: "败", consequence: "x" } };
+    const highHit = { roll: 80, band: { label: "成", consequence: "y" } };
+    expect(remindersFor("resolve_outcome_hidden", lowHit, input)).toEqual(["尊重结果,别软着陆"]);
+    expect(remindersFor("resolve_outcome_hidden", highHit, input)).toEqual([]);
+    // open 变体同口径
+    expect(remindersFor("resolve_outcome_open", { awaiting: "player_roll", roll: 30 }, input)).toEqual(["尊重结果,别软着陆"]);
   });
   it("sheet_update 仅 fired_watchers 非空才提醒", () => {
     expect(remindersFor("sheet_update", { fired_watchers: [{ id: 1 }] }, {})).toEqual(["watcher 已触发,本轮即时反应"]);

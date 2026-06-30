@@ -15,13 +15,16 @@ export interface ValidateIssue { level: "error" | "warn"; file: string; msg: str
 export interface ValidateReport { ok: boolean; issues: ValidateIssue[] }
 
 // ── 允许的顶层路径段 ──────────────────────────────────────────────────────
+// canonical 闸门见 catalog/import.ts importPack：state/ 与 manifest.md 是 import 真正消费的开局/元信息段。
+// sheets/ 与 import 一并物化进 state 表(import 接受两段)；manifest.yaml/world/params 当前未被 import 闸门消费
+// (manifest.yaml 仅在此做 Rule 1-4 DX 校验，无运行时消费方——终态由 pack 目录格式 ADR 统一拍板)。
 const KNOWN_TOP = new Set([
   "lore", "rules", "world", "pools", "params", "sheets", "fronts",
   "plotlines", "foreshadows", "anchors", // 叙事域 CSV
   "tools",          // 作者面：tools/*.json 携带声明式 toolgen 工具声明(DT-9 作者侧)
-  "state",          // legacy: Draft.toPackFiles() 生成的旧格式
-  "manifest.md",    // legacy: Draft.toPackFiles() 生成的旧格式
-  "manifest.yaml",  // 新格式
+  "state",          // canonical: import 闸门消费的开局状态段(与 sheets/ 同物化进 state 表)
+  "manifest.md",    // canonical: import 闸门消费的元信息段(H1 → adventureName)
+  "manifest.yaml",  // 仅 DX 校验(Rule 1-4)，import 闸门暂未消费；终态待 ADR
   "prologue.md",    // 团本开场白 prompt（必填）
 ]);
 

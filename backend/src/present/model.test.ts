@@ -59,6 +59,24 @@ describe("buildPresentationModel", () => {
     expect(m.pendingChoice?.seq).toBe(seq);
   });
 
+  it("已被玩家选择消费的 choice 不再投影（player_choice note 指回该 seq）", () => {
+    const db = freshDb();
+    stagePendingChoice(db, "怎么走?", [
+      { label: "进", consequence: "遇敌" },
+      { label: "退", consequence: "失机" },
+    ]);
+    const seq = materializePendingChoice(db)!;
+    expect(buildPresentationModel(db).pendingChoice?.seq).toBe(seq); // 物化后可投影
+    // 玩家点选（模拟 DiceSession.handleChoice 落的隐 note，eventId 指回 choice 的 seq）
+    logAppend(db, {
+      kind: "note",
+      visible: 0,
+      content: "进",
+      data_json: { player_choice: { eventId: seq, optionIndex: 0, label: "进", consequence: "遇敌" } },
+    });
+    expect(buildPresentationModel(db).pendingChoice).toBeUndefined(); // 已解决 → 不再投影
+  });
+
   it("无 choice event → pendingChoice 为 undefined", () => {
     const db = freshDb();
     expect(buildPresentationModel(db).pendingChoice).toBeUndefined();

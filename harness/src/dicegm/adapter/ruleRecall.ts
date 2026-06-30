@@ -7,7 +7,6 @@
 // Software Foundation, either version 3 of the License, or (at your option)
 // any later version. See <https://www.gnu.org/licenses/>.
 
-// packages/core/src/adapter/ruleRecall.ts
 import type { DB, SessionBackend } from "@dicelore/interface";
 
 // 被动 rule 召回:AI 只读、本地 FTS,远小于 UserPromptSubmit 30s 超时。

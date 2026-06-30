@@ -9,7 +9,7 @@
 
 import { describe, expect, test, beforeEach } from "vitest";
 import { openDb, initSchema, openSessionBackend, type DB } from "@dicelore/backend";
-import { wrapToolForTest } from "./server.js";
+import { makeToolInvoker } from "./server.js";
 import { narrationStdlibTools } from "@dicelore/backend";
 import { frontList } from "@dicelore/backend";
 import { plotlineList } from "@dicelore/backend";
@@ -19,7 +19,7 @@ let invoke: (name: string, args: unknown) => Promise<unknown>;
 beforeEach(() => {
   db = openDb(":memory:");
   initSchema(db);
-  invoke = wrapToolForTest(openSessionBackend(db), db, {}, narrationStdlibTools());
+  invoke = makeToolInvoker(openSessionBackend(db), db, {}, narrationStdlibTools());
 });
 
 // 信封 → 解出业务出参

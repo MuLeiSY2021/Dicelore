@@ -80,7 +80,7 @@ export function makeEventTools(backend: SessionBackend): ToolDef[] {
     title: "追加事件",
     description:
       "向事件流追加一条记录(散文进 content 走 FTS)。Args: content?、kind(narrate/note/verdict/mutation/watcher_fired/reveal,默认 note)、data_json?、tags?(数组)、visible?(0|1,省略按 kind 默认)。" +
-      "Returns: {event_id}。use: 记录非裁决的事实/旁注。don't: 当叙述通道(用 narrate)。错误: 入参非法→INTERNAL。",
+      "Returns: {event_id}。use: 记录非裁决的事实/旁注。don't: 当叙述通道(用 narrate)。错误: 入参非法→BAD_INPUT。",
     inputSchema: eventAppendIn,
     outputSchema: eventAppendOut,
     annotations: {
@@ -96,7 +96,7 @@ export function makeEventTools(backend: SessionBackend): ToolDef[] {
     title: "召回历史事件",
     description:
       "FTS5(jieba)召回历史事件。Args: query、k(1-100,默认8)。Returns: {events:[{seq,kind,content,visible}], truncated}。" +
-      "use: 找回早前剧情/伏笔。don't: 取角色属性(用 sheet_*)。错误: 入参非法→INTERNAL。",
+      "use: 找回早前剧情/伏笔。don't: 取角色属性(用 sheet_*)。错误: 入参非法→BAD_INPUT。",
     inputSchema: eventRecallIn,
     outputSchema: eventRecallOut,
     annotations: {

@@ -88,8 +88,15 @@ export function createLoreApp(deps: LoreDeps): Hono {
     return c.json({ files: entry.draft.toPackFiles(), snapshot: entry.draft.snapshot() });
   });
 
+  // 释放构建会话:从 loreReg 删 {session, draft}(每个 Draft 持完整 in-memory 包内容,
+  // 不删则常驻内存至进程退出——对比 dice 侧 removeHost + DELETE /sessions/:id 的清理)。
+  // 前端构建台离开/提交后应显式调它释放。会话不存在亦幂等返 ok。
+  app.delete("/lore-sessions/:id", (c) => {
+    loreReg.delete(c.req.param("id"));
+    return c.json({ ok: true });
+  });
+
   return app;
 }
 
 export function getLoreEntry(id: string): { session: LoreSession; draft: Draft } | undefined { return loreReg.get(id); }
-export function getLoreSession(id: string): LoreSession | undefined { return loreReg.get(id)?.session; }

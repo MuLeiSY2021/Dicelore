@@ -7,7 +7,6 @@
 // Software Foundation, either version 3 of the License, or (at your option)
 // any later version. See <https://www.gnu.org/licenses/>.
 
-// packages/core/src/adapter/l3.test.ts
 import { describe, it, expect } from "vitest";
 import type { LogRow } from "@dicelore/interface";
 import { auditTurn } from "./l3.js";

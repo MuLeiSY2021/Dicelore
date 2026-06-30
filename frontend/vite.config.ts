@@ -17,7 +17,7 @@ export default defineConfig({
   resolve: {
     alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
   },
-  // 开发期代理到 orchestrator；ws:true 透传 /sessions/:id/ws 的 WebSocket 升级。
+  // 开发期代理到 backend；ws:true 透传 /sessions/:id/ws 的 WebSocket 升级。
   server: {
     proxy: {
       "/sessions": { target: "http://localhost:8787", ws: true, changeOrigin: true },

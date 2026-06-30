@@ -9,6 +9,8 @@
 
 // 团本目录域 HTTP(后端双路径架构 P2/P3/P5)：列团本 / 建包 / 取文件 / 校验 / 发布 tag / 开新局。
 
+import { apiError } from "@/shared/api/http.js";
+
 export interface AdventureSummary { id: string; name: string; head: string | null; tags: string[] }
 export interface PackFile { path: string; content: string }
 
@@ -24,7 +26,7 @@ export async function commitPack(name: string, message: string, files: PackFile[
   const res = await fetch("/catalog/commit", {
     method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, message, files }),
   });
-  if (!res.ok) throw new Error(`commit 请求失败：${res.status}`);
+  if (!res.ok) throw await apiError(res, "commit");
   return (await res.json()) as { adventureId: string; commitId: string };
 }
 
@@ -33,7 +35,7 @@ export async function openPlaySession(sessionId: string, adventureId: string, re
   const res = await fetch(`/sessions/${encodeURIComponent(sessionId)}/open`, {
     method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ adventureId, ref }),
   });
-  if (!res.ok) throw new Error(`open 请求失败：${res.status}`);
+  if (!res.ok) throw await apiError(res, "open");
 }
 
 // 读团本版本全部包文件(团本制作页中央渲染)。
@@ -49,7 +51,7 @@ export async function validateCatalog(files: PackFile[]): Promise<{ ok: boolean;
   const res = await fetch("/catalog/validate", {
     method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ files }),
   });
-  if (!res.ok) throw new Error(`validate 请求失败：${res.status}`);
+  if (!res.ok) throw await apiError(res, "validate");
   return (await res.json()) as { ok: boolean; issues: ValidateIssue[] };
 }
 
@@ -58,5 +60,5 @@ export async function tagPack(adventureId: string, commitId: string, label: stri
   const res = await fetch(`/catalog/${encodeURIComponent(adventureId)}/tag`, {
     method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ commitId, label }),
   });
-  if (!res.ok) throw new Error(`tag 请求失败：${res.status}`);
+  if (!res.ok) throw await apiError(res, "tag");
 }

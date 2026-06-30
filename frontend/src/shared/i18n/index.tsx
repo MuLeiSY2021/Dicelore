@@ -24,7 +24,7 @@ type Dict = Record<string, string>;
 
 const ZH: Dict = {
   "nav.home": "主页", "nav.catalog": "团本", "nav.play": "跑团", "nav.build": "团本制作", "nav.config": "配置",
-  "bar.lang": "语言", "bar.theme": "明暗", "bar.accent": "强调色",
+  "bar.lang": "语言", "bar.theme": "明暗",
   "bar.model": "模型", "bar.mcp": "MCP", "bar.notify": "notify", "bar.notify.unset": "未配", "bar.notify.connected": "已连",
   // 主页
   "home.greeting.morning": "早上好", "home.greeting.afternoon": "下午好",
@@ -122,7 +122,7 @@ const ZH: Dict = {
 
 const EN: Dict = {
   "nav.home": "Home", "nav.catalog": "Campaigns", "nav.play": "Play", "nav.build": "Build", "nav.config": "Settings",
-  "bar.lang": "Language", "bar.theme": "Theme", "bar.accent": "Accent",
+  "bar.lang": "Language", "bar.theme": "Theme",
   "bar.model": "Model", "bar.mcp": "MCP", "bar.notify": "notify", "bar.notify.unset": "unset", "bar.notify.connected": "connected",
   "home.greeting.morning": "Good morning", "home.greeting.afternoon": "Good afternoon",
   "home.greeting.evening": "Good evening", "home.greeting.night": "Late night",

@@ -33,6 +33,16 @@ describe("restagePendingRolls", () => {
     const gate = new PlayerRollGate(backend, hub, "s1");
     expect(restagePendingRolls({ db, gate, hub, sessionId: "s1" })).toBe(0);
   });
+
+  it("debug 无 gate 时直接返回 0(明骰立即掷,无 pending 可重弹)", () => {
+    const db = openDb(":memory:"); initSchema(db);
+    // 库内即便有 awaiting 行,无 gate 也不重弹(noop)。
+    stagePendingRoll(db, { shape: "outcome", spec: { context: "撬锁", die: "1d100", bands: [{ label: "成功", min: 1, max: 60 }] } });
+    const hub = new WsHub(); const sent: any[] = [];
+    hub.add("s1", { send: (d: string) => sent.push(JSON.parse(d)), readyState: 1 });
+    expect(restagePendingRolls({ db, hub, sessionId: "s1" })).toBe(0);
+    expect(sent.length).toBe(0);
+  });
 });
 
 // B2：重连补叙述历史——replayNarration 把 since 之后的 narrate event 重发为 narration_commit。
@@ -65,5 +75,20 @@ describe("replayNarration", () => {
     hub.add("s1", { send: (d: string) => sent.push(JSON.parse(d)), readyState: 1 });
     expect(replayNarration({ backend, hub, sessionId: "s1" }, Number(info.lastInsertRowid))).toBe(0);
     expect(sent.length).toBe(0);
+  });
+
+  it("不补发隐事件(visible=0 的 narrate 不重弹给客户端)", () => {
+    const db = openDb(":memory:"); initSchema(db);
+    const backend = openSessionBackend(db);
+    // 一条可见 + 一条隐(visible=0):重连只应补可见那条。
+    const hidden = db.prepare("INSERT INTO log (content, kind, visible) VALUES ('暗叙','narrate',0)").run();
+    const vis = db.prepare("INSERT INTO log (content, kind, visible) VALUES ('明叙','narrate',1)").run();
+    const hub = new WsHub(); const sent: any[] = [];
+    hub.add("s1", { send: (d: string) => sent.push(JSON.parse(d)), readyState: 1 });
+    const n = replayNarration({ backend, hub, sessionId: "s1" }, 0);
+    expect(n).toBe(1);
+    const narr = sent.filter((m) => m.type === "narration_commit");
+    expect(narr.map((m) => m.seq)).toEqual([Number(vis.lastInsertRowid)]);
+    expect(narr.some((m) => m.seq === Number(hidden.lastInsertRowid))).toBe(false);
   });
 });

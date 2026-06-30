@@ -46,6 +46,26 @@ describe("runTool", () => {
     expect((env.structuredContent as any).reminders).toEqual(["后续叙述须与已锁后果一致"]);
   });
 
+  it("resolve_outcome_hidden 命中最低档:经 runTool 挂上反软着陆提醒(band 已被裁,靠 out.roll 反查)", async () => {
+    // 模拟真实暗骰 handler 出参:band 只剩 {label,consequence}(无 min),roll 落最低档区间。
+    const t = makeTool({
+      name: "resolve_outcome_hidden",
+      inputSchema: z.object({
+        context: z.string(), die: z.string(),
+        bands: z.array(z.object({ label: z.string(), min: z.number(), max: z.number(), consequence: z.string() })),
+      }).strict(),
+      outputSchema: z.object({
+        roll: z.number(), die: z.string(),
+        band: z.object({ label: z.string(), consequence: z.string() }), event_id: z.number(),
+        reminders: z.array(z.string()).optional(),
+      }),
+      handler: (_db, input: any) => ({ roll: 10, die: input.die, band: { label: "败", consequence: "x" }, event_id: 1 }),
+    });
+    const input = { context: "c", die: "1d100", bands: [{ label: "败", min: 1, max: 50, consequence: "x" }, { label: "成", min: 51, max: 100, consequence: "y" }] };
+    const env = await runTool(db, t, input);
+    expect((env.structuredContent as any).reminders).toEqual(["尊重结果,别软着陆"]);
+  });
+
   it("handler throw DiceloreError → 错误信封,无 structuredContent", async () => {
     const t = makeTool({ handler: () => { throw new DiceloreError("NOT_FOUND", "没了"); } });
     const env = await runTool(db, t, { x: 1 });

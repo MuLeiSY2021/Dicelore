@@ -11,7 +11,7 @@ import { useEffect, useRef, useState, Fragment, type ComponentType, type Keyboar
 import { useParams, useNavigate } from "react-router-dom";
 import {
   BookOpen, Wrench, LayoutGrid, Search, File, Pin, CheckCircle2, Dices, LayoutDashboard,
-  Grid3x3, User, Minus, X, Timer, Package, Eye, Sparkles, Loader2, AlertTriangle, Flag,
+  Grid3x3, User, Minus, X, Timer, Timer as ClockIcon, Package, Eye, Sparkles, Loader2, AlertTriangle, Flag,
   BookMarked, ChevronDown, ChevronUp, ScrollText, Play, Trash2,
   Scale, ArrowRightLeft, BellRing, GripVertical, RotateCcw, History,
 } from "lucide-react";
@@ -200,7 +200,8 @@ export default function PlayPage() {
     if (attrs.length > 0) push(`attr:${entity}`, () => panel(`attr:${entity}`, entity, User,
       attrs.map((c) => <div className="row" key={c.attr}><span>{c.attr}</span><b>{c.value}</b></div>)));
     clocks.forEach((c) => { const m = CLOCK_RE.exec(c.value)!; push(`clock:${entity}:${c.attr}`, () => panel(
-      `clock:${entity}:${c.attr}`, t("play.panel.clock"), Timer,
+      // 领域概念=Clock(倒计时钟)；复用 lucide Timer 图标渲染(无专用 Clock 字形时)，故本地别名 ClockIcon 标明用途。
+      `clock:${entity}:${c.attr}`, t("play.panel.clock"), ClockIcon,
       <div className="clockrow"><ClockDial cur={Number(m[1])} max={Number(m[2])} /><div className="ck"><div className="nm">{c.attr}</div><div className="v">{c.value}</div></div></div>)); });
     if (inv.length > 0) push(`inv:${entity}`, () => panel(`inv:${entity}`, `${t("play.panel.inv")} · ${inv.length}`, Package,
       inv.map((c) => <div className="row" key={c.attr}><span>{c.attr.slice(INV_PREFIX.length)}</span><b>{c.value}</b></div>)));

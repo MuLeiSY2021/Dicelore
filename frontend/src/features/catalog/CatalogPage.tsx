@@ -14,7 +14,7 @@ import { listCatalog, openPlaySession, commitPack, type AdventureSummary } from 
 import { useT } from "@/shared/i18n/index.js";
 
 // 团本名 → URL/文件名安全 slug(保留中文，去空格/分隔符)。会话 id 前缀团本名。
-function slug(name: string): string {
+export function slug(name: string): string {
   return name.trim().replace(/[\s/\\·:]+/g, "-").replace(/-+/g, "-").slice(0, 24) || "team";
 }
 

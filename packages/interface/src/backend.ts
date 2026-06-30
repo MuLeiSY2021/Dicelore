@@ -9,16 +9,16 @@
 
 // @dicelore/interface/backend —— storage-port 的端口接口 SessionBackend(依赖倒置中立契约)。
 //
-// 将来 mcp/adapter 经此接口(注入)调存储、不再直接 import @dicelore/backend，从而能断
-// backend↔harness 环；后端实现可加 cache / 远程 / 多租户。本阶段为**纯加法**：接口 + 实现就位、
-// typecheck 通过即可，现有消费者仍直接 import backend 不变。
+// mcp/adapter 经此接口(注入)调存储、不直接 import @dicelore/backend，从而断 backend↔harness
+// 环；后端实现可加 cache / 远程 / 多租户。接线已定稿(ADR-0028)：harness(DiceSession/createMcpServer)
+// 收注入的 SessionBackend、所有存储读写经它，组合根 backend/server.ts 按会话 openSessionBackend(db) 注入。
 //
 // 命名约定(项目)：接口按领域概念命名，**不带 Port/I 后缀**。每个会话拿到一个 db 已绑定的实例
-// (openSessionBackend(db))；故所有方法都**不收 db 参**——db 由实现闭包捕获。
-// 分组对应 ADR §3 的几束(Store / Resolver / Snapshots / Catalog / Presentation / Meta / Toolgen)；
-// 本阶段实现并圈定 mcp/adapter/integration 真正消费到的那一束(Store / Resolver / Meta)，其余
-// 束(Snapshots / Catalog / Presentation / Toolgen)随消费者迁经端口时再长出。
-// 见 docs/重构/ADR-storage-port.md §3/§4。
+// (openSessionBackend(db))；故所有方法都**不收会话 db 参**——db 由实现闭包捕获(唯一例外 Catalog.importPack
+// 收外部团本库句柄 catalogDB 作业务入参)。
+// 端口聚合全部束：Store / Resolver / Meta / Usage / Snapshots / Presentation / Catalog。
+// Toolgen 束(toolgenToToolDef)经 2026-06-29 归属判断划为 backend 资产、不进端口。
+// 见 docs/wiki/05-决策记录-ADR/README.md ADR-0028(决策②③④)。
 
 import type {
   StateCell,

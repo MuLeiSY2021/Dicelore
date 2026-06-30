@@ -9,7 +9,7 @@
 
 import { test, expect } from "@playwright/test";
 
-// 跑团页扩展：活动轨切换 + 真实浏览树 + 呈现台。前置:orchestrator :8787(FAKE_GM)。
+// 跑团页扩展：活动轨切换 + 真实浏览树 + 呈现台。前置:backend :8787(FAKE_GM)。
 test.describe("跑团页 · 活动轨/浏览/呈现台", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");

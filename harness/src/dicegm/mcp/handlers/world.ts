@@ -72,7 +72,7 @@ export function makeWorldTools(backend: SessionBackend): ToolDef[] {
     title: "加权抽样随机表",
     description:
       "从 pool 加权无放回抽 n 行。Args: pool、n(默认1)、filter?(键值精确匹配 row_json 字段)。Returns: {rows:[...]}。" +
-      "use: 抽遭遇/战利品/随机事件。don't: 取确定设定(用 world_search)。错误: 入参非法→INTERNAL。",
+      "use: 抽遭遇/战利品/随机事件。don't: 取确定设定(用 world_search)。错误: 入参非法→BAD_INPUT。",
     inputSchema: worldSampleIn,
     outputSchema: worldSampleOut,
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: false, openWorldHint: false },
@@ -94,7 +94,7 @@ export function makeWorldTools(backend: SessionBackend): ToolDef[] {
     title: "检索规则(只读)",
     description:
       "FTS5 检索作者灌注的规则(AI 只读,无写工具)。Args: query、k(1-100,默认20)。Returns: {rules:[{name,content,version}], truncated}。" +
-      "use: 查机制裁定依据。don't: 改规则(不可)。错误: 入参非法→INTERNAL。",
+      "use: 查机制裁定依据。don't: 改规则(不可)。错误: 入参非法→BAD_INPUT。",
     inputSchema: ruleSearchIn,
     outputSchema: ruleSearchOut,
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },

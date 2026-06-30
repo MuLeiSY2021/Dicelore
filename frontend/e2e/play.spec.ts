@@ -11,8 +11,8 @@ import { test, expect, type Page } from "@playwright/test";
 
 // 端到端「造团本 → 开局 → 玩」闭环 + 五条玩家主线(掷骰/选择/终局/错误恢复/断线重连)。
 //
-// 前置:orchestrator 起在 :8787 且 DICELORE_FAKE_GM=1(脚本化 GM,不烧 LLM);vite dev 由 webServer 拉起。
-//   cd apps/orchestrator && DICELORE_FAKE_GM=1 PORT=8787 npx tsx src/server.ts
+// 前置:backend 起在 :8787 且 DICELORE_FAKE_GM=1(脚本化 GM,不烧 LLM);vite dev 由 webServer 拉起。
+//   DICELORE_FAKE_GM=1 PORT=8787 npx tsx backend/src/server.ts
 //
 // ⚠️ 运行说明(follow-up):
 //   1) 本机 Playwright chromium 浏览器未安装(~100MB 未下载),五条 spec 本地未跑通,仅写好待 CI/装浏览器后跑。

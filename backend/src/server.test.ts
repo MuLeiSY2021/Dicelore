@@ -7,13 +7,14 @@
 // Software Foundation, either version 3 of the License, or (at your option)
 // any later version. See <https://www.gnu.org/licenses/>.
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 import { mkdtempSync, writeFileSync, rmSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { openDb, initSchema, metaSet, type DB } from "@dicelore/backend";
-import { createApp } from "./api/dice.js";
+import { createLiveApp } from "./api/dice.js";
 import { listSessionSummaries } from "./api/sessions.js";
+import { FakeDiceGm, removeHost } from "@dicelore/harness";
 
 function memSessionFactory(): (id: string) => DB {
   const db = openDb(":memory:");
@@ -30,9 +31,16 @@ function endedSessionFactory(): (id: string) => DB {
   return () => db;
 }
 
+const fakeFactory = () => new FakeDiceGm([{ type: "turn_end" }]);
+
+// createApp 已删(生产 server 从不挂载,只读 REST 路径走 createLiveApp);只读 REST 用例改对
+// createLiveApp 发请求(注入 openSession 内存库),覆盖真正跑生产的那份只读路由(接口页 §2)。
 describe("orchestrator 只读 REST", () => {
+  // createLiveApp 用进程级 host registry,跨用例复用同 id 会串库;每例后注销。
+  afterEach(() => { for (const id of ["s1", "dead", "slist"]) removeHost(id); });
+
   it("GET /sessions/:id/presentation 返回 §1 快照", async () => {
-    const app = createApp({ openSession: memSessionFactory(), listSessions: () => [] });
+    const app = createLiveApp({ agentFactory: fakeFactory, openSession: memSessionFactory(), listSessions: () => [] });
     const res = await app.request("/sessions/s1/presentation");
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -42,7 +50,7 @@ describe("orchestrator 只读 REST", () => {
   });
 
   it("GET /sessions/:id 返回会话元信息", async () => {
-    const app = createApp({ openSession: memSessionFactory(), listSessions: () => [] });
+    const app = createLiveApp({ agentFactory: fakeFactory, openSession: memSessionFactory(), listSessions: () => [] });
     const res = await app.request("/sessions/s1");
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -50,7 +58,7 @@ describe("orchestrator 只读 REST", () => {
   });
 
   it("GET /sessions/:id 终局会话(meta ended 已落)→ ended:true(RT-4,与 WS game_end 同源)", async () => {
-    const app = createApp({ openSession: endedSessionFactory(), listSessions: () => [] });
+    const app = createLiveApp({ agentFactory: fakeFactory, openSession: endedSessionFactory(), listSessions: () => [] });
     const res = await app.request("/sessions/dead");
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -58,7 +66,8 @@ describe("orchestrator 只读 REST", () => {
   });
 
   it("GET /sessions 返回会话列表", async () => {
-    const app = createApp({
+    const app = createLiveApp({
+      agentFactory: fakeFactory,
       openSession: memSessionFactory(),
       listSessions: () => [{ sessionId: "demo", title: "demo", status: "active" }],
     });

@@ -1,6 +1,6 @@
 ---
 name: dicelore-gm-core
-description: Use on EVERY turn of running an anko/anki (dice/vote-driven interactive fiction) session as GM — deciding whether to offer the player a choice or roll dice and which roll, respecting roll results without soft-landing, managing what the player can see, keeping a turn as one authored beat. Consult this even when the GM action seems simple.
+description: Use on EVERY turn of running an anko/anka (dice/vote-driven interactive fiction) session as GM — deciding whether to offer the player a choice or roll dice and which roll, respecting roll results without soft-landing, managing what the player can see, keeping a turn as one authored beat. Consult this even when the GM action seems simple.
 ---
 
 <!-- 措辞 eval-pending:终稿靠 skill-creator eval-loop(harness 就绪后,复用 L3 信号作 assertions)。 -->
@@ -31,10 +31,11 @@ description: Use on EVERY turn of running an anko/anki (dice/vote-driven interac
   - 否则(必成/必败、失败只是"再来一次"、对故事无关)→ 别骰,直接 `narrate`(或与玩家商量)。
 
 ### 形状表 · 骰什么 → 哪个工具(镜像 resolver 二轴)
-| 结果形状 | 工具 | 何时用 |
+> 下表是**形状轴**(结果长什么样)的家族名,非可直接调的工具名。真实工具按下一节「谁掷」明/暗骰二分落到 `_open`/`_hidden` 后缀(`world_sample`/`sheet_update` 无此后缀)。
+| 结果形状 | 工具家族(→ 见「谁掷」落 _open/_hidden) | 何时用 |
 |---|---|---|
-| label 叙事档位 | `resolve_outcome` | 结果是"哪一档后果/方向",GM 预设档位表 |
-| verdict 胜负 | `resolve_contest` | 两方对抗 或 过线检定(DC=一边常数) |
+| label 叙事档位 | `resolve_outcome_open` / `resolve_outcome_hidden` | 结果是"哪一档后果/方向",GM 预设档位表 |
+| verdict 胜负 | `resolve_contest_open` / `resolve_contest_hidden` | 两方对抗 或 过线检定(DC=一边常数) |
 | number 数值 | `sheet_update` 带骰 | 结果是具体数值变化(伤害/成长/资源) |
 | content 抽内容 | `world_sample` | 从池子随机抽一行(卡/掉落/遭遇) |
 
@@ -48,7 +49,7 @@ description: Use on EVERY turn of running an anko/anki (dice/vote-driven interac
 
 ### 两个补丁
 - **安全 vs 冒险**:给"稳妥/冒险一掷"的 `resolve_choice`,玩家选了冒险才进闸 B 骰(玩家自选风险→buy-in)。
-- **打平降级**:`resolve_choice` 平票且无所谓对错 → 降级 `resolve_outcome` 掷定。
+- **打平降级**:`resolve_choice` 平票且无所谓对错 → 降级 `resolve_outcome_hidden` 掷定(GM 暗骰破平局)。
 
 ### 派发到流程 skill
 判明 genre 局面后让位对应流程 skill:抽卡→consult `dicelore-flow-gacha`;对抗→`dicelore-flow-contest`;安价/投票→`dicelore-flow-anka`;探索/情报→`dicelore-flow-explore`。Moves 管"走哪条路",流程 skill 管"这条路怎么走"。

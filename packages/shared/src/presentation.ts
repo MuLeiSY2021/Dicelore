@@ -10,7 +10,7 @@
 import { z } from "zod";
 import { CLIENT_PROTOCOL } from "./protocol.js";
 
-// §1 机械回显可见种类（与 core EventKind 的机械子集对齐）
+// §1 机械回显可见种类（与 backend EventKind 的机械子集对齐）
 export const MechanicKind = z.enum(["verdict", "mutation", "watcher_fired"]);
 
 export const SheetCellSchema = z.object({

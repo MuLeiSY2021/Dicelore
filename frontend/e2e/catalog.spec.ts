@@ -10,7 +10,7 @@
 import { test, expect } from "@playwright/test";
 
 // 团本目录页(新「团本」)：列 catalog → 开始游戏 → 进 Play 开场层。
-// 前置:orchestrator :8787。先 seed 一个团本(经主页 quick-play)。
+// 前置:backend :8787。先 seed 一个团本(经主页 quick-play)。
 test.describe("团本目录页", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");

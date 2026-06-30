@@ -57,6 +57,24 @@ describe("compileReadTool", () => {
     expect(() => t.handler(db, {})).toThrow();
   });
 
+  test("读工具:SQL 用了未声明的 :param 编译期抛 BAD_INPUT", () => {
+    expect(() =>
+      compileReadTool({
+        name: "hp_of",
+        // SQL 引用 :who 但 params 未声明 who
+        sql: "SELECT value FROM state WHERE attr='HP' AND entity=:who",
+      })
+    ).toThrow();
+    // 部分声明、部分漏声明也应在编译期暴露
+    expect(() =>
+      compileReadTool({
+        name: "pair",
+        params: { a: "string" },
+        sql: "SELECT 1 WHERE x=:a AND y=:b",
+      })
+    ).toThrow();
+  });
+
   test("读工具有 name 和 desc", () => {
     const t = compileReadTool({
       name: "test_tool",

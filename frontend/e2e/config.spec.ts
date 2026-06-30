@@ -10,7 +10,7 @@
 import { test, expect } from "@playwright/test";
 
 // 配置页 7 子页：模型可选 / 连接测试真测 / MCP CRUD+持久化 / 语言 / 真实值。
-// 前置:orchestrator :8787(DICELORE_FAKE_GM=1)。
+// 前置:backend :8787(DICELORE_FAKE_GM=1)。
 
 test.describe("配置页", () => {
   test("七子页导航齐全", async ({ page }) => {

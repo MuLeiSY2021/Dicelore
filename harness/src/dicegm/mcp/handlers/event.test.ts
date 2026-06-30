@@ -14,7 +14,7 @@ import { logSince } from "@dicelore/backend";
 import { watcherList, watcherSet } from "@dicelore/backend";
 import { makeEventTools } from "./event.js";
 import { eventAppendOut } from "../schemas/event.js";
-import { wrapToolForTest } from "../server.js";
+import { makeToolInvoker } from "../server.js";
 
 function freshDb() { const db = openDb(":memory:"); initSchema(db); return db; }
 // 内置工具 handler 经注入 SessionBackend 调存储——按 db 造工具、handler 忽略传入的 db 形参。
@@ -83,13 +83,13 @@ describe("eventAppendOut schema", () => {
   });
 });
 
-// ===== 经 wrapToolForTest(server 路径)端到端 =====
+// ===== 经 makeToolInvoker(server 路径)端到端 =====
 describe("event_append 经 server 路径端到端", () => {
   it("log-has watcher 触发时 structuredContent 含 fired_watchers 且不被校验拒", async () => {
     const db = openDb(":memory:");
     initSchema(db);
     watcherSet(db, { condition: "{log:has(kind=reveal)}", payload: "秘密暴露提示", mode: "once" });
-    const invoke = wrapToolForTest(openSessionBackend(db), db, {});
+    const invoke = makeToolInvoker(openSessionBackend(db), db, {});
     const result = await invoke("event_append", { kind: "reveal", content: "重要秘密" }) as any;
     expect(result.isError).toBeFalsy();
     // structuredContent 是 SDK 传给 outputSchema 校验的对象——必须含 fired_watchers

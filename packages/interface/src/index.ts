@@ -8,8 +8,8 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 // @dicelore/interface —— harness 与 backend 之间的跨层契约（依赖倒置：双方都依赖此处、不互相 import）。
-// 先落最基础的共享契约；storage-port 的 SessionBackend 聚合接口随迁移阶段在此长出
-// （见 docs/重构/ADR-storage-port.md §3）。
+// storage-port 的 SessionBackend 聚合接口在此（见 backend.ts）。
+// 见 docs/wiki/05-决策记录-ADR/README.md ADR-0028(决策②③)。
 
 import type Database from "better-sqlite3";
 import type { z } from "zod";

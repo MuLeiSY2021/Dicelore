@@ -7,7 +7,6 @@
 // Software Foundation, either version 3 of the License, or (at your option)
 // any later version. See <https://www.gnu.org/licenses/>.
 
-// packages/core/src/adapter/turnEnd.ts
 import type { SessionBackend } from "@dicelore/interface";
 import { auditTurn } from "./l3.js";
 
@@ -19,7 +18,10 @@ export function runTurnEnd(
   const events = backend.logSince(turnStartSeq);
   const pc = backend.getPendingChoice();
   const pendingChoiceEmpty = !pc || pc.status !== "staged";
-  const hasGameEnd = events.some((e) => e.kind === "note" && (e.content ?? "").includes("game_end"));
+  // 终局检测读 session_meta 的 "ended" 键(game_end 工具/FakeDiceGm gameEnd 档同时写它,
+  // 与 REST/WS 终局态同源);旧实现嗅探 note.content "game_end" 恒 false——game_end 落库
+  // 形态是 {kind:"note",visible:0,data_json:{reason,outcome}},从不写 content,见 io.ts gameEndHandler。
+  const hasGameEnd = backend.metaGet("ended") !== undefined;
 
   const result = auditTurn({
     events,

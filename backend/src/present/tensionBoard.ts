@@ -13,6 +13,10 @@ import { plotlineList, type Plotline } from "../store/narrative/plotline.js";
 import { foreshadowList, type Foreshadow } from "../store/narrative/foreshadow.js";
 import { watcherList, type WatcherRow } from "../store/narrative/watcher.js";
 
+// ⚠ 接线待办（见 backlog-core A5 / A′「未结张力看板」）：本聚合已实现但尚未接进 buildMcp，
+// GM 调不到「以概念为单位」的张力看板读。当前无运行时消费者（仅自测引用）——保留作第二批
+// 路线图「视图层投影/暴露 tensionBoard 工具」的待接线资产，勿误删。
+
 export interface TensionBoard {
   fronts: Front[];
   plotlines: Plotline[];

@@ -15,9 +15,14 @@ export function remindersFor(name: string, out: any, input: any): string[] {
       return ["后续叙述须与已锁后果一致"];
     case "resolve_outcome_hidden":
     case "resolve_outcome_open": {
-      const mins: number[] = (input?.bands ?? []).map((b: any) => b.min);
-      if (mins.length && out?.band && out.band.min === Math.min(...mins)) {
-        return ["尊重结果,别软着陆"];
+      // 命中最低档 → 提醒别软着陆。out.band 被裁成 {label,consequence}(无 min),
+      // 故按 out.roll 反查 input.bands 命中的那一档(区间 [min,max]),与 rangeMap 同口径;
+      // 再比它是否就是 min 最小的档。(旧实现读 out.band.min 恒 undefined → 暗骰路径永不触发。)
+      const bands: any[] = input?.bands ?? [];
+      if (bands.length && typeof out?.roll === "number") {
+        const hit = bands.find((b: any) => out.roll >= b.min && out.roll <= b.max);
+        const lowestMin = Math.min(...bands.map((b: any) => b.min));
+        if (hit && hit.min === lowestMin) return ["尊重结果,别软着陆"];
       }
       return [];
     }

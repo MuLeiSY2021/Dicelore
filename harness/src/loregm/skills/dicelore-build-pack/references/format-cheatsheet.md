@@ -4,25 +4,21 @@
 
 ---
 
-## manifest.yaml
+## manifest.md
 
-```yaml
-id: fanren-xiuxian          # 唯一标识（catalog key，只用小写字母/数字/连字符）
-version: 1.2.0              # 团本版本（语义化版本，迁移用）
-name: 凡人修仙传
-description: 低武凡人流修仙，资质平庸者的逆袭。
-flows:                       # 选用的流程 skill（声明即可，不写逻辑）
-  - dicelore-flow-gacha
-  - dicelore-flow-contest
-clock: 世界.年               # 主钟 attr（watcher 比对用）；缺省按 seq
-entry: world/设定.md#引子    # 开局引子（指向 world doc 的锚点，或内联文本）
+`set_manifest({ name, id })` 产出 `manifest.md`——import 闸门只认这一个文件名（`backend/src/catalog/import.ts` 取 H1 当团本名、`- id:` 行当 catalog key）：
+
+```markdown
+# 凡人修仙传
+
+- id: fanren-xiuxian
 ```
 
-`set_manifest` 参数：`{ name, id }` —— version/flows/clock/entry 由 commit 时草稿自动填充或在 lore 文档 frontmatter 里声明。
+`set_manifest` 参数：`{ name, id }`。version/flows/clock/entry 暂不由 manifest 承载（`set_manifest` 当前只接受 name/id）；需要的话在 lore/rule 文档 frontmatter 里声明。
 
 ---
 
-## world 文档（`write_lore`）
+## lore 文档（`write_lore`）
 
 | frontmatter 字段 | 默认值 | 说明 |
 |------------------|--------|------|
@@ -149,8 +145,8 @@ visible: 0
 
 ```
 <团本名>/
-├── manifest.yaml
-├── world/
+├── manifest.md
+├── lore/
 │   ├── 设定.md
 │   ├── 门派/<门派名>.md
 │   └── npc/<NPC名>.md
@@ -164,4 +160,4 @@ visible: 0
     └── <front-id>.md
 ```
 
-最小团本：只需 `manifest.yaml` + 至少一篇 `world/` 文档。其余子目录按需出现。
+最小团本：只需 `manifest.md` + 至少一篇 `lore/` 文档。其余子目录按需出现。

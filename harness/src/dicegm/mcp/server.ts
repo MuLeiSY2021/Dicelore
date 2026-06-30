@@ -48,10 +48,12 @@ function maxSeq(db: DB): number {
   return r.s ?? 0;
 }
 
-// 「调用工具 + 写后 onCanonWrite」封装(供工厂注册 + 单测复用)。runTool 是 async、返回信封。
+// 「调用工具 + 写后 onCanonWrite」封装(生产注册 + 单测复用同一入口)。runTool 是 async、返回信封。
+// 注:名字反映真实职责——它是生产路径的工具调用核心(createMcpServer 用它构造每个 tool 的 invoke),
+// 同时供单测当正式 invoke 入口复用,并非测试专用辅助。
 // backend: 注入的会话存储端口(内置工具经它调 ported ops)。db: 仍需——供 toolgen extraTools handler
 // 的作者 SQL(不在端口面内)+ maxSeq 取写后 head seq。
-export function wrapToolForTest(backend: SessionBackend, db: DB, deps: McpServerDeps, extraTools: ToolDef[] = []) {
+export function makeToolInvoker(backend: SessionBackend, db: DB, deps: McpServerDeps, extraTools: ToolDef[] = []) {
   const byName = new Map([...makeTools(backend), ...extraTools].map((t) => [t.name, t]));
   return async (name: string, args: unknown): Promise<unknown> => {
     const t = byName.get(name);
@@ -70,7 +72,7 @@ export function wrapToolForTest(backend: SessionBackend, db: DB, deps: McpServer
 export function createMcpServer(backend: SessionBackend, db: DB, deps: McpServerDeps = {}, extraTools: ToolDef[] = []): McpServer {
   if (deps.rollGate) setRollGate(deps.rollGate); // 单人明骰：接既有模块级 gate seam
   const server = new McpServer({ name: "dicelore", version: "0.0.0" });
-  const invoke = wrapToolForTest(backend, db, deps, extraTools);
+  const invoke = makeToolInvoker(backend, db, deps, extraTools);
   for (const t of [...makeTools(backend), ...extraTools]) {
     server.registerTool(
       `dicelore_${t.name}`,
@@ -86,3 +88,9 @@ export function createMcpServer(backend: SessionBackend, db: DB, deps: McpServer
   }
   return server;
 }
+
+/**
+ * @deprecated 改名为 makeToolInvoker(反映「生产工具调用核心 + 单测复用」职责);
+ * 保留别名仅为兼容尚未迁移的外部调用点(backend 测试)。新代码请用 makeToolInvoker。
+ */
+export const wrapToolForTest = makeToolInvoker;

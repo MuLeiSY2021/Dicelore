@@ -9,11 +9,13 @@
 
 // 构建域 HTTP：构建助手对话(POST /lore-sessions/:id/messages)。
 
+import { apiError } from "@/shared/api/http.js";
+
 // 构建助手对话(POST /lore-sessions/:id/messages)。
 export async function postBuildMessage(loreSessionId: string, text: string, name: string): Promise<{ turnId: string }> {
   const res = await fetch(`/lore-sessions/${encodeURIComponent(loreSessionId)}/messages`, {
     method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text, name }),
   });
-  if (!res.ok) throw new Error(`build message 请求失败：${res.status}`);
+  if (!res.ok) throw await apiError(res, "build message");
   return (await res.json()) as { turnId: string };
 }

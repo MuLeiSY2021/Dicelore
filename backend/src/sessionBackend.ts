@@ -10,10 +10,12 @@
 // openSessionBackend —— storage-port 端口接口 SessionBackend 的 backend 侧实现(组合根)。
 //
 // 把 store/resolve/session 的现有自由函数用闭包绑定 db、组装成一个对象，满足
-// @dicelore/interface 的 SessionBackend(Store & Resolver & Meta)。一个会话一个实例。
-// 本阶段**纯加法**：现有消费者(mcp/adapter)仍直接 import 这些自由函数，本对象暂未接线注入；
-// 待后续阶段消费者改经端口调用、断 backend↔harness 环。
-// 见 docs/重构/ADR-storage-port.md §3/§4。
+// @dicelore/interface 的 SessionBackend(Store & Resolver & Meta & Usage & Snapshots &
+// Presentation & Catalog)。一个会话一个实例。
+// 接线已定稿(ADR-0028)：harness(DiceSession/createMcpServer)经注入的 SessionBackend 端口访存，
+// 不再直接 import 这些自由函数；openSessionBackend 是 harness 经端口访存的唯一实现，
+// 由组合根(server.ts/main.ts/hooks)按会话注入。
+// 见 docs/wiki/05-决策记录-ADR/README.md ADR-0028。
 
 import type { DB, SessionBackend } from "@dicelore/interface";
 

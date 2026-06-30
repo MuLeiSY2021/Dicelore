@@ -24,8 +24,10 @@ import { toolgenToToolDef } from "../toolgen/toToolDef.js";
 import type { ToolDef } from "@dicelore/interface";
 
 // 团本包 → per-session 运行库的物化映射(对齐 数据层 spec §9)。
-// 包路径约定: lore/<n>.md、rules/<n>.md、pools/<n>.csv、state/<n>.csv、manifest.md
+// 包路径约定(以本 importPack 闸门为 canonical): lore/<n>.md、rules/<n>.md、pools/<n>.csv、
+//   开局状态 state/<n>.csv 或 sheets/<n>.csv(两段都物化进 state 表)、manifest.md。
 //   + 叙事域 fronts/<id>.md(正典 md 格式)、plotlines/<n>.csv、foreshadows/<n>.csv、anchors/<n>.csv、prologue.md。
+//   + 作者面 tools/<n>.json(声明式工具)。manifest.yaml 暂未被本闸门消费(见 build/pack/validate.ts KNOWN_TOP 注)。
 // validatePack 实现集中在 build/pack/validate.ts(信任闸门 + 构建期 DX 报告),此处直接复用。
 
 /** 包校验 issue（与 ValidateIssue 同构，`file` 为 issue 所属路径段）。 */
@@ -113,7 +115,10 @@ export function importPack(catalogDB: CatalogDB, runDB: DB, adventureId: string,
           });
           res.pools++;
         }
-      } else if (top === "state") {
+      } else if (top === "state" || top === "sheets") {
+        // sheet 域开局格：state/(canonical 闸门段) 与 sheets/(validate Rule 5b 同样校验列、
+        // 同走 sheet 表)两者都物化进 state 表。validatePack 已绿灯 sheets/ 段，此处补齐物化，
+        // 避免 sheets/*.csv 过校验却被静默丢弃。
         for (const r of parseCsv(f.content)) {
           stateStmt.run(r.entity, r.kind || "world", r.attr, r.value, r.visible ? Number(r.visible) : 0);
           res.stateCells++;

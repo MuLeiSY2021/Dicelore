@@ -8,7 +8,9 @@ description: Use when resolving a contested action or skill check — combat hit
 
 ## 一步步走
 1. 取双方属性引用(`{张三.攻击}` vs `{哥布林.AC}`),DC=一边常数 expr。
-2. 调 `resolve_contest`,引擎取真值+掷+比大小(你给不出真值)。
+2. 按 gm-core「谁掷」二分调对抗工具,引擎取真值+掷+比大小(你给不出真值):
+   - 玩家主动行动(你攻击/说服/潜行)→ **明骰** `resolve_contest_open`(玩家点击掷、亮 DC;目标值隐藏时不亮、卡显 `vs ???`)。
+   - NPC/世界/暗检定(敌人来袭、暗对抗、隐藏检定线)→ **暗骰** `resolve_contest_hidden`(引擎自动掷)。
 3. 据 winner `narrate`;败方后果可能 `sheet_update` 带骰(掉血)。
 4. 群体目标逐个结算;连续对抗每次重判"不确定 ∧ 失败有意义"。
 

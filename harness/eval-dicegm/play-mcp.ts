@@ -10,7 +10,8 @@
 // play-mcp = CC(Claude Code)经此 stdio MCP 连本机后端 dicelore play HTTP,当玩家+评估者。
 // eval 入口(D1):包后端 play 接口为 MCP 工具。后端 URL=env DICELORE_PLAY_URL;sessions_dir=env DICELORE_SESSIONS_DIR。
 // 关键:narration 只经 WS 流式(streamDriverTurn 不落库),故 send_message/start_game 工具内连 WS
-// 收 narration_commit→turn_ended,返回 GM 散文;get_presentation 取机械态快照(sheets/mechanics/choices/ended)。
+// 收 narration_commit→turn_ended,返回 GM 散文;get_presentation 取机械态快照(sheets/mechanics/choices/seq；
+// 无 ended——终局态在 GET /sessions/:id;pendingRoll 在 Phase 1 恒 null)。
 // 工具 handler 抽纯函数(可测,见 play-mcp.test.ts);main() 起 stdio McpServer。参照 @dicelore/harness dicegm/mcp/server.ts。
 // 落 harness/eval-dicegm/(非 src):import @modelcontextprotocol/sdk,经 tsx 直跑、不进 src typecheck,作脚本。
 import { readdirSync } from "node:fs";
@@ -79,14 +80,14 @@ async function main() {
   const server = new McpServer({ name: "dicelore-play", version: "0.1.0" });
   const ro = { readOnlyHint: true } as const;
   const rw = { readOnlyHint: false } as const;
-  server.tool("list_scenarios", "列出可用 eval 场景", {}, async () => json(await doListScenarios()), ro);
-  server.tool("open_session", "灌场景种子建后端 session,返回 sessionId", { scenarioId: z.string() }, async ({ scenarioId }) => json(await doOpenSession(scenarioId)), rw);
-  server.tool("start_game", "开始游戏(开场回合),返回 GM 散文", { sessionId: z.string() }, async ({ sessionId }) => json(await doStartGame(sessionId)), rw);
-  server.tool("send_message", "玩家发言驱动 GM 一回合,返回 GM 散文(narrations)+turnEnded", { sessionId: z.string(), text: z.string() }, async ({ sessionId, text }) => json(await doSendMessage(sessionId, text)), rw);
-  server.tool("get_presentation", "取机械态快照(sheets/mechanics/choices/pendingRoll/seq)", { sessionId: z.string() }, async ({ sessionId }) => json(await doGetPresentation(sessionId)), ro);
-  server.tool("choose", "选选项", { sessionId: z.string(), eventId: z.number(), optionIndex: z.number() }, async ({ sessionId, eventId, optionIndex }) => json(await doChoose(sessionId, eventId, optionIndex)), rw);
-  server.tool("roll", "掷骰(resolve pending roll)", { sessionId: z.string(), eventId: z.number() }, async ({ sessionId, eventId }) => json(await doRoll(sessionId, eventId)), rw);
-  server.tool("browse", "浏览 world/rule/log", { sessionId: z.string(), source: z.string(), q: z.string() }, async ({ sessionId, source, q }) => json(await doBrowse(sessionId, source, q)), ro);
+  server.tool("list_scenarios", "列出可用 eval 场景", {}, ro, async () => json(await doListScenarios()));
+  server.tool("open_session", "灌场景种子建后端 session,返回 sessionId", { scenarioId: z.string() }, rw, async ({ scenarioId }) => json(await doOpenSession(scenarioId)));
+  server.tool("start_game", "开始游戏(开场回合),返回 GM 散文", { sessionId: z.string() }, rw, async ({ sessionId }) => json(await doStartGame(sessionId)));
+  server.tool("send_message", "玩家发言驱动 GM 一回合,返回 GM 散文(narrations)+turnEnded", { sessionId: z.string(), text: z.string() }, rw, async ({ sessionId, text }) => json(await doSendMessage(sessionId, text)));
+  server.tool("get_presentation", "取机械态快照(sheets/mechanics/choices/pendingRoll/seq)", { sessionId: z.string() }, ro, async ({ sessionId }) => json(await doGetPresentation(sessionId)));
+  server.tool("choose", "选选项", { sessionId: z.string(), eventId: z.number(), optionIndex: z.number() }, rw, async ({ sessionId, eventId, optionIndex }) => json(await doChoose(sessionId, eventId, optionIndex)));
+  server.tool("roll", "掷骰(resolve pending roll)", { sessionId: z.string(), eventId: z.number() }, rw, async ({ sessionId, eventId }) => json(await doRoll(sessionId, eventId)));
+  server.tool("browse", "浏览 world/rule/log", { sessionId: z.string(), source: z.string(), q: z.string() }, ro, async ({ sessionId, source, q }) => json(await doBrowse(sessionId, source, q)));
   await server.connect(new StdioServerTransport());
 }
 

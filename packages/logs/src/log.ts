@@ -37,8 +37,8 @@ export function createFileLogger(dir: string): pino.Logger {
   return l;
 }
 
-// 全局系统级 logger。未 init 前退化为 pino 默认(stdout,info 级)——供 core 内 cli/mcp/hooks 在
-// server 启动前兜底;server.ts 启动时 initGlobalLogger($ROOT) 切到分级文件输出。
+// 全局系统级 logger。未 init 前退化为 pino 默认(stdout,info 级)——供 backend cli/server 与
+// harness mcp/hooks 在 server 启动前兜底;server.ts 启动时 initGlobalLogger($ROOT) 切到分级文件输出。
 let _global: pino.Logger = pino({ level: "info" });
 export function getLogger(): pino.Logger {
   return _global;

@@ -85,7 +85,7 @@ export function makeIoTools(backend: SessionBackend): ToolDef[] {
     title: "持久揭示卡格",
     description:
       "翻 visible=1 让玩家看到指定 cell(强制隐=2 不受影响)。Args: entity、attrs?(给定=attr 级)、recursive?(省略 attrs + true=写 __show_all 整卡长效)。" +
-      "Returns: {shown, ok:true, audit_event_id}。audit_event_id 为审计 note event 的 seq,供 L3 比对串联。use: 公开角色已知属性。don't: 一次性披露(用 reveal_once)。错误: 入参非法→INTERNAL。",
+      "Returns: {shown, ok:true, audit_event_id}。audit_event_id 为审计 note event 的 seq,供 L3 比对串联。use: 公开角色已知属性。don't: 一次性披露(用 reveal_once)。错误: 入参非法→BAD_INPUT。",
     inputSchema: sheetShowIn,
     outputSchema: sheetShowOut,
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
@@ -97,7 +97,7 @@ export function makeIoTools(backend: SessionBackend): ToolDef[] {
     description:
       "翻世界条目 visible=1。Args: doc(按名)或 pool_rowid(按行 rowid),二选一。Returns: {ok:true, audit_event_id}。" +
       "audit_event_id 为审计 note event 的 seq,供 L3 比对串联。" +
-      "use: 公开已揭示的设定/地点。don't: 揭示卡格(用 sheet_show)。错误: doc 不存在→NOT_FOUND;入参非法→INTERNAL。",
+      "use: 公开已揭示的设定/地点。don't: 揭示卡格(用 sheet_show)。错误: doc 不存在→NOT_FOUND;入参非法→BAD_INPUT。",
     inputSchema: worldShowIn,
     outputSchema: worldShowOut,
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
@@ -119,7 +119,7 @@ export function makeIoTools(backend: SessionBackend): ToolDef[] {
     title: "叙事散文通道",
     description:
       "落一条 kind=narrate(默认 visible=1)的剧情散文,轮内可多次、非终结步骤。Args: text、tags?。Returns: {event_id}。" +
-      "use: 推进剧情描写。don't: 在 text 里吐数值菜单(机械结果归输出层)。错误: 入参非法→INTERNAL。",
+      "use: 推进剧情描写。don't: 在 text 里吐数值菜单(机械结果归输出层)。错误: 入参非法→BAD_INPUT。",
     inputSchema: narrateIn,
     outputSchema: narrateOut,
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
@@ -130,7 +130,7 @@ export function makeIoTools(backend: SessionBackend): ToolDef[] {
     title: "终局信号",
     description:
       "标记本局终结(you_death = 同工具 + reason 的语义特例)。Args: reason、outcome?。Returns: {ended:true, event_id}。" +
-      "use: 剧情自然终结/团灭。don't: 普通失败(那继续游戏)。错误: 入参非法→INTERNAL。",
+      "use: 剧情自然终结/团灭。don't: 普通失败(那继续游戏)。错误: 入参非法→BAD_INPUT。",
     inputSchema: gameEndIn,
     outputSchema: gameEndOut,
     annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },

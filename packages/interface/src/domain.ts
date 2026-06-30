@@ -14,7 +14,7 @@
 // import backend 取这些类型，interface↔backend 即成环。故把**方法面真正用到的**域类型下沉至此
 // (type-only，零行为)，backend 的原模块改为从此处 import 并 re-export，对其公共面零影响。
 //   依赖方向：backend → interface（合法）、interface → @dicelore/dice（叶子包，合法），无环。
-// 见 docs/重构/ADR-storage-port.md §2/§3。
+// 见 docs/wiki/05-决策记录-ADR/README.md ADR-0028(决策②③)。
 
 import type { Rng } from "@dicelore/dice";
 // ToolDef 定义在 index.ts(MCP 工具契约)；ImportResult.toolDefs 引用它。type-only import,无运行时环。
@@ -222,19 +222,6 @@ export interface PresentationModel {
   mechanicalEcho: EchoEntry[];
   statusMenu: VisibleCell[];
   pendingChoice?: ChoiceView;
-}
-
-// ===== toolgen (声明式工具契约) =====
-/** 声明式工具声明：读/写同形 { name, desc?, params?, sql, kind? }。
- *  纯数据契约(无行为)——编译动作(toolgenToToolDef) 是 backend 资产、不在此。 */
-export interface ToolDecl {
-  name: string;
-  desc?: string;
-  /** 参数声明: { paramName: "string" | "int" | "number" }。 */
-  params?: Record<string, string>;
-  sql: string;
-  /** 可选 state kind 标注（A1，仅 mutate 模式生效）。 */
-  kind?: StateKind;
 }
 
 // ===== store/usage (Usage 端口：token 计量落库) =====

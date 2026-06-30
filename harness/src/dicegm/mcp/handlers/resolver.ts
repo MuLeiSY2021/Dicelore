@@ -85,7 +85,7 @@ export function makeResolverTools(backend: SessionBackend): ToolDef[] {
     description:
       "暂存「下轮选项 + 后果」供回合末物化。Args: prompt(情境问句)、options(≥2 项,各含 label/consequence,后果必填=声明在先)。" +
       "Returns: {staged:true, options}(不含 event_id,回合末才落)。use: 需要玩家在分支处抉择时。don't: 用它代替随机裁决(那用 resolve_outcome_hidden)。" +
-      "错误: 入参非法→INTERNAL。",
+      "错误: 入参非法→BAD_INPUT。",
     inputSchema: resolveChoiceIn,
     outputSchema: resolveChoiceOut,
     annotations: anns(true),

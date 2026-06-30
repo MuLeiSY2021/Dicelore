@@ -10,7 +10,7 @@
 import { test, expect } from "@playwright/test";
 
 // 团本制作页：接真 catalog(选团本/读包渲染/校验)。
-// 前置:orchestrator :8787。先经主页 quick-play 造一个示例团本，确保 catalog 非空。
+// 前置:backend :8787。先经主页 quick-play 造一个示例团本，确保 catalog 非空。
 
 test.describe("团本制作页", () => {
   test.beforeEach(async ({ page }) => {

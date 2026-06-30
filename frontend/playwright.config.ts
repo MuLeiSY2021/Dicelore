@@ -9,9 +9,9 @@
 
 import { defineConfig } from "@playwright/test";
 
-// e2e:跑团闭环。orchestrator 需另起(DICELORE_FAKE_GM=1 PORT=8787);vite dev 由本配置拉起(代理 /sessions、/catalog → 8787)。
-//   运行:cd apps/orchestrator && DICELORE_FAKE_GM=1 PORT=8787 npx tsx src/server.ts   # 另一个终端
-//        cd apps/web && npx playwright test
+// e2e:跑团闭环。backend 需另起(DICELORE_FAKE_GM=1 PORT=8787);vite dev 由本配置拉起(代理 /sessions、/catalog → 8787)。
+//   运行:DICELORE_FAKE_GM=1 PORT=8787 npx tsx backend/src/server.ts   # 另一个终端
+//        cd frontend && npx playwright test
 export default defineConfig({
   testDir: "./e2e",
   timeout: 30_000,

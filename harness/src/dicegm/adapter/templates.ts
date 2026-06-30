@@ -7,7 +7,6 @@
 // Software Foundation, either version 3 of the License, or (at your option)
 // any later version. See <https://www.gnu.org/licenses/>.
 
-// packages/core/src/adapter/templates.ts
 import { join } from "node:path";
 
 export function claudeMdPointer(): string {

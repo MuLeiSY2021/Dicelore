@@ -9,7 +9,7 @@
 
 import type { DB } from "../store/db.js";
 import { DiceloreError } from "@dicelore/errors";
-import { assertReadOnlySelect } from "./sqlGuard.js";
+import { assertReadOnlySelect, extractParams } from "./sqlGuard.js";
 
 export interface ReadToolDecl {
   name: string;
@@ -36,6 +36,18 @@ export function compileReadTool(decl: ReadToolDecl): ReadTool {
   assertReadOnlySelect(decl.sql);
 
   const paramKeys = decl.params ? Object.keys(decl.params) : [];
+
+  // 编译期校验 SQL 里出现的 :param 占位都已在 decl.params 声明覆盖。
+  // 与写路径(writeTool) 的快速失败口径对齐：SQL 用了但未声明的 :param 在声明期就暴露，
+  // 而非等到运行期首次调用时 better-sqlite3 抛 "Missing named parameter"。
+  const sqlParams = extractParams(decl.sql);
+  const undeclared = sqlParams.filter((p) => !paramKeys.includes(p));
+  if (undeclared.length > 0) {
+    throw new DiceloreError(
+      "BAD_INPUT",
+      `readTool "${decl.name}": SQL 用了未声明的参数 ${undeclared.map((p) => `:${p}`).join(", ")}`,
+    );
+  }
 
   const handler = (db: DB, args: Record<string, unknown>): unknown[] => {
     const boundParams: Record<string, unknown> = {};

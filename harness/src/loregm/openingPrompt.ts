@@ -24,6 +24,8 @@ function buildPackDir(): string | null {
   } catch (e) { getLogger().warn({ err: e }, "resolve harness skills 失败,走 cwd 兜底"); }
   candidates.push(`${process.cwd()}/harness/src/loregm/skills/dicelore-build-pack`);
   for (const d of candidates) if (existsSync(`${d}/SKILL.md`)) return d;
+  // 兜底全落空：构建 agent 将拿不到 staged skill 教条(无声退化成无教条构建)——告警使其可观测。
+  getLogger().warn({ candidates }, "dicelore-build-pack skill 目录解析失败,构建 agent 无 staged 教条");
   return null;
 }
 

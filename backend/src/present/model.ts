@@ -48,11 +48,19 @@ function echoText(content: string | null, dataJson: string | null): string {
   return dataJson ?? "";
 }
 
+// 待选项投影：取最新 kind=choice event 作待选项，但若它已被玩家选择消费则不再投影。
+// 玩家点选(DiceSession.handleChoice)会落一条 kind=note 隐事件、data_json.player_choice.eventId=该 choice 的 seq；
+// 据此过滤掉「已解决」的 choice——否则直到 GM 物化新 choice 前，已答过的选项会被持续投影成可操作待选(状态错位)。
 function pendingChoice(db: DB): ChoiceView | undefined {
   const row = db.prepare(
     "SELECT seq, data_json FROM log WHERE kind='choice' ORDER BY seq DESC LIMIT 1",
   ).get() as { seq: number; data_json: string | null } | undefined;
   if (!row || !row.data_json) return undefined;
+  // 已被后续玩家选择消费？(player_choice note 指回本 choice 的 seq) → 不投影。
+  const consumed = db.prepare(
+    "SELECT 1 FROM log WHERE kind='note' AND seq > ? AND json_extract(data_json, '$.player_choice.eventId') = ? LIMIT 1",
+  ).get(row.seq, row.seq) as unknown;
+  if (consumed) return undefined;
   const d = JSON.parse(row.data_json) as { prompt: string; options: { label: string; consequence: string }[] };
   return { prompt: d.prompt, options: d.options, seq: row.seq };
 }

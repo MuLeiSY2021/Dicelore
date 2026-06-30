@@ -56,8 +56,11 @@ export function tableParticipant(
   };
 }
 
-// ---- v1 默认三域 -----------------------------------------------------------
-// sheet 域 = state 表；world.runtime = lore 表（+ pool AI 现编同表系，v1 先覆 lore 主体）；watcher = watcher 表。
+// ---- v1 默认域 -----------------------------------------------------------
+// 快照范围 = 游戏推进态（ADR-0017）：sheet（state 表，含 Clock）+ world 运行期（lore + pool AI 现编）
+// + watcher 运行时态 + 叙事脚手架运行期态（front/plotline/foreshadow，ADR-0016 ④ 落 v1 的 Front/Clock 内容类型）。
+// 这些表都在运行期被 AI 叙事工具写入（writeTool frontUpsert/plotlineUpsert/foreshadowUpsert/frontSetStatus、
+// world.ts worldRegister→poolAdd），属推进态，故 rewind/读档须一并回滚。rule 不注册（带外热更不随回合回滚）。
 // world restore 后重建 lore_fts：lore 整表覆写抹了旧 FTS 行（FTS 是独立虚表、不随 lore 行删），
 // 必须据覆写后的 lore 行重灌索引，否则 restore 出的态搜不到（snapshot.test「restore 出的态可被检索」）。
 function worldParticipant(): SnapshotParticipant {
@@ -77,12 +80,26 @@ function worldParticipant(): SnapshotParticipant {
 }
 
 export function defaultParticipants(): SnapshotParticipant[] {
-  // sheet / world / watcher（rule 不在内——带外热更自动留存）。排序稳定，便于断言与 blob 可读。
-  const base = [tableParticipant("sheet", "state"), worldParticipant(), tableParticipant("watcher", "watcher")];
+  // 推进态域（ADR-0017）：sheet / world / watcher + 叙事脚手架 front/plotline/foreshadow + AI 现编 pool。
+  // rule 不在内——带外热更自动留存。pool/front/plotline/foreshadow 均无 FTS，整表 dump/重灌即可，无需 afterRestore。
+  // 排序稳定，便于断言与 blob 可读。
+  const base = [
+    tableParticipant("sheet", "state"),
+    worldParticipant(),
+    tableParticipant("pool", "pool"),
+    tableParticipant("watcher", "watcher"),
+    tableParticipant("front", "front"),
+    tableParticipant("plotline", "plotline"),
+    tableParticipant("foreshadow", "foreshadow"),
+  ];
   return [...base, ..._registered].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 // ---- 全局 participant 注册（插件/客制域不改 core 即可入快照）----------------
+// ⚠ 多会话同进程（ADR-0020 默认 in-process 多 session）下勿用全局注册：_registered 是模块级单例，
+// 一个会话注册的自定义域会污染同进程内所有其他会话的 checkpoint/restore（试图 capture/restore
+// 别的会话 db 里未必存在的表）。按会话隔离的正路是经 CheckpointOpts.participants / restore 的
+// participants 参数由组合根按会话传入；此全局表仅供进程级、跨会话共享的内建插件域。
 const _registered: SnapshotParticipant[] = [];
 export function registerSnapshotParticipant(p: SnapshotParticipant): () => void {
   _registered.push(p);

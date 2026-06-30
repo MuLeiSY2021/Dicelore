@@ -31,11 +31,18 @@ export function rangeMap(value: number, bands: Band[]): Band {
   const sorted = [...bands].sort((a, b) => a.min - b.min);
   for (let i = 0; i < sorted.length; i++) {
     if (sorted[i].min > sorted[i].max) throw new DiceloreError("RANGE_INVALID", `rangeMap: 档位 ${sorted[i].label} min>max`);
-    if (i > 0 && sorted[i].min <= sorted[i - 1].max) {
-      throw new DiceloreError("RANGE_INVALID", `rangeMap: 档位区间重叠 ${sorted[i - 1].label}/${sorted[i].label}`);
+    if (i > 0) {
+      if (sorted[i].min <= sorted[i - 1].max) {
+        throw new DiceloreError("RANGE_INVALID", `rangeMap: 档位区间重叠 ${sorted[i - 1].label}/${sorted[i].label}`);
+      }
+      // 全覆盖：相邻档位须连续无缝（上一档 max 紧接下一档 min）。带洞档表在入口即判非法，
+      // 而非靠某个恰好落进 gap 的 roll 偶发暴露（errors.ts RANGE_INVALID 语义含「不全覆盖」）。
+      if (sorted[i].min !== sorted[i - 1].max + 1) {
+        throw new DiceloreError("RANGE_INVALID", `rangeMap: 档位 ${sorted[i - 1].label}/${sorted[i].label} 间存在空缺`);
+      }
     }
   }
-  const hit = bands.find((b) => value >= b.min && value <= b.max);
+  const hit = sorted.find((b) => value >= b.min && value <= b.max);
   if (!hit) throw new DiceloreError("RANGE_INVALID", `rangeMap: 值 ${value} 落空(无覆盖档位)`);
   return hit;
 }

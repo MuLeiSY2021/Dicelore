@@ -104,9 +104,26 @@ describe("snapshot 原语：checkpoint / restore（默认三域 sheet/world/watc
     expect(r.version).toBe(2);
   });
 
-  it("defaultParticipants 恰为 sheet / world / watcher（rule 不在内）", () => {
+  it("restore 回滚叙事脚手架运行期态（front.status / 新增 plotline / pool AI 行）", () => {
+    const db = freshDb();
+    db.prepare("INSERT INTO front (id, name, stakes, status) VALUES ('f1', '黑塔', '世界毁灭', 'active')").run();
+    const snapId = checkpoint(db, { turnSeq: 1 });
+
+    // 回合中 AI 叙事工具改 front 状态、新增 plotline、AI 现编 pool 行
+    db.prepare("UPDATE front SET status='resolved' WHERE id='f1'").run();
+    db.prepare("INSERT INTO plotline (id, title, status) VALUES ('p1', '复仇', 'open')").run();
+    db.prepare("INSERT INTO pool (pool, row_json, source) VALUES ('drop', '{\"n\":\"剑\"}', 'ai')").run();
+    expect((db.prepare("SELECT status FROM front WHERE id='f1'").get() as { status: string }).status).toBe("resolved");
+
+    restore(db, snapId);
+    expect((db.prepare("SELECT status FROM front WHERE id='f1'").get() as { status: string }).status).toBe("active"); // 回滚
+    expect(db.prepare("SELECT id FROM plotline WHERE id='p1'").get()).toBeUndefined(); // 新增被抹
+    expect(db.prepare("SELECT 1 FROM pool WHERE source='ai'").get()).toBeUndefined(); // AI 现编 pool 行被抹
+  });
+
+  it("defaultParticipants 含推进态各域（sheet/world/watcher + front/plotline/foreshadow/pool，rule 不在内）", () => {
     const names = defaultParticipants().map((p) => p.name).sort();
-    expect(names).toEqual(["sheet", "watcher", "world"]);
+    expect(names).toEqual(["foreshadow", "front", "plotline", "pool", "sheet", "watcher", "world"].sort());
   });
 });
 

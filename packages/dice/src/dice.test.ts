@@ -48,6 +48,21 @@ describe("rangeMap", () => {
       { label: "b", min: 10, max: 20 },
     ])).toThrow();
   });
+  test("带洞档表(不全覆盖)入口即抛 RANGE_INVALID（不靠 roll 偶发暴露）", () => {
+    const gapped: Band[] = [
+      { label: "a", min: 1, max: 10 },
+      { label: "b", min: 20, max: 30 },
+    ];
+    // 即便 value=5 落在某档内，带洞档表本身非法，应被急切拒绝
+    try {
+      rangeMap(5, gapped);
+      throw new Error("应抛 RANGE_INVALID");
+    } catch (e) {
+      expect(e).toBeInstanceOf(DiceloreError);
+      expect((e as DiceloreError).code).toBe("RANGE_INVALID");
+    }
+    expect(() => rangeMap(15, gapped)).toThrow(DiceloreError);
+  });
 });
 
 it("rollDice 非法参数抛 DIE_INVALID", () => {
