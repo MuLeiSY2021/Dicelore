@@ -28,6 +28,7 @@
 | G-前端-拖拽 | feat | **面板拖拽 / 缩放** | fast-follow | ✗ | 🔮 已记 |
 | G-前端-逐字 | feat | **token 级逐字 narration**（前端渲染侧） | fast-follow | ✗ | 🔮 已记，与后端 token 流配套 |
 | G-前端-toolcall | feat | **构建助手「显示调了哪些工具」**（前端展示） | fast-follow | ✗ | 🔮 依赖后端 lore-sessions 回 tool-call 痕迹（见 [backlog-后端](backlog-后端.md)） |
+| FE-build-upload | feat | **构建台素材上传 + 进度可视化**：build 页文件选择 → 流式上传到 `POST /lore-sessions/:id/materials`（XHR/fetch，`upload.onprogress` 进度条）。缝B 浏览器构建台的素材入口——后端流式端点由 [裁决记录/build-agent-workspace §3](裁决记录/build-agent-workspace.md) 提供（使进度可测）；本项是其前端消费面 | 用户 2026-07-01（build-workspace 裁决派生） | ✓（大文件/远程后端越需进度反馈） | 🔮 依赖 [H-build-workspace](backlog-后端.md) 流式端点落地；属里程碑二构建页细化 |
 | ~~G-前端-导航置灰~~ | fix | **跑团导航无活动会话置灰** | fast-follow | ✗ | ✅ 已修（2026-06-24）：TopBar 无活动会话时 `/play` 置灰（`aria-disabled`+`pointer-events:none`） |
 | ~~G-前端-i18n~~ | fix | **build 页若干硬编码中文走 i18n** | fast-follow | ✗ | ✅ 已修（2026-06-24）：BuildPage 9 处硬编码走 `t()`，i18n 加 12 key（中/英） |
 | G-前端-About | feat | **About 真实版本号** | fast-follow | ✗ | 🔮 依赖后端 health 暴露版本号（见 [backlog-后端](backlog-后端.md)） |
