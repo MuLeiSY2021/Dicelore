@@ -46,6 +46,8 @@ SDK 原生能力（已查证 sdk.d.ts）：
 
 pluginRoot 即 `harness/src/dicegm`（skills 在其 `skills/` 下）与 `harness/src/loregm`。plugin 扫描只认 `skills/`/`commands/`/`agents/`/`hooks/`，同目录的 `*.ts` 被忽略、无副作用。**dice 的 4 个 flow skill（gacha/contest/explore/anka）借此一并可用**（现 `stageSkills` 只拷 gm-core、flow 够不到；plugin 打包后 `skills:'all'` 全可见，供 gm-core 教条渐进披露）。
 
+- **发版/打包（用户 2026-07-01 问）**：本项目 `@dicelore/harness` 是 workspace 包、`main`/`exports` 直指 `./src/index.ts`、**无 dist、tsx 跑源码**——部署态即源码态，v1 一键安装包（多端整合包 / docker-compose）打包整棵源码树，故 `skills/*/SKILL.md` + 新增 `.claude-plugin/plugin.json` **作普通数据文件随包发出**，与现 `dicelore-gm-core/SKILL.md` 同待遇，无新增耦合。**硬约束**：pluginRoot 一律经 `import.meta.url` 解析（§2 复用 `gmCoreDir()` 候选逻辑）、**禁硬编码绝对路径**，以适配仓库 / `node_modules` / docker 镜像各安装位。**未来 if**：若某日引入编译/打包成 dist，`skills/**` + `.claude-plugin/**` 这些非 TS 资源须被构建步显式拷入 dist——此隐患今天已存在（SKILL.md 亦非 TS），plugin 不新增风险。
+
 ### 2. skill 源解析：SkillRef → PluginRef
 
 - `harness/src/runtime/agent.ts`：`SkillRef {name, srcDir}` **改/增** `PluginRef { pluginDir: string; skills: string[] | "all" }`（`pluginDir`=角色线根绝对路径；`skills`=启用的 skill 名单）。`AgentInit.skills: SkillRef[]` 换成 `AgentInit.plugin?: PluginRef`（可空=不启 skill，对齐 baseline）。
