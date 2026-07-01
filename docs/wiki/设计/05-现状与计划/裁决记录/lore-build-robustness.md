@@ -35,9 +35,9 @@ title: 裁决 · lore-build-robustness（组件5/6 余下）
 
 ### 2. BE-lore-prompt-fallback：loregm 教条保证投递内联兜底
 
-- **现状**：dicegm 侧 `openingPrompt.ts` 把 gm-core 教条内联进 systemPrompt 作兜底（staged skill 加载不通仍有教条）；loregm 侧只有 `buildPackSkill()`（返 staged ref 或 null），**无等价内联兜底**。`LoreSession.ts` openingPrompt = `deps.buildPrompt ?? env.DICELORE_BUILD_PROMPT ?? ""`，常态 env 未设 → 全靠 staged skill；`buildPackDir()` 因目录布局变动返 null 时 agent 拿到**空白 system prompt**，无声退化成无教条构建。
+- **现状**：dicegm 侧 `openingPrompt.ts` 把 gm-core 教条内联进 systemPrompt 作兜底（skill 加载不通仍有教条）；loregm 侧只有 `buildPackSkill()`（返 skill/plugin ref 或 null），**无等价内联兜底**。`LoreSession.ts` openingPrompt = `deps.buildPrompt ?? env.DICELORE_BUILD_PROMPT ?? ""`，常态 env 未设 → 全靠 skill 加载；skill 目录/plugin 解析返 null 时 agent 拿到**空白 system prompt**，无声退化成无教条构建。
 - **改**：`harness/src/loregm/openingPrompt.ts` 加 `buildOpeningPrompt(): string`，对称 dicegm `gmCoreDoctrine`——读 `dicelore-build-pack/SKILL.md` 正文（剥 frontmatter）作 buildPrompt 默认值；解析失败返回一段**最小内联兜底教条**（一句话：「你在构建团本，把素材提炼成 Dicelore 团本包，只声明不跑团」）而非空串。`LoreSession` openingPrompt 解析链改为 `deps.buildPrompt ?? env.DICELORE_BUILD_PROMPT ?? buildOpeningPrompt()`（去掉 `?? ""` 空兜底）。`server.ts` 组合根据此传值。
-- **协同**：`buildOpeningPrompt()` 读的是**当前** SKILL 正文；若与 [build-agent-workspace](build-agent-workspace.md) 同波（那边重写 SKILL），读到的即重写后版本，无冲突。
+- **协同**：本项是「skill 加载失败时仍有教条」的兜底，**独立于加载机制**——无论 skill 经旧 `stageSkills` 还是 [skill-loading-by-reference](skill-loading-by-reference.md) 的 plugin 加载，兜底语义一致（那份也保留 dice/lore 内联兜底，见其 §2）。`buildOpeningPrompt()` 读的是**当前** SKILL 正文；若与 [build-agent-workspace](build-agent-workspace.md) 同波（那边重写 SKILL），读到的即重写后版本，无冲突。
 
 ### 3. BE-lore-test-gap：`LoreSession.test.ts` 补投递 + error 收尾覆盖
 
