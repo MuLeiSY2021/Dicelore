@@ -236,7 +236,7 @@
 - **NPC 关系图谱（D-NPC-3 v2）**：把 npc 关系从 v1 的 relation 视图行**提成关系图谱**——成为独立承重节点（可查询的 anchor 边表），需升级数据形态。v1 走 relation 视图行不进 anchor（[A1 旁 D-NPC-3 裁决](#a1-旁--npc-产品决策wave2-浮现--2026-06-26-po-复核裁决)，2026-06-26 PO 复核）。
 - **状态回滚/分支**：反刷骰 config 旋钮（稳定键播种）；「进行中存档遇 rule 版本热更」的 `schema_version`/团本版本迁移语义（深 diff/merge）。来源：03 TODO G。
 - **自研 agent runtime**：agent 选型被否项（见设计页决策节），对冲＝快照/core agent 无关；迟早面临，记未来。承重层 port 防腐方向见 [主题S · S2](#主题s--战略风险--claude-code-承重绑定-)。
-- **团本构建台未来**：语义向量检索（FTS 起步够）、深版本化迁移。来源：04 TODO 组件5/6。
+- **团本构建台未来**：~~语义向量检索（FTS 起步够）~~ → **检索库（`build/retrieval/` 的 `ingest`/`search`，jieba+BM25）拟退役**：一旦给构建 agent 文件系统工作区，agentic 文件导航（Grep/Read/Bash）对 CC 架构优于切块 BM25（无语义优势且切块割裂）——见 [backlog-后端 H-build-workspace](backlog-后端.md) + [裁决 build-agent-workspace](裁决记录/build-agent-workspace.md)。深版本化迁移仍留。来源：04 TODO 组件5/6 + 用户 2026-07-01。
 - **eval-loop 工装**：headless `claude -p` 多回合驱动确切 flag（实现期核实）——但**主线改走子代理 GM harness（主题F），此项大概率作废**。
 - **`shop_pool` 视图 + `shop_buy` 工具**（数据层不阻塞）：当下走 choice 式文本菜单即可（团本富前端组件本体在 [backlog-前端](backlog-前端.md) 未来池）。来源：用户 + [声明式工具生成层 spec](../../../superpowers/specs/2026-06-22-声明式工具生成层-design.md)（2026-06-22）。
 - **AI 出图 MCP 工具** ⟶ **里程碑四**：给 GM 一个出图能力的声明式 MCP 工具（自然语言 → 图片）。subagent 编排见 [backlog-后端 未来池](backlog-后端.md)、前端展示见 [backlog-前端 未来池](backlog-前端.md)。来源：用户 2026-06-29。
