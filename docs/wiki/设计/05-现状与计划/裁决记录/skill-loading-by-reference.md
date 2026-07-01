@@ -37,21 +37,30 @@ SDK 原生能力（已查证 sdk.d.ts）：
 
 写一个**最小 smoke**（可 `RUN_LIVE` 手动、非 CI 门）：`query({prompt, options:{ plugins:[{type:'local', path:<角色线根>}], skills:['dicelore-gm-core'], settingSources:[], cwd:<任意> }})`，确认 system init 消息的 `skills` 清单含该 skill、且 `Skill` 工具可调。**目的**：钉死「local plugin + `skills` + `settingSources:[]`」在 `0.3.185` 下确实加载 skill（本裁决唯一残留经验性未知点）。若 plugin 需额外清单字段，据实修 §2 的 `plugin.json`。
 
-### 1. 各角色线根打成 local plugin（不挪 skill 目录）
+### 1. skill 打成 local plugin + 安装期物化到数据根（用户 2026-07-01 定）
 
-现 skill 已在 `harness/src/dicegm/skills/*`、`harness/src/loregm/skills/*`——正好是 CC plugin 约定的 `<pluginRoot>/skills/<skill>/SKILL.md` 布局。故**只需在各线根补一个 plugin 清单**：
+**运行期 plugin 不指源码树，而是物化到数据根**（`DICELORE_SESSIONS_DIR ?? "."`，即 DB/sessions 所在的 `$`——与 `$/dice/sessions`、`$/lore/sessions/<id>/workspace` 同置）：
 
-- `harness/src/dicegm/.claude-plugin/plugin.json` → `{ "name": "dicelore-dice", "version": "0.1.0", "description": "Dicelore 跑团 GM skills（gm-core + flows）" }`
-- `harness/src/loregm/.claude-plugin/plugin.json` → `{ "name": "dicelore-lore", "version": "0.1.0", "description": "Dicelore 团本构建 skills（build-pack）" }`
+- **物化目标**（= 用户命名的 `$/dice/skills`、`$/lore/skills`）：
+  - `$/dice/`（pluginRoot）：`$/dice/skills/<skill>/SKILL.md`（gm-core + 4 flows）+ `$/dice/.claude-plugin/plugin.json`。
+  - `$/lore/`（pluginRoot）：`$/lore/skills/dicelore-build-pack/SKILL.md` + `$/lore/.claude-plugin/plugin.json`。
+  - plugin 扫描只认 `skills/`/`commands/`/`agents/`/`hooks/` + `.claude-plugin/`，同置的 `sessions/` 子树被忽略、无副作用。
+- **物化源**（随包发的只读母本）：现 skill 已在 `harness/src/dicegm/skills/*`、`harness/src/loregm/skills/*`（正好 CC plugin 的 `skills/` 布局）；给源树各线根补一份 `.claude-plugin/plugin.json` 作母本清单：
+  - `harness/src/dicegm/.claude-plugin/plugin.json` → `{ "name": "dicelore-dice", "version": "0.1.0", "description": "Dicelore 跑团 GM skills（gm-core + flows）" }`
+  - `harness/src/loregm/.claude-plugin/plugin.json` → `{ "name": "dicelore-lore", "version": "0.1.0", "description": "Dicelore 团本构建 skills（build-pack）" }`
+- **物化时机 = server 启动幂等 + 版本感知**（**一次性**，不是每回合/每会话——那是被否掉的 `stageSkills`）：boot 时 `ensureSkillPlugin(dataRoot, role)`：目标 `$/{role}/.claude-plugin/plugin.json` 缺失、或其 `version` 低于母本 → 从母本（`import.meta.url` 定位，见 §2）`cpSync` 覆盖 `skills/` + `.claude-plugin/`；否则跳过。一次性、随版本自动刷新，**化解 copy 的 staleness**（升级代码后首个 boot 自动重刷）。`import.meta.url` 只在 boot seed 时用一次、不进热路径。
+- **为什么物化到数据根而非直接指源码**：① 所有运行态数据（DB/sessions/workspace/skills）归同一可配置根，代码树位置变实现细节（docker 只读代码层友好）；② plugin 路径是干净稳定的绝对路径、不掺 `.ts` 兄弟文件；③ 与现有 `$/dice`、`$/lore` 布局一致。代价（staleness）已由版本感知幂等重刷化解。
+- **dice 的 4 个 flow skill（gacha/contest/explore/anka）借此一并可用**（现 `stageSkills` 只拷 gm-core、flow 够不到；物化整个 `skills/` + `skills:'all'` 全可见，供 gm-core 教条渐进披露）。
+- **发版/打包**：`@dicelore/harness` 是 workspace 包、`main`/`exports` 指 `./src/*.ts`、**无 dist、tsx 跑源码**——母本（`src/.../skills/**` + `.claude-plugin/**`）作数据文件随整合包/docker 发出，boot 时物化到挂载的数据卷 `$`。未来若引入编译/打包成 dist，母本这些非 TS 资源须被构建步显式拷入（此隐患今已存在于 SKILL.md）。
 
-pluginRoot 即 `harness/src/dicegm`（skills 在其 `skills/` 下）与 `harness/src/loregm`。plugin 扫描只认 `skills/`/`commands/`/`agents/`/`hooks/`，同目录的 `*.ts` 被忽略、无副作用。**dice 的 4 个 flow skill（gacha/contest/explore/anka）借此一并可用**（现 `stageSkills` 只拷 gm-core、flow 够不到；plugin 打包后 `skills:'all'` 全可见，供 gm-core 教条渐进披露）。
+### 2. skill 源解析 + 物化：SkillRef → PluginRef
 
-- **发版/打包（用户 2026-07-01 问）**：本项目 `@dicelore/harness` 是 workspace 包、`main`/`exports` 直指 `./src/index.ts`、**无 dist、tsx 跑源码**——部署态即源码态，v1 一键安装包（多端整合包 / docker-compose）打包整棵源码树，故 `skills/*/SKILL.md` + 新增 `.claude-plugin/plugin.json` **作普通数据文件随包发出**，与现 `dicelore-gm-core/SKILL.md` 同待遇，无新增耦合。**硬约束**：pluginRoot 一律经 `import.meta.url` 解析（§2 复用 `gmCoreDir()` 候选逻辑）、**禁硬编码绝对路径**，以适配仓库 / `node_modules` / docker 镜像各安装位。**未来 if**：若某日引入编译/打包成 dist，`skills/**` + `.claude-plugin/**` 这些非 TS 资源须被构建步显式拷入 dist——此隐患今天已存在（SKILL.md 亦非 TS），plugin 不新增风险。
-
-### 2. skill 源解析：SkillRef → PluginRef
-
-- `harness/src/runtime/agent.ts`：`SkillRef {name, srcDir}` **改/增** `PluginRef { pluginDir: string; skills: string[] | "all" }`（`pluginDir`=角色线根绝对路径；`skills`=启用的 skill 名单）。`AgentInit.skills: SkillRef[]` 换成 `AgentInit.plugin?: PluginRef`（可空=不启 skill，对齐 baseline）。
-- `harness/src/dicegm/openingPrompt.ts` `gmCoreSkill()` / `harness/src/loregm/openingPrompt.ts` `buildPackSkill()`：**改成返回 `PluginRef | null`**——解析角色线根（复用现 `gmCoreDir()`/`buildPackDir()` 的候选逻辑，但返回**线根**而非具体 skill 目录，并校验 `<root>/.claude-plugin/plugin.json` 存在）。dice 返 `{ pluginDir: <dicegm 根>, skills: "all" }`（含 flows）；lore 返 `{ pluginDir: <loregm 根>, skills: ["dicelore-build-pack"] }`。解析失败返 null（沿现退化：仅走 openingPrompt 内联教条）。
+- `harness/src/runtime/agent.ts`：`SkillRef {name, srcDir}` **改/增** `PluginRef { pluginDir: string; skills: string[] | "all" }`（`pluginDir`=**物化后的数据根 pluginRoot 绝对路径**，如 `$/dice`；`skills`=启用的 skill 名单）。`AgentInit.skills: SkillRef[]` 换成 `AgentInit.plugin?: PluginRef`（可空=不启 skill，对齐 baseline）。
+- **物化 + 解析函数**：`harness/src/dicegm/openingPrompt.ts` `gmCoreSkill()` / `harness/src/loregm/openingPrompt.ts` `buildPackSkill()` **改成 `ensureDicePlugin(dataRoot)` / `ensureLorePlugin(dataRoot)`**，返回 `PluginRef | null`：
+  1. 用现 `gmCoreDir()`/`buildPackDir()` 的候选逻辑（`dirname(fileURLToPath(import.meta.url))` + cwd 兜底）定位**母本线根**（`harness/src/{dice,lore}gm`，校验其 `.claude-plugin/plugin.json` 在）；
+  2. 幂等 + 版本感知物化到 `$/{role}`（§1 `ensureSkillPlugin` 逻辑，可即此函数内联）；
+  3. 返回 `{ pluginDir: <$/dice 或 $/lore>, skills: "all"（dice，含 flows）/ ["dicelore-build-pack"]（lore） }`。母本定位失败返 null（沿现退化：仅走 openingPrompt 内联教条）。
+- **dataRoot 入参**：组合根 `server.ts` 已有 `dir`（`DICELORE_SESSIONS_DIR ?? "."`），传给 `ensure*Plugin(dir)`。
 - **内联教条兜底保留**：`gmCoreDoctrine`（dice）与 lore 的等价兜底（见 [lore-build-robustness](lore-build-robustness.md) §2 `buildOpeningPrompt`）**继续存在**——plugin 加载失败时 systemPrompt 仍有教条，不无声退化。语义从「staged 失败兜底」泛化为「plugin 加载失败兜底」。
 
 ### 3. `buildQueryOptions` 改造（gmAssembly.ts）
@@ -74,7 +83,7 @@ pluginRoot 即 `harness/src/dicegm`（skills 在其 `skills/` 下）与 `harness
 ### 5. 删 `skillStage.ts` + 组合根接线
 
 - **删** `harness/src/dicegm/skillStage.ts` + `skillStage.test.ts`（若有）。
-- `backend/src/server.ts`：`gmCoreSkill()`/`buildPackSkill()` 现返 `PluginRef|null`；`diceSkills`/`loreSkills`（`SkillRef[]`）换成 `dicePlugin`/`lorePlugin`（`PluginRef|undefined`）；经 dice deps（`createDiceApp`?/`attachWsUpgrade`）与 `createLoreApp` 传下。`DICELORE_BASELINE==="1"` 时 plugin 传 `undefined`（baseline：skill 全关，现行为不变）。
+- `backend/src/server.ts`：`gmCoreSkill()`/`buildPackSkill()` 改为 `ensureDicePlugin(dir)`/`ensureLorePlugin(dir)`（`dir`=`DICELORE_SESSIONS_DIR`；boot 时幂等物化 + 返 `PluginRef|null`）；`diceSkills`/`loreSkills`（`SkillRef[]`）换成 `dicePlugin`/`lorePlugin`（`PluginRef|undefined`）；经 dice deps（`createDiceApp`?/`attachWsUpgrade`）与 `createLoreApp` 传下。`DICELORE_BASELINE==="1"` 时 plugin 传 `undefined`（baseline：skill 全关，现行为不变）。
 - dice 侧会话装配处（`server.ts` 组装 `AgentInit` 的地方 / DiceSession）：`skills` 字段换 `plugin`。
 
 ### 6. 导出与类型面（harness index）
@@ -87,7 +96,7 @@ pluginRoot 即 `harness/src/dicegm`（skills 在其 `skills/` 下）与 `harness
 
 - `npm run typecheck` + `npm test`（backend/harness）全绿；删 `skillStage.ts` 后无悬空 import。
 - **纯装配单测**（`gmAssembly.test.ts`，不烧 LLM）：`plugin` 非空 → options 含 `plugins:[{type:'local',path}]` + `skills` + `settingSources:[]` + `allowedTools` **不含 `"Skill"`**；`plugin` 为空 → `skills:[]`、无 plugins（baseline）；`workspace` 非空 → `cwd=workspace` + 放开 Bash/Grep/… （与 build-agent-workspace 合并断言）。
-- **plugin 清单存在性单测**（纯 fs）：`gmCoreSkill()`/`buildPackSkill()` 返回的 `pluginDir` 下有 `.claude-plugin/plugin.json` 且 `skills/<name>/SKILL.md` 在；解析失败返 null。
+- **plugin 物化单测**（纯 fs）：`ensureDicePlugin(tmp)`/`ensureLorePlugin(tmp)` 首调把母本 `skills/` + `.claude-plugin/plugin.json` 物化到 `tmp/{role}`、返回的 `pluginDir` 下 `.claude-plugin/plugin.json` + `skills/<name>/SKILL.md` 在；**幂等**（重复调不重拷、version 相等跳过）；**版本感知**（母本 version 高于目标 → 重刷覆盖）；母本定位失败返 null。
 - **DiceGm 无 stage 回归**：`DiceGm` 不再引用 `stageSkills`/`cleanupSkills`（grep 断言 / 编译期）；baseline 档（plugin=undefined）行为不变。
 - **de-risk smoke**（§0，`RUN_LIVE` 手动）：真 query 加载到 skill、`Skill` 可调。
 - **flow skill 可用回归**（可选，随 gm eval）：gm-core 教条引用的 flow skill 现能被 agent 渐进披露调起（迁移前够不到）。
@@ -98,8 +107,8 @@ pluginRoot 即 `harness/src/dicegm`（skills 在其 `skills/` 下）与 `harness
 - `harness/src/dicegm/gmAssembly.ts` + `gmAssembly.test.ts`（staged→plugin/workspace 分支）
 - `harness/src/dicegm/DiceGm.ts`（删 stage/cleanup、改装配）
 - **删** `harness/src/dicegm/skillStage.ts`（+ 测试）
-- `harness/src/dicegm/openingPrompt.ts` + `harness/src/loregm/openingPrompt.ts`（gmCoreSkill/buildPackSkill 返 PluginRef）
-- **新增** `harness/src/dicegm/.claude-plugin/plugin.json` + `harness/src/loregm/.claude-plugin/plugin.json`
+- `harness/src/dicegm/openingPrompt.ts` + `harness/src/loregm/openingPrompt.ts`（`gmCoreSkill`/`buildPackSkill` → `ensureDicePlugin(dataRoot)`/`ensureLorePlugin(dataRoot)`：母本定位 + 幂等版本感知物化 + 返 PluginRef；物化 helper 可抽 `harness/src/runtime` 共用）
+- **新增源码母本** `harness/src/dicegm/.claude-plugin/plugin.json` + `harness/src/loregm/.claude-plugin/plugin.json`（随包发、作物化母本清单）
 - `backend/src/server.ts`（skills[]→plugin 注入、baseline 分支）
 - dice 会话装配处（AgentInit.skills→plugin 透传）+ 相关端点/WS 接线
 - harness index 导出（PluginRef）

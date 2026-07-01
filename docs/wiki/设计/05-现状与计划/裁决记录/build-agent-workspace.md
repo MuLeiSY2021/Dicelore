@@ -32,7 +32,7 @@ title: 裁决 · build-agent-workspace
 - **布局**（**纯业务数据，无 `.claude`、无 skill**）：
   - `workspace/materials/` —— 上传的源文件落此。
   - `workspace/`（根）—— agent 自己写的清洗/分块中间产物（scratch）随意落。
-  - skill **不在此**——经 plugin 按引用从 `harness/src/loregm` 加载（见依赖裁决），框架教条不混入每会话用户数据目录。
+  - skill **不在 workspace 内**——经 plugin 从 `$/lore/skills`（数据根、安装期幂等物化，见 [skill-loading-by-reference](skill-loading-by-reference.md) §1）加载，框架教条不混入每会话用户数据目录。
 - **生命周期**：**每 session 建一次、跨轮存活、不随轮销毁**。销毁 v1 = 随 session 文件夹删除（复用 `deleteSession` 的 `rmSync(sessionDir)`；workspace 在 lore session 子树下，一并删）。不单做 GC（v1 简单版；需独立 GC 落后续 backlog）。
 - **谁建**：后端 `createLoreApp` 侧 `ensureWorkspace(sessionId)` 幂等函数：仅 `mkdir -p workspace/materials`（**不拷任何 skill**）。由 **POST /materials 端点**与**首条 message 处理**两处按需调用（whichever first），保证 agent 起跑前 workspace 就位。
 
