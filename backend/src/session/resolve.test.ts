@@ -18,9 +18,9 @@ beforeEach(() => { dir = mkdtempSync(join(tmpdir(), "dicelore-")); process.env.D
 afterEach(() => { delete process.env.DICELORE_SESSIONS_DIR; rmSync(dir, { recursive: true, force: true }); });
 
 describe("session", () => {
-  test("DICELORE_SESSIONS_DIR 覆盖根目录(dice/lore 隔离 + session 自包含文件夹)", () => {
-    expect(sessionDbPath("修仙团")).toBe(join(dir, "dice", "sessions", "修仙团", "session.db"));
-    expect(sessionDbPath("修仙团", "lore")).toBe(join(dir, "lore", "sessions", "修仙团", "session.db"));
+  test("DICELORE_SESSIONS_DIR 覆盖根目录(DD2 布局 sessions/kind/id + session 自包含文件夹)", () => {
+    expect(sessionDbPath("修仙团")).toBe(join(dir, "sessions", "dice", "修仙团", "session.db"));
+    expect(sessionDbPath("修仙团", "lore")).toBe(join(dir, "sessions", "lore", "修仙团", "session.db"));
   });
   test("openSession 建库 + 写 meta", () => {
     const s = openSession("修仙团");

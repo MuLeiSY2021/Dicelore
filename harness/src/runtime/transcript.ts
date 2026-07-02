@@ -13,11 +13,11 @@ import { randomUUID } from "node:crypto";
 import { getLogger } from "@dicelore/logs";
 
 // 一 session 的自包含文件夹路径(backend-free 纯函数,不碰 appDataRoot/env)。
-// TR1 v1 = 现布局:join(dataDir, kind, 'sessions', id)(behavior-equivalent 现 DiceGm)。
-// DD2 才翻转为 join(dataDir, 'sessions', kind, id);TR1 不改现有落点。
+// DD2 布局:join(dataDir, 'sessions', kind, id)——sessions 顶层、kind 次级、id 叶级。
+// backend 侧会话物理路径统一走本函数(backend import harness),与 DiceGm/transcript 落点完全一致。
 export type TranscriptKind = "dice" | "lore";
 export function sessionDir(dataDir: string, kind: TranscriptKind, id: string): string {
-  return join(dataDir, kind, "sessions", id);
+  return join(dataDir, "sessions", kind, id);
 }
 
 // jsonl 一行:现 DiceGm 行形状({_,turnId,...} 等)前置 uuid/parentUuid 铸成 append-only 父子链树。
