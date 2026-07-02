@@ -8,7 +8,7 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import { describe, it, expect, vi } from "vitest";
-import { openCatalog, openDb, initSchema, type DB } from "@dicelore/backend";
+import { openCatalog, openDb, initSchema, resolveId, type DB, type PackFile } from "@dicelore/backend";
 import { createLoreApp } from "./lore.js";
 import { createLiveApp } from "./dice.js";
 import { FakeDiceGm } from "@dicelore/harness";
@@ -57,6 +57,82 @@ describe("后端 e2e: 建团本 → 列 → 开局 import → 呈现", () => {
     const hp = snap.sheets.find((g) => g.entity === "韩立")?.cells.find((c) => c.attr === "HP");
     expect(hp?.value).toBe("12");
 
+    catalog.close();
+  });
+});
+
+// §3 BE-checkout-head: GET /catalog/:id/files?ref=head 端点层解析 head commitId。
+// core checkout 只认 tag label / commitId、不认 "head" 关键字;端点在 ref 省略或 = "head" 时
+// 先从 catalog list 取该 adventure 的 head commitId 再 checkout,不动 core checkout 语义。
+describe("GET /catalog/:id/files ref=head 解析", () => {
+  async function commitPack(lore: ReturnType<typeof createLoreApp>, name: string, files: PackFile[], message: string) {
+    const res = await lore.request("/catalog/commit", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name, message, files }),
+    });
+    return (await res.json()) as { adventureId: string; commitId: string };
+  }
+
+  it("ref=head 返 head commit 的文件(非 [])", async () => {
+    const catalog = openCatalog(":memory:");
+    const lore = createLoreApp({ catalog, agentFactory: () => new FakeDiceGm([]) });
+    const { adventureId } = await commitPack(lore, "凡人", PACK, "init");
+
+    const res = await lore.request(`/catalog/${adventureId}/files?ref=head`);
+    expect(res.status).toBe(200);
+    const { files } = (await res.json()) as { files: PackFile[] };
+    expect(files.length).toBe(PACK.length);
+    expect(files.map((f) => f.path)).toEqual(expect.arrayContaining(PACK.map((f) => f.path)));
+    catalog.close();
+  });
+
+  it("省略 ref 返 head commit 的文件(非 [])", async () => {
+    const catalog = openCatalog(":memory:");
+    const lore = createLoreApp({ catalog, agentFactory: () => new FakeDiceGm([]) });
+    const { adventureId } = await commitPack(lore, "凡人", PACK, "init");
+
+    const res = await lore.request(`/catalog/${adventureId}/files`);
+    expect(res.status).toBe(200);
+    const { files } = (await res.json()) as { files: PackFile[] };
+    expect(files.length).toBe(PACK.length);
+    catalog.close();
+  });
+
+  it("多次提交后 head 指向最新 commit", async () => {
+    const catalog = openCatalog(":memory:");
+    const lore = createLoreApp({ catalog, agentFactory: () => new FakeDiceGm([]) });
+    await commitPack(lore, "凡人", PACK, "init");
+    const NEXT: PackFile[] = [...PACK, { path: "lore/新篇.md", content: "第二章" }];
+    await commitPack(lore, "凡人", NEXT, "second");
+
+    const res = await lore.request(`/catalog/${resolveId("凡人")}/files?ref=head`);
+    const { files } = (await res.json()) as { files: PackFile[] };
+    expect(files.map((f) => f.path)).toContain("lore/新篇.md");
+    catalog.close();
+  });
+
+  it("显式 commitId 仍照旧解析(不受 head 分支影响)", async () => {
+    const catalog = openCatalog(":memory:");
+    const lore = createLoreApp({ catalog, agentFactory: () => new FakeDiceGm([]) });
+    const { commitId } = await commitPack(lore, "凡人", PACK, "init");
+    const NEXT: PackFile[] = [...PACK, { path: "lore/新篇.md", content: "第二章" }];
+    await commitPack(lore, "凡人", NEXT, "second");
+
+    // 用第一版的 commitId checkout,应拿到第一版(不含新篇)
+    const res = await lore.request(`/catalog/${resolveId("凡人")}/files?ref=${commitId}`);
+    const { files } = (await res.json()) as { files: PackFile[] };
+    expect(files.map((f) => f.path)).not.toContain("lore/新篇.md");
+    expect(files.length).toBe(PACK.length);
+    catalog.close();
+  });
+
+  it("未知 adventure + ref=head 返空(head 为 null,不炸)", async () => {
+    const catalog = openCatalog(":memory:");
+    const lore = createLoreApp({ catalog, agentFactory: () => new FakeDiceGm([]) });
+    const res = await lore.request(`/catalog/${resolveId("不存在")}/files?ref=head`);
+    expect(res.status).toBe(200);
+    const { files } = (await res.json()) as { files: PackFile[] };
+    expect(files).toEqual([]);
     catalog.close();
   });
 });

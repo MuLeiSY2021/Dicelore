@@ -39,9 +39,18 @@ export function createLoreApp(deps: LoreDeps): Hono {
   });
 
   // 读某团本版本的全部包文件(团本制作页中央编辑器渲染来源)。ref 缺省=head。
+  // §3 BE-checkout-head: core checkout 只认 tag label / commitId、不认 "head" 关键字,
+  // 故 ref 省略或 = "head" 时在端点层先从 catalog list 取该 adventure 的 head commitId 再 checkout
+  // (不动 core checkout 语义)。head 为 null(未知/空团本)时返 []。
   app.get("/catalog/:adventureId/files", (c) => {
+    const adventureId = c.req.param("adventureId");
     const ref = c.req.query("ref") ?? "head";
-    const files = checkout(deps.catalog, c.req.param("adventureId"), ref);
+    if (ref === "head") {
+      const head = list(deps.catalog).find((a) => a.id === adventureId)?.head;
+      if (!head) return c.json({ files: [] });
+      return c.json({ files: checkout(deps.catalog, adventureId, head) });
+    }
+    const files = checkout(deps.catalog, adventureId, ref);
     return c.json({ files });
   });
 
