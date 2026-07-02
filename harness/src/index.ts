@@ -54,6 +54,7 @@ export { WsHub, type WsLike } from "./runtime/wsHub.js";
 export { streamDriverTurn, type StreamTurnDeps } from "./runtime/streamTurn.js";
 export { ensureSkillPlugin } from "./runtime/skillPlugin.js";
 export { sessionDir, SessionTranscript, type TranscriptKind } from "./runtime/transcript.js";
+export { Rewind, type RollbackHook, type RewindAnchor } from "./runtime/rewind.js";
 
 // ===== dicegm（dice 跑团线，组合根注入 {db,backend} 建会话、api 驱动）=====
 export { DiceSession, TurnInProgressError, type DiceSessionDeps } from "./dicegm/DiceSession.js";
