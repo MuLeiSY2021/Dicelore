@@ -64,7 +64,7 @@ SDK 原生能力（已查证 sdk.d.ts）：
   2. 幂等 + 版本感知物化到 `$/{role}`（§1 `ensureSkillPlugin` 逻辑，可即此函数内联）；
   3. 返回 `{ pluginDir: <$/dice 或 $/lore>, skills: "all" }`（dice=gm-core+4 flows；lore=build-pack+build-core）。母本定位失败返 null（见下「退役内联兜底」：不再退回内联教条，改 fail loud）。
 - **dataRoot 入参**：组合根 `server.ts` 已有 `dir`（`DICELORE_SESSIONS_DIR ?? "."`），传给 `ensure*Plugin(dir)`。
-- **退役内联教条兜底（两侧，用户 2026-07-01 定）**：删 dice `gmCoreDoctrine`/`doctrine`/`_doctrine`（`dicegm/openingPrompt.ts`），`buildOpeningPrompt` 改为 `signpost + 团本 prologue`（**不再拼 gm-core 教条**）；lore 侧同样不加内联（原 [lore-build-robustness](lore-build-robustness.md) §2 已删）。**教条只经 plugin 加载的 skill 投递**（dice=`dicelore-gm-core`、lore=`dicelore-build-core`）。plugin 母本定位失败 / 加载失败 = **系统 bug**：`getLogger().error` 上报 + 让上层可见（**fail loud**），**不无声退化、不内联兜底**。因教条投递变唯一路径，§0 smoke 升为**必过门**。
+- **退役内联教条兜底（两侧，用户 2026-07-01 定）**：删 dice `gmCoreDoctrine`/`doctrine`/`_doctrine`（`dicegm/openingPrompt.ts`），`buildOpeningPrompt` 改为 `signpost + 团本 prologue`（**不再拼 gm-core 教条**）；lore 侧同样不加内联（原 lore-build-robustness §2 已删——该裁决已归档、设计沉入 [团本构建工具链](../../04-子系统设计/团本构建工具链.md)）。**教条只经 plugin 加载的 skill 投递**（dice=`dicelore-gm-core`、lore=`dicelore-build-core`）。plugin 母本定位失败 / 加载失败 = **系统 bug**：`getLogger().error` 上报 + 让上层可见（**fail loud**），**不无声退化、不内联兜底**。因教条投递变唯一路径，§0 smoke 升为**必过门**。
 - **`buildBaselinePrompt` 归并**：教条既不再内联，`buildOpeningPrompt`（=signpost+prologue）已等同原 `buildBaselinePrompt`——baseline 对照改由「plugin 传 `undefined` = 不加载 gm-core skill = 无教条」达成（见 §5）。`buildBaselinePrompt` 可删（或留薄别名一个过渡周期）。
 
 ### 3. `buildQueryOptions` 改造（gmAssembly.ts）
