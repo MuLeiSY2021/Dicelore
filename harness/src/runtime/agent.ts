@@ -50,6 +50,7 @@ export interface AgentInit {
   model?: string; // 默认由 env / 适配器内定
   sessionId?: string; // GM raw 日志用:标识会话(日志文件名)
   sessionsDir?: string; // GM raw 日志用:sessions 根目录(日志落 <dir>/dicelore/sessions/<id>.gm.log)
+  kind?: "dice" | "lore"; // transcript/日志目录归属(sessionDir(sessionsDir, kind, sessionId));缺省 dice
 }
 
 export type AgentFactory = (init: AgentInit) => Agent;
