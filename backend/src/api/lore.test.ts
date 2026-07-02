@@ -12,7 +12,7 @@ import { openCatalog, openDb, initSchema, resolveId, type DB, type PackFile } fr
 import { createLoreApp } from "./lore.js";
 import { createLiveApp } from "./dice.js";
 import { FakeDiceGm } from "@dicelore/harness";
-import type { Agent, AgentInit, SkillRef, TurnEvent } from "@dicelore/harness";
+import type { Agent, AgentInit, PluginRef, TurnEvent } from "@dicelore/harness";
 
 const PACK = [
   { path: "manifest.md", content: "# 凡人\n\n- id: f" },
@@ -137,18 +137,18 @@ describe("GET /catalog/:id/files ref=head 解析", () => {
   });
 });
 
-describe("createLoreApp: skills 传入", () => {
-  it("skills 参数经 LoreDeps 传入构建会话(agentFactory 收到 skills)", async () => {
+describe("createLoreApp: plugin 传入", () => {
+  it("plugin 参数经 LoreDeps 传入构建会话(agentFactory 收到 plugin)", async () => {
     const catalog = openCatalog(":memory:");
-    const capturedInits: { skills: SkillRef[] }[] = [];
-    const fakeSkill: SkillRef = { name: "dicelore-build-pack", srcDir: "/fake/build-pack" };
+    const capturedInits: { plugin?: PluginRef }[] = [];
+    const fakePlugin: PluginRef = { pluginDir: "/data/lore", skills: "all" };
     const lore = createLoreApp({
       catalog,
       agentFactory: (init) => {
-        capturedInits.push({ skills: init.skills ?? [] });
+        capturedInits.push({ plugin: init.plugin });
         return new FakeDiceGm([{ type: "narration", text: "ok" }, { type: "turn_end" }]);
       },
-      skills: [fakeSkill],
+      plugin: fakePlugin,
     });
 
     const res = await lore.request("/lore-sessions/s-skill-test/messages", {
@@ -158,21 +158,20 @@ describe("createLoreApp: skills 传入", () => {
     });
     expect(res.status).toBe(202);
     expect(capturedInits.length).toBeGreaterThan(0);
-    expect(capturedInits[0].skills).toHaveLength(1);
-    expect(capturedInits[0].skills[0].name).toBe("dicelore-build-pack");
+    expect(capturedInits[0].plugin).toEqual(fakePlugin);
     catalog.close();
   });
 
-  it("skills 省略时构建 agent 收到空数组(向后兼容)", async () => {
+  it("plugin 省略时构建 agent 收到 undefined(向后兼容)", async () => {
     const catalog = openCatalog(":memory:");
-    const capturedSkills: SkillRef[][] = [];
+    const capturedPlugins: (PluginRef | undefined)[] = [];
     const lore = createLoreApp({
       catalog,
       agentFactory: (init) => {
-        capturedSkills.push(init.skills ?? []);
+        capturedPlugins.push(init.plugin);
         return new FakeDiceGm([{ type: "narration", text: "ok" }, { type: "turn_end" }]);
       },
-      // skills 省略
+      // plugin 省略
     });
 
     const res = await lore.request("/lore-sessions/s-no-skill/messages", {
@@ -181,7 +180,7 @@ describe("createLoreApp: skills 传入", () => {
       body: JSON.stringify({ text: "写点设定", name: "无技能团本" }),
     });
     expect(res.status).toBe(202);
-    expect(capturedSkills[0]).toEqual([]);
+    expect(capturedPlugins[0]).toBeUndefined();
     catalog.close();
   });
 });

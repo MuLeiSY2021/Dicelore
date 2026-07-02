@@ -8,60 +8,45 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import { fileURLToPath } from "node:url";
-import { readFileSync, existsSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { buildSessionContext } from "./adapter/sessionContext.js";
 import { getLogger } from "@dicelore/logs";
 import type { SessionBackend } from "@dicelore/interface";
-import type { SkillRef } from "../runtime/agent.js";
+import type { PluginRef } from "../runtime/agent.js";
+import { ensureSkillPlugin } from "../runtime/skillPlugin.js";
 
-// gm-core skill 源目录解析(供内联兜底读 SKILL.md + staged skill 取整目录)。
-// skill 真源随 dice 线归位在本角色线根 <pkg>/src/dicegm/skills(本文件在 src/dicegm,故同级 ./skills)。
-function gmCoreDir(): string | null {
+// dice skill 母本线根解析(<pkg>/src/dicegm,含 .claude-plugin/plugin.json + skills/)。
+// 本文件在 src/dicegm,故母本线根 = 本文件所在目录;cwd 兜底供 tsx 跑源码/异常定位失败时。
+function diceSkillRoot(): string | null {
   const candidates: string[] = [];
   try {
-    const here = dirname(fileURLToPath(import.meta.url));
-    candidates.push(join(here, "skills", "dicelore-gm-core"));
-  } catch (e) { getLogger().warn({ err: e }, "resolve harness skills 失败,走 cwd 兜底"); }
-  candidates.push(`${process.cwd()}/harness/src/dicegm/skills/dicelore-gm-core`);
-  for (const d of candidates) if (existsSync(`${d}/SKILL.md`)) return d;
+    candidates.push(dirname(fileURLToPath(import.meta.url)));
+  } catch (e) { getLogger().warn({ err: e }, "resolve dice skill 母本线根失败,走 cwd 兜底"); }
+  candidates.push(`${process.cwd()}/harness/src/dicegm`);
+  for (const d of candidates) if (existsSync(join(d, ".claude-plugin", "plugin.json"))) return d;
   return null;
 }
 
-// gm-core 作为 staged skill 的引用(server 注入 dice skills);源目录不存在则返回 null(只走内联兜底)。
-export function gmCoreSkill(): SkillRef | null {
-  const dir = gmCoreDir();
-  return dir ? { name: "dicelore-gm-core", srcDir: dir } : null;
+// dice skill plugin:boot 期幂等 + 版本感知物化母本(gm-core + 4 flows)到数据根 $/dice,
+// 返回运行期 PluginRef(pluginDir=$/dice, skills:"all")。母本定位失败 → ensureSkillPlugin 内 fail loud 返 null。
+// server.ts boot 时调一次,PluginRef 经 DiceSession → AgentInit 传下。
+export function ensureDicePlugin(dataRoot: string): PluginRef | null {
+  return ensureSkillPlugin(diceSkillRoot(), dataRoot, "dice", "all");
 }
 
-// 开场 prompt = 引擎 signpost(GM 身份/Agenda/纪律) + gm-core 教条全文 + 团本 prologue(AD-2 叠加)。
+// 开场 prompt = 引擎 signpost(GM 身份/Agenda/纪律) + 团本 prologue(AD-2 叠加)。
 //
-// gm-core 教条内联进 systemPrompt 作**保证投递**兜底(即便 staged skill 加载不通,GM 仍有教条入戏);
-// staged skill(见 DiceGm)在此之上额外提供 references/ 深层内容供 GM 按需 Read(渐进披露)。
-function gmCoreDoctrine(): string {
-  const dir = gmCoreDir();
-  if (!dir) return "";
-  try {
-    const raw = readFileSync(`${dir}/SKILL.md`, "utf8");
-    return raw.replace(/^---[\s\S]*?---\s*/, "").replace(/<!--[\s\S]*?-->/g, "").trim();
-  } catch (e) { getLogger().warn({ err: e }, "读 SKILL.md 失败,返回空字符串兜底"); return ""; }
-}
-
-let _doctrine: string | null = null;
-function doctrine(): string { return (_doctrine ??= gmCoreDoctrine()); }
-
+// 教条不再内联(裁决 skill-loading-by-reference §2 退役内联兜底):gm-core 教条只经 plugin 加载的
+// dicelore-gm-core skill 单路径投递。plugin 母本定位/加载失败 = 系统 bug,由 ensureDicePlugin 内
+// getLogger().error + 返 null(fail loud),不再退回内联教条。
 export function buildOpeningPrompt(backend: SessionBackend): string {
-  const signpost = buildSessionContext(backend);
-  const prologue = backend.metaGet("prologue");
-  const core = doctrine();
-  const head = core ? `${signpost}\n\n---\n\n${core}` : signpost;
-  return prologue ? `${head}\n\n---\n\n# 团本开场\n\n${prologue}` : head;
-}
-
-// baseline 系统提示:signpost + prologue,**不含 gm-core 教条**(用于 harness baseline 对照,
-// 分离"教条有无")。与 buildOpeningPrompt 的区别仅是去掉 doctrine 段。
-export function buildBaselinePrompt(backend: SessionBackend): string {
   const signpost = buildSessionContext(backend);
   const prologue = backend.metaGet("prologue");
   return prologue ? `${signpost}\n\n---\n\n# 团本开场\n\n${prologue}` : signpost;
 }
+
+// baseline 系统提示。教条既已退役内联,buildOpeningPrompt(=signpost+prologue)已等同原 buildBaselinePrompt——
+// baseline 对照改由「plugin 传 undefined = 不加载 gm-core skill = 无教条」达成(见 DiceSession/gmAssembly)。
+// 本别名留一个过渡周期不删,避免外部消费者(index 导出)骤断。
+export const buildBaselinePrompt = buildOpeningPrompt;

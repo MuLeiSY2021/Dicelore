@@ -11,21 +11,25 @@ import { describe, it, expect } from "vitest";
 import { openDb, initSchema, openSessionBackend } from "@dicelore/backend";
 import { createMcpServer } from "@dicelore/harness";
 import { buildQueryOptions } from "./gmAssembly.js";
+import type { PluginRef } from "../runtime/agent.js";
 
 // TB-2：SDK 装配的 offline 回归网。
 //
 // 背景：DiceGm.runTurn 调真 @anthropic-ai/claude-agent-sdk 的 query()，live.test.ts 默认 skip(烧 LLM)，
-// 真 SDK 装配路径(options 构建、MCP 挂载、settingSources/allowedTools 门控、systemPrompt/model)零回归保护。
+// 真 SDK 装配路径(options 构建、MCP 挂载、plugins/skills 门控、allowedTools 门控、systemPrompt/model)零回归保护。
 // 这里把装配逻辑抽成纯函数 buildQueryOptions 后，不调 query()、不连 LLM 即可断言装配正确性。
 //
-// 本文件只 import gmAssembly(不 import DiceGm)——故不会拉入未安装运行时的 SDK 包，纯 offline。
+// skill 加载改「local plugin 按引用 + skills 开关」(裁决 skill-loading-by-reference §3)：
+// plugin 非空 → plugins:[{type:'local',path}] + skills；plugin 空 → skills:[]/无 plugins(baseline)。
+// allowedTools 去 'Skill'(已废弃)。settingSources 恒 []。workspace 非空 → cwd=workspace + 放开文件工具。
 describe("buildQueryOptions（SDK 装配 offline 回归 / TB-2）", () => {
-  // 真 McpServer 实例(同 live.test.ts 的造法)，断言它被原样挂到 mcpServers.dicelore.instance。
   function makeMcp() {
     const db = openDb(":memory:");
     initSchema(db);
     return createMcpServer(openSessionBackend(db), db, {});
   }
+
+  const DICE_PLUGIN: PluginRef = { pluginDir: "/data/dice", skills: "all" };
 
   it("MCP 以 sdk 类型挂在 dicelore 槽位，instance 即传入的 mcpServer", () => {
     const mcpServer = makeMcp();
@@ -34,7 +38,6 @@ describe("buildQueryOptions（SDK 装配 offline 回归 / TB-2）", () => {
       model: "glm-5.2",
       mcpServer,
       openingPrompt: "你是 GM。",
-      staged: undefined,
       abortController: ctrl,
     });
     expect(opts.mcpServers.dicelore.type).toBe("sdk");
@@ -48,61 +51,91 @@ describe("buildQueryOptions（SDK 装配 offline 回归 / TB-2）", () => {
     const opts = buildQueryOptions({
       model: "some-custom-model",
       mcpServer,
-      openingPrompt: "SIGNPOST+教条+prologue",
-      staged: undefined,
+      openingPrompt: "SIGNPOST+prologue",
       abortController: ctrl,
     });
     expect(opts.model).toBe("some-custom-model");
-    expect(opts.systemPrompt).toBe("SIGNPOST+教条+prologue");
+    expect(opts.systemPrompt).toBe("SIGNPOST+prologue");
     expect(opts.abortController).toBe(ctrl); // 同一 controller → 超时 abort 才能生效
   });
 
-  describe("staged 为空（无 skill，走 ADR-0020 settingSources:[]）", () => {
+  it("settingSources 恒为空数组(不读盘上 settings;plugins 正交加载)", () => {
+    const off = buildQueryOptions({ model: "m", mcpServer: makeMcp(), openingPrompt: "p", abortController: new AbortController() });
+    const on = buildQueryOptions({ model: "m", mcpServer: makeMcp(), openingPrompt: "p", plugin: DICE_PLUGIN, abortController: new AbortController() });
+    expect(off.settingSources).toEqual([]);
+    expect(on.settingSources).toEqual([]);
+  });
+
+  describe("plugin 为空（baseline：skill 全不启）", () => {
     const opts = buildQueryOptions({
       model: "glm-5.2",
       mcpServer: makeMcp(),
       openingPrompt: "你是 GM。",
-      staged: undefined,
       abortController: new AbortController(),
     });
-    it("settingSources 为空数组(不读本地 .claude)", () => {
-      expect(opts.settingSources).toEqual([]);
+    it("skills 为空数组、不装 plugins", () => {
+      expect(opts.skills).toEqual([]);
+      expect(opts.plugins).toBeUndefined();
+      expect("plugins" in opts).toBe(false);
     });
-    it("不设置 cwd", () => {
+    it("不设置 cwd(dice 无 workspace)", () => {
       expect(opts.cwd).toBeUndefined();
-      expect("cwd" in opts).toBe(false); // 字段本身不出现，而非 = undefined
+      expect("cwd" in opts).toBe(false);
     });
-    it("allowedTools 只放 mcp__dicelore(不放 Skill/Read)", () => {
-      expect(opts.allowedTools).toEqual(["mcp__dicelore"]);
+    it("allowedTools = mcp__dicelore + Read(不含 Skill)", () => {
+      expect(opts.allowedTools).toEqual(["mcp__dicelore", "Read"]);
+      expect(opts.allowedTools).not.toContain("Skill");
     });
   });
 
-  describe("staged 非空（有 skill，读副本 cwd 的 .claude）", () => {
-    const STAGED = "/tmp/dg-staged-42";
+  describe("plugin 非空（local plugin 按引用 + skills 开关）", () => {
     const opts = buildQueryOptions({
       model: "glm-5.2",
       mcpServer: makeMcp(),
       openingPrompt: "你是 GM。",
-      staged: STAGED,
+      plugin: DICE_PLUGIN,
       abortController: new AbortController(),
     });
-    it("settingSources 为 ['project'](读 staged 副本 cwd 的 .claude)", () => {
-      expect(opts.settingSources).toEqual(["project"]);
+    it("plugins = [{type:'local', path: plugin.pluginDir}]", () => {
+      expect(opts.plugins).toEqual([{ type: "local", path: "/data/dice" }]);
     });
-    it("cwd 指向 staged 副本目录", () => {
-      expect(opts.cwd).toBe(STAGED);
+    it("skills = plugin.skills", () => {
+      expect(opts.skills).toBe("all");
     });
-    it("allowedTools 放开 Skill/Read 供 agent 自助查阅 skill(渐进披露)", () => {
-      expect(opts.allowedTools).toEqual(["mcp__dicelore", "Skill", "Read"]);
+    it("allowedTools 仍不含 Skill(已废弃,skills 选项接管开关)", () => {
+      expect(opts.allowedTools).not.toContain("Skill");
+      expect(opts.allowedTools).toEqual(["mcp__dicelore", "Read"]);
     });
   });
 
-  it("staged 切换只改 settingSources/cwd/allowedTools 三处，MCP 装配两档一致", () => {
+  describe("workspace 非空（lore build-agent-workspace）", () => {
+    const WS = "/data/lore/sessions/l1/workspace";
+    const opts = buildQueryOptions({
+      model: "glm-5.2",
+      mcpServer: makeMcp(),
+      openingPrompt: "构建 prompt",
+      plugin: { pluginDir: "/data/lore", skills: "all" },
+      workspace: WS,
+      abortController: new AbortController(),
+    });
+    it("cwd = workspace", () => {
+      expect(opts.cwd).toBe(WS);
+    });
+    it("allowedTools 放开素材工作区文件工具(Bash/Grep/Glob/Write/Edit)", () => {
+      expect(opts.allowedTools).toEqual(["mcp__dicelore", "Read", "Bash", "Grep", "Glob", "Write", "Edit"]);
+      expect(opts.allowedTools).not.toContain("Skill");
+    });
+    it("plugins/skills 仍按 plugin 装配", () => {
+      expect(opts.plugins).toEqual([{ type: "local", path: "/data/lore" }]);
+      expect(opts.skills).toBe("all");
+    });
+  });
+
+  it("plugin 切换只改 plugins/skills，MCP 装配两档一致", () => {
     const mcpServer = makeMcp();
     const base = { model: "glm-5.2", mcpServer, openingPrompt: "p", abortController: new AbortController() };
-    const off = buildQueryOptions({ ...base, staged: undefined });
-    const on = buildQueryOptions({ ...base, staged: "/tmp/dg-staged-7" });
-    // MCP 挂载与 staged 与否无关(始终同一 in-process server)。
+    const off = buildQueryOptions({ ...base });
+    const on = buildQueryOptions({ ...base, plugin: DICE_PLUGIN });
     expect(off.mcpServers).toEqual(on.mcpServers);
     expect(off.mcpServers.dicelore.instance).toBe(on.mcpServers.dicelore.instance);
   });

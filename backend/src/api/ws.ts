@@ -15,12 +15,12 @@ import { openSessionBackend } from "@dicelore/backend";
 import { getLogger } from "@dicelore/logs";
 import { getOrCreateHost } from "@dicelore/harness";
 import { restagePendingRolls, replayNarration } from "@dicelore/harness";
-import type { AgentFactory, SkillRef } from "@dicelore/harness";
+import type { AgentFactory, PluginRef } from "@dicelore/harness";
 
 export interface WsUpgradeDeps {
   openSession: (id: string) => DB;
   agentFactory: AgentFactory;
-  skills?: SkillRef[];
+  plugin?: PluginRef;
   model?: string;
   baseline?: boolean; // eval baseline 对照:透传 DiceSession
   debug?: boolean; // eval/裸 CC 明骰降级:透传 DiceSession(不注入 rollGate)
@@ -44,7 +44,7 @@ export function attachWsUpgrade(server: unknown, deps: WsUpgradeDeps): void {
         const id = decodeURIComponent(m[1]);
         const db = deps.openSession(id);
         // 组合根:绑定本局 db 的存储端口实例,注入 harness 会话(harness 不自开库/不自建 backend)。
-        const host = getOrCreateHost(id, { db, backend: openSessionBackend(db), agentFactory: deps.agentFactory, skills: deps.skills, model: deps.model, baseline: deps.baseline, debug: deps.debug, sessionsDir: deps.sessionsDir });
+        const host = getOrCreateHost(id, { db, backend: openSessionBackend(db), agentFactory: deps.agentFactory, plugin: deps.plugin, model: deps.model, baseline: deps.baseline, debug: deps.debug, sessionsDir: deps.sessionsDir });
         const wsLike = ws as unknown as { send(d: string): void; readyState: number };
         host.attachWs(wsLike);
         const since = new URLSearchParams(m[2] ?? "").get("since");

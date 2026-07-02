@@ -8,7 +8,7 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { AgentFactory, SkillRef } from "../runtime/agent.js";
+import type { AgentFactory, PluginRef } from "../runtime/agent.js";
 import type { Session } from "../runtime/session.js";
 
 let loreTurnCounter = 0;
@@ -20,7 +20,8 @@ export interface LoreSessionDeps {
   mcpServer: McpServer;
   agentFactory: AgentFactory; // 适配缝;真实现 = CC SDK 适配器挂构建 MCP + 构建 skill
   buildPrompt?: string; // 构建教条(→ openingPrompt;默认 env DICELORE_BUILD_PROMPT)
-  skills?: SkillRef[]; // 构建 skill(会话本地 staged);省略=不 stage
+  plugin?: PluginRef; // 构建 skill plugin 引用(build-pack+build-core,boot 期物化到 $/lore);省略=不启 skill
+  workspace?: string; // 素材工作区 cwd(build-agent-workspace 用;本裁决先立入参,接线属该裁决)
 }
 
 // lore 构建运行单元:驱动 agent 挂注入的构建 MCP,无 rollGate/turn-end/canon-notify。
@@ -39,7 +40,8 @@ export class LoreSession implements Session {
     const driver = this.deps.agentFactory({
       mcpServer: this.mcpServer,
       openingPrompt: this.deps.buildPrompt ?? process.env.DICELORE_BUILD_PROMPT ?? "",
-      skills: this.deps.skills ?? [],
+      plugin: this.deps.plugin,
+      workspace: this.deps.workspace,
     });
     // REST 语义:跑完整轮构建反馈(narration/turn_end/error)即收尾,不向任何 WS 广播。
     for await (const ev of driver.runTurn({ text, turnId })) {

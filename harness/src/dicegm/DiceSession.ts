@@ -17,7 +17,7 @@ import { PlayerRollGate } from "./rollGate.js";
 import { mapCanonWrite } from "./notify.js";
 import { runTurn, type TurnEndResult } from "./turnLoop.js";
 import { buildOpeningPrompt, buildBaselinePrompt } from "./openingPrompt.js";
-import type { AgentFactory, AgentInit, SkillRef, TurnUsage } from "../runtime/agent.js";
+import type { AgentFactory, AgentInit, PluginRef, TurnUsage } from "../runtime/agent.js";
 import type { Session } from "../runtime/session.js";
 
 let turnCounter = 0; // 进程内自增,测试稳定(不依赖随机/时间)
@@ -37,10 +37,10 @@ export interface DiceSessionDeps {
   db: DB; // 组合根注入(backend 侧 openSession→openDb);harness 不自开库(storage-port ADR §4)
   backend: SessionBackend; // 组合根注入(openSessionBackend(db));所有存储读写经它,不直连 backend 自由函数
   agentFactory: AgentFactory; // 适配缝:据 AgentInit 产一个会话 agent(真=DiceGm,fake=FakeDiceGm)
-  skills?: SkillRef[]; // 会话本地 staged skill(dice 默认 gm-core);省略=不 stage
+  plugin?: PluginRef; // skill plugin 引用(dice 默认 gm-core+flows,boot 期物化到 $/dice);省略=不启 skill
   model?: string; // GM 模型覆盖
   importFrom?: { catalog: DB; adventureId: string; ref: string }; // 开局从 Catalog import 团本(信任闸门重验)→运行库
-  baseline?: boolean; // eval baseline 对照:去 doctrine(buildBaselinePrompt) + 强制 skills 空,分离「教条有无」
+  baseline?: boolean; // eval baseline 对照:去教条(buildBaselinePrompt) + 强制 plugin 空,分离「教条有无」
   debug?: boolean; // eval/裸 CC 明骰降级:不注入 rollGate,core outcomeOpenHandler 走「无 gate 立即掷」分支(否则 await 永不来的 POST /roll 卡死)
   sessionsDir?: string; // GM raw 日志根目录(日志落 <dir>/dicelore/sessions/<sessionId>.gm.log);省略=不记日志
 }
@@ -118,9 +118,9 @@ export class DiceSession implements Session {
     return this.deps.baseline ? buildBaselinePrompt(this.backend) : buildOpeningPrompt(this.backend);
   }
 
-  // 据本会话状态组装 AgentInit(每回合新建一个 agent)。baseline 强制 skills 空(不 stage 教条)。
+  // 据本会话状态组装 AgentInit(每回合新建一个 agent)。baseline 强制 plugin 空(不加载 gm-core 教条 skill)。
   private buildInit(): AgentInit {
-    return { mcpServer: this.mcpServer, openingPrompt: this.openingPrompt, skills: this.deps.baseline ? [] : (this.deps.skills ?? []), model: this.deps.model, sessionId: this.sessionId, sessionsDir: this.deps.sessionsDir };
+    return { mcpServer: this.mcpServer, openingPrompt: this.openingPrompt, plugin: this.deps.baseline ? undefined : this.deps.plugin, model: this.deps.model, sessionId: this.sessionId, sessionsDir: this.deps.sessionsDir };
   }
 
   // RT-2：串行化所有「跑回合」入口。已有回合在跑则抛 TurnInProgressError（拒绝并发、不双开），

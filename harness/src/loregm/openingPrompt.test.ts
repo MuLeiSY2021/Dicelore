@@ -8,21 +8,26 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import { describe, it, expect } from "vitest";
-import { existsSync } from "node:fs";
-import { buildPackSkill } from "./openingPrompt.js";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { ensureLorePlugin } from "./openingPrompt.js";
 
-describe("buildPackSkill", () => {
-  it("源目录存在时返回 SkillRef(name=dicelore-build-pack, srcDir 含 SKILL.md)", () => {
-    const ref = buildPackSkill();
-    // CI 下 harness/skills/dicelore-build-pack 必须存在;若不存在返回 null
-    if (ref === null) {
-      // 目录不存在时合法退化(同 gmCoreSkill() 的处理)
-      expect(ref).toBeNull();
-    } else {
-      expect(ref.name).toBe("dicelore-build-pack");
-      expect(ref.srcDir).toMatch(/dicelore-build-pack$/);
-      // srcDir 下有 SKILL.md(是合法 skill 目录)
-      expect(existsSync(`${ref.srcDir}/SKILL.md`)).toBe(true);
+describe("ensureLorePlugin（母本物化到数据根 + build-core 对称 gm-core）", () => {
+  it("母本存在时首调物化 + 返回 PluginRef(pluginDir=<root>/lore, skills:'all')", () => {
+    const root = mkdtempSync(join(tmpdir(), "lore-plugin-"));
+    try {
+      const ref = ensureLorePlugin(root);
+      // CI 下 harness/src/loregm 母本(.claude-plugin/plugin.json + skills/)必须存在
+      expect(ref).not.toBeNull();
+      expect(ref!.pluginDir).toBe(join(root, "lore"));
+      expect(ref!.skills).toBe("all");
+      expect(existsSync(join(ref!.pluginDir, ".claude-plugin", "plugin.json"))).toBe(true);
+      // build-pack + build-core 两个 skill 都物化到位(skills:'all' 一并加载)
+      expect(existsSync(join(ref!.pluginDir, "skills", "dicelore-build-pack", "SKILL.md"))).toBe(true);
+      expect(existsSync(join(ref!.pluginDir, "skills", "dicelore-build-core", "SKILL.md"))).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
     }
   });
 });

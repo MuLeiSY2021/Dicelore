@@ -261,18 +261,19 @@ describe("DiceSession baseline", () => {
     expect(s.openingPrompt).not.toContain("形状表");
   });
 
-  it("baseline:true → handleMessage 给 agentFactory 的 skills=[];非 baseline 用 deps.skills", async () => {
+  it("baseline:true → handleMessage 给 agentFactory 的 plugin=undefined;非 baseline 用 deps.plugin", async () => {
     let captured: AgentInit | null = null;
     const fac = (init: AgentInit): Agent => {
       captured = init;
       return { async *runTurn() { yield { type: "turn_end" } } };
     };
-    const s = newDice("t-bl-2", { agentFactory: fac, db: memDb(), baseline: true, skills: [{ name: "x", srcDir: "/x" }] });
+    const P = { pluginDir: "/data/dice", skills: "all" as const };
+    const s = newDice("t-bl-2", { agentFactory: fac, db: memDb(), baseline: true, plugin: P });
     await s.handleMessage("hi");
-    expect(captured!.skills).toEqual([]);
+    expect(captured!.plugin).toBeUndefined();
 
-    const s2 = newDice("t-bl-3", { agentFactory: fac, db: memDb(), skills: [{ name: "x", srcDir: "/x" }] });
+    const s2 = newDice("t-bl-3", { agentFactory: fac, db: memDb(), plugin: P });
     await s2.handleMessage("hi");
-    expect(captured!.skills).toEqual([{ name: "x", srcDir: "/x" }]);
+    expect(captured!.plugin).toEqual(P);
   });
 });

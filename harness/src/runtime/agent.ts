@@ -32,16 +32,21 @@ export interface Agent {
 
 // ── Agent 适配缝(spec AD-1) ──
 // 任意 agent/harness 经 AgentFactory 适配进架构;CC SDK(DiceGm)是首个适配器。
-// AgentInit = 起一个会话 agent 所需的全部:in-process MCP + 系统提示 + 会话本地 skill + 模型。
-export interface SkillRef {
-  name: string; // skill 名(= staged 目录名,如 dicelore-gm-core)
-  srcDir: string; // 源 skill 目录(只读;staged 时整目录拷贝)
+// AgentInit = 起一个会话 agent 所需的全部:in-process MCP + 系统提示 + skill plugin 引用 + 模型。
+//
+// skill 加载改「local plugin 按引用 + skills 开关」(裁决 skill-loading-by-reference):
+// 不再每回合 cpSync 会话本地副本,而是 boot 期把 skill 母本幂等物化到数据根 pluginRoot(如 $/dice),
+// 运行期只把该 pluginRoot 作 SDK plugins:[{type:'local',path}] 按引用加载、skills 开关启用之。
+export interface PluginRef {
+  pluginDir: string; // 物化后的数据根 pluginRoot 绝对路径(含 .claude-plugin/plugin.json + skills/),如 $/dice
+  skills: string[] | "all"; // 启用的 skill 名单('all'=plugin 内全部 skill)
 }
 
 export interface AgentInit {
   mcpServer: McpServer; // 会话 in-process MCP(已注入回调/gate)
-  openingPrompt: string; // 系统提示(dice=signpost+教条+prologue;lore=构建prompt)
-  skills: SkillRef[]; // 会话本地 staged skill 副本(空=不 stage,走 settingSources:[])
+  openingPrompt: string; // 系统提示(dice=signpost+prologue;lore=构建prompt;教条经 plugin skill 投递,不再内联)
+  plugin?: PluginRef; // skill plugin 引用(空=不启 skill,对齐 baseline;非空=按引用加载 + skills 开关)
+  workspace?: string; // 素材工作区 cwd(lore build-agent-workspace 用;空=SDK 默认 cwd)
   model?: string; // 默认由 env / 适配器内定
   sessionId?: string; // GM raw 日志用:标识会话(日志文件名)
   sessionsDir?: string; // GM raw 日志用:sessions 根目录(日志落 <dir>/dicelore/sessions/<id>.gm.log)

@@ -10,13 +10,10 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import type { Logger } from "pino";
 import type { Agent, TurnInput, TurnEvent, AgentInit } from "../runtime/agent.js";
-import { stageSkills, cleanupSkills } from "./skillStage.js";
 import { buildQueryOptions } from "./gmAssembly.js";
 import { getLogger, createFileLogger } from "@dicelore/logs";
 import { appendFileSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
-
-let stageSeq = 0; // staged 目录命名,避免并发回合碰撞(不依赖随机/时间)
 
 // CO-采集:Agent SDK result.usage 字段名 → UsageInput 数字字段（纯函数,可 offline 单测）。
 // SDK NonNullableUsage 形:{input_tokens, output_tokens, cache_read_input_tokens, cache_creation_input_tokens, …}。
@@ -117,28 +114,18 @@ export class DiceGm implements Agent {
     const turnId = input.turnId ?? "?";
     this.curTurnId = turnId;
     const ts = new Date().toISOString();
-    const skillsMeta = this.init.skills.length ? this.init.skills.map((s) => `${s.name}<-${s.srcDir}`) : [];
+    const plugin = this.init.plugin;
+    const pluginMeta = plugin ? `${plugin.pluginDir}::${Array.isArray(plugin.skills) ? plugin.skills.join(",") : plugin.skills}` : null;
 
-    // ① 先落回合头(诊断价值最大)——在 stageSkills 之前,即使 stage 抛错也留痕。
-    //    此前 stageSkills 在 log 头之前且无 try,抛错会吞掉全部日志 + 回合静默失败(日志不生成的根因)。
-    this.sessionLogger.info({ turnId, session: this.init.sessionId ?? "?", model, input: input.text, skills: skillsMeta, ts }, `TURN ${turnId} start`);
-    this.appendConversation({ _: "turn", turnId, sessionId: this.init.sessionId ?? null, model, input: input.text, skills: skillsMeta, ts });
+    // ① 落回合头(诊断价值最大)。skill 加载改 local plugin 按引用(裁决 skill-loading-by-reference):
+    //    不再每回合暂存 skill 会话本地副本 —— plugin 母本已 boot 期物化到数据根,此处只透传 PluginRef。
+    this.sessionLogger.info({ turnId, session: this.init.sessionId ?? "?", model, input: input.text, plugin: pluginMeta, ts }, `TURN ${turnId} start`);
+    this.appendConversation({ _: "turn", turnId, sessionId: this.init.sessionId ?? null, model, input: input.text, plugin: pluginMeta, ts });
 
-    // ② stageSkills 包 try:失败降级 staged=undefined(走内联 doctrine),不阻断回合。
-    //    skill 非空 → stage 会话本地副本,以该 cwd 起 agent 可加载 skill 供自助查阅(渐进披露);
-    //    空 → 沿 ADR-0020 settingSources:[](不读本地 .claude)。教条已内联进 openingPrompt 作兜底。
-    let staged: string | undefined;
-    if (this.init.skills.length > 0) {
-      try {
-        staged = stageSkills(`dg-${++stageSeq}`, this.init.skills);
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        this.sessionLogger.error({ err: e, turnId }, "stageSkills 失败,降级走内联 doctrine");
-        this.appendConversation({ _: "stage_error", turnId, message: msg });
-        staged = undefined;
-      }
-    }
-    this.sessionLogger.info({ turnId, settingSources: staged ? "project" : "[]", allowedTools: staged ? "mcp__dicelore,Skill,Read" : "mcp__dicelore" }, "turn opts");
+    this.sessionLogger.info(
+      { turnId, settingSources: "[]", plugin: pluginMeta, workspace: this.init.workspace ?? null, skills: plugin ? plugin.skills : [] },
+      "turn opts",
+    );
     this.sessionLogger.debug({ turnId, system: this.init.openingPrompt }, "[system]");
     // ③ 超时兜底:防真 LLM 卡死拖垮 eval/联调。默认 3min,DICELORE_GM_TIMEOUT_MS 可覆盖。
     // abort 触发后 SDK 停 query(抛 AbortError 或以 result 结束)→ catch 转 error 事件,回合脱困不卡死。
@@ -152,7 +139,8 @@ export class DiceGm implements Agent {
         model,
         mcpServer: this.init.mcpServer,
         openingPrompt: this.init.openingPrompt,
-        staged,
+        plugin: this.init.plugin,
+        workspace: this.init.workspace,
         abortController: controller,
       }) as unknown as Parameters<typeof query>[0]["options"];
 
@@ -185,7 +173,6 @@ export class DiceGm implements Agent {
       yield { type: "error", message, code: isTimeout ? "gm_timeout" : undefined };
     } finally {
       clearTimeout(timer);
-      if (staged) cleanupSkills(staged);
     }
   }
 }

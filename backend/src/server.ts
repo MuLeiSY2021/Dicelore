@@ -21,7 +21,7 @@ import { createKeysApp } from "./api/keys.js";
 import { createRateLimit } from "./api/rateLimit.js";
 import { attachWsUpgrade } from "./api/ws.js";
 import { listSessionSummaries } from "./api/sessions.js";
-import { gmCoreSkill, buildPackSkill, DiceGm, FakeDiceGm, type AgentFactory, type SkillRef } from "@dicelore/harness";
+import { ensureDicePlugin, ensureLorePlugin, DiceGm, FakeDiceGm, type AgentFactory, type PluginRef } from "@dicelore/harness";
 
 export function startServer(port: number): void {
   const dir = process.env.DICELORE_SESSIONS_DIR ?? ".";
@@ -40,22 +40,22 @@ export function startServer(port: number): void {
   const agentFactory: AgentFactory = fake
     ? () => new FakeDiceGm((input) => [{ type: "narration", text: `（GM）你说：「${input.text}」。门吱呀一声开了。` }, { type: "turn_end" }])
     : (init) => new DiceGm(init);
-  // dice 默认会话本地 skill = gm-core(源目录在则 staged;教条另内联进 openingPrompt 兜底)。
-  const gm = gmCoreSkill();
-  const diceSkills: SkillRef[] = gm ? [gm] : [];
-  // lore 构建 skill = dicelore-build-pack(源目录在则 staged;同 gmCoreSkill() 退化策略)。
-  const bp = buildPackSkill();
-  const loreSkills: SkillRef[] = bp ? [bp] : [];
+  // dice/lore skill plugin:boot 期幂等 + 版本感知物化母本到数据根 $/{dice,lore}(非每回合复制),
+  // 返回运行期 PluginRef(pluginDir + skills:"all");母本定位/物化失败 → ensure*Plugin 内 fail loud 返 null。
+  // baseline(DICELORE_BASELINE=1)时 dice plugin 传 undefined(skill 全关,分离「教条有无」);
+  // lore 侧无 baseline 概念,始终装 plugin。
+  const dicePlugin: PluginRef | undefined = baseline ? undefined : (ensureDicePlugin(dir) ?? undefined);
+  const lorePlugin: PluginRef | undefined = ensureLorePlugin(dir) ?? undefined;
 
   const app = new Hono();
   // per-session 基础限流(宽松默认 60s/120 次,env DICELORE_RATELIMIT_* 收紧/关闭)——在路由前挂。
   app.use("*", createRateLimit());
   app.route("/", createLiveApp({
-    agentFactory, skills: diceSkills, openSession, catalog, baseline, debug, sessionsDir: dir,
+    agentFactory, plugin: dicePlugin, openSession, catalog, baseline, debug, sessionsDir: dir,
     listSessions: () => listSessionSummaries(join(dir, "dice", "sessions")),
     deleteSession: (id) => { try { rmSync(sessionDir(id, "dice"), { recursive: true, force: true }); } catch (e) { getLogger().error({ err: e, id }, "删 session 文件夹失败"); } },
   }));
-  app.route("/", createLoreApp({ catalog, agentFactory, buildPrompt: process.env.DICELORE_BUILD_PROMPT, skills: loreSkills }));
+  app.route("/", createLoreApp({ catalog, agentFactory, buildPrompt: process.env.DICELORE_BUILD_PROMPT, plugin: lorePlugin }));
   app.route("/", createDiagnosticsApp({ port, fakeGm: fake }));
   // CO 可视化:GET /sessions/:id/usage 只读投影,复用本局 db 端口。
   app.route("/", createUsageApp({ openSession }));
@@ -65,7 +65,7 @@ export function startServer(port: number): void {
   app.route("/", createKeysApp({ db: keysDb, master: () => process.env.DICELORE_KEY_MASTER ?? "" }));
 
   const server = serve({ fetch: app.fetch, port });
-  attachWsUpgrade(server, { openSession, agentFactory, skills: diceSkills, baseline, debug, sessionsDir: dir });
+  attachWsUpgrade(server, { openSession, agentFactory, plugin: dicePlugin, baseline, debug, sessionsDir: dir });
   // 启动 banner 走 logger(已 initGlobalLogger → 分级文件),不再裸 console.log 重复一行(O2)。
   getLogger().info({ port, fakeGm: fake, debug, sessionsDir: dir, catalog: catalogPath }, `orchestrator live :${port}`);
 }

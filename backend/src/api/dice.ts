@@ -14,7 +14,7 @@ import { MessageRequestSchema, ChoiceRequestSchema, RollRequestSchema } from "@d
 import { loreSearch, ruleSearch, logSince, metaGet, openSessionBackend, openDb, initSchema } from "@dicelore/backend";
 import { getLogger } from "@dicelore/logs";
 import { buildSnapshot } from "./presentation.js";
-import { getOrCreateHost, removeHost, TurnInProgressError, type AgentFactory, type SkillRef } from "@dicelore/harness";
+import { getOrCreateHost, removeHost, TurnInProgressError, type AgentFactory, type PluginRef } from "@dicelore/harness";
 
 // CatalogDB 只是团本库 DB 句柄别名(=interface DB);组合根经它给「开局 import 团本」。
 type CatalogDB = DB;
@@ -25,7 +25,7 @@ function memoryDb(): DB { const d = openDb(":memory:"); initSchema(d); return d;
 // 实时引擎面：动作进(POST messages/choices/roll) + 首屏快照，经 registry/DiceSession。
 export interface LiveDeps {
   agentFactory: AgentFactory;
-  skills?: SkillRef[]; // dice 默认 gm-core(staged skill)
+  plugin?: PluginRef; // dice skill plugin(gm-core+flows,boot 期物化到 $/dice)
   model?: string; // GM 模型覆盖
   openSession?: (id: string) => DB; // 省略则 DiceSession 用内存库(测试)
   listSessions?: () => SessionSummary[]; // 会话列表(主页继续上次/最近);省略则空
@@ -42,7 +42,7 @@ export function createLiveApp(deps: LiveDeps): Hono {
   // 把 {db, backend} 注入 harness 的 DiceSession(harness 不自开库/不自建 backend,守 storage-port ADR §4)。
   const hostDeps = (id: string) => {
     const db = deps.openSession?.(id) ?? memoryDb();
-    return { db, backend: openSessionBackend(db), agentFactory: deps.agentFactory, skills: deps.skills, model: deps.model, baseline: deps.baseline, debug: deps.debug, sessionsDir: deps.sessionsDir };
+    return { db, backend: openSessionBackend(db), agentFactory: deps.agentFactory, plugin: deps.plugin, model: deps.model, baseline: deps.baseline, debug: deps.debug, sessionsDir: deps.sessionsDir };
   };
 
   // 开新局:选一个团本版本 import → 物化运行库(信任闸门)。body {adventureId, ref}。

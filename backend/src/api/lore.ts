@@ -9,13 +9,13 @@
 
 import { Hono } from "hono";
 import { list, commit, tag, checkout, validatePack, createBuildMcpServer, Draft, type CatalogDB, type PackFile } from "@dicelore/backend";
-import { LoreSession, type LoreSessionDeps, type AgentFactory, type SkillRef } from "@dicelore/harness";
+import { LoreSession, type LoreSessionDeps, type AgentFactory, type PluginRef } from "@dicelore/harness";
 
 export interface LoreDeps {
   catalog: CatalogDB;
   agentFactory: AgentFactory; // CC SDK 适配器挂构建 MCP + 构建 skill
   buildPrompt?: string; // 构建教条(→ openingPrompt)
-  skills?: SkillRef[]; // 构建 skill(staged)
+  plugin?: PluginRef; // 构建 skill plugin(build-pack+build-core,boot 期物化到 $/lore)
 }
 
 // 组合根持 { session, draft }:Draft + 构建 MCP 在此建好(backend 可 import createBuildMcpServer/Draft),
@@ -76,7 +76,7 @@ export function createLoreApp(deps: LoreDeps): Hono {
       // 组合根建 Draft + 构建 MCP server(BUILD_TOOLS over Draft+Catalog),注入 LoreSession。
       const draft = new Draft();
       const mcpServer = createBuildMcpServer({ catalog: deps.catalog, draft, name: body.name });
-      const dep: LoreSessionDeps = { mcpServer, agentFactory: deps.agentFactory, buildPrompt: deps.buildPrompt, skills: deps.skills };
+      const dep: LoreSessionDeps = { mcpServer, agentFactory: deps.agentFactory, buildPrompt: deps.buildPrompt, plugin: deps.plugin };
       entry = { session: new LoreSession(id, dep), draft };
       loreReg.set(id, entry);
     }

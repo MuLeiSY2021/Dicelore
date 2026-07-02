@@ -11,27 +11,24 @@ import { fileURLToPath } from "node:url";
 import { existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { getLogger } from "@dicelore/logs";
-import type { SkillRef } from "../runtime/agent.js";
+import type { PluginRef } from "../runtime/agent.js";
+import { ensureSkillPlugin } from "../runtime/skillPlugin.js";
 
-// dicelore-build-pack skill 源目录解析(供 staged skill 整目录拷入构建 agent 的临时 cwd)。
-// skill 真源随 lore 线归位在本角色线根 <pkg>/src/loregm/skills(本文件在 src/loregm,故同级 ./skills),
-// 与跑团侧 gm-core 对称(见 dicegm/openingPrompt gmCoreDir,各线根 ./skills)。
-function buildPackDir(): string | null {
+// lore skill 母本线根解析(<pkg>/src/loregm,含 .claude-plugin/plugin.json + skills/)。
+// 本文件在 src/loregm,故母本线根 = 本文件所在目录,与跑团侧 diceSkillRoot 对称。
+function loreSkillRoot(): string | null {
   const candidates: string[] = [];
   try {
-    const here = dirname(fileURLToPath(import.meta.url));
-    candidates.push(join(here, "skills", "dicelore-build-pack"));
-  } catch (e) { getLogger().warn({ err: e }, "resolve harness skills 失败,走 cwd 兜底"); }
-  candidates.push(`${process.cwd()}/harness/src/loregm/skills/dicelore-build-pack`);
-  for (const d of candidates) if (existsSync(`${d}/SKILL.md`)) return d;
-  // 兜底全落空：构建 agent 将拿不到 staged skill 教条(无声退化成无教条构建)——告警使其可观测。
-  getLogger().warn({ candidates }, "dicelore-build-pack skill 目录解析失败,构建 agent 无 staged 教条");
+    candidates.push(dirname(fileURLToPath(import.meta.url)));
+  } catch (e) { getLogger().warn({ err: e }, "resolve lore skill 母本线根失败,走 cwd 兜底"); }
+  candidates.push(`${process.cwd()}/harness/src/loregm`);
+  for (const d of candidates) if (existsSync(join(d, ".claude-plugin", "plugin.json"))) return d;
   return null;
 }
 
-// dicelore-build-pack 作为 staged skill 的引用(server 注入 lore skills);
-// 源目录不存在则返回 null(跑团侧 gmCoreSkill() 的同构处理)。
-export function buildPackSkill(): SkillRef | null {
-  const dir = buildPackDir();
-  return dir ? { name: "dicelore-build-pack", srcDir: dir } : null;
+// lore skill plugin:boot 期幂等 + 版本感知物化母本(build-pack + build-core)到数据根 $/lore,
+// 返回运行期 PluginRef(pluginDir=$/lore, skills:"all")。母本定位失败 → ensureSkillPlugin 内 fail loud 返 null。
+// server.ts boot 时调一次,PluginRef 经 createLoreApp → LoreSession → AgentInit 传下。
+export function ensureLorePlugin(dataRoot: string): PluginRef | null {
+  return ensureSkillPlugin(loreSkillRoot(), dataRoot, "lore", "all");
 }
