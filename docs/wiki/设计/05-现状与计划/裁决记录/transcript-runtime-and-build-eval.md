@@ -1,6 +1,6 @@
 # 裁决：transcript-runtime-and-build-eval —— 会话对话记录抽进 runtime（transcript 铸 UUID 权威 + rewind 注册器）+ build 侧 eval skill
 
-- [ ] 用户已批准本裁决（勾上前视为未裁决，不可进交付波）
+- [X]  用户已批准本裁决（勾上前视为未裁决，不可进交付波）
 
 > 路线图项：里程碑一「团本构建链路 eval」新增需求。
 > 来源：用户 2026-07-02——「agent 测试团本构建链路完整可用；要一份『作者说了什么→loregm 干了什么』的对话记录，既是回退入点又是评估 loregm 行为的入口；对话记录要和 dicegm 侧一致（jsonl）；落对话记录与退回是两侧一致的运行时逻辑、抽进 `harness/src/runtime`，只差工作目录；rewind 加 Register 构造器让 Rollback hook 进来实现兼容；db 侧基于 UUID 的回退要全局唯一、以 transcript 生成为准；把这个链路沉淀成一个 skill；dicelore-eval 改名避免误导。」
@@ -67,6 +67,7 @@ export class SessionTranscript {
 ```
 
 **决策（拍定）：**
+
 - **UUID 生成源唯一 = SessionTranscript**：每行 `crypto.randomUUID()` 铸全局唯一 `uuid`，带 `parentUuid = 当前 HEAD`（**不是"上一落盘行"**——回退后 HEAD 变，下一行就从 HEAD 分叉；空会话首行 parentUuid=null）。全项目**只有这里**铸这套 UUID。
 - **HEAD 指针（git 式，回退底座）**：`<sessionDir>/HEAD` 一行存当前活动叶 uuid；每次 append 后 + `moveHead` 后都更新它。reopen 从 HEAD 恢复；HEAD 缺失/损坏则回落 = 末行 uuid（线性续，fail-soft）。
 - **jsonl 是 append-only 树**：所有行（**含被回退废弃的分支**）永不删；「当前活动历史」由 `livePath()`（HEAD→根沿 parentUuid 走、反转）给出。废弃分支留在文件里作历史/审计（这正是"回退可再前进出新分支"的载体）。
@@ -104,6 +105,7 @@ export class Rewind {
 ```
 
 **决策（拍定）：**
+
 - **runtime 保持 backend-free**：`Rewind`/`RollbackHook` 不 import `backend/store`；领域态还原由**注册进来的 hook** 干（dice→db 快照、lore→Draft）。runtime 通用，两侧靠注册接入。
 - **rewindTo 真的动 transcript（关键补正）**：`rewindTo(U)` = ① `transcript.hasNode(U)` 校验存在 → ② 按注册序逐 hook `rollbackTo({uuid:U})`（还原领域态）→ ③ 全部成功后 `transcript.moveHead(U)`（.jsonl 活动叶回到 U）。顺序讲究：**领域还原失败则不移 HEAD、抛错**，避免 transcript 与领域态错位。之后下一轮 append 的 `parentUuid=U`，自然长出新分支——这就是"回退 + 重生成"，此前只做①②漏了③。
 - **rewindLast** = 取 transcript 上「HEAD 之前最近的 `turn_end` 锚」的 uuid，调 `rewindTo` 走它。
@@ -116,6 +118,7 @@ export class Rewind {
 现状：`checkpoint(db,{turnSeq})` 每回合末落一行 snapshot（`parent_id`=上一份、`turn_start/end_seq`=turnSeq、`blob_json`），`restore(db,snapshotId)` 整表覆写，`host.rewind()` 撤上一轮、`/sessions/:id/rewind` 202 `{snapshotId}`。**全部保留**，只做加法：
 
 **决策（拍定）：**
+
 1. **snapshot 表加一列** `transcript_anchor TEXT`（`db.ts` 的 `CREATE TABLE snapshot`）：记该 checkpoint 对应的 transcript 回合末 uuid。旧行 NULL（兼容）。
 2. **checkpoint 收一个可选锚**：`CheckpointOpts` 加 `anchorUuid?: string`，INSERT 时写入 `transcript_anchor`。调用点（`turnEnd` 收尾，`index.ts:73` 所述）先从 `SessionTranscript.turnEnd()` 拿到本回合末 uuid，再传给 checkpoint——**权威方向：transcript 先铸、db 后锚**。
 3. **新增按 uuid 定位的还原**：`snapshot.ts` 加 `restoreToAnchor(db, uuid)`：`SELECT id FROM snapshot WHERE transcript_anchor=?` → 复用现有 `restore(db,id)`。找不到抛 `no_snapshot_for_anchor`。
@@ -130,6 +133,7 @@ export class Rewind {
 ## §4 lore 侧接线：LoreSession 穿 sessionId/sessionsDir → loregm 落 jsonl（+ Draft rollback hook）
 
 **决策（拍定）：**
+
 1. **`LoreSessionDeps` 加 `dataDir?: string`**（`backend/api/lore.ts` 从组合根拿已解析的 `$ROOT`，透传；install-datadir-layout 后 `$ROOT` 是唯一数据根，`sessionsDir` 概念并入）。
 2. **`LoreSession.handleMessage` 建 driver 时补传 `sessionId: this.sessionId` + `dataDir`**（现只传 4 项）。适配器据 `sessionDir(dataDir,"lore",id)` 建 `SessionTranscript`，loregm 开始落 `$ROOT/sessions/lore/<id>/<id>_session.jsonl`。
    - `turnId` 沿用现有 `nextTurnId`（`<sid>-l<n>`）；`input`=作者指令 text；`model`=构建模型。
@@ -150,6 +154,7 @@ export class Rewind {
 - **输入 = 一份真实案例 md**（`docs/research/scraped/*.md`；后续 DnD pdf 同法）。它**双重身份**：既是喂给 loregm 的**源素材**（经 `put_material` 上传），又是评判团本质量的**黄金参照**（对称 play-eval 的「对照系=真实案例语料（唯一）」）。
 - **前置**：走 §7 的前置 skill 起后端——`install.sh` 铺 eval 数据根 `.dicelore-eval`（= `$ROOT`），`run.sh -f` 起真 LoreGm（`config.toml [env]` 里 `DICELORE_FAKE_GM=0`，`DICELORE_DATA_DIR=.dicelore-eval`）；`.mcp.json` 的 build-mcp 指同一 `$ROOT`（server 名 `dicelore-build`，工具 `mcp__dicelore-build__*`）。
 - **跑一局构建（CC 当作者）**：
+
   1. `open_build_session` 起 sid。
   2. `put_material(sid, filename, localPath=<md 绝对路径>)` 流式上传源（大源不入 LLM 上下文）。
   3. **多轮对话**驱动 loregm 走 `dicelore-build-pack` 阶段（摸源→manifest→prologue→world→npc→cards→rules→fronts→state→validate→commit）：每轮 `send_to_builder(sid,name,text)` 发作者自然语言指令；**因 REST-only 不回散文，每轮后 `get_draft(sid)` 检视本轮 Draft 增量**判断 loregm 干了什么、进度如何。
@@ -157,11 +162,11 @@ export class Rewind {
 - **对话记录 = loregm 的 `<id>_session.jsonl`**（§1–§4 产出）：这是「作者说了什么（`_:"turn"`.input）→ loregm 干了什么（`_:"msg"` 的 tool_use/tool_result/result）」的权威记录。**skill 读它评估构建行为**（比 get_draft 增量更全：能看到 loregm 每步工具调用、摸源清洗过程、有没有凭空编造）。
 - **评估两维**（对照 md 黄金参照，定性、不量化）：
 
-  | 维度 | 抓什么信号（jsonl + Draft/pack） | 违规长啥样 |
-  |---|---|---|
-  | **A 构建行为**（对 `dicelore-build-core` 教条） | jsonl 里：先 Read/Grep/Bash 摸源再落笔？只声明（`dicelore_build_*`）不跑团（无 `resolve_*`/`narrate`）？一次一件、`validate` 收口？ | 没摸源就编；调了运行时裁决工具；跳过 validate 直接 commit |
-  | **B 团本质量**（对源案例 md） | pack 有 manifest/prologue/world/npc/cards/rules/state 吗、开得起局吗？忠于 md 的门派/NPC/机制/威胁线吗？ | 缺 prologue/manifest 开不了局；捏造原著没有的设定；丢了 md 的核心桥段/机制 |
 
+  | 维度                                            | 抓什么信号（jsonl + Draft/pack）                                                                                                    | 违规长啥样                                                                 |
+  | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+  | **A 构建行为**（对 `dicelore-build-core` 教条） | jsonl 里：先 Read/Grep/Bash 摸源再落笔？只声明（`dicelore_build_*`）不跑团（无 `resolve_*`/`narrate`）？一次一件、`validate` 收口？ | 没摸源就编；调了运行时裁决工具；跳过 validate 直接 commit                  |
+  | **B 团本质量**（对源案例 md）                   | pack 有 manifest/prologue/world/npc/cards/rules/state 吗、开得起局吗？忠于 md 的门派/NPC/机制/威胁线吗？                            | 缺 prologue/manifest 开不了局；捏造原著没有的设定；丢了 md 的核心桥段/机制 |
 - **写报告（定性）**：落 `docs/reports/<YYYY-MM-DD>-build-<团本名>.md`（对齐 play-eval 报告约定）。含：对象（md 源 + sid + commit）、逐维裁决（证据挂 jsonl 行 uuid / Draft 片段 + vs 源案例差距）、整体（相比源案例哪到位/哪差）、`build_core_fix_hints`（可泛化的教条措辞建议）、findings 分流（A 措辞类当轮改 / B 架构类记 findings 路由设计）。
 - **纪律**：对照真实案例、非凭空；玩家所见口径不适用（这是构建侧，判据是「团本可玩性 + 忠于素材」）；量化不可行→定性；别过拟合单个 md。
 
@@ -172,6 +177,7 @@ export class Rewind {
 ## §6 `dicelore-eval` → `play-eval` 改名
 
 **决策（拍定）：**
+
 - 目录 `.claude/skills/dicelore-eval/` → `.claude/skills/play-eval/`（`git mv`）；`SKILL.md` frontmatter `name: dicelore-eval` → `play-eval`，正文自指同步。
 - 更新引用（共 5 处，grep `dicelore-eval` 全改）：`docs/audits/2026-06-25-全量体检/05-回溯-测试.md`、`docs/wiki/设计/05-现状与计划/backlog-core.md`、`docs/wiki/设计/04-子系统设计/Skills-eval.md`、`docs/reports/README.md`（+ 本裁决自身随交付更新）。
 - `.mcp.json` 的 MCP server 名（`dicelore-play`/`dicelore-build`）**不改**（本就是 play/build 语义，不叫 dicelore-eval）。
@@ -184,6 +190,7 @@ export class Rewind {
 eval 的 `$` **就是 [install-datadir-layout](install-datadir-layout.md) 的 `$ROOT` 的一个 dev 实例**（默认 `.dicelore-eval`）：根下 `run.sh`+`config.toml`（不变的），`sessions/{dice,lore}`/`catalog.db`/`keys.db`/`logs/`（数据）。源码=仓库、不进 `$`。
 
 **决策（拍定）：**
+
 - **`install.sh`**（仓库根执行）：`bash install.sh [-d|--dir <安装目录>]`（默认 `.dicelore-eval`）。职责 = 铺一个 `$ROOT` 实例：
   - 建 `$ROOT` + 从 `config.example.toml` 拷出 `$ROOT/config.toml`（`[env]` 预置 `DICELORE_FAKE_GM = "0"`、`DICELORE_GM_MODEL`）+ 生成 `$ROOT/run.sh`（把 `git rev-parse --show-toplevel` 的仓库根路径**烙进去**）。
   - 把 `$ROOT` 加进 `.gitignore`（纯本地运行态）。
