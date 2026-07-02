@@ -1,5 +1,5 @@
 ---
-name: dicelore-eval
+name: play-eval
 description: Dicelore GM 教条 eval——评估带 gm-core 教条的真 GM 跑一个团本跑得好不好，对照 docs/research 真实安价案例（语料）出定性报告。用法：给一个**已备好的团本(Adventure) URI** + 一份**真实案例语料 URI**，经 play-mcp 连真后端当玩家驱动 GM 跑一局、再当评测者对照语料判表现。触发词：跑 eval、评估 GM 教条、看 GM 表现好不好、对照真实案例跑团本、play-mcp eval。哪怕用户只说"跑这个团本看看 GM 表现""教条有没有用"也用它——别手动一步步调 HTTP。
 ---
 
