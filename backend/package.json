@@ -6,7 +6,9 @@
   "license": "AGPL-3.0-or-later",
   "author": "MuLeiSY2021 <mulei_sy@qq.com>",
   "main": "./src/index.ts",
-  "exports": { ".": "./src/index.ts" },
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit",
@@ -14,18 +16,19 @@
     "dicelore": "tsx src/cli.ts"
   },
   "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "0.3.185",
     "@dicelore/dice": "*",
     "@dicelore/errors": "*",
     "@dicelore/harness": "*",
     "@dicelore/interface": "*",
     "@dicelore/logs": "*",
     "@dicelore/shared": "*",
-    "@anthropic-ai/claude-agent-sdk": "0.3.185",
+    "@hono/node-server": "^1.13.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@node-rs/jieba": "^2.0.1",
     "better-sqlite3": "^12.11.1",
     "hono": "^4.6.0",
-    "@hono/node-server": "^1.13.0",
+    "smol-toml": "^1.7.0",
     "ws": "^8.21.0",
     "zod": "^3.25.76"
   },
