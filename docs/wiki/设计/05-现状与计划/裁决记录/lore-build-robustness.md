@@ -1,17 +1,17 @@
 ---
 title: 裁决 · lore-build-robustness（组件5/6 余下）
 ---
-
 # 裁决：lore-build-robustness —— 团本构建组件5/6 余下（构建 MCP + Skill 侧健壮性收尾）
 
-- [ ] 用户已批准本裁决（勾上前视为未裁决，不可进交付波）
+- [X]  用户已批准本裁决（勾上前视为未裁决，不可进交付波）
 
 > 路线图项：里程碑一 · 地基「团本构建 组件5/6 余下（构建 MCP + 构建 Skill）」。此前该项标「已裁决」却无链接裁决文件（铁律 = 实为未裁决的历史欠账）——本文件补齐。
 > **范围界定（要紧）**：组件5/6 **核心已建成** ✅（构建 MCP `dicelore_build_*`、构建 skill `dicelore-build-pack`、`importPack` 四域+叙事域物化、toolgen 引擎/视图/叙事标准库、团本自定义 `tools:` import 装载）。本裁决只收「构建侧健壮性 3 条收尾」；**源摄入重设计（工作区+agentic 文件）另见 [build-agent-workspace](build-agent-workspace.md)**。
 > backlog：[BE-lore-error-shape / BE-lore-test-gap / BE-checkout-head](../backlog-后端.md)（本裁决合并这 3 条为一个交付单元）。
 > 来源：2026-06-30 113-agent review（前 2 条）+ 2026-06-26 N20 浮现（BE-checkout-head）；2026-07-01 用户要求补裁决文件。
 > **协同**：与 [build-agent-workspace](build-agent-workspace.md) 文件重叠——BE-lore-error-shape 与其同触 `LoreSession.handleMessage`/`api/lore.ts`。**若两裁决同波交付，重叠合并由主 agent 集成时解**；若分波，本裁决可先行（不依赖工作区）。
-> **原 §2「教条保证投递内联兜底」已删**（用户 2026-07-01：skill 加载失败是系统 bug、应修复不 fallback）——lore 开场白改由专属 `dicelore-build-core` skill 经 plugin 加载投递（归 [skill-loading-by-reference](skill-loading-by-reference.md)），两侧一并退役内联兜底。
+> **原 §2「BE-lore-prompt-fallback（给 loregm 新增内联兜底）」已删**（用户 2026-07-01：skill 加载失败是系统 bug、应 fail loud 修复而非 fallback）——lore 侧本就**无**内联兜底，§2 只是「新增」提案、现取消：lore 开场白改由专属 `dicelore-build-core` skill 经 plugin 加载投递（归 [skill-loading-by-reference](skill-loading-by-reference.md)）。
+> 真正被「退役」的兜底在 **dicegm 侧——删除其原有 `gmCoreDoctrine` 内联兜底**；该策略**已并入 [skill-loading-by-reference](skill-loading-by-reference.md) §2**（「删 dice 内联教条 + fail loud」，已批准），不属本裁决范围。
 
 ---
 
