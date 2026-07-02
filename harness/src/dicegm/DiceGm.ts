@@ -12,8 +12,7 @@ import type { Logger } from "pino";
 import type { Agent, TurnInput, TurnEvent, AgentInit } from "../runtime/agent.js";
 import { buildQueryOptions } from "./gmAssembly.js";
 import { getLogger, createFileLogger } from "@dicelore/logs";
-import { appendFileSync, mkdirSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { sessionDir, SessionTranscript } from "../runtime/transcript.js";
 
 // CO-采集:Agent SDK result.usage 字段名 → UsageInput 数字字段（纯函数,可 offline 单测）。
 // SDK NonNullableUsage 形:{input_tokens, output_tokens, cache_read_input_tokens, cache_creation_input_tokens, …}。
@@ -43,34 +42,24 @@ export function parseUsage(usage: unknown): ParsedUsage {
 // A1 后 DiceGm 不再消费 assistant text 当 narration(只取 result 结束),故这些 raw 仅进日志、不进玩家所见。
 export class DiceGm implements Agent {
   private readonly sessionLogger: Logger;
+  private readonly transcript?: SessionTranscript;
   constructor(private init: AgentInit) {
     const d = this.sessionDir;
     this.sessionLogger = d ? createFileLogger(d) : getLogger(); // 无 sessionDir(lore/测试)退化为全局
+    if (d && this.init.sessionId) {
+      this.transcript = new SessionTranscript({ sessionDir: d, sessionId: this.init.sessionId });
+    }
   }
 
-  // session 自包含文件夹:<sessionsDir>/dice/sessions/<sessionId>/{session.db, <sessionId>_session.jsonl, *.log}
+  // session 自包含文件夹:<sessionsDir>/<kind>/sessions/<sessionId>/{session.db, <sessionId>_session.jsonl, *.log}
+  // 目录经 backend-free 纯函数 sessionDir(dataDir, kind, id) 算(TR1 v1 = 现布局)。
   private get sessionDir(): string | undefined {
     const { sessionId, sessionsDir } = this.init;
     if (!sessionId || !sessionsDir) return undefined;
-    return join(sessionsDir, "dice", "sessions", sessionId);
-  }
-  private get conversationPath(): string | undefined {
-    const d = this.sessionDir;
-    return d ? join(d, `${this.init.sessionId}_session.jsonl`) : undefined;
+    return sessionDir(sessionsDir, this.init.kind ?? "dice", sessionId);
   }
 
-  private logReady = false;
   private curTurnId = "?";
-
-  // 对话记录:每行一 JSON 事件(turn/msg/turn_end/error/stage_error),CC transcript 风格,可回放/迁移。
-  private appendConversation(obj: unknown): void {
-    const p = this.conversationPath;
-    if (!p) return;
-    try {
-      if (!this.logReady) { mkdirSync(dirname(p), { recursive: true }); this.logReady = true; }
-      appendFileSync(p, JSON.stringify(obj) + "\n");
-    } catch (e) { getLogger().error({ err: e }, "写 _session.jsonl 失败"); }
-  }
 
   // SDK 单条消息:对话记录落原始结构,回合日志落可读摘要(result 用 info,余 debug)。
   private logMsg(idx: number, msg: unknown): void {
@@ -83,7 +72,7 @@ export class DiceGm implements Agent {
     const body = (type === "system" && m.subtype === "init")
       ? { type, subtype: m.subtype, model: m.model, session_id: m.session_id, cwd: m.cwd }
       : m;
-    this.appendConversation({ _: "msg", turnId: this.curTurnId, idx, ...body });
+    this.transcript?.msg(idx, { _: "msg", turnId: this.curTurnId, ...body });
     const tag = `[msg#${idx} ${type}]`;
     if (type === "assistant") {
       const blocks = m.message?.content ?? [];
@@ -120,7 +109,7 @@ export class DiceGm implements Agent {
     // ① 落回合头(诊断价值最大)。skill 加载改 local plugin 按引用(裁决 skill-loading-by-reference):
     //    不再每回合暂存 skill 会话本地副本 —— plugin 母本已 boot 期物化到数据根,此处只透传 PluginRef。
     this.sessionLogger.info({ turnId, session: this.init.sessionId ?? "?", model, input: input.text, plugin: pluginMeta, ts }, `TURN ${turnId} start`);
-    this.appendConversation({ _: "turn", turnId, sessionId: this.init.sessionId ?? null, model, input: input.text, plugin: pluginMeta, ts });
+    this.transcript?.turn({ turnId, sessionId: this.init.sessionId ?? null, model, input: input.text, plugin: pluginMeta, ts });
 
     this.sessionLogger.info(
       { turnId, settingSources: "[]", plugin: pluginMeta, workspace: this.init.workspace ?? null, skills: plugin ? plugin.skills : [] },
@@ -161,7 +150,7 @@ export class DiceGm implements Agent {
       }
       yield { type: "turn_end" };
       this.sessionLogger.info({ turnId, msgs: msgIdx }, `TURN ${turnId} end`);
-      this.appendConversation({ _: "turn_end", turnId, msgs: msgIdx });
+      this.transcript?.turnEnd(turnId, { msgs: msgIdx });
     } catch (e) {
       // 超时 abort 优先按超时报(更可读 + 可区分 code=gm_timeout,让前端识别「超时·可重试」);否则原样抛错信息。
       const isTimeout = controller.signal.aborted;
@@ -169,7 +158,7 @@ export class DiceGm implements Agent {
         ? `GM 回合超时(${timeoutMs / 1000}s)中止,已脱困`
         : (e instanceof Error ? e.message : String(e));
       this.sessionLogger.error({ err: e, turnId, aborted: isTimeout }, "GM runTurn 异常");
-      this.appendConversation({ _: "error", turnId, message, code: isTimeout ? "gm_timeout" : undefined });
+      this.transcript?.error({ turnId, message, code: isTimeout ? "gm_timeout" : undefined });
       yield { type: "error", message, code: isTimeout ? "gm_timeout" : undefined };
     } finally {
       clearTimeout(timer);
