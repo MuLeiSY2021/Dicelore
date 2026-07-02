@@ -148,3 +148,39 @@ describe("build-mcp put_material 流式上传素材", () => {
     }
   });
 });
+
+// §1 BE-lore-error-shape: doSendToBuilder 透传后端 body 的 error(构建 GM 中途出错、领域级、HTTP 仍 202),不吞。
+// 独立起一个后端(其 agentFactory 返回一个产 error 事件的构建 agent),验 send_to_builder 结果带 error。
+describe("doSendToBuilder 透传 error(不吞)", () => {
+  let errServer: ReturnType<typeof serve>;
+  let errCatalog: CatalogDB;
+  let prevUrl: string | undefined;
+  beforeAll(() => {
+    prevUrl = process.env.DICELORE_PLAY_URL;
+    errCatalog = openCatalog(":memory:");
+    // 产 error 事件的构建 agent(模拟 LLM/工具异常)。
+    class ErroringBuilder implements Agent {
+      async *runTurn(): AsyncIterable<TurnEvent> {
+        yield { type: "narration", text: "开始……" };
+        yield { type: "error", message: "构建工具异常", code: "tool_error" };
+      }
+    }
+    const agentFactory = (_init: AgentInit) => new ErroringBuilder();
+    const app = createLoreApp({ catalog: errCatalog, agentFactory });
+    errServer = serve({ fetch: app.fetch, port: 0 });
+    process.env.DICELORE_PLAY_URL = `http://localhost:${(errServer.address() as { port: number }).port}`;
+  });
+  afterAll(() => {
+    errServer.close();
+    errCatalog.close();
+    if (prevUrl === undefined) delete process.env.DICELORE_PLAY_URL;
+    else process.env.DICELORE_PLAY_URL = prevUrl;
+  });
+
+  it("后端 body 带 error 时 doSendToBuilder 返回带 error(作者可见)", async () => {
+    const sid = doOpenBuildSession();
+    const r = await doSendToBuilder(sid, "出错团本", "写点设定");
+    expect(r.turnId).toMatch(/-l\d+$/);
+    expect(r.error).toEqual({ message: "构建工具异常", code: "tool_error" });
+  });
+});

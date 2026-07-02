@@ -43,11 +43,13 @@ function post(p: string, body: unknown): Promise<unknown> {
 function enc(sid: string): string { return encodeURIComponent(sid); }
 function json(v: unknown) { return { content: [{ type: "text" as const, text: JSON.stringify(v) }] }; }
 
-// 发一条作者指令驱动构建 GM 一轮。REST only(RT-5):后端把构建 GM 跑到 turn_end 即返回 {turnId},
+// 发一条作者指令驱动构建 GM 一轮。REST only(RT-5):后端把构建 GM 跑到 turn_end 即返回 {turnId, error?},
 // 不回传散文。name = 在造的团本名(→ 后端 UUIDv5 身份;同名 session 累积到同一 Draft)。
 // 作者拿到 {turnId} 后,靠 get_draft / list_catalog 检视构建 GM 这一轮改了什么。
-export async function doSendToBuilder(sid: string, name: string, text: string): Promise<{ turnId: string }> {
-  return (await post(`/lore-sessions/${enc(sid)}/messages`, { text, name })) as { turnId: string };
+// §1 BE-lore-error-shape:后端 body 带 error 时(构建 GM 中途出错、领域级、HTTP 仍 200/202)透传给作者、不吞——
+// send_to_builder 结果 JSON 带 error 时作者可见。
+export async function doSendToBuilder(sid: string, name: string, text: string): Promise<{ turnId: string; error?: { message: string; code?: string } }> {
+  return (await post(`/lore-sessions/${enc(sid)}/messages`, { text, name })) as { turnId: string; error?: { message: string; code?: string } };
 }
 // 起一个构建会话 id。后端 LoreSession 是 getOrCreate(首次 POST messages 时建),故这里只回 sid 不打后端——
 // 与 play-mcp.doOpenSession 灌种子建 session 的语义不同(构建会话无场景种子,空 Draft 起步)。

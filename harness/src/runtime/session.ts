@@ -14,3 +14,12 @@ export interface Session {
   readonly sessionId: string;
   readonly kind: SessionKind;
 }
+
+// handleMessage 一轮的返回。error 可选、领域级(GM 中途出错;非传输级):
+// lore 侧(BE-lore-error-shape)驱动 agent 产 error 事件时填 { message, code? }、不吞;
+// dice 侧不产该字段(其 handleMessage 返回结构上是 TurnResult 的子类型、零影响)。
+// handleMessage 未挂进 Session 接口(仅 DiceSession/LoreSession 各自实现),此类型作跨实现的共享返回契约。
+export interface TurnResult {
+  turnId: string;
+  error?: { message: string; code?: string };
+}

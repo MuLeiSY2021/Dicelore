@@ -105,8 +105,11 @@ export function createLoreApp(deps: LoreDeps): Hono {
       entry = { session: new LoreSession(id, dep), draft };
       loreReg.set(id, entry);
     }
-    const { turnId } = await entry.session.handleMessage(body.text);
-    return c.json({ turnId }, 202);
+    // §1 BE-lore-error-shape:handleMessage 返回 {turnId, error?}——error 属领域级(构建 GM 中途出错),
+    // turn 已实际跑完(turnId 有效)→ HTTP 保持 202 不变,靠 body 的 error 字段标失败(不改 5xx)。
+    // 调用方(build-mcp / 前端构建台)以 body.error 存在与否判成败。
+    const { turnId, error } = await entry.session.handleMessage(body.text);
+    return c.json(error ? { turnId, error } : { turnId }, 202);
   });
 
   // 素材流式上传(build-agent-workspace §3):请求体=原始文件字节流(application/octet-stream),

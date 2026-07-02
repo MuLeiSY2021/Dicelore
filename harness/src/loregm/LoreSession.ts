@@ -9,7 +9,7 @@
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { AgentFactory, PluginRef } from "../runtime/agent.js";
-import type { Session } from "../runtime/session.js";
+import type { Session, TurnResult } from "../runtime/session.js";
 
 let loreTurnCounter = 0;
 function nextTurnId(id: string): string { loreTurnCounter += 1; return `${id}-l${loreTurnCounter}`; }
@@ -27,7 +27,7 @@ export interface LoreSessionDeps {
 // lore 构建运行单元:驱动 agent 挂注入的构建 MCP,无 rollGate/turn-end/canon-notify。
 // 刻意不持有 gate/db/Draft —— 跑团插件结构上不在场(物理隔离);Draft 由组合根持有(draft 只读端点经组合根读)。
 // v1 lore 构建是 REST only:无 WS 端点接入(见 api/lore.ts,只 POST /lore-sessions/:id/messages),
-// 故不持 hub/不广播——handleMessage 直接把 driver 跑到 turn_end、轮询/等待返回 {turnId}。
+// 故不持 hub/不广播——handleMessage 直接把 driver 跑到 turn_end、轮询/等待返回 {turnId, error?}。
 export class LoreSession implements Session {
   readonly kind = "lore" as const;
   readonly mcpServer: McpServer;
@@ -35,7 +35,10 @@ export class LoreSession implements Session {
     this.mcpServer = deps.mcpServer;
   }
 
-  async handleMessage(text: string): Promise<{ turnId: string }> {
+  // 返回 {turnId, error?}:构建 agent 中途 error(LLM 失败/工具异常/FakeDiceGm error 档)不再被吞——
+  // 循环捕获 ev.type==="error" 记 { message, code? }、turn_end 时不带 error。error 属领域级,
+  // 调用方(api/lore POST messages、build-mcp doSendToBuilder)以 body.error 存在与否判成败(HTTP 保持 200/202)。
+  async handleMessage(text: string): Promise<TurnResult> {
     const turnId = nextTurnId(this.sessionId);
     const driver = this.deps.agentFactory({
       mcpServer: this.mcpServer,
@@ -44,9 +47,11 @@ export class LoreSession implements Session {
       workspace: this.deps.workspace,
     });
     // REST 语义:跑完整轮构建反馈(narration/turn_end/error)即收尾,不向任何 WS 广播。
+    let error: TurnResult["error"];
     for await (const ev of driver.runTurn({ text, turnId })) {
-      if (ev.type === "turn_end" || ev.type === "error") break;
+      if (ev.type === "error") { error = { message: ev.message, code: ev.code }; break; }
+      if (ev.type === "turn_end") break;
     }
-    return { turnId };
+    return error ? { turnId, error } : { turnId };
   }
 }

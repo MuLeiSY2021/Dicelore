@@ -188,6 +188,50 @@ describe("createLoreApp: plugin 传入", () => {
   });
 });
 
+// §1 BE-lore-error-shape: POST /lore-sessions/:id/messages 返回体带 error?。
+// 构建 GM 中途 error 属领域级(turn 已跑完、turnId 有效)→ HTTP 保持 202,靠 body.error 标失败(不改 5xx)。
+// 成功轮 body 不含 error。
+describe("POST /lore-sessions/:id/messages error 透传(body error,HTTP 保持 202)", () => {
+  it("agent 产 error 事件时 body 含 error、HTTP 仍 202", async () => {
+    const catalog = openCatalog(":memory:");
+    const lore = createLoreApp({
+      catalog,
+      agentFactory: () => new FakeDiceGm([
+        { type: "narration", text: "开始……" },
+        { type: "error", message: "构建工具异常", code: "tool_error" },
+      ]),
+    });
+
+    const res = await lore.request("/lore-sessions/e1/messages", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ text: "写点设定", name: "出错团本" }),
+    });
+    expect(res.status).toBe(202); // 领域级 error、传输层仍成功
+    const body = (await res.json()) as { turnId: string; error?: { message: string; code?: string } };
+    expect(body.turnId).toBeTruthy();
+    expect(body.error).toEqual({ message: "构建工具异常", code: "tool_error" });
+    catalog.close();
+  });
+
+  it("成功轮 body 不含 error", async () => {
+    const catalog = openCatalog(":memory:");
+    const lore = createLoreApp({
+      catalog,
+      agentFactory: () => new FakeDiceGm([{ type: "narration", text: "写好了" }, { type: "turn_end" }]),
+    });
+
+    const res = await lore.request("/lore-sessions/ok1/messages", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ text: "写点设定", name: "成功团本" }),
+    });
+    expect(res.status).toBe(202);
+    const body = (await res.json()) as { turnId: string; error?: unknown };
+    expect(body.turnId).toBeTruthy();
+    expect(body.error).toBeUndefined();
+    catalog.close();
+  });
+});
+
 // GET /lore-sessions/:id/draft —— additive 检视端点:看未 commit 的 Draft 当前态。
 // 由来:RT-5 后 lore 是 REST only,POST messages 只回 {turnId} 不回传 GM 散文;构建 GM 改的是 in-memory
 // Draft,commit 前 catalog 查不到。此端点暴露 LoreSession.draft 的只读视图(toPackFiles + snapshot),
