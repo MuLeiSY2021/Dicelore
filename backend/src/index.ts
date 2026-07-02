@@ -143,7 +143,7 @@ export { npcStdlibTools, npcToolDecls } from "./stdlib/npc.js";
 // 组合根:openSession→openDb→openSessionBackend 注入 harness 会话(harness 不自开库)。
 // eval harness(harness/eval-dicegm play-mcp、harness/eval-loregm build-mcp)经此装真后端 HTTP/WS 跑评测。
 export { createLiveApp, type LiveDeps } from "./api/dice.js";
-export { createLoreApp, type LoreDeps } from "./api/lore.js";
+export { createLoreApp, ensureWorkspace, type LoreDeps } from "./api/lore.js";
 export { createDiagnosticsApp } from "./api/diagnostics.js";
 export { createKeysApp, type KeysDeps } from "./api/keys.js";
 export { storeKey, getKeyMeta, listKeyMeta, deleteKey, revealKey, KeyMasterMissingError, type KeyMeta, type StoreKeyInput } from "./store/keys.js";

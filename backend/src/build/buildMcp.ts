@@ -12,18 +12,14 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { Draft, commitDraft, type FrontSpec } from "./draft.js";
 import { tag, resolveId } from "../catalog/catalog.js";
 import type { CatalogDB } from "../catalog/db.js";
-import { initRetrieval, type RetrievalDB } from "./retrieval/db.js";
-import { ingest } from "./retrieval/ingest.js";
-import { searchMaterial } from "./retrieval/search.js";
 import { validatePack } from "./pack/validate.js";
 
 // 构建会话上下文:一个 Draft(跨工具调用累积) + Catalog + 团本名。lore_agent 在此造包。
+// 源素材经会话工作区 materials/ 落盘、构建 agent 用 Read/Grep/Bash 处理(退役 BM25 检索,见 build-agent-workspace)。
 export interface BuildCtx {
   catalog: CatalogDB;
   draft: Draft;
   name: string;
-  /** 素材检索 DB（可选；由 ingest/search 按需 initRetrieval）。 */
-  retrievalDb?: RetrievalDB;
 }
 
 export interface BuildEnvelope {
@@ -55,9 +51,7 @@ export const BUILD_SCHEMAS = {
   }).strict(),
   commit: z.object({ message: z.string() }).strict(),
   tag: z.object({ commitId: z.string(), label: z.string() }).strict(),
-  // ── 新増 5 个工具（检索 + 校验 + 读取 + front md格式 + prologue）────────
-  ingest: z.object({ text: z.string() }).strict(),
-  search: z.object({ query: z.string(), k: z.number().int().positive().optional() }).strict(),
+  // ── 新増工具（校验 + 读取 + front md格式 + prologue）────────
   validate: z.object({}).strict(),
   read: z.object({
     section: z.enum(["manifest", "world", "rules", "pools", "sheets", "fronts"]).optional(),
@@ -104,18 +98,6 @@ export function invokeBuildTool(ctx: BuildCtx, name: string, args: unknown): Bui
     }
     case "tag": tag(ctx.catalog, { adventureId: resolveId(ctx.name), commitId: a.commitId as string, label: a.label as string }); return ok({ ok: true });
     // ── 新增工具 ────────────────────────────────────────────────────────────
-    case "ingest": {
-      if (!ctx.retrievalDb) return err("NO_RETRIEVAL_DB", "BuildCtx 未设置 retrievalDb，无法 ingest");
-      initRetrieval(ctx.retrievalDb);
-      const chunks = ingest(ctx.retrievalDb, a.text as string);
-      return ok({ chunks });
-    }
-    case "search": {
-      if (!ctx.retrievalDb) return err("NO_RETRIEVAL_DB", "BuildCtx 未设置 retrievalDb，无法 search");
-      const k = (a.k as number | undefined) ?? 8;
-      const hits = searchMaterial(ctx.retrievalDb, a.query as string, k);
-      return ok({ hits });
-    }
     case "validate": {
       const files = ctx.draft.toPackFiles();
       const report = validatePack(files);
@@ -167,8 +149,6 @@ const TOOL_META: Record<string, { description: string; annotations?: { readOnlyH
   set_state:    { description: "追加开局状态格（entity/attr/value）到 Draft。非幂等——多次调用追加行。", annotations: { destructiveHint: false } },
   commit:       { description: "把 Draft 当前内容作为一个版本提交到 Catalog（linear commit）。返回 adventureId + commitId。", annotations: { destructiveHint: false } },
   tag:          { description: "给 Catalog 中某 commitId 打标签（如 v1.0.0）。同名标签会覆盖。", annotations: { idempotentHint: true } },
-  ingest:       { description: "将原著/素材文本切块后写入素材检索库（build_material）。追加语义——多次调用追加块，不覆盖。", annotations: { destructiveHint: false } },
-  search:       { description: "在素材检索库中用 jieba BM25 全文搜索，返回 top-k 相关块（{ hits: [{idx, text}] }）。只读。", annotations: { readOnlyHint: true } },
   validate:     { description: "校验 Draft 当前内容是否符合团本包规范（manifest/fronts/CSV 列等）。返回 { ok, issues }。只读。", annotations: { readOnlyHint: true } },
   read:         { description: "回读 Draft 当前内容（供审阅）。section 可选：manifest/world/rules/pools/sheets/fronts；省略返回全部。只读。", annotations: { readOnlyHint: true } },
   add_front:     { description: "添加/覆写一个 Front（阵线）到 Draft，产出 fronts/<id>.md（frontmatter 声明 Clock + 凶兆阶梯表）。同 id 覆盖，幂等。", annotations: { idempotentHint: true } },

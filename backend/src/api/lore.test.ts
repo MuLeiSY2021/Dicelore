@@ -8,8 +8,11 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import { describe, it, expect, vi } from "vitest";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { openCatalog, openDb, initSchema, resolveId, type DB, type PackFile } from "@dicelore/backend";
-import { createLoreApp } from "./lore.js";
+import { createLoreApp, ensureWorkspace } from "./lore.js";
 import { createLiveApp } from "./dice.js";
 import { FakeDiceGm } from "@dicelore/harness";
 import type { Agent, AgentInit, PluginRef, TurnEvent } from "@dicelore/harness";
@@ -235,5 +238,188 @@ describe("GET /lore-sessions/:id/draft 检视未 commit 的 Draft", () => {
     const cat = (await (await lore.request("/catalog")).json()) as { adventure: unknown[] };
     expect(cat.adventure.length).toBe(0);
     catalog.close();
+  });
+});
+
+// ── 会话工作区 ensureWorkspace（build-agent-workspace §1）──────────────────────
+// workspace 每 session 持久:<sessionsDir>/lore/sessions/<id>/workspace/,只建 materials/,
+// 不拷任何 skill、不产 .claude(skill 经 plugin 从数据根按引用加载)。ensureWorkspace 幂等。
+describe("ensureWorkspace（会话工作区，纯 fs）", () => {
+  it("建 <sessionsDir>/lore/sessions/<id>/workspace/materials，返回 workspace 绝对路径", () => {
+    const root = mkdtempSync(join(tmpdir(), "dl-ws-"));
+    try {
+      const ws = ensureWorkspace(root, "sess-a");
+      expect(ws).toBe(join(root, "lore", "sessions", "sess-a", "workspace"));
+      expect(existsSync(join(ws, "materials"))).toBe(true);
+      // 不产 .claude / 不拷 skill——workspace 只装 materials（+ agent scratch，起跑时空）。
+      expect(existsSync(join(ws, ".claude"))).toBe(false);
+      expect(readdirSync(ws).sort()).toEqual(["materials"]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("幂等：重复调不炸、目录仍在", () => {
+    const root = mkdtempSync(join(tmpdir(), "dl-ws-"));
+    try {
+      const ws1 = ensureWorkspace(root, "sess-b");
+      const ws2 = ensureWorkspace(root, "sess-b");
+      expect(ws1).toBe(ws2);
+      expect(existsSync(join(ws1, "materials"))).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+// ── POST /lore-sessions/:id/materials（流式上传，build-agent-workspace §3）──────
+describe("POST /lore-sessions/:id/materials 流式素材上传", () => {
+  function loreApp(root: string) {
+    const catalog = openCatalog(":memory:");
+    const app = createLoreApp({ catalog, agentFactory: () => new FakeDiceGm([]), sessionsDir: root });
+    return { app, catalog };
+  }
+
+  it("octet-stream 流式落盘到 workspace/materials/，返回 {path,bytes}", async () => {
+    const root = mkdtempSync(join(tmpdir(), "dl-mat-"));
+    const { app, catalog } = loreApp(root);
+    try {
+      const body = "北境蛮族与边境长城的百年恩怨。".repeat(10);
+      const res = await app.request("/lore-sessions/m1/materials?filename=兽人冒险.md", {
+        method: "POST",
+        headers: { "content-type": "application/octet-stream" },
+        body,
+      });
+      expect(res.status).toBe(200);
+      const out = (await res.json()) as { path: string; bytes: number };
+      expect(out.path).toBe("materials/兽人冒险.md");
+      expect(out.bytes).toBe(Buffer.byteLength(body));
+      const onDisk = readFileSync(join(root, "lore", "sessions", "m1", "workspace", "materials", "兽人冒险.md"), "utf8");
+      expect(onDisk).toBe(body);
+    } finally {
+      catalog.close();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("同名覆盖", async () => {
+    const root = mkdtempSync(join(tmpdir(), "dl-mat-"));
+    const { app, catalog } = loreApp(root);
+    try {
+      await app.request("/lore-sessions/m2/materials?filename=a.txt", {
+        method: "POST", headers: { "content-type": "application/octet-stream" }, body: "第一版内容",
+      });
+      const res = await app.request("/lore-sessions/m2/materials?filename=a.txt", {
+        method: "POST", headers: { "content-type": "application/octet-stream" }, body: "第二版",
+      });
+      expect(res.status).toBe(200);
+      const onDisk = readFileSync(join(root, "lore", "sessions", "m2", "workspace", "materials", "a.txt"), "utf8");
+      expect(onDisk).toBe("第二版");
+    } finally {
+      catalog.close();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("X-Material-Filename header 亦可带文件名", async () => {
+    const root = mkdtempSync(join(tmpdir(), "dl-mat-"));
+    const { app, catalog } = loreApp(root);
+    try {
+      const res = await app.request("/lore-sessions/m3/materials", {
+        method: "POST",
+        headers: { "content-type": "application/octet-stream", "x-material-filename": "via-header.txt" },
+        body: "内容",
+      });
+      expect(res.status).toBe(200);
+      const out = (await res.json()) as { path: string };
+      expect(out.path).toBe("materials/via-header.txt");
+    } finally {
+      catalog.close();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("filename 含 ../ → 400 bad_material_name，不落盘", async () => {
+    const root = mkdtempSync(join(tmpdir(), "dl-mat-"));
+    const { app, catalog } = loreApp(root);
+    try {
+      const res = await app.request("/lore-sessions/m4/materials?filename=" + encodeURIComponent("../evil.txt"), {
+        method: "POST", headers: { "content-type": "application/octet-stream" }, body: "x",
+      });
+      expect(res.status).toBe(400);
+      const out = (await res.json()) as { error: { code: string } };
+      expect(out.error.code).toBe("bad_material_name");
+      // 逃逸目标不存在
+      expect(existsSync(join(root, "lore", "sessions", "evil.txt"))).toBe(false);
+    } finally {
+      catalog.close();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("filename 缺失 → 400 bad_material_name", async () => {
+    const root = mkdtempSync(join(tmpdir(), "dl-mat-"));
+    const { app, catalog } = loreApp(root);
+    try {
+      const res = await app.request("/lore-sessions/m5/materials", {
+        method: "POST", headers: { "content-type": "application/octet-stream" }, body: "x",
+      });
+      expect(res.status).toBe(400);
+      const out = (await res.json()) as { error: { code: string } };
+      expect(out.error.code).toBe("bad_material_name");
+    } finally {
+      catalog.close();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("超 DICELORE_MATERIAL_MAX_MB 中途 413 material_too_large + 清半成品（不整体入内存）", async () => {
+    const root = mkdtempSync(join(tmpdir(), "dl-mat-"));
+    const prev = process.env.DICELORE_MATERIAL_MAX_MB;
+    process.env.DICELORE_MATERIAL_MAX_MB = "1"; // 上限 1MB
+    const { app, catalog } = loreApp(root);
+    try {
+      // 构造一个远超上限的流(多块，边写边超)——不整体缓冲。
+      const chunk = new Uint8Array(256 * 1024).fill(65); // 256KB/块
+      const total = 8; // 2MB > 1MB 上限
+      let pushed = 0;
+      const stream = new ReadableStream<Uint8Array>({
+        pull(controller) {
+          if (pushed >= total) { controller.close(); return; }
+          controller.enqueue(chunk);
+          pushed += 1;
+        },
+      });
+      const res = await app.request("/lore-sessions/m6/materials?filename=big.bin", {
+        method: "POST",
+        headers: { "content-type": "application/octet-stream" },
+        body: stream,
+        // @ts-expect-error node fetch/undici needs duplex for streaming request body
+        duplex: "half",
+      });
+      expect(res.status).toBe(413);
+      const out = (await res.json()) as { error: { code: string } };
+      expect(out.error.code).toBe("material_too_large");
+      // 半成品已清:文件不应残留。
+      expect(existsSync(join(root, "lore", "sessions", "m6", "workspace", "materials", "big.bin"))).toBe(false);
+    } finally {
+      if (prev === undefined) delete process.env.DICELORE_MATERIAL_MAX_MB;
+      else process.env.DICELORE_MATERIAL_MAX_MB = prev;
+      catalog.close();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("sessionsDir 缺省 → materials 端点 500（组合根未接线）", async () => {
+    const catalog = openCatalog(":memory:");
+    const app = createLoreApp({ catalog, agentFactory: () => new FakeDiceGm([]) });
+    try {
+      const res = await app.request("/lore-sessions/m7/materials?filename=a.txt", {
+        method: "POST", headers: { "content-type": "application/octet-stream" }, body: "x",
+      });
+      expect(res.status).toBe(500);
+    } finally {
+      catalog.close();
+    }
   });
 });

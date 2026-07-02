@@ -55,7 +55,7 @@ export function startServer(port: number): void {
     listSessions: () => listSessionSummaries(join(dir, "dice", "sessions")),
     deleteSession: (id) => { try { rmSync(sessionDir(id, "dice"), { recursive: true, force: true }); } catch (e) { getLogger().error({ err: e, id }, "删 session 文件夹失败"); } },
   }));
-  app.route("/", createLoreApp({ catalog, agentFactory, buildPrompt: process.env.DICELORE_BUILD_PROMPT, plugin: lorePlugin }));
+  app.route("/", createLoreApp({ catalog, agentFactory, buildPrompt: process.env.DICELORE_BUILD_PROMPT, plugin: lorePlugin, sessionsDir: dir }));
   app.route("/", createDiagnosticsApp({ port, fakeGm: fake }));
   // CO 可视化:GET /sessions/:id/usage 只读投影,复用本局 db 端口。
   app.route("/", createUsageApp({ openSession }));

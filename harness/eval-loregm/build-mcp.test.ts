@@ -13,10 +13,13 @@
 // 改 Draft / commit,完全复刻真 CC 构建 GM 的产物路径,只是把 LLM 决策换成固定指令序列。
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { serve } from "@hono/node-server";
+import { mkdtempSync, writeFileSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { openCatalog, resolveId, type CatalogDB } from "@dicelore/backend";
 import type { Agent, AgentInit, TurnEvent } from "@dicelore/harness";
 import { createLoreApp } from "@dicelore/backend";
-import { doOpenBuildSession, doSendToBuilder, doGetDraft, doListCatalog, doGetPackFiles } from "./build-mcp.js";
+import { doOpenBuildSession, doSendToBuilder, doGetDraft, doListCatalog, doGetPackFiles, doPutMaterial } from "./build-mcp.js";
 
 // 脚本化构建 agent:不烧 LLM,经 mcpServer 上注册的真 dicelore_build_* 工具改 Draft。
 // 每收一条作者指令(text),按 text 关键字决定调哪些构建工具——模拟真构建 GM「读作者意图→调工具造包」。
@@ -99,5 +102,49 @@ describe("build-mcp handlers", () => {
     const pack = (await doGetPackFiles(entry!.id, entry!.head!)) as { files: { path: string; content: string }[] };
     const paths = pack.files.map((f) => f.path);
     expect(paths).toEqual(expect.arrayContaining(["manifest.md", "prologue.md", "lore/世界观.md"]));
+  });
+});
+
+// put_material:把作者本机文件流式上传进构建会话工作区(build-agent-workspace §3)。
+// content 不进工具参数(取 localPath),端点流式落 workspace/materials/。用带 sessionsDir 的独立后端。
+describe("build-mcp put_material 流式上传素材", () => {
+  let matServer: ReturnType<typeof serve>;
+  let matCatalog: CatalogDB;
+  let root: string;
+  let prevUrl: string | undefined;
+
+  beforeAll(() => {
+    root = mkdtempSync(join(tmpdir(), "dl-putmat-"));
+    matCatalog = openCatalog(":memory:");
+    const app = createLoreApp({ catalog: matCatalog, agentFactory: (init: AgentInit) => new FakeLoreBuilder(init), sessionsDir: root });
+    matServer = serve({ fetch: app.fetch, port: 0 });
+    prevUrl = process.env.DICELORE_PLAY_URL;
+    process.env.DICELORE_PLAY_URL = `http://localhost:${(matServer.address() as { port: number }).port}`;
+  });
+  afterAll(() => {
+    matServer.close();
+    matCatalog.close();
+    if (prevUrl === undefined) delete process.env.DICELORE_PLAY_URL;
+    else process.env.DICELORE_PLAY_URL = prevUrl;
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  it("取 localPath 流式上传，返回 {path,bytes}，落盘内容与源一致（content 不进工具参数）", async () => {
+    // 作者本机源文件(模拟 508KB 大源:此处小样本，关键是走 localPath 而非把 content 当参数)。
+    const srcDir = mkdtempSync(join(tmpdir(), "dl-src-"));
+    const srcPath = join(srcDir, "兽人冒险.md");
+    const content = "从刚成年开始的兽人冒险。".repeat(500);
+    writeFileSync(srcPath, content, "utf8");
+    try {
+      const sid = doOpenBuildSession();
+      const out = await doPutMaterial(sid, "兽人冒险.md", srcPath);
+      expect(out.path).toBe("materials/兽人冒险.md");
+      expect(out.bytes).toBe(Buffer.byteLength(content));
+      // 端点落盘:workspace/materials/ 下内容与源逐字节一致。
+      const onDisk = readFileSync(join(root, "lore", "sessions", sid, "workspace", "materials", "兽人冒险.md"), "utf8");
+      expect(onDisk).toBe(content);
+    } finally {
+      rmSync(srcDir, { recursive: true, force: true });
+    }
   });
 });

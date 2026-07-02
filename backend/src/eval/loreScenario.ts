@@ -30,7 +30,6 @@ import { importPack, type ImportResult } from "../catalog/import.js";
 import { resolveId } from "../catalog/catalog.js";
 import { Draft } from "../build/draft.js";
 import { invokeBuildTool, type BuildCtx, type BuildEnvelope } from "../build/buildMcp.js";
-import { initRetrieval, type RetrievalDB } from "../build/retrieval/db.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 // lore scenarios 在 packages/core/eval/loreScenarios/（src/eval → ../../eval/loreScenarios）。
@@ -82,14 +81,11 @@ export function loadLoreScenario(scenarioId: string): LoreScenario {
   return JSON.parse(readFileSync(join(loreScenariosDir, `${scenarioId}.json`), "utf8")) as LoreScenario;
 }
 
-// 建一个 offline 构建上下文：内存 Catalog + 空 Draft + 内存检索库（供 ingest/search 用）。
-export function buildAuthorCtx(adventure: string): { ctx: BuildCtx; catalog: CatalogDB; retrievalDb: RetrievalDB } {
+// 建一个 offline 构建上下文：内存 Catalog + 空 Draft（源摄入已退役 BM25 检索，改会话工作区 materials/ + agentic 文件处理）。
+export function buildAuthorCtx(adventure: string): { ctx: BuildCtx; catalog: CatalogDB } {
   const catalog = openCatalog(":memory:");
-  // 检索库与运行库同为 better-sqlite3 句柄（DB ≡ RetrievalDB）；initRetrieval 在其上建自己的 build_material 表。
-  const retrievalDb: RetrievalDB = openDb(":memory:");
-  initRetrieval(retrievalDb);
-  const ctx: BuildCtx = { catalog, draft: new Draft(), name: adventure, retrievalDb };
-  return { ctx, catalog, retrievalDb };
+  const ctx: BuildCtx = { catalog, draft: new Draft(), name: adventure };
+  return { ctx, catalog };
 }
 
 export interface LoreRunResult {

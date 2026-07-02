@@ -8,6 +8,9 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import { Hono } from "hono";
+import { mkdirSync, createWriteStream, unlinkSync, existsSync } from "node:fs";
+import { basename, join } from "node:path";
+import { Readable } from "node:stream";
 import { list, commit, tag, checkout, validatePack, createBuildMcpServer, Draft, type CatalogDB, type PackFile } from "@dicelore/backend";
 import { LoreSession, type LoreSessionDeps, type AgentFactory, type PluginRef } from "@dicelore/harness";
 
@@ -16,6 +19,25 @@ export interface LoreDeps {
   agentFactory: AgentFactory; // CC SDK 适配器挂构建 MCP + 构建 skill
   buildPrompt?: string; // 构建教条(→ openingPrompt)
   plugin?: PluginRef; // 构建 skill plugin(build-pack+build-core,boot 期物化到 $/lore)
+  sessionsDir?: string; // sessions 数据根:每 session 工作区落 <sessionsDir>/lore/sessions/<id>/workspace/(build-agent-workspace)
+}
+
+// 每 session 持久工作区(build-agent-workspace §1):<sessionsDir>/lore/sessions/<id>/workspace/。
+// 仅 mkdir workspace/materials/(**不拷任何 skill、不产 .claude**——skill 经 plugin 从数据根按引用加载)。
+// 幂等:重复调不炸。返回 workspace 绝对路径(=构建 agent 的 cwd,经 AgentInit.workspace 透传)。
+export function ensureWorkspace(sessionsDir: string, sessionId: string): string {
+  const workspace = join(sessionsDir, "lore", "sessions", sessionId, "workspace");
+  mkdirSync(join(workspace, "materials"), { recursive: true });
+  return workspace;
+}
+
+// 净化上传文件名:取 basename(剥路径)、拒空 / 拒仍含分隔符或 ..(basename 后若与原值不一致 = 曾带路径,拒之)。
+// 返回净化后的安全文件名,非法返 null。
+function sanitizeFilename(raw: string | undefined | null): string | null {
+  if (!raw) return null;
+  const name = basename(raw);
+  if (!name || name === "." || name === ".." || name !== raw) return null;
+  return name;
 }
 
 // 组合根持 { session, draft }:Draft + 构建 MCP 在此建好(backend 可 import createBuildMcpServer/Draft),
@@ -76,12 +98,78 @@ export function createLoreApp(deps: LoreDeps): Hono {
       // 组合根建 Draft + 构建 MCP server(BUILD_TOOLS over Draft+Catalog),注入 LoreSession。
       const draft = new Draft();
       const mcpServer = createBuildMcpServer({ catalog: deps.catalog, draft, name: body.name });
-      const dep: LoreSessionDeps = { mcpServer, agentFactory: deps.agentFactory, buildPrompt: deps.buildPrompt, plugin: deps.plugin };
+      // workspace:sessionsDir 已接线时,首条 message 前确保 workspace 就位并透传给 agentFactory(cwd);
+      // 未接线(如纯 catalog 单测)则 workspace 恒 undefined(agent 用 SDK 默认 cwd)。
+      const workspace = deps.sessionsDir ? ensureWorkspace(deps.sessionsDir, id) : undefined;
+      const dep: LoreSessionDeps = { mcpServer, agentFactory: deps.agentFactory, buildPrompt: deps.buildPrompt, plugin: deps.plugin, workspace };
       entry = { session: new LoreSession(id, dep), draft };
       loreReg.set(id, entry);
     }
     const { turnId } = await entry.session.handleMessage(body.text);
     return c.json({ turnId }, 202);
+  });
+
+  // 素材流式上传(build-agent-workspace §3):请求体=原始文件字节流(application/octet-stream),
+  // 文件名经 query ?filename= 或 header X-Material-Filename 带(不在 body)。
+  // ensureWorkspace → 净化 filename → 边读边写落 workspace/materials/<filename>(同名覆盖),
+  // 边写边累计字节;超 DICELORE_MATERIAL_MAX_MB(默认 100)立即 destroy + unlink 半成品 + 413(不吃内存)。
+  // error 属领域级但上传是 IO 端点(非构建反馈):filename 非法 400、超限 413、写盘失败 500(均清半成品)。
+  app.post("/lore-sessions/:id/materials", async (c) => {
+    const id = c.req.param("id");
+    if (!deps.sessionsDir) {
+      return c.json({ error: { code: "no_workspace", message: "sessionsDir 未接线,素材上传不可用" } }, 500);
+    }
+    const rawName = c.req.query("filename") ?? c.req.header("x-material-filename");
+    const filename = sanitizeFilename(rawName);
+    if (!filename) {
+      return c.json({ error: { code: "bad_material_name", message: "文件名非法(空 / 含路径分隔符 / ..)" } }, 400);
+    }
+    const workspace = ensureWorkspace(deps.sessionsDir, id);
+    const dest = join(workspace, "materials", filename);
+    const maxBytes = (Number(process.env.DICELORE_MATERIAL_MAX_MB) || 100) * 1024 * 1024;
+
+    const web = c.req.raw.body;
+    if (!web) {
+      return c.json({ error: { code: "empty_body", message: "请求体为空" } }, 400);
+    }
+    // 流式:边读边写、边累计字节;超限中途掐断 + 清半成品(不整体缓冲整文件、不吃内存)。
+    const source = Readable.fromWeb(web as Parameters<typeof Readable.fromWeb>[0]);
+    const sink = createWriteStream(dest);
+    let bytes = 0;
+    let tooLarge = false;
+    const cleanup = () => { if (existsSync(dest)) { try { unlinkSync(dest); } catch { /* ignore */ } } };
+    try {
+      for await (const chunk of source) {
+        const buf = chunk as Buffer;
+        bytes += buf.length;
+        if (bytes > maxBytes) {
+          tooLarge = true;
+          source.destroy();
+          break;
+        }
+        // 尊重背压:write 返回 false 时等 drain,避免把整流堆进内存。
+        if (!sink.write(buf)) {
+          await new Promise<void>((res) => sink.once("drain", res));
+        }
+      }
+    } catch (e) {
+      sink.destroy();
+      cleanup();
+      return c.json({ error: { code: "material_write_failed", message: String((e as Error)?.message ?? e) } }, 500);
+    }
+    if (tooLarge) {
+      sink.destroy();
+      cleanup();
+      return c.json({ error: { code: "material_too_large", message: `素材超过上限 ${maxBytes} 字节` } }, 413);
+    }
+    // 正常收尾:关闭写流并等 flush。
+    try {
+      await new Promise<void>((res, rej) => { sink.end((err?: Error | null) => (err ? rej(err) : res())); });
+    } catch (e) {
+      cleanup();
+      return c.json({ error: { code: "material_write_failed", message: String((e as Error)?.message ?? e) } }, 500);
+    }
+    return c.json({ path: `materials/${filename}`, bytes });
   });
 
   // 读未 commit 的 Draft 当前态(构建中途产物)。

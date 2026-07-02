@@ -26,6 +26,8 @@
 // 落 harness/eval-loregm/(非 src):import @modelcontextprotocol/sdk(harness 已直接声明),不进 typecheck,作脚本。
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { createReadStream } from "node:fs";
+import { Readable } from "node:stream";
 import { z } from "zod";
 
 const PLAY_URL = () => process.env.DICELORE_PLAY_URL ?? "http://localhost:8787";
@@ -62,12 +64,30 @@ export const doListCatalog = () => jfetch(`/catalog`);
 export const doGetPackFiles = (adventureId: string, ref?: string) =>
   jfetch(`/catalog/${enc(adventureId)}/files${ref ? `?ref=${encodeURIComponent(ref)}` : ""}`);
 
+// 上传素材:把**作者本机**文件流式 POST 进构建会话工作区(build-agent-workspace §3)。
+// 关键:content 不进工具参数——取 localPath、createReadStream 流式送(大源不经 LLM 中继)。
+// 端点边写边累计、超 DICELORE_MATERIAL_MAX_MB 中途 413。返回 { path, bytes }(path 如 "materials/兽人冒险.md")。
+export async function doPutMaterial(sid: string, filename: string, localPath: string): Promise<{ path: string; bytes: number }> {
+  const nodeStream = createReadStream(localPath);
+  const body = Readable.toWeb(nodeStream) as unknown as ReadableStream;
+  const r = await fetch(`${PLAY_URL()}/lore-sessions/${enc(sid)}/materials?filename=${encodeURIComponent(filename)}`, {
+    method: "POST",
+    headers: { "content-type": "application/octet-stream" },
+    body,
+    // Node fetch/undici 流式请求体需 duplex:"half"。
+    duplex: "half",
+  } as RequestInit & { duplex: "half" });
+  if (!r.ok) throw new Error(`后端 ${r.status} put_material: ${await r.text().catch(() => "")}`);
+  return (await r.json()) as { path: string; bytes: number };
+}
+
 async function main() {
   const server = new McpServer({ name: "dicelore-build", version: "0.1.0" });
   const ro = { readOnlyHint: true } as const;
   const rw = { readOnlyHint: false } as const;
   server.tool("open_build_session", "起一个构建会话 id(作者经此 id 驱动构建 GM 造团本;不带参则随机生成)", { sessionId: z.string().optional() }, rw, async ({ sessionId }) => json(doOpenBuildSession(sessionId)));
   server.tool("send_to_builder", "作者自然语言指令驱动构建 GM 一轮(改 in-memory Draft)。REST only:只返回 {turnId},不回传 GM 散文——靠 get_draft/list_catalog 检视产物。name=在造团本名。", { sessionId: z.string(), name: z.string(), text: z.string() }, rw, async ({ sessionId, name, text }) => json(await doSendToBuilder(sessionId, name, text)));
+  server.tool("put_material", "把本机源文件**流式**上传进该 build session 工作区(materials/),供构建 agent 用 Read/Grep/Bash 处理;大文件不入 LLM 上下文(取 localPath、不把 content 塞进工具参数)。返回 { path, bytes }。", { sessionId: z.string(), filename: z.string(), localPath: z.string() }, rw, async ({ sessionId, filename, localPath }) => json(await doPutMaterial(sessionId, filename, localPath)));
   server.tool("get_draft", "检视未 commit 的 Draft 当前态(构建中途产物):{ files(将提交的包文件), snapshot(分域结构化回读) }。判断构建 GM 干了什么/进度的主检视面。", { sessionId: z.string() }, ro, async ({ sessionId }) => json(await doGetDraft(sessionId)));
   server.tool("list_catalog", "检视已 commit 的团本目录(列所有团本 + 版本概要)", {}, ro, async () => json(await doListCatalog()));
   server.tool("get_pack_files", "检视某团本某版本的全部包文件(ref 缺省=head 最新 commit)", { adventureId: z.string(), ref: z.string().optional() }, ro, async ({ adventureId, ref }) => json(await doGetPackFiles(adventureId, ref)));

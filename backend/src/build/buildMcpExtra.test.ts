@@ -8,108 +8,13 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import { describe, it, expect } from "vitest";
-import Database from "better-sqlite3";
 import { openCatalog } from "../catalog/db.js";
-import { initRetrieval } from "./retrieval/db.js";
 import { Draft } from "./draft.js";
 import { invokeBuildTool, type BuildCtx } from "./buildMcp.js";
 
-function ctx(db?: Database.Database): BuildCtx {
-  const catalog = openCatalog(":memory:");
-  const draft = new Draft();
-  const retrievalDb = db ?? new Database(":memory:");
-  initRetrieval(retrievalDb);
-  return { catalog, draft, name: "凡人", retrievalDb };
+function ctx(): BuildCtx {
+  return { catalog: openCatalog(":memory:"), draft: new Draft(), name: "凡人" };
 }
-
-// ── ingest ──────────────────────────────────────────────────────────────────
-describe("dicelore_build_ingest", () => {
-  it("返回 { chunks: N } 且 N > 0", () => {
-    const c = ctx();
-    const r = invokeBuildTool(c, "ingest", { text: "黄枫谷是一处幽静的山谷。\n\n墨大夫行医数十年。" });
-    expect(r.isError).toBeFalsy();
-    const out = JSON.parse(r.content[0].text) as { chunks: number };
-    expect(out.chunks).toBeGreaterThan(0);
-    c.catalog.close();
-    c.retrievalDb!.close();
-  });
-
-  it("空文本 → chunks 为 0（不报错）", () => {
-    const c = ctx();
-    const r = invokeBuildTool(c, "ingest", { text: "" });
-    expect(r.isError).toBeFalsy();
-    const out = JSON.parse(r.content[0].text) as { chunks: number };
-    expect(out.chunks).toBe(0);
-    c.catalog.close();
-    c.retrievalDb!.close();
-  });
-
-  it("缺 text 字段 → isError", () => {
-    const c = ctx();
-    const r = invokeBuildTool(c, "ingest", {});
-    expect(r.isError).toBe(true);
-    c.catalog.close();
-    c.retrievalDb!.close();
-  });
-});
-
-// ── search ───────────────────────────────────────────────────────────────────
-describe("dicelore_build_search", () => {
-  it("端到端：ingest 后按关键词召回 hits", () => {
-    const c = ctx();
-    invokeBuildTool(c, "ingest", { text: "黄枫谷枫叶如火。\n\n墨大夫悬壶济世。" });
-    const r = invokeBuildTool(c, "search", { query: "黄枫谷" });
-    expect(r.isError).toBeFalsy();
-    const out = JSON.parse(r.content[0].text) as { hits: { idx: number; text: string }[] };
-    expect(out.hits.length).toBeGreaterThan(0);
-    expect(out.hits.some((h) => h.text.includes("黄枫谷"))).toBe(true);
-    c.catalog.close();
-    c.retrievalDb!.close();
-  });
-
-  it("k 参数生效 → 返回数量不超过 k", () => {
-    const c = ctx();
-    invokeBuildTool(c, "ingest", {
-      text: [
-        "铁剑门弟子修炼剑法。",
-        "蜜糖山熊族采蜜。",
-        "黄枫谷山门招新弟子。",
-        "墨大夫研习炼药技巧。",
-        "破剑阁险峰耸立。",
-      ].join("\n\n"),
-    });
-    const r = invokeBuildTool(c, "search", { query: "弟子", k: 2 });
-    expect(r.isError).toBeFalsy();
-    const out = JSON.parse(r.content[0].text) as { hits: { idx: number; text: string }[] };
-    expect(out.hits.length).toBeLessThanOrEqual(2);
-    c.catalog.close();
-    c.retrievalDb!.close();
-  });
-
-  it("未 ingest → hits 为空", () => {
-    const c = ctx();
-    const r = invokeBuildTool(c, "search", { query: "黄枫谷" });
-    expect(r.isError).toBeFalsy();
-    const out = JSON.parse(r.content[0].text) as { hits: { idx: number; text: string }[] };
-    expect(out.hits).toEqual([]);
-    c.catalog.close();
-    c.retrievalDb!.close();
-  });
-
-  it("hits 每项包含 idx(number) + text(string)", () => {
-    const c = ctx();
-    invokeBuildTool(c, "ingest", { text: "铁剑门弟子习武。" });
-    const r = invokeBuildTool(c, "search", { query: "铁剑" });
-    expect(r.isError).toBeFalsy();
-    const out = JSON.parse(r.content[0].text) as { hits: { idx: number; text: string }[] };
-    for (const h of out.hits) {
-      expect(typeof h.idx).toBe("number");
-      expect(typeof h.text).toBe("string");
-    }
-    c.catalog.close();
-    c.retrievalDb!.close();
-  });
-});
 
 // ── validate ─────────────────────────────────────────────────────────────────
 describe("dicelore_build_validate", () => {
@@ -122,7 +27,6 @@ describe("dicelore_build_validate", () => {
     expect(out.ok).toBe(false);
     expect(out.issues.length).toBeGreaterThan(0);
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 
   it("有合法内容的 draft → ok=true", () => {
@@ -134,7 +38,6 @@ describe("dicelore_build_validate", () => {
     const out = JSON.parse(r.content[0].text) as { ok: boolean; issues: unknown[] };
     expect(out.ok).toBe(true);
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 
   it("issues 字段存在且是数组", () => {
@@ -143,7 +46,6 @@ describe("dicelore_build_validate", () => {
     const out = JSON.parse(r.content[0].text) as { ok: boolean; issues: unknown[] };
     expect(Array.isArray(out.issues)).toBe(true);
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 });
 
@@ -161,7 +63,6 @@ describe("dicelore_build_read", () => {
     expect(out).toHaveProperty("world");
     expect(out).toHaveProperty("rules");
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 
   it("section=manifest → 只返回 manifest 字段", () => {
@@ -173,7 +74,6 @@ describe("dicelore_build_read", () => {
     expect(out).toHaveProperty("manifest");
     expect(out).not.toHaveProperty("lore");
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 
   it("section=world → 返回 world 键（lore/world 域）", () => {
@@ -184,7 +84,6 @@ describe("dicelore_build_read", () => {
     const out = JSON.parse(r.content[0].text) as Record<string, unknown>;
     expect(out).toHaveProperty("world");
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 
   it("section=rules → 返回 rules 键", () => {
@@ -195,7 +94,6 @@ describe("dicelore_build_read", () => {
     const out = JSON.parse(r.content[0].text) as Record<string, unknown>;
     expect(out).toHaveProperty("rules");
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 
   it("section=pools → 返回 pools 键", () => {
@@ -206,7 +104,6 @@ describe("dicelore_build_read", () => {
     const out = JSON.parse(r.content[0].text) as Record<string, unknown>;
     expect(out).toHaveProperty("pools");
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 
   it("section=fronts → 返回 fronts 键", () => {
@@ -224,7 +121,6 @@ describe("dicelore_build_read", () => {
     const out = JSON.parse(r.content[0].text) as Record<string, unknown>;
     expect(out).toHaveProperty("fronts");
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 
   it("非法 section 值 → isError", () => {
@@ -232,7 +128,6 @@ describe("dicelore_build_read", () => {
     const r = invokeBuildTool(c, "read", { section: "bogus" });
     expect(r.isError).toBe(true);
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 });
 
@@ -267,7 +162,6 @@ describe("dicelore_build_add_front", () => {
     expect(front!.content).toContain("max: 8");
     expect(front!.content).toContain("mode: once");
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 
   it("凶兆阶梯表格包含每个 threshold + payload", () => {
@@ -297,7 +191,6 @@ describe("dicelore_build_add_front", () => {
     expect(content).toContain("| 6 |");
     expect(content).toContain("天雷落地");
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 
   it("name 写入 body 标题", () => {
@@ -314,7 +207,6 @@ describe("dicelore_build_add_front", () => {
     const front = files.find((f) => f.path === "fronts/inv3.md");
     expect(front!.content).toContain("灵脉枯竭");
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 
   it("stakes 若提供则出现在 body 利害问题里", () => {
@@ -332,7 +224,6 @@ describe("dicelore_build_add_front", () => {
     const front = files.find((f) => f.path === "fronts/inv4.md");
     expect(front!.content).toContain("门派能否抵挡妖族入侵？");
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 
   it("validate 通过 fronts 的 Rule 6 校验", () => {
@@ -356,7 +247,6 @@ describe("dicelore_build_add_front", () => {
     const rule6errors = vout.issues.filter((i) => i.level === "error" && i.file.startsWith("fronts/"));
     expect(rule6errors).toHaveLength(0);
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 
   it("缺必填字段 id → isError", () => {
@@ -370,7 +260,6 @@ describe("dicelore_build_add_front", () => {
     });
     expect(r.isError).toBe(true);
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 
   it("多次调用同 id → 后者覆盖（只有一个文件）", () => {
@@ -395,7 +284,6 @@ describe("dicelore_build_add_front", () => {
     expect(files).toHaveLength(1);
     expect(files[0].content).toContain("第二版");
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 });
 
@@ -417,7 +305,6 @@ describe("dicelore_build_add_plotline", () => {
     expect(file!.content).toContain("黄枫谷危机");
     expect(file!.content).toContain("妖兽袭谷");
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 
   it("summary/status 可省略", () => {
@@ -428,7 +315,6 @@ describe("dicelore_build_add_plotline", () => {
     expect(file!.content).toContain("p2");
     expect(file!.content).toContain("只有标题");
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 
   it("多次调用追加行（非幂等）", () => {
@@ -439,7 +325,6 @@ describe("dicelore_build_add_plotline", () => {
     expect(file!.content).toContain("甲");
     expect(file!.content).toContain("乙");
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 
   it("缺必填字段 title → isError", () => {
@@ -447,7 +332,6 @@ describe("dicelore_build_add_plotline", () => {
     const r = invokeBuildTool(c, "add_plotline", { rows: [{ id: "x" }] });
     expect(r.isError).toBe(true);
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 
   it("空 rows → isError", () => {
@@ -455,7 +339,6 @@ describe("dicelore_build_add_plotline", () => {
     const r = invokeBuildTool(c, "add_plotline", { rows: [] });
     expect(r.isError).toBe(true);
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 
   it("validate 不报 plotlines CSV 列错误", () => {
@@ -466,7 +349,6 @@ describe("dicelore_build_add_plotline", () => {
     const vout = JSON.parse(vr.content[0].text) as { ok: boolean; issues: { level: string; file: string }[] };
     expect(vout.issues.some((i) => i.level === "error" && i.file.startsWith("plotlines/"))).toBe(false);
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 });
 
@@ -486,7 +368,6 @@ describe("dicelore_build_add_foreshadow", () => {
     expect(file!.content).toContain("f1");
     expect(file!.content).toContain("墙上挂着一柄古剑");
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 
   it("status 可省略", () => {
@@ -496,7 +377,6 @@ describe("dicelore_build_add_foreshadow", () => {
     const file = c.draft.toPackFiles().find((f) => f.path === "foreshadows/main.csv");
     expect(file!.content).toContain("无状态伏笔");
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 
   it("多次调用追加行（非幂等）", () => {
@@ -507,7 +387,6 @@ describe("dicelore_build_add_foreshadow", () => {
     expect(file!.content).toContain("一");
     expect(file!.content).toContain("二");
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 
   it("缺必填字段 content → isError", () => {
@@ -515,7 +394,6 @@ describe("dicelore_build_add_foreshadow", () => {
     const r = invokeBuildTool(c, "add_foreshadow", { rows: [{ id: "x" }] });
     expect(r.isError).toBe(true);
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 
   it("空 rows → isError", () => {
@@ -523,7 +401,6 @@ describe("dicelore_build_add_foreshadow", () => {
     const r = invokeBuildTool(c, "add_foreshadow", { rows: [] });
     expect(r.isError).toBe(true);
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 
   it("validate 不报 foreshadows CSV 列错误", () => {
@@ -534,7 +411,6 @@ describe("dicelore_build_add_foreshadow", () => {
     const vout = JSON.parse(vr.content[0].text) as { ok: boolean; issues: { level: string; file: string }[] };
     expect(vout.issues.some((i) => i.level === "error" && i.file.startsWith("foreshadows/"))).toBe(false);
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 });
 
@@ -554,7 +430,6 @@ describe("dicelore_build_add_anchor", () => {
     expect(file!.content).toContain("墨大夫");
     expect(file!.content).toContain("推动者");
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 
   it("role 可省略", () => {
@@ -566,7 +441,6 @@ describe("dicelore_build_add_anchor", () => {
     const file = c.draft.toPackFiles().find((f) => f.path === "anchors/main.csv");
     expect(file!.content).toContain("foreshadow");
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 
   it("多次调用追加行（非幂等）", () => {
@@ -577,7 +451,6 @@ describe("dicelore_build_add_anchor", () => {
     expect(file!.content).toContain("p1");
     expect(file!.content).toContain("p2");
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 
   it("缺必填字段 target_id → isError", () => {
@@ -587,7 +460,6 @@ describe("dicelore_build_add_anchor", () => {
     });
     expect(r.isError).toBe(true);
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 
   it("空 rows → isError", () => {
@@ -595,7 +467,6 @@ describe("dicelore_build_add_anchor", () => {
     const r = invokeBuildTool(c, "add_anchor", { rows: [] });
     expect(r.isError).toBe(true);
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 
   it("validate 不报 anchors CSV 列错误", () => {
@@ -608,7 +479,6 @@ describe("dicelore_build_add_anchor", () => {
     const vout = JSON.parse(vr.content[0].text) as { ok: boolean; issues: { level: string; file: string }[] };
     expect(vout.issues.some((i) => i.level === "error" && i.file.startsWith("anchors/"))).toBe(false);
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 });
 
@@ -624,7 +494,6 @@ describe("dicelore_build_set_prologue", () => {
     expect(prologueFile).toBeDefined();
     expect(prologueFile!.content).toBe("游戏开始，请 GM 开场。");
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 
   it("多次调用 → 后者覆盖，只有一个 prologue.md", () => {
@@ -635,7 +504,6 @@ describe("dicelore_build_set_prologue", () => {
     expect(prologueFiles).toHaveLength(1);
     expect(prologueFiles[0].content).toBe("第二版开场。");
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 
   it("缺 text 字段 → isError", () => {
@@ -643,7 +511,6 @@ describe("dicelore_build_set_prologue", () => {
     const r = invokeBuildTool(c, "set_prologue", {});
     expect(r.isError).toBe(true);
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 
   it("设置 prologue 后 validate 不再报 prologue 缺失错误", () => {
@@ -655,6 +522,5 @@ describe("dicelore_build_set_prologue", () => {
     expect(vout.issues.some((i) => i.file === "prologue.md" && i.level === "error")).toBe(false);
     expect(vout.ok).toBe(true);
     c.catalog.close();
-    c.retrievalDb!.close();
   });
 });
