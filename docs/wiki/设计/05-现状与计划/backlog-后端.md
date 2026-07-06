@@ -136,7 +136,7 @@
 
 | # | 类型 | 问题 | 来源 | 恶化 | 下一步/依赖 |
 |---|------|------|------|:--:|--------|
-| REL-datadir | feat | **数据目录布局规范**：单一数据根 `DICELORE_DATA_DIR`（`--data-dir` flag > env > OS app-data 默认，废 `DICELORE_SESSIONS_DIR`/`DICELORE_CATALOG`）+ on-disk 布局 `$ROOT/{config.toml, catalog.db, keys.db, sessions/<kind>/<id>, logs/}` + config.toml 结构化 `[env]` 节赋环境变量 + 程序↔数据分处。三发版形态各自数据根（Tauri app-data / server `--data-dir` / dev `.dicelore-eval`）。牵动组合根 `server.ts` 路径解析 + 会话路径单源 `sessionDir`。 | 用户 2026-07-02（分发模型追问，立为正式设计） | ✓✓（团本/会话/日志随使用无限长，无统一根则备份/迁移/重装易丢档、越用越乱） | ✅ **已交付（2026-07-02 transcript-datadir-buildeval 轮 DD1–DD4，全离线测试绿）**：设计已沉 [玩家客户端 D5](../04-子系统设计/玩家客户端.md)。**待手动门**：真跑 `install.sh` + `run.sh -f` 起后端就绪（[eval-backend-setup skill](../../../../.claude/skills/eval-backend-setup/SKILL.md)）。裁决 [install-datadir-layout](裁决记录/install-datadir-layout.md) 暂留到手动门过。 |
+| REL-datadir | feat | **数据目录布局规范**：单一数据根 `DICELORE_DATA_DIR`（`--data-dir` flag > env > OS app-data 默认，废 `DICELORE_SESSIONS_DIR`/`DICELORE_CATALOG`）+ on-disk 布局 `$ROOT/{config.toml, catalog.db, keys.db, sessions/<kind>/<id>, logs/}` + config.toml 结构化 `[env]` 节赋环境变量 + 程序↔数据分处。三发版形态各自数据根（Tauri app-data / server `--data-dir` / dev `.dicelore-eval`）。牵动组合根 `server.ts` 路径解析 + 会话路径单源 `sessionDir`。 | 用户 2026-07-02（分发模型追问，立为正式设计） | ✓✓（团本/会话/日志随使用无限长，无统一根则备份/迁移/重装易丢档、越用越乱） | ✅ **已归档（2026-07-02 交付 DD1–DD4 + 2026-07-06 手动门过：真跑 `install.sh`+`run.sh -f` 起真后端就绪、`/diagnostics` 报真 `$ROOT`）**：设计沉 [玩家客户端 D5](../04-子系统设计/玩家客户端.md)，裁决文件已删。是「可安装可用验证」前置、已就绪。 |
 
 ---
 
