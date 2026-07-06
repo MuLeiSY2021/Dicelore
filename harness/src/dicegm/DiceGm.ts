@@ -116,11 +116,10 @@ export class DiceGm implements Agent {
       "turn opts",
     );
     this.sessionLogger.debug({ turnId, system: this.init.openingPrompt }, "[system]");
-    // ③ 超时兜底:防真 LLM 卡死拖垮 eval/联调。默认 3min,DICELORE_GM_TIMEOUT_MS 可覆盖。
-    // abort 触发后 SDK 停 query(抛 AbortError 或以 result 结束)→ catch 转 error 事件,回合脱困不卡死。
-    const timeoutMs = Number(process.env.DICELORE_GM_TIMEOUT_MS ?? 180_000);
+    // turn 不设墙钟超时(用户 2026-07-06 裁决:build/play 皆然)——turn 无限跑,唯一时间界是「与模型的连接」:
+    // SDK 底层 Anthropic client per-request 超时(DEFAULT_TIMEOUT 600s)+ 连接错误自动重试(api_retry,默认 maxRetries=2)。
+    // controller 保留(buildQueryOptions 需要、留作未来玩家主动取消入口),但不再按时长自动 abort。
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(new Error(`GM turn timeout (${timeoutMs / 1000}s)`)), timeoutMs);
     try {
       // SDK options 装配抽成纯函数(gmAssembly.buildQueryOptions),offline 可跑装配断言(TB-2)。
       // 这里仅把结构化结果 as 成 SDK 复杂签名 + 调 query()/消费消息流(副作用部分留 runTurn)。
@@ -152,16 +151,11 @@ export class DiceGm implements Agent {
       this.sessionLogger.info({ turnId, msgs: msgIdx }, `TURN ${turnId} end`);
       this.transcript?.turnEnd(turnId, { msgs: msgIdx });
     } catch (e) {
-      // 超时 abort 优先按超时报(更可读 + 可区分 code=gm_timeout,让前端识别「超时·可重试」);否则原样抛错信息。
-      const isTimeout = controller.signal.aborted;
-      const message = isTimeout
-        ? `GM 回合超时(${timeoutMs / 1000}s)中止,已脱困`
-        : (e instanceof Error ? e.message : String(e));
-      this.sessionLogger.error({ err: e, turnId, aborted: isTimeout }, "GM runTurn 异常");
-      this.transcript?.error({ turnId, message, code: isTimeout ? "gm_timeout" : undefined });
-      yield { type: "error", message, code: isTimeout ? "gm_timeout" : undefined };
-    } finally {
-      clearTimeout(timer);
+      // 连接/SDK 错误(SDK 内部重试耗尽后抛)原样报;turn 无墙钟超时,故不再有 gm_timeout 分支。
+      const message = e instanceof Error ? e.message : String(e);
+      this.sessionLogger.error({ err: e, turnId }, "GM runTurn 异常");
+      this.transcript?.error({ turnId, message });
+      yield { type: "error", message };
     }
   }
 }

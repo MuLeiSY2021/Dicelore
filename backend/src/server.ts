@@ -42,9 +42,8 @@ const CONFIG_EXAMPLE_TOML = `# Dicelore 配置示例。复制为同目录下 con
 # DICELORE_BASELINE = "0"
 # 明骰降级:DiceSession 不注入 rollGate,core 立即掷(裸 CC / eval)。
 # DICELORE_DEBUG = "0"
-# GM 模型 / 单回合超时(ms)。
+# GM 模型。
 # DICELORE_GM_MODEL = "glm-5.2"
-# DICELORE_GM_TIMEOUT_MS = "180000"
 # lore 构建 GM 的 openingPrompt 覆盖。
 # DICELORE_BUILD_PROMPT = ""
 # per-session 限流(留空=默认 60s/120 次;设 0 关闭)。
