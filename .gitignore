@@ -16,3 +16,6 @@ dist/
 .claude/worktrees/
 .dl-eval-doctrine/
 .dl-build
+
+# eval 隔离启动器默认数据根(install.sh 铺;不入库)
+.dicelore-eval/

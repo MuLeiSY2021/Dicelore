@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+# Copyright (C) 2026 MuLeiSY2021
+#
+# This file is part of Dicelore.
+#
+# Dicelore is free software: you can redistribute it and/or modify it under
+# the terms of the GNU Affero General Public License as published by the Free
+# Software Foundation, either version 3 of the License, or (at your option)
+# any later version. See <https://www.gnu.org/licenses/>.
+#
+# eval 隔离启动器 run.sh 模板。install.sh 据此在数据根 $ROOT 生成 $ROOT/run.sh，
+# 把仓库根路径 @@REPO_ROOT@@ 烙进去。**勿手改生成物**——改这里再 `bash install.sh` 重铺。
+#
+# 用法(须在数据根 $ROOT 内跑,cd $ROOT && bash run.sh):
+#   bash run.sh [-f|--force] [-p|--port <port>]
+#     -f/--force     先 kill 掉占端口的进程再起(强抢端口)。
+#     -p/--port <n>  监听端口(最高优先级)。缺省: config.toml [env] PORT > 8787。
+#
+# 数据根 = $PWD(本脚本所在目录),经 DICELORE_DATA_DIR 传给后端;后端所有子路径
+# (catalog.db / keys.db / logs/ / sessions/<kind>/<id>/<id>_session.jsonl)均由此派生。
+# 后端以 `npx tsx <repo>/backend/src/server.ts` 复用仓库 node_modules 起(不拷源码)。
+
+set -euo pipefail
+
+REPO_ROOT="@@REPO_ROOT@@"
+ROOT="$PWD"
+
+FORCE=0
+PORT_OVERRIDE=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -f|--force) FORCE=1; shift ;;
+    -p|--port)
+      [ $# -ge 2 ] || { echo "run.sh: $1 需要一个端口参数" >&2; exit 2; }
+      PORT_OVERRIDE="$2"; shift 2 ;;
+    -h|--help)
+      sed -n '13,22p' "$0"; exit 0 ;;
+    *) echo "run.sh: 未知参数 $1" >&2; exit 2 ;;
+  esac
+done
+
+# 端口解析: -p 标志 > config.toml [env] 的 PORT(未注释) > 8787。
+read_config_port() {
+  local cfg="$ROOT/config.toml"
+  [ -f "$cfg" ] || return 0
+  # 取 [env] 段内未注释的 PORT = "xxxx" / PORT = xxxx,剥引号。
+  grep -E '^[[:space:]]*PORT[[:space:]]*=' "$cfg" 2>/dev/null \
+    | grep -vE '^[[:space:]]*#' \
+    | head -n1 \
+    | sed -E 's/^[[:space:]]*PORT[[:space:]]*=[[:space:]]*"?([0-9]+)"?.*/\1/'
+}
+
+if [ -n "$PORT_OVERRIDE" ]; then
+  PORT="$PORT_OVERRIDE"
+else
+  PORT="$(read_config_port)"
+  [ -n "${PORT:-}" ] || PORT=8787
+fi
+
+echo "run.sh: repo=$REPO_ROOT  root=$ROOT  port=$PORT" >&2
+
+# -f: 强杀占端口进程再起。
+if [ "$FORCE" -eq 1 ]; then
+  if command -v lsof >/dev/null 2>&1; then
+    lsof -ti:"$PORT" | xargs -r kill 2>/dev/null || true
+    # 给被杀进程一点收尾时间。
+    sleep 1
+  else
+    echo "run.sh: 未装 lsof,-f 无法强杀占端口进程(跳过)" >&2
+  fi
+fi
+
+mkdir -p "$ROOT/logs"
+SERVER_LOG="$ROOT/logs/server.out"
+
+# 后端: DICELORE_DATA_DIR=$ROOT,显式传 --port(与轮询端口一致);后台起,日志落 server.out。
+DICELORE_DATA_DIR="$ROOT" nohup npx tsx "$REPO_ROOT/backend/src/server.ts" --port "$PORT" \
+  >"$SERVER_LOG" 2>&1 &
+SERVER_PID=$!
+echo "run.sh: 后端已后台启动 pid=$SERVER_PID,日志 $SERVER_LOG" >&2
+
+# 轮询 GET /diagnostics/health 到 200 判就绪(约 30s 超时)。
+HEALTH_URL="http://127.0.0.1:$PORT/diagnostics/health"
+READY=0
+for _ in $(seq 1 60); do
+  if ! kill -0 "$SERVER_PID" 2>/dev/null; then
+    echo "run.sh: 后端进程提前退出,尾部日志:" >&2
+    tail -n 40 "$SERVER_LOG" >&2 || true
+    exit 1
+  fi
+  code="$(curl -s -o /dev/null -w '%{http_code}' "$HEALTH_URL" 2>/dev/null || echo 000)"
+  if [ "$code" = "200" ]; then READY=1; break; fi
+  sleep 0.5
+done
+
+if [ "$READY" -ne 1 ]; then
+  echo "run.sh: 就绪探测超时($HEALTH_URL 未返回 200),尾部日志:" >&2
+  tail -n 40 "$SERVER_LOG" >&2 || true
+  exit 1
+fi
+
+echo "run.sh: 后端就绪 ✓  $HEALTH_URL → 200  (pid=$SERVER_PID, port=$PORT)"
