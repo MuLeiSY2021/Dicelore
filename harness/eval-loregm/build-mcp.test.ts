@@ -141,7 +141,7 @@ describe("build-mcp put_material 流式上传素材", () => {
       expect(out.path).toBe("materials/兽人冒险.md");
       expect(out.bytes).toBe(Buffer.byteLength(content));
       // 端点落盘:workspace/materials/ 下内容与源逐字节一致。
-      const onDisk = readFileSync(join(root, "lore", "sessions", sid, "workspace", "materials", "兽人冒险.md"), "utf8");
+      const onDisk = readFileSync(join(root, "sessions", "lore", sid, "workspace", "materials", "兽人冒险.md"), "utf8");
       expect(onDisk).toBe(content);
     } finally {
       rmSync(srcDir, { recursive: true, force: true });
