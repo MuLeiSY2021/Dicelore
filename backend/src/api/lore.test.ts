@@ -12,10 +12,11 @@ import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { openCatalog, openDb, initSchema, resolveId, type DB, type PackFile } from "@dicelore/backend";
-import { createLoreApp, ensureWorkspace } from "./lore.js";
+import { createLoreApp, ensureWorkspace, createLoreDraftHook, getLoreEntry } from "./lore.js";
 import { createLiveApp } from "./dice.js";
-import { FakeDiceGm } from "@dicelore/harness";
-import type { Agent, AgentInit, PluginRef, TurnEvent } from "@dicelore/harness";
+import { FakeDiceGm, SessionTranscript, sessionDir } from "@dicelore/harness";
+import type { Agent, AgentInit, PluginRef, TurnEvent, TurnInput } from "@dicelore/harness";
+import { getLogger } from "@dicelore/logs";
 
 const PACK = [
   { path: "manifest.md", content: "# 凡人\n\n- id: f" },
@@ -467,3 +468,129 @@ describe("POST /lore-sessions/:id/materials 流式素材上传", () => {
     }
   });
 });
+
+// ── lore-draft 回退钩子(v1 占位) + loregm transcript 落盘 ──────────────────────
+// (1) transcript:接线 sessionsDir 后跑一轮,<sessionsDir>/sessions/lore/<id>/<id>_session.jsonl 出现非空。
+// (2) lore-draft hook:rollbackTo 仅 warn + no-op(Draft 领域态还原占位);组合根注册在位。
+describe("lore-draft 回退钩子 + loregm transcript 落盘", () => {
+  // 适配器测试替身:据 AgentInit 建 kind:'lore' 的 SessionTranscript(复刻 DiceGm 带外落盘),
+  // 落回合头(_:'turn',带作者 text)+ 一条 msg。loregm 本身不碰 transcript(由适配器落)。
+  class TranscriptFakeGm implements Agent {
+    constructor(private init: AgentInit) {}
+    async *runTurn(input: TurnInput): AsyncIterable<TurnEvent> {
+      const dir = sessionDir(this.init.sessionsDir!, this.init.kind ?? "dice", this.init.sessionId!);
+      const t = new SessionTranscript({ sessionDir: dir, sessionId: this.init.sessionId! });
+      t.turn({ turnId: input.turnId, input: input.text });
+      t.msg(1, { _: "msg", turnId: input.turnId, text: "已写入设定。" });
+      t.turnEnd(input.turnId ?? "?");
+      yield { type: "turn_end" };
+    }
+  }
+
+  it("接线 sessionsDir 跑一轮后 <sessionsDir>/sessions/lore/<id>/<id>_session.jsonl 非空(含 turn+msg),HTTP 仍 202", async () => {
+    const root = mkdtempSync(join(tmpdir(), "dl-lore-jsonl-"));
+    const catalog = openCatalog(":memory:");
+    const lore = createLoreApp({ catalog, agentFactory: (init) => new TranscriptFakeGm(init), sessionsDir: root });
+    try {
+      const res = await lore.request("/lore-sessions/jl1/messages", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ text: "把第一章设定写进去", name: "凡人" }),
+      });
+      expect(res.status).toBe(202);
+      const body = (await res.json()) as { turnId: string; error?: unknown };
+      expect(body.turnId).toBeTruthy();
+      expect(body.error).toBeUndefined();
+
+      const jsonlPath = join(sessionDir(root, "lore", "jl1"), "jl1_session.jsonl");
+      expect(existsSync(jsonlPath)).toBe(true);
+      const raw = readFileSync(jsonlPath, "utf8").trim();
+      expect(raw.length).toBeGreaterThan(0);
+      const lines = raw.split("\n").map((l) => JSON.parse(l) as { _?: string; input?: string });
+      const turnLine = lines.find((l) => l._ === "turn");
+      expect(turnLine?.input).toBe("把第一章设定写进去");
+      expect(lines.some((l) => l._ === "msg")).toBe(true);
+    } finally {
+      catalog.close();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("组合根 sessionsDir 接线时注册 lore-draft 回退编排在位(entry.rewind 存在)", async () => {
+    const root = mkdtempSync(join(tmpdir(), "dl-lore-hook-"));
+    const catalog = openCatalog(":memory:");
+    const lore = createLoreApp({ catalog, agentFactory: (init) => new TranscriptFakeGm(init), sessionsDir: root });
+    try {
+      await lore.request("/lore-sessions/rw1/messages", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ text: "写点设定", name: "凡人" }),
+      });
+      expect(getLoreEntry("rw1")?.rewind).toBeTruthy();
+    } finally {
+      catalog.close();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("sessionsDir 未接线时不建回退编排(entry.rewind 为 undefined)", async () => {
+    const catalog = openCatalog(":memory:");
+    const lore = createLoreApp({ catalog, agentFactory: () => new FakeDiceGm([{ type: "turn_end" }]) });
+    try {
+      await lore.request("/lore-sessions/rw2/messages", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ text: "写点设定", name: "凡人" }),
+      });
+      expect(getLoreEntry("rw2")?.rewind).toBeUndefined();
+    } finally {
+      catalog.close();
+    }
+  });
+
+  it("createLoreDraftHook: name='lore-draft',rollbackTo 仅 warn + no-op(不抛)", () => {
+    const hook = createLoreDraftHook("s-hook");
+    expect(hook.name).toBe("lore-draft");
+    const warnSpy = vi.spyOn(getLogger(), "warn").mockImplementation(() => getLogger());
+    try {
+      expect(() => hook.rollbackTo({ uuid: "u-123" })).not.toThrow();
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      // warn 带 sessionId + uuid 上下文(诊断:transcript 已回退但 Draft 未动)。
+      const [ctx] = warnSpy.mock.calls[0] as [{ sessionId: string; uuid: string }];
+      expect(ctx.sessionId).toBe("s-hook");
+      expect(ctx.uuid).toBe("u-123");
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it("lore-draft hook 注册进 Rewind 后,transcript 层回退(rewindTo 移 HEAD)真生效、hook no-op 不阻断", async () => {
+    // 端到端:跑一轮 → transcript 落节点 → 从 jsonl 取一个真 uuid → rewind.rewindTo(uuid):
+    // ① hasNode 读文件校验(过);② lore-draft hook 被调(warn+no-op、不抛);③ moveHead 写 HEAD 成功。
+    // 验证 hook 确已注册进编排,且其 no-op 不阻断 transcript 层回退。
+    // (注:composition-root 的 transcript 实例内存 _head 相对驱动侧滞后,故用读文件的 rewindTo 而非 rewindLast;
+    //  端点接线 + 实例刷新属 follow-up,见 backlog-后端「lore Draft 按轮快照/回退」。)
+    const root = mkdtempSync(join(tmpdir(), "dl-lore-rewind-"));
+    const catalog = openCatalog(":memory:");
+    const lore = createLoreApp({ catalog, agentFactory: (init) => new TranscriptFakeGm(init), sessionsDir: root });
+    const warnSpy = vi.spyOn(getLogger(), "warn").mockImplementation(() => getLogger());
+    try {
+      await lore.request("/lore-sessions/re1/messages", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ text: "第一轮", name: "凡人" }),
+      });
+      const entry = getLoreEntry("re1");
+      expect(entry?.rewind).toBeTruthy();
+      // 从落盘 jsonl 取一个真 uuid(turn 行)。
+      const jsonlPath = join(sessionDir(root, "lore", "re1"), "re1_session.jsonl");
+      const lines = readFileSync(jsonlPath, "utf8").trim().split("\n").map((l) => JSON.parse(l) as { uuid: string; _?: string });
+      const target = lines.find((l) => l._ === "turn")!;
+      warnSpy.mockClear();
+      expect(() => entry!.rewind!.rewindTo(target.uuid)).not.toThrow();
+      // lore-draft hook 在回退中被调用(warn),但 no-op 不阻断 → moveHead 成功。
+      expect(warnSpy).toHaveBeenCalled();
+    } finally {
+      warnSpy.mockRestore();
+      catalog.close();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+

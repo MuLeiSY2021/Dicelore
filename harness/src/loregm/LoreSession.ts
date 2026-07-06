@@ -22,6 +22,7 @@ export interface LoreSessionDeps {
   buildPrompt?: string; // 构建教条(→ openingPrompt;默认 env DICELORE_BUILD_PROMPT)
   plugin?: PluginRef; // 构建 skill plugin 引用(build-pack+build-core,boot 期物化到 $/lore);省略=不启 skill
   workspace?: string; // 素材工作区 cwd(build-agent-workspace 用;本裁决先立入参,接线属该裁决)
+  dataDir?: string; // sessions 数据根(DD2 布局):透传为 AgentInit.sessionsDir,适配器据 sessionDir(dataDir,'lore',id) 落 <dataDir>/sessions/lore/<id>/<id>_session.jsonl 对话记录 + 分级日志;省略=不落 transcript(退化全局日志,对齐纯 catalog 单测)
 }
 
 // lore 构建运行单元:驱动 agent 挂注入的构建 MCP,无 rollGate/turn-end/canon-notify。
@@ -45,6 +46,12 @@ export class LoreSession implements Session {
       openingPrompt: this.deps.buildPrompt ?? process.env.DICELORE_BUILD_PROMPT ?? "",
       plugin: this.deps.plugin,
       workspace: this.deps.workspace,
+      // 可观测性:与 dicegm 同源——透传 sessionId + sessionsDir(=dataDir) + kind:'lore',
+      // 适配器(DiceGm)据 sessionDir(dataDir,'lore',sessionId) 建 kind:'lore' 的 SessionTranscript,
+      // loregm 对话记录落 <dataDir>/sessions/lore/<id>/<id>_session.jsonl(带外落盘,不改 REST 返回形状)。
+      sessionId: this.sessionId,
+      sessionsDir: this.deps.dataDir,
+      kind: "lore",
     });
     // REST 语义:跑完整轮构建反馈(narration/turn_end/error)即收尾,不向任何 WS 广播。
     let error: TurnResult["error"];
