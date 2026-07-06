@@ -8,7 +8,7 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 // play-mcp = CC(Claude Code)经此 stdio MCP 连本机后端 dicelore play HTTP,当玩家+评估者。
-// eval 入口(D1):包后端 play 接口为 MCP 工具。后端 URL=env DICELORE_PLAY_URL;sessions_dir=env DICELORE_SESSIONS_DIR。
+// eval 入口(D1):包后端 play 接口为 MCP 工具。后端 URL=env DICELORE_PLAY_URL;数据根=env DICELORE_DATA_DIR。
 // 关键:narration 只经 WS 流式(streamDriverTurn 不落库),故 send_message/start_game 工具内连 WS
 // 收 narration_commit→turn_ended,返回 GM 散文;get_presentation 取机械态快照(sheets/mechanics/choices/seq；
 // 无 ended——终局态在 GET /sessions/:id;pendingRoll 在 Phase 1 恒 null)。
@@ -39,7 +39,7 @@ function json(v: unknown) { return { content: [{ type: "text" as const, text: JS
 
 // 灌场景种子到后端 sessions_dir,返回 sessionId(=sessionName)。后端 getOrCreateHost 读同一 db。
 export async function doOpenSession(scenarioId: string): Promise<string> {
-  const sessionsDir = process.env.DICELORE_SESSIONS_DIR ?? "."; // 与后端 server.ts 默认一致,避免 mkdtemp 新目录
+  const sessionsDir = process.env.DICELORE_DATA_DIR ?? "."; // 与后端 server.ts 默认一致,避免 mkdtemp 新目录
   const { sessionName } = await prepareSessionDb(scenarioId, { sessionsDir });
   return sessionName;
 }

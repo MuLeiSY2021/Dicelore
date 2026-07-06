@@ -30,13 +30,13 @@ CC（Claude Code）经 **play-mcp**（stdio MCP）连本机后端 dicelore play 
 **只起一档**（doctrine，带教条、真 GM 烧 LLM）——不再起 baseline 第二档：
 
 ```bash
-DICELORE_SESSIONS_DIR=/tmp/dl-eval DICELORE_FAKE_GM=0 \
+DICELORE_DATA_DIR=/tmp/dl-eval DICELORE_FAKE_GM=0 \
   npx tsx backend/src/server.ts &
 ```
 
 > `DICELORE_FAKE_GM=0` 确保走真 DiceGm（eval 默认就该烧 LLM，别图快用 fake）。
 
-play-mcp 经 `.mcp.json` 注册，`DICELORE_PLAY_URL` 指该后端、`DICELORE_SESSIONS_DIR` 与后端一致：
+play-mcp 经 `.mcp.json` 注册，`DICELORE_PLAY_URL` 指该后端、`DICELORE_DATA_DIR` 与后端一致：
 
 ```jsonc
 {
@@ -44,7 +44,7 @@ play-mcp 经 `.mcp.json` 注册，`DICELORE_PLAY_URL` 指该后端、`DICELORE_S
     "dicelore-play": {
       "command": "npx",
       "args": ["tsx", "harness/eval-dicegm/play-mcp.ts"],
-      "env": { "DICELORE_PLAY_URL": "http://localhost:8787", "DICELORE_SESSIONS_DIR": "/tmp/dl-eval" }
+      "env": { "DICELORE_PLAY_URL": "http://localhost:8787", "DICELORE_DATA_DIR": "/tmp/dl-eval" }
     }
   }
 }

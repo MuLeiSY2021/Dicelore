@@ -14,7 +14,7 @@ import { initGlobalLogger, getLogger } from "@dicelore/logs";
 import { createMcpServer } from "./server.js";
 
 async function main() {
-  const { db, path } = openSession(); // env: DICELORE_SESSION / DICELORE_SESSIONS_DIR
+  const { db, path } = openSession(); // env: DICELORE_SESSION / DICELORE_DATA_DIR
   // stdio server:日志必须走文件/stderr,绝不能进 stdout(会污染 JSON-RPC 协议流)。
   // 把全局 logger 切到会话文件夹的分级文件(createFileLogger 只写 *.log,不碰 stdout)。
   initGlobalLogger(dirname(path));

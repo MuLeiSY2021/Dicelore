@@ -5,7 +5,7 @@
       "args": ["tsx", "harness/eval-dicegm/play-mcp.ts"],
       "env": {
         "DICELORE_PLAY_URL": "http://localhost:8787",
-        "DICELORE_SESSIONS_DIR": ".dl-eval-doctrine"
+        "DICELORE_DATA_DIR": ".dl-eval-doctrine"
       }
     },
     "dicelore-build": {

@@ -115,7 +115,7 @@ npm run typecheck        # 类型检查
 npm run dicelore -- new <团名>   # CLI：建 / 开一局会话
 ```
 
-会话存档在平台 app-data 目录下 `dicelore/sessions/<名字>.db`；环境变量 `DICELORE_SESSIONS_DIR` 可覆盖根目录、`DICELORE_SESSION` 指定缺省会话名。
+会话存档在平台 app-data 目录下 `dicelore/sessions/<名字>.db`；环境变量 `DICELORE_DATA_DIR` 可覆盖根目录、`DICELORE_SESSION` 指定缺省会话名。
 
 **技术栈**：TypeScript + better-sqlite3（权威状态外置）· MCP（`@modelcontextprotocol/sdk` v1.x + Zod v3，内层能力库包成一组 `dicelore_*` 工具）· FTS5 + jieba 中文全文检索（trigram 零依赖保底）。
 

@@ -66,7 +66,7 @@ test.describe("配置页", () => {
   test("数据与存储 / 关于：展示后端真实值", async ({ page }) => {
     await page.goto("/config");
     await page.getByRole("button", { name: "数据与存储" }).click();
-    await expect(page.getByText("DICELORE_SESSIONS_DIR")).toBeVisible();
+    await expect(page.getByText("DICELORE_DATA_DIR")).toBeVisible();
     await page.getByRole("button", { name: "关于" }).click();
     await expect(page.getByText(/dicelore.client\/1/)).toBeVisible();
   });

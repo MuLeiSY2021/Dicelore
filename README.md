@@ -116,7 +116,7 @@ npm run dicelore -- new <session-name>   # CLI: create / open a session (dev / s
 
 To actually play during development you also need to start the `backend` and the `frontend` dev server, then open the web client in a browser — the CLI alone does not run a game.
 
-Sessions are saved under the platform's app-data directory at `dicelore/sessions/<name>.db`. The environment variable `DICELORE_SESSIONS_DIR` overrides the root directory; `DICELORE_SESSION` sets the default session name.
+Sessions are saved under the platform's app-data directory at `dicelore/sessions/<name>.db`. The environment variable `DICELORE_DATA_DIR` overrides the root directory; `DICELORE_SESSION` sets the default session name.
 
 **Tech stack**: TypeScript + better-sqlite3 (authoritative state externalised) · MCP (`@modelcontextprotocol/sdk` v1.x + Zod v3, inner capability library packaged as a set of `dicelore_*` tools) · FTS5 + jieba Chinese full-text search (trigram zero-dependency fallback).
 

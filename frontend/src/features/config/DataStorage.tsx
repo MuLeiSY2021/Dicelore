@@ -28,7 +28,7 @@ export function DataStorage() {
       <div className="section">
         <div className="frow">
           <span className="flabel">{t("cfg.data.dir")}</span>
-          <div className="fctrl"><span className="fval">{offline ? "—" : health?.storage.sessionsDir ?? "…"}</span><span className="fhint">DICELORE_SESSIONS_DIR</span></div>
+          <div className="fctrl"><span className="fval">{offline ? "—" : health?.storage.sessionsDir ?? "…"}</span><span className="fhint">DICELORE_DATA_DIR</span></div>
         </div>
         <div className="frow">
           <span className="flabel">{t("cfg.data.fts")}</span>

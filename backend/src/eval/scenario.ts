@@ -47,7 +47,7 @@ export async function prepareSessionDb(
   const scenario = loadScenario(scenarioId);
   const sessionsDir = opts.sessionsDir ?? mkdtempSync(join(tmpdir(), "dl-eval-"));
   const sessionName = `eval-${scenario.id}${opts.baseline ? "-baseline" : ""}`;
-  process.env.DICELORE_SESSIONS_DIR = sessionsDir;
+  process.env.DICELORE_DATA_DIR = sessionsDir;
   process.env.DICELORE_SESSION = sessionName;
   const { openSession, metaSet } = await import("../session/resolve.js");
   const { ruleUpsert } = await import("../store/world/rule.js");

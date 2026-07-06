@@ -37,7 +37,7 @@ function readVersion(pluginJsonPath: string): string | null {
 
 // 幂等 + 版本感知物化母本 skill plugin 到数据根,返回运行期 PluginRef。
 //  · srcDir  = 母本线根绝对路径(须含 .claude-plugin/plugin.json;缺 = 母本定位失败 → 返 null)。
-//  · dataRoot = 数据根 $(DICELORE_SESSIONS_DIR ?? ".")。
+//  · dataRoot = 数据根 $(DICELORE_DATA_DIR ?? ".")。
 //  · role    = "dice" | "lore",物化目标 = <dataRoot>/<role>。
 //  · skills  = 启用的 skill 名单(默认 "all")。
 // 母本 plugin.json 不存在 → getLogger().error + 返 null(调用点据此 fail loud,不静默兜底)。
