@@ -37,7 +37,7 @@ import { resolveContest } from "./resolve/contest.js";
 import { commitPendingRoll } from "./resolve/commitRoll.js";
 import { metaGet, metaSet } from "./session/resolve.js";
 import { recordUsage } from "./store/usage.js";
-import { checkpoint, restore, latestSnapshot, listSnapshots } from "./store/snapshot.js";
+import { checkpoint, restore, restoreToAnchor, latestSnapshot, listSnapshots } from "./store/snapshot.js";
 import { buildPresentationModel } from "./present/model.js";
 import { importPack } from "./catalog/import.js";
 
@@ -99,6 +99,7 @@ export function openSessionBackend(db: DB): SessionBackend {
     // ===== Snapshots =====
     checkpoint: (opts) => checkpoint(db, opts),
     restore: (snapshotId) => restore(db, snapshotId),
+    restoreToAnchor: (uuid) => restoreToAnchor(db, uuid),
     latestSnapshot: () => latestSnapshot(db),
     listSnapshots: () => listSnapshots(db),
 

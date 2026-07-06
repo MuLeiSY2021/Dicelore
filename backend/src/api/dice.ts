@@ -197,11 +197,26 @@ export function createLiveApp(deps: LiveDeps): Hono {
   });
 
   // SNAP-1 读档（ADR-0017 v1：自动恢复最近快照，非手动回滚按钮/branch/续命——那些 v2）。
-  // 成功 → 202 {snapshotId}；库内无快照(未跑过回合) → 409 no_snapshot；有回合在跑 → 409 turn_in_progress。
+  // TR3 additive：可选 body {toUuid?}。
+  //   · 带 toUuid → host.rewindTo(toUuid)：按 transcript 节点 uuid 回退(领域态经 dice-db RollbackHook + 移 HEAD)；
+  //                 成功 202 {uuid}；uuid 不在 transcript 树内 → 404 unknown_anchor；该锚点无 db 快照 → 409 no_snapshot_for_anchor。
+  //   · 不带 toUuid → 现有 host.rewind()(撤上一轮·最近快照)，向后兼容：202 {snapshotId} / 无快照 409 no_snapshot。
+  // 有回合在跑 → 409 turn_in_progress。
   app.post("/sessions/:id/rewind", async (c) => {
     const id = c.req.param("id");
     const host = getOrCreateHost(id, hostDeps(id));
+    // body 可空/非法：容错解析，缺 toUuid 即走旧路径（既有客户端发 {} 或空 body 均兼容）。
+    let toUuid: string | undefined;
     try {
+      const body = (await c.req.json()) as { toUuid?: unknown } | null;
+      if (body && typeof body.toUuid === "string" && body.toUuid.length > 0) toUuid = body.toUuid;
+    } catch { /* 空/非法 body → 走旧路径 */ }
+
+    try {
+      if (toUuid) {
+        const r = await host.rewindTo(toUuid);
+        return c.json({ uuid: r.uuid }, 202);
+      }
       const res = await host.rewind();
       if (!res) return c.json({ code: "no_snapshot" }, 409);
       return c.json({ snapshotId: res.snapshotId }, 202);
@@ -209,6 +224,16 @@ export function createLiveApp(deps: LiveDeps): Hono {
       if (e instanceof TurnInProgressError) {
         getLogger().warn({ sessionId: id }, "rewind 时已有回合在跑,返回 409 turn_in_progress");
         return c.json({ code: "turn_in_progress" }, 409);
+      }
+      const msg = e instanceof Error ? e.message : String(e);
+      // toUuid 路径的可预期失败映射（避免 500）：锚点不在树内 / 该锚点无 db 快照。
+      if (msg.includes("no_snapshot_for_anchor")) {
+        getLogger().warn({ sessionId: id, toUuid }, "rewind:锚点无对应 db 快照,返回 409 no_snapshot_for_anchor");
+        return c.json({ code: "no_snapshot_for_anchor" }, 409);
+      }
+      if (msg.includes("不在 transcript 树内") || msg.includes("no_transcript")) {
+        getLogger().warn({ sessionId: id, toUuid }, "rewind:锚点 uuid 不在 transcript 树内,返回 404 unknown_anchor");
+        return c.json({ code: "unknown_anchor" }, 404);
       }
       getLogger().error({ sessionId: id, err: e }, "rewind 未预期异常,抛给 Hono(500)");
       throw e;

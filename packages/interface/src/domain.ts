@@ -212,6 +212,8 @@ export interface SnapshotRow {
 export interface CheckpointOpts {
   /** 本回合末 log seq（turn_end_seq）。 */
   turnSeq: number;
+  /** TR3 additive：本回合末对应的 transcript 节点 uuid（落 transcript_anchor 列，供 restoreToAnchor 反查）。 */
+  anchorUuid?: string;
 }
 
 // ===== present/model (Presentation 端口) =====

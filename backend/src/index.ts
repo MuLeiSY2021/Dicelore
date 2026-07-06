@@ -74,6 +74,7 @@ export { metaGet, metaSet, sessionDbPath, sessionDir, openSession, type SessionK
 export {
   checkpoint,
   restore,
+  restoreToAnchor,
   latestSnapshot,
   listSnapshots,
   registerSnapshotParticipant,

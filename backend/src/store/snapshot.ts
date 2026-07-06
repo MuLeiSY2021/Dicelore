@@ -140,6 +140,9 @@ export interface CheckpointOpts {
   turnSeq: number;
   /** 自定义 participant 集；省略 = defaultParticipants()（含全局注册）。 */
   participants?: SnapshotParticipant[];
+  /** TR3 additive：本回合末对应的 transcript 节点 uuid，落 transcript_anchor 列供 restoreToAnchor 反查。
+   *  省略 = NULL（无 transcript 的会话/测试；向后兼容旧 seq-based 路径）。 */
+  anchorUuid?: string;
 }
 
 export function checkpoint(db: DB, opts: CheckpointOpts): number {
@@ -148,8 +151,10 @@ export function checkpoint(db: DB, opts: CheckpointOpts): number {
   for (const p of parts) blob[p.name] = p.capture(db);
   const parent = latestSnapshot(db); // 线性链：parent = 上一份快照（v1 不分叉）。
   const info = db
-    .prepare("INSERT INTO snapshot (parent_id, turn_start_seq, turn_end_seq, blob_json) VALUES (?, ?, ?, ?)")
-    .run(parent?.id ?? null, opts.turnSeq, opts.turnSeq, JSON.stringify(blob));
+    .prepare(
+      "INSERT INTO snapshot (parent_id, turn_start_seq, turn_end_seq, blob_json, transcript_anchor) VALUES (?, ?, ?, ?, ?)",
+    )
+    .run(parent?.id ?? null, opts.turnSeq, opts.turnSeq, JSON.stringify(blob), opts.anchorUuid ?? null);
   return Number(info.lastInsertRowid);
 }
 
@@ -165,4 +170,16 @@ export function restore(db: DB, snapshotId: number, participants?: SnapshotParti
     }
   });
   tx();
+}
+
+// TR3 additive：把 db 级快照/回退锤到 transcript uuid。按 transcript_anchor 列反查快照 id，
+// 复用 restore(db, id) 整表覆写；找不到锚点对应快照则抛 no_snapshot_for_anchor（dice RollbackHook
+// 经此把领域态复位到 transcript 节点，与 seq-based restore 共存、不改旧路径）。
+export function restoreToAnchor(db: DB, uuid: string, participants?: SnapshotParticipant[]): void {
+  // 同一 uuid 每回合仅铸一次（transcript 节点唯一），DESC LIMIT 1 兜底取最新。
+  const row = db
+    .prepare("SELECT id FROM snapshot WHERE transcript_anchor=? ORDER BY id DESC LIMIT 1")
+    .get(uuid) as { id: number } | undefined;
+  if (!row) throw new Error(`no_snapshot_for_anchor: ${uuid}`);
+  restore(db, row.id, participants);
 }

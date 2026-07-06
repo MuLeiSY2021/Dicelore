@@ -12,6 +12,7 @@ import { openDb, initSchema, type DB } from "./db.js";
 import {
   checkpoint,
   restore,
+  restoreToAnchor,
   latestSnapshot,
   listSnapshots,
   registerSnapshotParticipant,
@@ -182,5 +183,51 @@ describe("SnapshotParticipant 注册表（IoC）", () => {
     } finally {
       unregister();
     }
+  });
+});
+
+// TR3 additive：transcript_anchor 列 + restoreToAnchor（db 快照锤到 transcript uuid）。
+describe("snapshot transcript_anchor（TR3：锤到 transcript uuid）", () => {
+  function anchorOf(db: DB, id: number): string | null {
+    return (db.prepare("SELECT transcript_anchor a FROM snapshot WHERE id=?").get(id) as { a: string | null }).a;
+  }
+
+  it("checkpoint 带 anchorUuid → 落 transcript_anchor 列；省略 → NULL（旧 seq-based 路径兼容）", () => {
+    const db = freshDb();
+    const withAnchor = checkpoint(db, { turnSeq: 1, anchorUuid: "uuid-abc" });
+    const without = checkpoint(db, { turnSeq: 2 });
+    expect(anchorOf(db, withAnchor)).toBe("uuid-abc");
+    expect(anchorOf(db, without)).toBeNull();
+  });
+
+  it("restoreToAnchor 按 uuid 反查快照并整表覆写回该锚点态", () => {
+    const db = freshDb();
+    setSheet(db, "你", "HP", "10");
+    checkpoint(db, { turnSeq: 1, anchorUuid: "turn-1-end" });
+
+    // 锚点后状态变更
+    setSheet(db, "你", "HP", "3");
+    setSheet(db, "你", "金币", "99");
+
+    restoreToAnchor(db, "turn-1-end");
+    expect(getSheet(db, "你", "HP")).toBe("10"); // 回到锚点态
+    expect(getSheet(db, "你", "金币")).toBeUndefined(); // 锚点后新增被抹
+  });
+
+  it("restoreToAnchor 对未知锚点抛 no_snapshot_for_anchor", () => {
+    const db = freshDb();
+    checkpoint(db, { turnSeq: 1, anchorUuid: "known" });
+    expect(() => restoreToAnchor(db, "unknown-uuid")).toThrow(/no_snapshot_for_anchor/);
+  });
+
+  it("同 uuid 多份快照 → restoreToAnchor 取最新一份", () => {
+    const db = freshDb();
+    setSheet(db, "你", "HP", "10");
+    checkpoint(db, { turnSeq: 1, anchorUuid: "dup" });
+    setSheet(db, "你", "HP", "7");
+    checkpoint(db, { turnSeq: 2, anchorUuid: "dup" }); // 更晚一份，HP=7
+    setSheet(db, "你", "HP", "1");
+    restoreToAnchor(db, "dup");
+    expect(getSheet(db, "你", "HP")).toBe("7"); // 取 id 最大（最新）那份
   });
 });
