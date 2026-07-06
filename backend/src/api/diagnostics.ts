@@ -148,7 +148,7 @@ export function createDiagnosticsApp(deps: DiagDeps): Hono {
       mcp: { name: "dicelore", transport: "in-process", toolCount: BUILTIN_TOOL_COUNT, running: true },
       notify: { url: notifyUrl, configured: !!notifyUrl },
       storage: {
-        sessionsDir: process.env.DICELORE_SESSIONS_DIR ?? ".",
+        sessionsDir: process.env.DICELORE_DATA_DIR ?? process.env.DICELORE_SESSIONS_DIR ?? ".",
         ftsMode: process.env.DICELORE_FTS_MODE === "trigram" ? "trigram" : "jieba",
       },
     };
