@@ -3,10 +3,10 @@
 import { doOpenSession, doStartGame, doSendMessage, doGetPresentation } from "./play-mcp.js";
 
 process.env.DICELORE_PLAY_URL ??= "http://127.0.0.1:8787";
-process.env.DICELORE_SESSIONS_DIR ??= "/tmp/dl-eval-doctrine";
+process.env.DICELORE_DATA_DIR ??= "/tmp/dl-eval-doctrine";
 
 const scenario = process.argv[2] ?? "orc-hunt";
-console.log(`[run-live] scenario=${scenario} play=${process.env.DICELORE_PLAY_URL} dir=${process.env.DICELORE_SESSIONS_DIR}`);
+console.log(`[run-live] scenario=${scenario} play=${process.env.DICELORE_PLAY_URL} dir=${process.env.DICELORE_DATA_DIR}`);
 
 const sid = await doOpenSession(scenario);
 console.log(`[run-live] sessionId=${sid}`);

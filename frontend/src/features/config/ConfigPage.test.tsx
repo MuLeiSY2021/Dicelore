@@ -36,10 +36,10 @@ it("点「MCP 服务器」显示 MCP 子页(含必需与 out-of-canon)", () => {
   expect(screen.getAllByText(/out-of-canon/).length).toBeGreaterThan(0);
 });
 
-it("点「数据与存储」显示数据子页(含 DICELORE_SESSIONS_DIR)", () => {
+it("点「数据与存储」显示数据子页(含 DICELORE_DATA_DIR)", () => {
   mount();
   act(() => { screen.getByRole("button", { name: "数据与存储" }).click(); });
-  expect(screen.getByText("DICELORE_SESSIONS_DIR")).toBeInTheDocument();
+  expect(screen.getByText("DICELORE_DATA_DIR")).toBeInTheDocument();
 });
 
 it("点「服务与网络」显示服务子页(含 DICELORE_NOTIFY_URL)", () => {

@@ -22,7 +22,7 @@ import { doOpenSession, doStartGame, doSendMessage } from "./play-mcp.js";
 let server: ReturnType<typeof serve>;
 beforeAll(() => {
   const dir = mkdtempSync(join(tmpdir(), "dl-pmcp-"));
-  process.env.DICELORE_SESSIONS_DIR = dir;
+  process.env.DICELORE_DATA_DIR = dir;
   const openSession = (id: string) => { const d = openDb(`${dir}/${id}.db`); initSchema(d); return d; };
   const agentFactory = () => new FakeDiceGm([{ type: "narration", text: "门开了。" }, { type: "turn_end" }]);
   const app = createLiveApp({ agentFactory, openSession });
@@ -33,7 +33,7 @@ beforeAll(() => {
 afterAll(() => {
   server.close();
   delete process.env.DICELORE_PLAY_URL;
-  delete process.env.DICELORE_SESSIONS_DIR;
+  delete process.env.DICELORE_DATA_DIR;
 });
 
 describe("play-mcp handlers", () => {
