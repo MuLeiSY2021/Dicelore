@@ -287,14 +287,14 @@ describe("GET /lore-sessions/:id/draft 检视未 commit 的 Draft", () => {
 });
 
 // ── 会话工作区 ensureWorkspace（build-agent-workspace §1）──────────────────────
-// workspace 每 session 持久:<sessionsDir>/lore/sessions/<id>/workspace/,只建 materials/,
+// workspace 每 session 持久:<sessionsDir>/sessions/lore/<id>/workspace/,只建 materials/,
 // 不拷任何 skill、不产 .claude(skill 经 plugin 从数据根按引用加载)。ensureWorkspace 幂等。
 describe("ensureWorkspace（会话工作区，纯 fs）", () => {
-  it("建 <sessionsDir>/lore/sessions/<id>/workspace/materials，返回 workspace 绝对路径", () => {
+  it("建 <sessionsDir>/sessions/lore/<id>/workspace/materials，返回 workspace 绝对路径", () => {
     const root = mkdtempSync(join(tmpdir(), "dl-ws-"));
     try {
       const ws = ensureWorkspace(root, "sess-a");
-      expect(ws).toBe(join(root, "lore", "sessions", "sess-a", "workspace"));
+      expect(ws).toBe(join(root, "sessions", "lore", "sess-a", "workspace"));
       expect(existsSync(join(ws, "materials"))).toBe(true);
       // 不产 .claude / 不拷 skill——workspace 只装 materials（+ agent scratch，起跑时空）。
       expect(existsSync(join(ws, ".claude"))).toBe(false);
@@ -339,7 +339,7 @@ describe("POST /lore-sessions/:id/materials 流式素材上传", () => {
       const out = (await res.json()) as { path: string; bytes: number };
       expect(out.path).toBe("materials/兽人冒险.md");
       expect(out.bytes).toBe(Buffer.byteLength(body));
-      const onDisk = readFileSync(join(root, "lore", "sessions", "m1", "workspace", "materials", "兽人冒险.md"), "utf8");
+      const onDisk = readFileSync(join(root, "sessions", "lore", "m1", "workspace", "materials", "兽人冒险.md"), "utf8");
       expect(onDisk).toBe(body);
     } finally {
       catalog.close();
@@ -358,7 +358,7 @@ describe("POST /lore-sessions/:id/materials 流式素材上传", () => {
         method: "POST", headers: { "content-type": "application/octet-stream" }, body: "第二版",
       });
       expect(res.status).toBe(200);
-      const onDisk = readFileSync(join(root, "lore", "sessions", "m2", "workspace", "materials", "a.txt"), "utf8");
+      const onDisk = readFileSync(join(root, "sessions", "lore", "m2", "workspace", "materials", "a.txt"), "utf8");
       expect(onDisk).toBe("第二版");
     } finally {
       catalog.close();
@@ -395,7 +395,7 @@ describe("POST /lore-sessions/:id/materials 流式素材上传", () => {
       const out = (await res.json()) as { error: { code: string } };
       expect(out.error.code).toBe("bad_material_name");
       // 逃逸目标不存在
-      expect(existsSync(join(root, "lore", "sessions", "evil.txt"))).toBe(false);
+      expect(existsSync(join(root, "sessions", "lore", "evil.txt"))).toBe(false);
     } finally {
       catalog.close();
       rmSync(root, { recursive: true, force: true });
@@ -446,7 +446,7 @@ describe("POST /lore-sessions/:id/materials 流式素材上传", () => {
       const out = (await res.json()) as { error: { code: string } };
       expect(out.error.code).toBe("material_too_large");
       // 半成品已清:文件不应残留。
-      expect(existsSync(join(root, "lore", "sessions", "m6", "workspace", "materials", "big.bin"))).toBe(false);
+      expect(existsSync(join(root, "sessions", "lore", "m6", "workspace", "materials", "big.bin"))).toBe(false);
     } finally {
       if (prev === undefined) delete process.env.DICELORE_MATERIAL_MAX_MB;
       else process.env.DICELORE_MATERIAL_MAX_MB = prev;

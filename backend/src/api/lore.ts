@@ -20,14 +20,16 @@ export interface LoreDeps {
   agentFactory: AgentFactory; // CC SDK 适配器挂构建 MCP + 构建 skill
   buildPrompt?: string; // 构建教条(→ openingPrompt)
   plugin?: PluginRef; // 构建 skill plugin(build-pack+build-core,boot 期物化到 $/lore)
-  sessionsDir?: string; // sessions 数据根:每 session 工作区落 <sessionsDir>/lore/sessions/<id>/workspace/(build-agent-workspace)
+  sessionsDir?: string; // sessions 数据根:每 session 工作区落 <sessionsDir>/sessions/lore/<id>/workspace/(build-agent-workspace)
 }
 
-// 每 session 持久工作区(build-agent-workspace §1):<sessionsDir>/lore/sessions/<id>/workspace/。
+// 每 session 持久工作区(build-agent-workspace §1):<sessionsDir>/sessions/lore/<id>/workspace/。
+// 路径走统一 sessionDir(dataDir,'lore',id) 助手(与 transcript/session.db 同处 $ROOT/sessions/lore/<id>/,
+// 不再自拼 lore/sessions/<id> 旧布局——DD2 relayout 单源)。
 // 仅 mkdir workspace/materials/(**不拷任何 skill、不产 .claude**——skill 经 plugin 从数据根按引用加载)。
 // 幂等:重复调不炸。返回 workspace 绝对路径(=构建 agent 的 cwd,经 AgentInit.workspace 透传)。
 export function ensureWorkspace(sessionsDir: string, sessionId: string): string {
-  const workspace = join(sessionsDir, "lore", "sessions", sessionId, "workspace");
+  const workspace = join(sessionDir(sessionsDir, "lore", sessionId), "workspace");
   mkdirSync(join(workspace, "materials"), { recursive: true });
   return workspace;
 }
