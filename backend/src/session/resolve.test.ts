@@ -10,12 +10,38 @@
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { metaGet, openSession, sessionDbPath } from "./resolve.js";
 
 let dir: string;
 beforeEach(() => { dir = mkdtempSync(join(tmpdir(), "dicelore-")); process.env.DICELORE_SESSIONS_DIR = dir; });
 afterEach(() => { delete process.env.DICELORE_SESSIONS_DIR; rmSync(dir, { recursive: true, force: true }); });
+
+describe("单根收敛:appDataRoot 复用 resolveDataDir(DD3)", () => {
+  const orig = { data: process.env.DICELORE_DATA_DIR, sessions: process.env.DICELORE_SESSIONS_DIR };
+  afterEach(() => {
+    if (orig.data === undefined) delete process.env.DICELORE_DATA_DIR; else process.env.DICELORE_DATA_DIR = orig.data;
+    if (orig.sessions === undefined) delete process.env.DICELORE_SESSIONS_DIR; else process.env.DICELORE_SESSIONS_DIR = orig.sessions;
+  });
+
+  test("无 DICELORE_SESSIONS_DIR 时走 resolveDataDir(DICELORE_DATA_DIR)", () => {
+    delete process.env.DICELORE_SESSIONS_DIR;
+    process.env.DICELORE_DATA_DIR = "/data/root-a";
+    expect(sessionDbPath("团", "dice")).toBe(join(resolve("/data/root-a"), "sessions", "dice", "团", "session.db"));
+  });
+
+  test("显式 DICELORE_DATA_DIR 压过遗留 DICELORE_SESSIONS_DIR(单根,不再两套)", () => {
+    process.env.DICELORE_SESSIONS_DIR = "/legacy/sess";
+    process.env.DICELORE_DATA_DIR = "/data/root-b";
+    expect(sessionDbPath("团", "dice")).toBe(join(resolve("/data/root-b"), "sessions", "dice", "团", "session.db"));
+  });
+
+  test("仅遗留 DICELORE_SESSIONS_DIR(无 DATA_DIR)仍兜底honored(eval/旧脚本)", () => {
+    delete process.env.DICELORE_DATA_DIR;
+    process.env.DICELORE_SESSIONS_DIR = "/legacy/only";
+    expect(sessionDbPath("团", "dice")).toBe(join("/legacy/only", "sessions", "dice", "团", "session.db"));
+  });
+});
 
 describe("session", () => {
   test("DICELORE_SESSIONS_DIR 覆盖根目录(DD2 布局 sessions/kind/id + session 自包含文件夹)", () => {

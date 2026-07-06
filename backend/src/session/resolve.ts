@@ -8,21 +8,21 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import { mkdirSync } from "node:fs";
-import { homedir, platform } from "node:os";
 import { dirname, join } from "node:path";
 import { sessionDir as harnessSessionDir } from "@dicelore/harness";
 import { initSchema, openDb, type DB } from "../store/db.js";
+import { resolveDataDir } from "../config.js";
 
 const SCHEMA_VERSION = "1";
 
+// 数据根单源(DD3):组合根 server.ts 已 resolveDataDir → 落 DICELORE_DATA_DIR,openSession/DiceGm 据此
+// 派生同一 $ROOT/sessions/<kind>/<id>,不再有第二套根。这里只需与之一致——一律复用 resolveDataDir(config.ts)。
+// 遗留 DICELORE_SESSIONS_DIR 仅在「无任何显式数据根」时兜底(eval/scenario、旧脚本、resolve 单测),
+// 一旦出现显式 --data-dir / DICELORE_DATA_DIR 即以其为准(压过遗留 env),保证单根收敛。
 function appDataRoot(): string {
-  if (process.env.DICELORE_SESSIONS_DIR) return process.env.DICELORE_SESSIONS_DIR;
-  const home = homedir();
-  switch (platform()) {
-    case "win32": return process.env.APPDATA ?? join(home, "AppData", "Roaming");
-    case "darwin": return join(home, "Library", "Application Support");
-    default: return process.env.XDG_DATA_HOME ?? join(home, ".local", "share");
-  }
+  const explicit = process.env.DICELORE_DATA_DIR !== undefined || process.argv.includes("--data-dir");
+  if (!explicit && process.env.DICELORE_SESSIONS_DIR) return process.env.DICELORE_SESSIONS_DIR;
+  return resolveDataDir(process.argv, process.env);
 }
 
 // session 自包含文件夹布局(DD2:sessions 顶层、kind 次级、id 叶级):
