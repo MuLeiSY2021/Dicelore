@@ -152,6 +152,8 @@ export interface Snapshots {
   checkpoint(opts: CheckpointOpts): number;
   /** 恢复到指定快照(默认 participant 集)。 */
   restore(snapshotId: number): void;
+  /** TR3 additive：按 transcript 节点 uuid 反查快照并整表覆写（找不到锚点抛 no_snapshot_for_anchor）。 */
+  restoreToAnchor(uuid: string): void;
   /** 最近一份快照(无则 undefined)。 */
   latestSnapshot(): SnapshotRow | undefined;
   /** 按 id 升序列出全部快照。 */

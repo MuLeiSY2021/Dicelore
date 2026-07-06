@@ -33,4 +33,27 @@ describe("schema", () => {
       expect(names).toContain(t);
     }
   });
+
+  test("TR3:snapshot 表含 transcript_anchor 列", () => {
+    const db = openDb(":memory:");
+    initSchema(db);
+    const cols = (db.prepare("PRAGMA table_info(snapshot)").all() as { name: string }[]).map((c) => c.name);
+    expect(cols).toContain("transcript_anchor");
+  });
+
+  test("TR3 迁移:既有(无 transcript_anchor 列的)snapshot 表被 initSchema 幂等补列", () => {
+    const db = openDb(":memory:");
+    // 模拟迁移前建的旧库:手建不含 transcript_anchor 的 snapshot 表 + 一行旧数据。
+    db.exec(`CREATE TABLE snapshot (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, parent_id INTEGER,
+      turn_start_seq INTEGER, turn_end_seq INTEGER, blob_json TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`);
+    db.prepare("INSERT INTO snapshot (blob_json) VALUES ('{}')").run();
+    initSchema(db); // 迁移应补列且不丢旧行
+    const cols = (db.prepare("PRAGMA table_info(snapshot)").all() as { name: string }[]).map((c) => c.name);
+    expect(cols).toContain("transcript_anchor");
+    const old = db.prepare("SELECT transcript_anchor a FROM snapshot WHERE id=1").get() as { a: string | null };
+    expect(old.a).toBeNull(); // 旧行该列为 NULL
+  });
 });

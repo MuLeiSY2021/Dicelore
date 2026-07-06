@@ -106,6 +106,9 @@ export function initSchema(db: DB): void {
       turn_start_seq INTEGER,
       turn_end_seq INTEGER,
       blob_json TEXT NOT NULL,
+      -- TR3 additive：本回合末对应的 transcript 节点 uuid（权威方向 transcript 先铸、db 后锤）。
+      -- 旧行 NULL（迁移前建的 db），restoreToAnchor 按此列 uuid 反查快照 id。
+      transcript_anchor TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
     -- ===== token 用量计量(CO-采集 / store/usage.ts)=====
@@ -136,6 +139,13 @@ export function initSchema(db: DB): void {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
+
+  // ===== TR3 迁移：既有 db 的 snapshot 表补 transcript_anchor 列 =====
+  // CREATE TABLE IF NOT EXISTS 不会给已存在的表加列；对迁移前建的库幂等补列（旧行值 NULL）。
+  const snapCols = db.prepare("PRAGMA table_info(snapshot)").all() as { name: string }[];
+  if (!snapCols.some((c) => c.name === "transcript_anchor")) {
+    db.exec("ALTER TABLE snapshot ADD COLUMN transcript_anchor TEXT");
+  }
 
   // ===== FTS5 全文检索虚表(Plan 2)=====
   // 与并行「回合快照线」的 snapshot 表互不重叠;改动只在此集中,便于对方 rebase。

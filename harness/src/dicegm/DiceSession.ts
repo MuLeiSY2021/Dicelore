@@ -19,6 +19,8 @@ import { runTurn, type TurnEndResult } from "./turnLoop.js";
 import { buildOpeningPrompt, buildBaselinePrompt } from "./openingPrompt.js";
 import type { AgentFactory, AgentInit, PluginRef, TurnUsage } from "../runtime/agent.js";
 import type { Session } from "../runtime/session.js";
+import { sessionDir, SessionTranscript } from "../runtime/transcript.js";
+import { Rewind } from "../runtime/rewind.js";
 
 let turnCounter = 0; // 进程内自增,测试稳定(不依赖随机/时间)
 function nextTurnId(sessionId: string): string { turnCounter += 1; return `${sessionId}-t${turnCounter}`; }
@@ -236,6 +238,14 @@ export class DiceSession implements Session {
 
   handleRoll(eventId: number): boolean { return this.gate?.resolveRoll(eventId) ?? false; }
 
+  // TR3：为本会话开一个 transcript 视图（文件态，backend-free）。sessionsDir 缺省（lore/测试）→ undefined。
+  // 每次新建（recoverHead 读盘）以看到 DiceGm 本回合刚落的 HEAD——不缓存陈旧 _head。
+  private openTranscript(): SessionTranscript | undefined {
+    const dir = this.deps.sessionsDir;
+    if (!dir) return undefined;
+    return new SessionTranscript({ sessionDir: sessionDir(dir, this.kind, this.sessionId), sessionId: this.sessionId });
+  }
+
   // SNAP-1 读档（ADR-0017 v1：自动恢复最近一份快照，非手动回滚/branch）。
   // 无快照（开局未跑过一回合）→ 返回 false，API 层映射 409；有则整体覆写 sheet/world/watcher 域并返回快照 id。
   // 串行进 runExclusive：restore 整表覆写与回合写 DB 不能并发（同 handleMessage 的并发互斥）。
@@ -252,12 +262,31 @@ export class DiceSession implements Session {
     });
   }
 
+  // TR3：回退到指定 transcript 节点 uuid（权威方向 transcript 先铸、db 后锤）。
+  // 为本会话建 Rewind(transcript) 并注册 dice-db RollbackHook（rollbackTo → restoreToAnchor(db,uuid)），
+  // 经 rewind.rewindTo：① uuid 不在树内 → 抛错；② dice-db 复位领域态（无锤则抛 no_snapshot_for_anchor，
+  // HEAD 不动）；③ 全成功后移 transcript HEAD。串行进 runExclusive（restore 覆写与回合写 DB 不并发）。
+  async rewindTo(uuid: string): Promise<{ uuid: string }> {
+    return this.runExclusive(async () => {
+      const transcript = this.openTranscript();
+      if (!transcript) throw new Error("no_transcript"); // 无 sessionsDir：本会话无 transcript，无法按 uuid 回退
+      const rewind = new Rewind(transcript);
+      rewind.register({ name: "dice-db", rollbackTo: ({ uuid }) => this.backend.restoreToAnchor(uuid) });
+      rewind.rewindTo(uuid);
+      getLogger().info({ sessionId: this.sessionId, uuid }, "rewindTo:已按 transcript uuid 回退(领域态+HEAD)");
+      return { uuid };
+    });
+  }
+
   private turnEnd(_db: DB): TurnEndResult {
     runTurnEnd(this.backend, { transcriptHasText: true, stopHookActive: false }); // 物化 choice + L3 审计
     // SNAP-1：回合边界自动落一份全量快照（存档语义）。turnSeq = 当前最大 log seq（对齐 narrativeCursor 口径）。
     // 在 runTurnEnd 后取——choice 物化等回合末写已落库，快照覆盖完整回合态。
+    // TR3：anchorUuid = 本回合末 transcript HEAD（DiceGm 已落 turn/msg 行、HEAD 前进）——transcript 先铸、db 后锤。
+    // 无 transcript（无 sessionsDir/测试）→ undefined → transcript_anchor 列 NULL（向后兼容 seq-based 路径）。
     const maxSeq = (this.db.prepare("SELECT MAX(seq) s FROM log").get() as { s: number | null }).s ?? 0;
-    this.backend.checkpoint({ turnSeq: maxSeq });
+    const anchorUuid = this.openTranscript()?.head() ?? undefined;
+    this.backend.checkpoint({ turnSeq: maxSeq, anchorUuid });
     const pc = this.backend.buildPresentationModel({ turnStartSeq: 0 }).pendingChoice;
     if (!pc) return {};
     return {

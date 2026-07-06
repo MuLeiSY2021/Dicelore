@@ -8,8 +8,11 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import { describe, it, expect, beforeEach } from "vitest";
-import { openDb, initSchema, metaSet, listSnapshots, openSessionBackend, type DB } from "@dicelore/backend";
-import { setRollGate, getRollGate } from "@dicelore/harness";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { openDb, initSchema, metaSet, listSnapshots, checkpoint, openSessionBackend, type DB } from "@dicelore/backend";
+import { setRollGate, getRollGate, sessionDir, SessionTranscript } from "@dicelore/harness";
 import { DiceSession, TurnInProgressError, type DiceSessionDeps } from "./DiceSession.js";
 import { FakeDiceGm } from "./FakeDiceGm.js";
 import type { AgentInit, Agent } from "../runtime/agent.js";
@@ -251,6 +254,61 @@ describe("DiceSession 快照（SNAP-1：turnEnd 自动 checkpoint + rewind 读�
   it("无快照（未跑过回合）→ rewind 返回 null（API 层映射 409）", async () => {
     const host = newDice("s-snap-3", { agentFactory: () => new FakeDiceGm([{ type: "turn_end" }]), db: memDb() });
     expect(await host.rewind()).toBeNull();
+  });
+});
+
+// TR3：rewindTo（按 transcript uuid 回退，dice-db RollbackHook 复位领域态 + 移 HEAD）。
+describe("DiceSession.rewindTo（TR3：锤到 transcript uuid）", () => {
+  function newDiceWithDir(id: string): { host: DiceSession; db: DB; dir: string } {
+    const db = memDb();
+    const dir = mkdtempSync(join(tmpdir(), "tr3-ds-"));
+    const host = new DiceSession(id, {
+      db, backend: openSessionBackend(db),
+      agentFactory: () => new FakeDiceGm([{ type: "turn_end" }]),
+      sessionsDir: dir,
+    });
+    return { host, db, dir };
+  }
+
+  it("rewindTo 复位领域态回锚点 + 挪 transcript HEAD 到该 uuid", async () => {
+    const id = "s-rt-1";
+    const { host, db, dir } = newDiceWithDir(id);
+    const t = new SessionTranscript({ sessionDir: sessionDir(dir, "dice", id), sessionId: id });
+
+    db.prepare("INSERT OR REPLACE INTO state (entity, attr, value) VALUES ('你','HP','10')").run();
+    const uuidA = t.turnEnd("t1");
+    checkpoint(db, { turnSeq: 1, anchorUuid: uuidA });
+    t.turnEnd("t2"); // 推进 HEAD
+    db.prepare("UPDATE state SET value='3' WHERE entity='你' AND attr='HP'").run();
+
+    const r = await host.rewindTo(uuidA);
+    expect(r.uuid).toBe(uuidA);
+    expect((db.prepare("SELECT value v FROM state WHERE entity='你' AND attr='HP'").get() as { v: string }).v).toBe("10");
+    const head = new SessionTranscript({ sessionDir: sessionDir(dir, "dice", id), sessionId: id }).head();
+    expect(head).toBe(uuidA);
+  });
+
+  it("rewindTo 锚点无 db 快照 → 抛 no_snapshot_for_anchor（HEAD 不动）", async () => {
+    const id = "s-rt-2";
+    const { host, dir } = newDiceWithDir(id);
+    const t = new SessionTranscript({ sessionDir: sessionDir(dir, "dice", id), sessionId: id });
+    const uuid = t.turnEnd("t1"); // 树内节点但无 checkpoint
+    await expect(host.rewindTo(uuid)).rejects.toThrow(/no_snapshot_for_anchor/);
+    // HEAD 仍在该节点（未被回退，只是找不到快照）——树未被破坏。
+    expect(new SessionTranscript({ sessionDir: sessionDir(dir, "dice", id), sessionId: id }).head()).toBe(uuid);
+  });
+
+  it("rewindTo uuid 不在 transcript 树内 → 抛错", async () => {
+    const id = "s-rt-3";
+    const { host, dir } = newDiceWithDir(id);
+    const t = new SessionTranscript({ sessionDir: sessionDir(dir, "dice", id), sessionId: id });
+    t.turnEnd("t1");
+    await expect(host.rewindTo("not-in-tree")).rejects.toThrow(/不在 transcript 树内/);
+  });
+
+  it("无 sessionsDir → rewindTo 抛 no_transcript（本会话无 transcript）", async () => {
+    const host = newDice("s-rt-4", { agentFactory: () => new FakeDiceGm([{ type: "turn_end" }]), db: memDb() });
+    await expect(host.rewindTo("any")).rejects.toThrow(/no_transcript/);
   });
 });
 
