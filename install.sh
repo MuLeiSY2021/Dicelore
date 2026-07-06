@@ -85,6 +85,10 @@ case "$ROOT/" in
     if [ -f "$GITIGNORE" ] && grep -qxF "$REL" "$GITIGNORE"; then
       echo "install.sh: .gitignore 已含 $REL,跳过"
     else
+      # 追加前保证 .gitignore 以换行结尾,否则新条目会粘到最后一行(损坏+非幂等)。
+      if [ -f "$GITIGNORE" ] && [ -s "$GITIGNORE" ] && [ -n "$(tail -c1 "$GITIGNORE")" ]; then
+        printf '\n' >> "$GITIGNORE"
+      fi
       printf '%s\n' "$REL" >> "$GITIGNORE"
       echo "install.sh: 已把 $REL 加进 .gitignore"
     fi
