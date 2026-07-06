@@ -10,6 +10,7 @@
 import { mkdirSync } from "node:fs";
 import { homedir, platform } from "node:os";
 import { dirname, join } from "node:path";
+import { sessionDir as harnessSessionDir } from "@dicelore/harness";
 import { initSchema, openDb, type DB } from "../store/db.js";
 
 const SCHEMA_VERSION = "1";
@@ -24,13 +25,15 @@ function appDataRoot(): string {
   }
 }
 
-// session 自包含文件夹布局(dice/lore 顶层隔离):
-//   <root>/dice/sessions/<name>/{session.db, <name>_session.jsonl, error.log, info.log, ...}
-//   <root>/lore/sessions/<name>/{...}(lore 无 db,用内存 Draft;路径预留)
+// session 自包含文件夹布局(DD2:sessions 顶层、kind 次级、id 叶级):
+//   <root>/sessions/dice/<name>/{session.db, <name>_session.jsonl, error.log, info.log, ...}
+//   <root>/sessions/lore/<name>/{...}(lore 无 db,用内存 Draft;路径预留)
 // 每 session 一个自包含文件夹,打包/迁移/删除以文件夹为单位;sessionDir 即该文件夹,openSession 据此 mkdir。
+// 物理路径单源走 harness 的 backend-free 纯函数 sessionDir(dataDir, kind, id)——backend 只补 dataDir=appDataRoot(),
+// 保证与 DiceGm/SessionTranscript 落点完全一致。
 export type SessionKind = "dice" | "lore";
 export function sessionDir(name: string, kind: SessionKind = "dice"): string {
-  return join(appDataRoot(), kind, "sessions", name);
+  return harnessSessionDir(appDataRoot(), kind, name);
 }
 export function sessionDbPath(name: string, kind: SessionKind = "dice"): string {
   return join(sessionDir(name, kind), "session.db");

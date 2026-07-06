@@ -35,7 +35,7 @@ export function parseUsage(usage: unknown): ParsedUsage {
 // 鉴权沿用 env ANTHROPIC_BASE_URL/ANTHROPIC_AUTH_TOKEN(SDK 原生读)。不进单测(烧 LLM)。
 // CC SDK 适配器 = Agent 适配缝(AgentInit→Agent)的首个实现。
 //
-// 可观测性双轨(均落 session 自包含文件夹 <sessionsDir>/dice/sessions/<sessionId>/):
+// 可观测性双轨(均落 session 自包含文件夹 <sessionsDir>/sessions/dice/<sessionId>/):
 //   · <sessionId>_session.jsonl = 对话记录(业务数据,CC transcript 风格,随文件夹迁移)
 //   · {error,warn,info,debug}.log = 该 session 回合日志(pino 分级,调试用)
 // 含玩家输入、staged skill、opts、systemPrompt、SDK 流出的每条消息(assistant text / tool_use / tool_result / result)。
@@ -51,8 +51,8 @@ export class DiceGm implements Agent {
     }
   }
 
-  // session 自包含文件夹:<sessionsDir>/<kind>/sessions/<sessionId>/{session.db, <sessionId>_session.jsonl, *.log}
-  // 目录经 backend-free 纯函数 sessionDir(dataDir, kind, id) 算(TR1 v1 = 现布局)。
+  // session 自包含文件夹:<sessionsDir>/sessions/<kind>/<sessionId>/{session.db, <sessionId>_session.jsonl, *.log}
+  // 目录经 backend-free 纯函数 sessionDir(dataDir, kind, id) 算(DD2 布局 sessions/kind/id)。
   private get sessionDir(): string | undefined {
     const { sessionId, sessionsDir } = this.init;
     if (!sessionId || !sessionsDir) return undefined;

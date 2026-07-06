@@ -24,10 +24,10 @@ function readLines(dir: string, sessionId: string): any[] {
   return content.split("\n").map((l) => JSON.parse(l));
 }
 
-describe("sessionDir 纯函数(TR1 v1 = 现布局)", () => {
-  it("返回 join(dataDir, kind, 'sessions', id)", () => {
-    expect(sessionDir("/data", "dice", "s1")).toBe(join("/data", "dice", "sessions", "s1"));
-    expect(sessionDir("/data", "lore", "s2")).toBe(join("/data", "lore", "sessions", "s2"));
+describe("sessionDir 纯函数(DD2 布局 sessions/kind/id)", () => {
+  it("返回 join(dataDir, 'sessions', kind, id)", () => {
+    expect(sessionDir("/data", "dice", "s1")).toBe(join("/data", "sessions", "dice", "s1"));
+    expect(sessionDir("/data", "lore", "s2")).toBe(join("/data", "sessions", "lore", "s2"));
   });
 });
 

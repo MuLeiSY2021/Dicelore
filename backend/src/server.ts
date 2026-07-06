@@ -26,7 +26,7 @@ import { ensureDicePlugin, ensureLorePlugin, DiceGm, FakeDiceGm, type AgentFacto
 export function startServer(port: number): void {
   const dir = process.env.DICELORE_SESSIONS_DIR ?? ".";
   initGlobalLogger(dir); // 全局系统级日志 → $ROOT/{error,info,warn,debug}.log(须在一切 IO 前)
-  // 以 core 路径规则为准(sessionDbPath=$ROOT/dice/sessions/${id}/session.db):eval prepareSessionDb 灌种子到同路径,
+  // 以 core 路径规则为准(sessionDbPath=$ROOT/sessions/dice/${id}/session.db):eval prepareSessionDb 灌种子到同路径,
   // 后端开同库读种子;core openSession 含 mkdir+initSchema+meta,避免种子灌 core 路径而后端开平铺空库。
   const openSession = (id: string) => openCoreSession(id, "dice").db;
   // catalog.db 在 $ROOT/(dice/lore 共用:lore 构建→dice import);openCatalog 不 mkdir,先确保父目录存在。
@@ -52,7 +52,7 @@ export function startServer(port: number): void {
   app.use("*", createRateLimit());
   app.route("/", createLiveApp({
     agentFactory, plugin: dicePlugin, openSession, catalog, baseline, debug, sessionsDir: dir,
-    listSessions: () => listSessionSummaries(join(dir, "dice", "sessions")),
+    listSessions: () => listSessionSummaries(join(dir, "sessions", "dice")),
     deleteSession: (id) => { try { rmSync(sessionDir(id, "dice"), { recursive: true, force: true }); } catch (e) { getLogger().error({ err: e, id }, "删 session 文件夹失败"); } },
   }));
   app.route("/", createLoreApp({ catalog, agentFactory, buildPrompt: process.env.DICELORE_BUILD_PROMPT, plugin: lorePlugin, sessionsDir: dir }));
