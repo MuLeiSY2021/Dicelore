@@ -13,5 +13,6 @@
 | RT7 | ⚠️ 对称缺口 | **loregm 缺显式 create / get-meta**（对称于 dicegm） | 接口重构定稿 |
 | RT-ns | ⚠️ 架构对称 | `/sessions`(dicegm) vs `/lore-sessions`(loregm) **命名不对称**；理想 `/sessions/{kind}`；内部 `Session`/`TurnResult` 已统一，仅 HTTP 表皮分裂（破坏性改名，冒泡待裁决） | backlog-后端 / 主题A′ HTTP 面 |
 | RT8 | ⚠️ 能力缺口/增强 | 配置侧额外 MCP 工具（含**搜索**）未接入 GM/loregm 运行时（`FE-mcp-config` v1-deferred） | backlog-前端 FE-mcp-config / 增强 |
-| RT9 | ⚠️ 字段 | 跑团/制作页顶栏 session bar 需 {最近活动日期, 所属团本, **最新回复内容**}；`SessionSummary` 是否含"最新回复"待验（疑缺） | 真跑 → backlog |
+| RT9 | ⚠️ 字段 | 跑团页 `Session` 抽屉 / 制作页 session bar 都需 {最近活动日期, 所属团本, **最新回复内容**}；`SessionSummary` 是否含"最新回复"待验（疑缺） | 真跑 → backlog |
 | RT-B3 | ⚠️ 必验 | WS `game_end` 曾从不发（映射漏），核验标已修 → 必真跑验终局画面确能触发 | 真跑 → backlog |
+| RT-FE1 | ⚠️ 设计漂移 | 当前 React `PlayPage` 仍偏「工作区/工具面板」IA；与本轮 acceptance-loop 收束出的 A2「桌面沙盘 + dock&bay + sheet 模板卡」不一致，易造成可玩性与认知负担问题 | backlog-前端 A2 信息架构 |

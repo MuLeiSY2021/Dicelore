@@ -49,7 +49,7 @@ assert_shape '<期望 body 形状>'   # 引 wiki，不看代码现输出
 - [ ] B1 导航：五页签切换；无活动会话时 `nav-tab-play` 置灰
 - [ ] B2 主页：指南 + `home-manual-link` 存在；仅显示最近一个会话摘要（非全量）
 - [ ] B3 目录：列表/空态；`catalog-start-btn`→选版本→跳跑团；`catalog-import-btn`
-- [ ] B4 跑团：`play-noSession-hint`；kickoff→续玩层；掷骰卡/选项/错误/终局；顶栏 session bar 列所有会话（date/pack/lastreply — **RT9 最新回复字段待验**）
+- [ ] B4 跑团：`play-noSession-hint`；kickoff→续玩层；掷骰卡/选项/错误/终局；整页保持单屏（不依赖页面滚动）；底部 `play-bay` 六入口在**屏幕中央**弹浮窗并点外关闭；`Session` 浮窗列会话（date/pack/lastreply — **RT9 最新回复字段待验**）；玩家气泡 `edit` 后出现 `play-rewind-note`；`play-card-{status,plotline,world,other}` 按模板卡落桌而不是工作区面板
 - [ ] B5 制作：顶栏 bar；内容类型切换；助手编排→即写即读刷新；校验报告
 - [ ] B6 配置：七子页切换；连接测试三态
 

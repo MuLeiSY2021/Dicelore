@@ -24,14 +24,20 @@
 - `catalog-start-btn`（开始游戏 → 选版本 → 跳跑团）；`catalog-import-btn`（导入团本）；`catalog-edit-btn`（→制作页）。
 
 ### B4 跑团页
-- **顶栏 session bar** `play-sessionbar`（滚动；每项 `play-session-item` 显示 `-date`/`-pack`/`-lastreply`）。
+- **桌面沙盘壳**：整页为**单屏** `play-stage-shell`，页面本身不滚动；中央 `play-stage`（永不切走的跑团舞台）+ 左右 `play-dock-{left,right}`（被钉住的公开信息卡）+ 底部 `play-bay`（入口条，不承载常驻内容）。
+- 左右停靠区不是单列，而是**可缩放栅格**；卡片默认按类型定尺寸：状态大卡、剧情线中卡、世界书/其他团数据小卡或横卡。
+- `play-bay-btn-{session,status,plotline,world,other,config}` 六入口；点击后在**屏幕中央**弹 `play-bay-popover-{session,status,plotline,world,other,config}`，点浮窗外关闭。
+- `play-session-item` 改挂在 `play-bay-popover-session` 内（`-date`/`-pack`/`-lastreply`），**不再要求顶栏 session bar**。
 - `play-noSession-hint`（无活动会话 → 提示先导入/创建）。
+- **玩家输入气泡独立于轮次卡**：`play-player-msg`（内含 `play-player-edit` / `play-player-delete`）。点 `edit` 后走**自动 rewind**，只保留提示 `play-rewind-note`；**不再出现显式 `play-rewind-btn/modal/confirm`**。`play-rewind-empty`（rewind 到头后的空态）；`play-archived`（归档态）。
 - 未开场层 `play-kickoff-btn`；续玩层 `play-narration`（叙事流）、`play-input`（输入框）、`play-rollcard`（掷骰卡）、`play-choices`（选项按钮）、`play-error`、`play-gameend`（终局画面）。
-- 呈现台 `play-panels`（面板三态）；活动轨 `play-rail-{lore,tools}`。
+- **卡片视图单位 = 一张 sheet**，不是字段：`play-card-status`（角色卡模板）、`play-card-plotline`（剧情线模板）、`play-card-world`（资料纸页模板）、`play-card-other`（其他团数据兜底模板）。
+- 舞台配色与整体主题一致，不再做整块跳出的浅色纸面；长内容规则：状态类卡尽量完整展示；资料类卡默认摘要 + 展开，不做满屏工作区。
+- AI 新披露信息进 `play-temp-stack`（临时位），不抢常驻位；常驻位不自动替换。
 
 ### B5 团本制作页
-- 顶栏 session bar `build-sessionbar`（同跑团页，列构建会话）。
-- 左导航 `build-nav-{lore,npc,pool,rule,front,manifest}`（内容类型）；中央 `build-editor`；右栏 `build-assistant`（助手对话 + `-toolcalls` 显示调了哪些工具）、`build-validate-report`（error/warn 计数+定位）。
+- 顶栏 session bar `build-sessionbar`（列构建会话）。
+- 左导航 `build-nav-{lore,npc,pool,rule,state,front,plotline,foreshadow,anchor,relation,prologue,manifest}`（内容类型）；中央 `build-editor`；右栏 `build-assistant`（助手对话 + `-toolcalls` 显示调了哪些工具）、`build-validate-report`（error/warn 计数+定位）。
 - 上下文条 `build-ctxbar`（团本名 + 草稿版本 + 校验/导入/导出）。
 
 ### B6 配置页
@@ -42,5 +48,5 @@
 ## 落地状态
 
 - [x] `frontend/` 下 5 页 html + 共享 `styles.css`/`app.js`（重构自 wiki 视觉草图），挂全上述 `data-testid`。见 [`frontend/README.md`](frontend/README.md)。
-- [ ] 隐藏态（`play-noSession-hint`/`catalog-empty`/`play-input`/`play-gameend`/`config-test-*`）第三步据实际状态切换。
+- [ ] 隐藏态（`play-noSession-hint`/`catalog-empty`/`play-input`/`play-gameend`/`config-test-*`/`play-bay-popover-*`）第三步据实际状态切换。
 - [ ] 与状态机每条转移对应的可见状态可断言（供 playwright · 第二步）。
