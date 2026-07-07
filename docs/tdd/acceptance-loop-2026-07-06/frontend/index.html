@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh"><head><meta charset="utf-8">
+<title>Dicelore · 预览 harness</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<link rel="stylesheet" href="styles.css">
+<style>
+.hbody{display:flex;height:calc(100vh - 48px)}
+.idxnav{width:236px;flex:none;background:var(--surface);border-right:1px solid var(--line);overflow:auto;padding:8px 8px 20px}
+.hint{padding:8px 9px 4px;font-size:10px;color:var(--text3);line-height:1.5}
+.grp-l{display:flex;align-items:center;gap:7px;color:var(--text3);font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:12px 8px 4px}
+.grp-l .m{font-family:var(--mono);font-weight:400;text-transform:none}
+.item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;color:var(--text2);cursor:pointer;font-size:12.5px}
+.item:hover{background:var(--surface2);color:var(--text)}
+.item.on{background:var(--surface2);color:var(--text)}.item.on::before{content:"";width:3px;height:14px;border-radius:2px;background:var(--acc);margin-left:-4px;margin-right:2px}
+.item .s{margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--text3)}
+.stagewrap{flex:1;display:flex;flex-direction:column;min-width:0;background:#06130d}
+.framehead{display:flex;align-items:center;gap:9px;padding:7px 14px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;color:var(--text3)}
+.framehead .u{color:var(--acc-soft)}
+iframe{flex:1;width:100%;border:none;background:var(--bg)}
+</style></head>
+<body>
+  <div class="shell appshell">
+    <nav class="bar">
+      <span class="brand">Dicelore<span style="color:#d8553f">.</span></span>
+      <span style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-left:6px">预览 harness · 状态 → 视图 · acceptance-loop 2026-07-06</span>
+      <div class="tools"><span class="tool" data-testid="shell-theme"><i data-lucide="moon"></i></span></div>
+    </nav>
+
+    <div class="hbody">
+      <div class="idxnav" id="nav">
+        <div class="hint">左边点一个状态 → 右侧 iframe 加载对应成品页的那一个态（互斥、不叠）。状态取自 0-state-machines.md。</div>
+
+        <div class="grp-l">主页 <span class="m">B2</span></div>
+        <div class="item" data-src="home.html">落地页 · 指南+最近会话<span class="s">home</span></div>
+
+        <div class="grp-l">团本目录 <span class="m">B3 · catalog A4</span></div>
+        <div class="item" data-src="catalog.html#s=list">有团本列表<span class="s">#s=list</span></div>
+        <div class="item" data-src="catalog.html#s=empty">空态<span class="s">#s=empty</span></div>
+
+        <div class="grp-l">跑团 <span class="m">B4 · dicegm A2</span></div>
+        <div class="item" data-src="play.html#s=none">无会话<span class="s">none</span></div>
+        <div class="item" data-src="play.html#s=kickoff">未开场<span class="s">kickoff</span></div>
+        <div class="item" data-src="play.html#s=input">待输入<span class="s">input</span></div>
+        <div class="item" data-src="play.html#s=generating">生成中<span class="s">generating</span></div>
+        <div class="item" data-src="play.html#s=roll">待掷（明骰）<span class="s">roll</span></div>
+        <div class="item" data-src="play.html#s=choices">待选<span class="s">choices</span></div>
+        <div class="item" data-src="play.html#s=error">错误<span class="s">error</span></div>
+        <div class="item" data-src="play.html#s=end">终局<span class="s">end</span></div>
+
+        <div class="grp-l">团本制作 <span class="m">B5 · loregm A3</span></div>
+        <div class="item" data-src="build.html#v=lore">世界设定<span class="s">lore</span></div>
+        <div class="item" data-src="build.html#v=npc">NPC<span class="s">npc</span></div>
+        <div class="item" data-src="build.html#v=pool">卡池<span class="s">pool</span></div>
+        <div class="item" data-src="build.html#v=rule">规则·分档<span class="s">rule</span></div>
+        <div class="item" data-src="build.html#v=state">状态·sheets<span class="s">state</span></div>
+        <div class="item" data-src="build.html#v=front">阵线 Front<span class="s">front</span></div>
+        <div class="item" data-src="build.html#v=plotline">剧情线<span class="s">plotline</span></div>
+        <div class="item" data-src="build.html#v=foreshadow">伏笔<span class="s">foreshadow</span></div>
+        <div class="item" data-src="build.html#v=anchor">锚点<span class="s">anchor</span></div>
+        <div class="item" data-src="build.html#v=prologue">开场白<span class="s">prologue</span></div>
+        <div class="item" data-src="build.html#v=manifest">Manifest<span class="s">manifest</span></div>
+
+        <div class="grp-l">配置 <span class="m">B6</span></div>
+        <div class="item" data-src="config.html#v=general">通用<span class="s">general</span></div>
+        <div class="item" data-src="config.html#v=network">服务与网络<span class="s">network</span></div>
+        <div class="item" data-src="config.html#v=mcp">MCP 服务器<span class="s">mcp</span></div>
+        <div class="item" data-src="config.html#v=model">模型连接<span class="s">model</span></div>
+        <div class="item" data-src="config.html#v=model&s=ok">└ 测试·成功<span class="s">ok</span></div>
+        <div class="item" data-src="config.html#v=theme">主题外观<span class="s">theme</span></div>
+        <div class="item" data-src="config.html#v=data">数据与存储<span class="s">data</span></div>
+        <div class="item" data-src="config.html#v=about">关于<span class="s">about</span></div>
+      </div>
+
+      <div class="stagewrap">
+        <div class="framehead">当前：<span class="u" id="cur">home.html</span></div>
+        <iframe id="frame" src="home.html" title="preview"></iframe>
+      </div>
+    </div>
+  </div>
+<script src="app.js"></script>
+<script>window.addEventListener('load',()=>{
+  const frame=document.getElementById('frame'),cur=document.getElementById('cur'),items=document.querySelectorAll('.item');
+  items[0].classList.add('on');
+  items.forEach(it=>it.addEventListener('click',()=>{
+    items.forEach(x=>x.classList.remove('on'));it.classList.add('on');
+    const src=it.getAttribute('data-src');frame.src=src;cur.textContent=src;
+  }));
+});</script>
+</body></html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh"><head><meta charset="utf-8">
+<title>Dicelore · 跑团</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<link rel="stylesheet" href="styles.css">
+<style>
+.subbar{display:flex;align-items:center;gap:16px;padding:6px 14px;background:var(--surface);border-bottom:1px solid var(--line);font-size:11.5px;color:var(--text2)}.subbar .sp{flex:1}
+.pbody{display:flex;height:452px}
+.rail{width:46px;background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 0}
+.rail .ic{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:7px;color:var(--text3);cursor:pointer}.rail .ic.on{color:var(--acc-soft);background:var(--surface2)}.rail .ic:hover{color:var(--text)}.rail .sp{flex:1}
+.browse{width:196px;background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column}
+.bh{display:flex;align-items:center;gap:8px;padding:11px 13px 6px;color:var(--text);font-family:var(--serif);font-weight:600;font-size:13.5px}.bh [data-lucide]{width:15px;color:var(--acc-soft)}
+.bsearch{display:flex;align-items:center;gap:7px;margin:2px 11px 8px;padding:6px 9px;background:var(--bg);border:1px solid var(--line);border-radius:6px;color:var(--text3);font-size:11.5px}
+.tree{padding:0 8px 8px;overflow:auto;flex:1;font-size:12px}.leaf{display:flex;align-items:center;gap:8px;color:var(--text);padding:5px 7px;cursor:pointer;border-radius:6px}.leaf:hover{background:var(--surface2)}.leaf .tag{margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--text3)}
+.center{flex:1;display:flex;flex-direction:column;background:var(--bg);min-width:0}
+.stream{flex:1;overflow:auto;padding:18px 26px;font-size:14px;line-height:1.8}
+.you{display:flex;gap:9px;color:var(--text2);font-style:italic;font-size:12.5px;margin:4px 0 14px}.you [data-lucide]{width:15px;color:var(--text3)}
+.prose{margin:0 0 13px;color:var(--text)}
+.say{display:flex;gap:9px;margin:0 0 13px;padding:10px 13px;background:var(--surface);border:1px solid var(--line);border-left:2px solid var(--acc-soft);border-radius:8px;font-size:12.5px;color:var(--text2);line-height:1.6}
+.say .who{display:flex;align-items:center;gap:5px;color:var(--acc-soft);font-family:var(--mono);font-size:9.5px;flex:none;margin-top:2px}.say .who [data-lucide]{width:12px}
+.mech{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11.5px;color:var(--acc-soft);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:7px 11px;margin:11px 0}.mech [data-lucide]{width:14px;color:var(--acc)}
+.reveal{border:1px solid var(--line2);border-radius:8px;padding:9px 12px;margin:11px 0;background:var(--surface)}.reveal .rh{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:9.5px;color:var(--text3);margin-bottom:5px}.reveal .rh [data-lucide]{width:12px;color:var(--acc-soft)}.reveal b{font-family:var(--serif);color:var(--text)}
+.toolcall{display:none;align-items:center;gap:7px;font-family:var(--mono);font-size:10.5px;color:var(--text3);padding:3px 10px;margin:3px 0;border-left:2px dashed var(--line2)}.stream.show-actions .toolcall{display:flex}.toolcall [data-lucide]{width:12px}
+.split{height:1px;background:var(--line)}
+.foot{padding:14px 26px}
+.input{display:flex;align-items:center;gap:12px}.input .box{flex:1;padding:9px 12px;background:var(--surface);border:1px solid var(--line);border-radius:7px;color:var(--text3);font-size:12.5px}.input .send{width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,var(--acc-h),var(--acc));border-radius:7px;color:var(--acc-on);cursor:pointer}
+.gen{display:flex;align-items:center;gap:9px;color:var(--text2);font-size:12.5px;font-style:italic}.gen .spin{width:14px;height:14px;border:2px solid var(--line2);border-top-color:var(--acc);border-radius:50%;animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+.rollreq{display:flex;align-items:center;gap:12px;padding:11px 14px;background:var(--surface);border:1px solid var(--acc);border-radius:9px}.rollreq .rc{flex:1;font-size:12.5px;color:var(--text)}.rollreq .rq{font-family:var(--mono);font-size:10px;color:var(--text3)}
+.roll{display:flex;align-items:center;gap:8px;padding:9px 18px;background:linear-gradient(160deg,var(--acc-h),var(--acc));border:none;border-radius:7px;color:var(--acc-on);font-weight:700;font-size:13px;cursor:pointer}.roll .d{font-family:var(--mono);font-size:11px;background:#0000002a;padding:2px 6px;border-radius:4px}
+.choices{display:flex;flex-direction:column;gap:7px}.choice{display:flex;align-items:center;gap:9px;padding:10px 13px;background:var(--surface);border:1px solid var(--line2);border-radius:8px;cursor:pointer;font-size:13px}.choice:hover{border-color:var(--acc)}.choice .cx{font-family:var(--mono);font-size:10px;color:var(--text3);margin-left:auto}
+.errbar{display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--surface);border:1px solid var(--err);border-radius:9px;color:var(--err);font-size:12.5px}.errbar [data-lucide]{width:16px}.errbar .sp{flex:1}
+.stage{width:320px;background:var(--surface);border-left:1px solid var(--line);display:flex;flex-direction:column}
+.sh{display:flex;align-items:center;gap:8px;padding:11px 13px;border-bottom:1px solid var(--line);font-family:var(--serif);font-weight:600;font-size:13.5px}.sh [data-lucide]{width:15px;color:var(--acc-soft)}
+.pgrid{padding:9px;overflow:auto;flex:1;display:grid;grid-template-columns:1fr 1fr;gap:8px;align-content:start}
+.pan{background:var(--surface2);border:1px solid var(--line);border-radius:7px}.pan.wide{grid-column:1/-1}
+.ph{display:flex;align-items:center;gap:6px;padding:6px 9px;border-bottom:1px solid var(--line);font-size:11px;font-weight:500}.ph [data-lucide]{width:13px;color:var(--text3)}
+.pc{padding:8px 10px}.prow{display:flex;justify-content:space-between;padding:2px 0;font-family:var(--mono);font-size:11.5px;color:var(--text2)}.prow b{color:var(--text)}
+.dial{width:46px;height:46px;border-radius:50%;background:conic-gradient(from -90deg,var(--acc) 0 90deg,var(--dial-empty) 90deg);border:1px solid var(--line2)}
+.bars{display:flex;flex-direction:column;gap:4px}.barrow{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--text2)}.bar2{flex:1;height:6px;border-radius:3px;background:var(--dial-empty);overflow:hidden}.bar2 i{display:block;height:100%;background:var(--acc)}
+.front .step{font-family:var(--mono);font-size:10px;color:var(--text2);padding:2px 0}.front .step.on{color:var(--acc-soft)}
+.chips{display:flex;flex-wrap:wrap;gap:5px}.chip2{font-family:var(--mono);font-size:9.5px;padding:2px 7px;border-radius:10px;border:1px solid var(--line2);color:var(--text2)}
+.full{display:flex;height:452px;align-items:center;justify-content:center}
+.hint{max-width:400px;text-align:center;color:var(--text2);display:flex;flex-direction:column;gap:12px;align-items:center}.hint [data-lucide]{width:38px;color:var(--text3)}
+.kickoff{display:flex;flex-direction:column;align-items:center;gap:16px}.kickoff .big{display:flex;align-items:center;gap:10px;padding:15px 34px;background:linear-gradient(160deg,var(--acc-h),var(--acc));border:none;border-radius:10px;color:var(--acc-on);font-weight:700;font-size:16px;cursor:pointer}
+.dice-die{width:74px;height:74px;margin:6px auto 14px;border-radius:14px;background:linear-gradient(150deg,var(--acc-h),var(--acc));display:flex;align-items:center;justify-content:center;color:var(--acc-on);font-family:var(--mono);font-weight:700;font-size:30px}
+.bandtable{margin:10px 0}.band{display:flex;gap:12px;padding:6px 10px;border-left:2px solid var(--line2);font-size:12px;color:var(--text2)}.band+.band{border-top:1px solid var(--line)}.band .bg{font-family:var(--mono);color:var(--acc);font-weight:600;min-width:34px}.band.hit{background:var(--surface2);color:var(--text)}
+.result{text-align:center;font-family:var(--mono);margin-top:10px}.result .big{font-size:26px;color:var(--acc-soft)}.result .out{font-size:13px;color:var(--ok);margin-top:4px}
+</style></head>
+<body data-screen-default="input">
+  <div class="shell appshell">
+    <nav class="bar">
+      <span class="brand">Dicelore<span style="color:#d8553f">.</span></span>
+      <nav class="nav">
+        <a href="home.html" data-testid="nav-tab-home"><i data-lucide="home"></i>主页</a>
+        <a href="catalog.html" data-testid="nav-tab-catalog"><i data-lucide="library"></i>团本</a>
+        <a class="on" data-testid="nav-tab-play"><i data-lucide="dices"></i>跑团</a>
+        <a href="build.html" data-testid="nav-tab-build"><i data-lucide="hammer"></i>制作</a>
+        <a href="config.html" data-testid="nav-tab-config"><i data-lucide="settings"></i>配置</a>
+      </nav>
+      <div class="tools">
+        <span class="tool" data-testid="shell-theme"><i data-lucide="moon"></i></span>
+      </div>
+    </nav>
+
+    <!-- 无会话（整屏独占） -->
+    <div class="full" data-screen="none"><div class="hint" data-testid="play-noSession-hint"><i data-lucide="dices"></i><div>还没有进行中的会话。先去 <a href="catalog.html" style="color:var(--acc-soft)">团本目录</a> 开始游戏，或 <a href="build.html" style="color:var(--acc-soft)">制作</a> 一个团本。</div></div></div>
+
+    <!-- 未开场（整屏独占） -->
+    <div class="full" data-screen="kickoff"><div class="kickoff"><div style="font-family:var(--serif);font-size:20px">黑风寨的钟声 · 第二幕</div><button class="big" data-testid="play-kickoff-btn"><i data-lucide="play"></i>点击开始游戏</button><div style="font-size:12px;color:var(--text3)">GM 播报开场（prologue），随后出现输入框</div></div></div>
+
+    <!-- 终局（整屏独占） -->
+    <div class="full" data-screen="end"><div class="hint" data-testid="play-gameend"><i data-lucide="flag"></i><div><b style="color:var(--text);font-family:var(--serif);font-size:16px">终局 · 你割断了钟绳</b><br>钟声哑了，你带着寨防图退入夜色。进入复盘。</div><span class="btn"><i data-lucide="rotate-ccw"></i>复盘 / 新局</span></div></div>
+
+    <!-- 续玩层：input/generating/roll/choices/error 共用此壳，仅底部当前交互不同 -->
+    <div data-screen="input generating roll choices error">
+      <div class="sessionbar" data-testid="play-sessionbar">
+        <div class="sess on" data-testid="play-session-item"><div class="st"><i data-lucide="swords" style="width:13px"></i>黑风寨的钟声</div><div class="sm" data-testid="play-session-pack">黑风寨 · 3 分钟前</div><div class="sr" data-testid="play-session-lastreply">…钟绳在头顶随风轻晃</div></div>
+        <div class="sess" data-testid="play-session-item"><div class="st"><i data-lucide="clock" style="width:13px"></i>长安十二时辰</div><div class="sm" data-testid="play-session-pack">长安 · 昨天</div><div class="sr" data-testid="play-session-lastreply">你站在望楼下，鼓声三响</div></div>
+        <div class="sess new"><i data-lucide="plus"></i></div>
+      </div>
+      <div class="subbar"><label class="toggle" data-testid="play-observe-toggle"><span class="sw2" id="obsSw"></span>透视 GM 动作（叙述 + MCP 调用）</label><span class="sp"></span><span style="font-family:var(--mono);font-size:10px;color:var(--text3)">seq 1284 · 第二幕「夜入山寨」</span></div>
+
+      <div class="pbody">
+        <div class="rail">
+          <div class="ic on" data-nav="lore" data-navgroup="rail" data-testid="play-rail-lore" title="设定"><i data-lucide="book-open"></i></div>
+          <div class="ic" data-nav="rule" data-navgroup="rail" title="规则"><i data-lucide="scale"></i></div>
+          <div class="ic" data-nav="log" data-navgroup="rail" title="日志"><i data-lucide="scroll-text"></i></div>
+          <div class="ic" data-nav="tools" data-navgroup="rail" data-testid="play-rail-tools" title="工具"><i data-lucide="wrench"></i></div>
+          <div class="sp"></div><div class="ic" title="加面板"><i data-lucide="layout-grid"></i></div>
+        </div>
+        <div class="browse">
+          <div data-view="lore" data-viewgroup="rail" style="display:flex;flex-direction:column;flex:1"><div class="bh"><i data-lucide="book-open"></i>设定</div><div class="bsearch"><i data-lucide="search"></i>搜设定 / 卡池</div><div class="tree"><div class="leaf"><i data-lucide="file" style="width:13px;color:var(--text3)"></i>黑风寨<span class="tag">据点</span></div><div class="leaf"><i data-lucide="user" style="width:13px;color:var(--text3)"></i>钟三爷<span class="tag">头领</span></div><div class="leaf"><i data-lucide="dice-5" style="width:13px;color:var(--text3)"></i>机缘<span class="tag">加权</span></div></div></div>
+          <div data-view="rule" data-viewgroup="rail" hidden style="display:flex;flex-direction:column;flex:1"><div class="bh"><i data-lucide="scale"></i>规则</div><div class="tree"><div class="leaf"><i data-lucide="file-text" style="width:13px;color:var(--text3)"></i>潜行判定</div><div class="leaf"><i data-lucide="file-text" style="width:13px;color:var(--text3)"></i>战斗回合</div></div></div>
+          <div data-view="log" data-viewgroup="rail" hidden style="display:flex;flex-direction:column;flex:1"><div class="bh"><i data-lucide="scroll-text"></i>日志</div><div class="tree" style="font-family:var(--mono);font-size:10.5px;color:var(--text2)"><div style="padding:4px 7px">seq1282 narrate</div><div style="padding:4px 7px">seq1284 resolve_outcome_open</div></div></div>
+          <div data-view="tools" data-viewgroup="rail" hidden style="display:flex;flex-direction:column;flex:1"><div class="bh"><i data-lucide="wrench"></i>工具</div><div class="bsearch"><i data-lucide="search"></i>全文搜索本局</div><div class="tree"><div class="leaf"><i data-lucide="pin" style="width:13px;color:var(--acc)"></i>黑风寨布防<span class="tag">已钉</span></div></div></div>
+        </div>
+
+        <div class="center">
+          <!-- 历史流（过去日志·可共存） -->
+          <div class="stream" data-testid="play-stream" id="stream">
+            <div class="you"><i data-lucide="corner-down-right"></i>翻身上墙，贴阴影摸向钟楼，伺机割断钟绳。</div>
+            <div class="say" data-testid="play-gm-reply"><span class="who"><i data-lucide="message-circle"></i>GM·对你说</span><span>你问潜行怎么算：潜行 = d20 + 你的「潜行」，对上守卫察觉 DC。你贴阴影、又有夜色，DC 按 12。</span></div>
+            <div class="toolcall"><i data-lucide="cpu"></i>resolve_outcome_hidden(潜行, d20+4, DC12) → 18 成功</div>
+            <p class="prose">夜风穿过箭楼，火把压低了身子。你攀上木梯，钟绳在头顶随风轻晃。</p>
+            <div class="mech"><i data-lucide="check-circle-2"></i>潜行 d20+4 = 18　已到位</div>
+            <div class="toolcall"><i data-lucide="cpu"></i>sheet_update(张三.位置 = 钟楼下)</div>
+            <div class="reveal"><div class="rh"><i data-lucide="eye"></i>揭示 · GM · 回合 7</div><b>黑风寨布防</b>：东门两哨、钟楼暗哨一，子时换岗；后窗临崖无人。</div>
+            <p class="prose">就是此刻。你拔出铁剑，刃锋贴上粗绳——成败，看这一下手稳不稳。</p>
+          </div>
+          <div class="split"></div>
+          <!-- 底部当前交互：五态互斥，只显示一个 -->
+          <div class="foot" data-screen="input"><div class="input" data-testid="play-input"><span class="box">说点什么，或做点什么，或问 GM 规则…</span><span class="send"><i data-lucide="arrow-up"></i></span></div></div>
+          <div class="foot" data-screen="generating"><div class="gen" data-testid="play-generating"><span class="spin"></span>GM 生成中…</div></div>
+          <div class="foot" data-screen="roll"><div class="rollreq" data-testid="play-rollreq"><div class="rc">这一掷决定钟绳断不断<div class="rq">d10 · 区间裁决</div></div><button class="roll" data-testid="play-roll-btn" data-modal-open="diceModal"><i data-lucide="dices"></i>丢骰子<span class="d">d10</span></button></div></div>
+          <div class="foot" data-screen="choices"><div class="choices" data-testid="play-choices"><div class="choice">推门直入正厅<span class="cx">→ 惊动守卫</span></div><div class="choice">绕到后窗潜入<span class="cx">→ 耗时但隐蔽</span></div></div></div>
+          <div class="foot" data-screen="error"><div class="errbar" data-testid="play-error"><i data-lucide="alert-circle"></i><span class="sp">GM 超时或出错：这一回合没能完成。</span><span class="btn"><i data-lucide="rotate-ccw"></i>重试</span></div></div>
+        </div>
+
+        <div class="stage" data-testid="play-panels">
+          <div class="sh"><i data-lucide="layout-dashboard"></i>呈现台<span style="margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--text3)">五域 + 叙事脚手架</span></div>
+          <div class="pgrid">
+            <div class="pan"><div class="ph"><i data-lucide="user"></i>人物属性</div><div class="pc"><div class="prow"><span>HP</span><b>12/15</b></div><div class="prow"><span>金钱</span><b>77</b></div><div class="prow"><span>声望</span><b>+2</b></div></div></div>
+            <div class="pan"><div class="ph"><i data-lucide="package"></i>库存</div><div class="pc"><div class="prow"><span>铁剑</span><b>1</b></div><div class="prow"><span>火折子</span><b>3</b></div></div></div>
+            <div class="pan"><div class="ph"><i data-lucide="timer"></i>倒计时钟</div><div class="pc" style="display:flex;gap:10px;align-items:center"><div class="dial"></div><div><div style="font-size:11px">钟楼示警</div><div style="font-family:var(--mono);font-size:14px;color:var(--acc-soft)">2/8</div></div></div></div>
+            <div class="pan"><div class="ph"><i data-lucide="swords"></i>阵线 Front</div><div class="pc front"><div class="step on">① 巡夜加倍</div><div class="step on">② 封锁后山</div><div class="step">③ 全寨戒严</div></div></div>
+            <div class="pan wide"><div class="ph"><i data-lucide="gauge"></i>张力看板</div><div class="pc bars"><div class="barrow">暴露<div class="bar2"><i style="width:40%"></i></div>2/5</div><div class="barrow">时限<div class="bar2"><i style="width:75%"></i></div>6/8</div></div></div>
+            <div class="pan wide"><div class="ph"><i data-lucide="git-branch"></i>剧情线 / 伏笔</div><div class="pc"><div style="font-size:11px;color:var(--text2);margin-bottom:5px">剧情线：<b style="color:var(--text)">夺图</b>（进行中）</div><div class="chips"><span class="chip2">伏笔·暗格</span><span class="chip2">伏笔·哑婆的信</span></div></div></div>
+            <div class="pan wide"><div class="ph"><i data-lucide="eye"></i>揭示 · 设定</div><div class="pc" style="font-size:11px;color:var(--text2)"><b style="color:var(--text)">黑风寨布防</b>　东门两哨、钟楼暗哨一，子时换岗。</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="diceModal" data-testid="play-dice-modal" hidden>
+  <div class="modal-card">
+    <h3>丢骰子 · d10</h3>
+    <p class="msub">这一掷决定钟绳断不断。点数由引擎裁定，你只负责这一掷（anti-F1）。</p>
+    <div class="dice-die" data-testid="play-dice-face">d10</div>
+    <div class="bandtable" data-testid="play-dice-bands">
+      <div class="band"><span class="bg">1–2</span><span>绳没断，钟楼晃出声响（示警 +2）</span></div>
+      <div class="band" id="band36"><span class="bg">3–6</span><span>割断绳，钟声哑了，你悄然退下</span></div>
+      <div class="band"><span class="bg">7–9</span><span>干净利落，顺走守卫的酒壶</span></div>
+      <div class="band"><span class="bg">0</span><span>大成功：暗格露出完整寨防图</span></div>
+    </div>
+    <div class="result" data-testid="play-dice-result" id="diceResult" hidden><div class="big">5</div><div class="out">成功 · 割断钟绳</div></div>
+    <div class="modal-foot"><span class="btn" data-modal-close>关闭</span><span class="btn go" data-testid="play-dice-roll" id="diceRoll"><i data-lucide="dices"></i>掷！</span></div>
+  </div>
+</div>
+<script src="app.js"></script>
+<script>window.addEventListener('load',()=>{
+  const t=document.querySelector('[data-testid="play-observe-toggle"]'),sw=document.getElementById('obsSw'),st=document.getElementById('stream');
+  if(t)t.addEventListener('click',()=>{sw.classList.toggle('on');st.classList.toggle('show-actions');});
+  // 掷骰：待掷（区间）→ 点「掷！」→ 出结果（committed），不预先叠显
+  const rb=document.getElementById('diceRoll'),res=document.getElementById('diceResult'),b36=document.getElementById('band36');
+  if(rb)rb.addEventListener('click',()=>{res.hidden=false;if(b36)b36.classList.add('hit');rb.textContent='已掷';rb.style.opacity=.6;});
+  // 选项：点一下高亮选中
+  document.querySelectorAll('[data-testid="play-choices"] .choice').forEach(c=>c.addEventListener('click',()=>{document.querySelectorAll('[data-testid="play-choices"] .choice').forEach(x=>x.style.borderColor='');c.style.borderColor='var(--acc)';}));
+});</script>
+</body></html>

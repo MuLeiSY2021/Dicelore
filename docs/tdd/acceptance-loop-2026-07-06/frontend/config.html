@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh"><head><meta charset="utf-8">
+<title>Dicelore · 配置</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<link rel="stylesheet" href="styles.css">
+<style>
+.cbody{display:flex;height:452px}
+.cmain{flex:1;overflow:auto;min-width:0;padding:18px 24px}
+.mhead{display:flex;align-items:center;gap:11px;margin-bottom:4px}.mhead h3{font-family:var(--serif);font-weight:600;font-size:18px;margin:0}.mhead .sp{flex:1}
+.mdesc{color:var(--text2);font-size:12px;margin-bottom:16px;max-width:640px;line-height:1.6}
+.sec-l{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);margin:16px 0 9px;display:flex;align-items:center;gap:7px}.sec-l:after{content:"";flex:1;height:1px;background:var(--line)}
+.field{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)}
+.field .fl{width:150px;flex:none;color:var(--text);font-size:12.5px}.field .fl .sub{color:var(--text3);font-size:10.5px;margin-top:2px}
+.field .fc{flex:1;display:flex;align-items:center;gap:9px}
+.inp{background:var(--bg);border:1px solid var(--line);border-radius:6px;color:var(--text);font-size:12px;padding:7px 10px;font-family:var(--mono)}
+.inp.ro{color:var(--text3);border-style:dashed}
+select.inp{font-family:var(--sans)}
+.seg{display:flex;border:1px solid var(--line2);border-radius:7px;overflow:hidden}.seg span{padding:6px 13px;font-size:12px;color:var(--text2);cursor:pointer}.seg span.on{background:var(--surface2);color:var(--text)}
+.sw2{width:38px;height:21px;border-radius:11px;background:var(--line2);position:relative;cursor:pointer}.sw2.on{background:var(--acc)}.sw2:after{content:"";position:absolute;top:2px;left:2px;width:17px;height:17px;border-radius:50%;background:#fff}.sw2.on:after{left:19px}
+.srv{display:flex;align-items:center;gap:13px;padding:13px 15px;border:1px solid var(--line);border-radius:9px;background:var(--surface);margin-bottom:9px}
+.srv .ico{width:36px;height:36px;border-radius:8px;background:var(--surface2);display:flex;align-items:center;justify-content:center;color:var(--acc-soft);flex:none}
+.srv .mid{flex:1;min-width:0}.srv .nm{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--text);font-weight:600}.srv .nm .dot{width:7px;height:7px;border-radius:50%;background:var(--ok)}.srv .nm .dot.off{background:var(--text3)}
+.badge{font-family:var(--mono);font-size:9px;padding:1px 7px;border-radius:10px;border:1px solid var(--line2);color:var(--text2)}.badge.core{color:var(--acc-soft);border-color:var(--acc)}.badge.ooc{color:var(--warn);border-color:var(--warn)}
+.srv .meta{font-family:var(--mono);font-size:10.5px;color:var(--text3);margin-top:4px;display:flex;gap:12px;flex-wrap:wrap}
+.srv .right{display:flex;align-items:center;gap:12px;flex:none}.lock{color:var(--text3);display:flex;align-items:center;gap:4px;font-size:10.5px}.lock [data-lucide]{width:13px}
+.tstate{font-family:var(--mono);font-size:11px;padding:3px 9px;border-radius:6px;border:1px solid var(--line2)}.tstate.pending{color:var(--text2)}.tstate.ok{color:var(--ok);border-color:var(--ok)}.tstate.fail{color:var(--err);border-color:var(--err)}
+.note{display:flex;gap:8px;font-size:11px;color:var(--text2);line-height:1.55;background:var(--surface);border:1px solid var(--line);border-left:2px solid var(--acc);border-radius:6px;padding:9px 12px;margin-top:8px}.note [data-lucide]{width:14px;flex:none;color:var(--acc-soft);margin-top:1px}
+.sw3{display:inline-flex;gap:5px}.sw3 span{width:16px;height:16px;border-radius:50%;cursor:pointer;outline:1px solid var(--line2)}.sw3 span.on{outline:2px solid var(--text)}
+</style></head>
+<body data-screen-default="none">
+  <div class="shell appshell">
+    <nav class="bar">
+      <span class="brand">Dicelore<span style="color:#d8553f">.</span></span>
+      <nav class="nav">
+        <a href="home.html" data-testid="nav-tab-home"><i data-lucide="home"></i>主页</a>
+        <a href="catalog.html" data-testid="nav-tab-catalog"><i data-lucide="library"></i>团本</a>
+        <a href="play.html" data-testid="nav-tab-play"><i data-lucide="dices"></i>跑团</a>
+        <a href="build.html" data-testid="nav-tab-build"><i data-lucide="hammer"></i>制作</a>
+        <a class="on" data-testid="nav-tab-config"><i data-lucide="settings"></i>配置</a>
+      </nav>
+      <div class="tools"><span class="tool" data-testid="shell-theme"><i data-lucide="moon"></i></span></div>
+    </nav>
+
+    <div class="cbody">
+      <div class="sidenav">
+        <div class="sn-grp">设置</div>
+        <div class="sn on" data-nav="general" data-navgroup="cfg" data-testid="config-nav-general"><i data-lucide="sliders-horizontal"></i>通用</div>
+        <div class="sn" data-nav="network" data-navgroup="cfg" data-testid="config-nav-network"><i data-lucide="network"></i>服务与网络</div>
+        <div class="sn" data-nav="mcp" data-navgroup="cfg" data-testid="config-nav-mcp"><i data-lucide="plug"></i>MCP 服务器</div>
+        <div class="sn" data-nav="model" data-navgroup="cfg" data-testid="config-nav-model"><i data-lucide="brain-circuit"></i>模型连接</div>
+        <div class="sn" data-nav="theme" data-navgroup="cfg" data-testid="config-nav-theme"><i data-lucide="palette"></i>主题外观</div>
+        <div class="sn" data-nav="data" data-navgroup="cfg" data-testid="config-nav-data"><i data-lucide="database"></i>数据与存储</div>
+        <div class="sn" data-nav="about" data-navgroup="cfg" data-testid="config-nav-about"><i data-lucide="info"></i>关于</div>
+      </div>
+
+      <div class="cmain" data-testid="config-subpage">
+        <!-- 通用 -->
+        <div data-view="general" data-viewgroup="cfg">
+          <div class="mhead"><h3>通用</h3></div>
+          <div class="mdesc">语言与通用偏好，均本地持久化（localStorage）。</div>
+          <div class="field"><div class="fl">界面语言</div><div class="fc"><div class="seg"><span class="on">中文</span><span>English</span></div></div></div>
+          <div class="field"><div class="fl">自动继续最近会话<div class="sub">启动即回到上次</div></div><div class="fc"><span class="sw2 on"></span></div></div>
+          <div class="field" style="border:none"><div class="fl">紧凑模式</div><div class="fc"><span class="sw2"></span></div></div>
+        </div>
+
+        <!-- 服务与网络 -->
+        <div data-view="network" data-viewgroup="cfg" hidden>
+          <div class="mhead"><h3>服务与网络</h3></div>
+          <div class="mdesc">主页服务端口 / 域名 / 缝A 跨进程 notify webhook（真值来自 health）。</div>
+          <div class="field"><div class="fl">主页端口</div><div class="fc"><input class="inp" value="8787"></div></div>
+          <div class="field"><div class="fl">域名 / 绑定</div><div class="fc"><input class="inp" value="127.0.0.1"></div></div>
+          <div class="field" style="border:none"><div class="fl">notify webhook<div class="sub">DICELORE_NOTIFY_URL</div></div><div class="fc"><input class="inp" style="flex:1" value="（未配 · v1 走进程内回调）"></div></div>
+        </div>
+
+        <!-- MCP 服务器 -->
+        <div data-view="mcp" data-viewgroup="cfg" hidden>
+          <div class="mhead"><h3>MCP 服务器</h3><span class="sp"></span><span class="btn go" data-testid="config-mcp-add"><i data-lucide="plus"></i>添加 MCP</span></div>
+          <div class="mdesc"><b style="color:var(--text)">规范态只走 dicelore 自己</b>；自定义 MCP 仅提供周边能力（检索/配图），归 out-of-canon。</div>
+          <div class="sec-l">核心 · 规范态来源</div>
+          <div class="srv" data-testid="config-mcp-core"><span class="ico"><i data-lucide="dices"></i></span><div class="mid"><div class="nm">dicelore<span class="dot"></span><span class="badge core">规范态来源</span></div><div class="meta"><span>stdio · 运行时</span><span data-testid="config-mcp-toolcount">18 工具</span><span>notify 已连</span></div></div><div class="right"><span class="lock"><i data-lucide="lock"></i>必需</span></div></div>
+          <div class="sec-l">自定义 · out-of-canon</div>
+          <div class="srv" data-testid="config-mcp-item"><span class="ico"><i data-lucide="search"></i></span><div class="mid"><div class="nm">联网搜索<span class="dot off"></span><span class="badge ooc">out-of-canon</span></div><div class="meta"><span>远程 SSE</span><span>1 工具</span><span style="color:var(--warn)">⚠ 未接运行时（RT8）</span></div></div><div class="right"><span class="btn" data-testid="config-test-btn"><i data-lucide="plug-zap"></i>测试</span><span class="sw2" data-testid="config-mcp-toggle"></span></div></div>
+          <div class="note"><i data-lucide="info"></i><span>out-of-canon 落 event 留痕，但<b style="color:var(--text)">不参与 L3 审计、不发呈现 notify</b>；副作用不进快照。v1 自定义 MCP 尚未接入运行时（RT8）。</span></div>
+        </div>
+
+        <!-- 模型连接 -->
+        <div data-view="model" data-viewgroup="cfg" hidden>
+          <div class="mhead"><h3>模型连接</h3></div>
+          <div class="mdesc">哪个模型当 GM（经 Agent SDK）+ Agent 底座 + key。连接测试探活。</div>
+          <div class="field"><div class="fl">GM 模型</div><div class="fc"><select class="inp"><option>Opus 4.8</option><option>Sonnet 5</option><option>glm-5.2</option></select></div></div>
+          <div class="field"><div class="fl">Agent 底座<div class="sub">驱动 GM 的运行时</div></div><div class="fc"><div class="seg"><span class="on">Harness 默认</span><span>Claude Agent SDK</span></div></div></div>
+          <div class="field"><div class="fl">API key</div><div class="fc"><input class="inp" style="flex:1" type="password" value="sk-••••••••••••4f2a"></div></div>
+          <div class="field"><div class="fl">baseURL</div><div class="fc"><input class="inp" style="flex:1" value="https://api.anthropic.com"></div></div>
+          <div class="field" style="border:none"><div class="fl">连接测试</div><div class="fc"><span class="btn" data-testid="config-test-btn"><i data-lucide="plug-zap"></i>测试连接</span>
+            <span class="tstate" data-testid="config-test-none" data-screen="none">未测</span>
+            <span class="tstate pending" data-testid="config-test-pending" data-screen="pending" hidden>测试中…</span>
+            <span class="tstate ok" data-testid="config-test-ok" data-screen="ok" hidden>可达 · 探活 OK</span>
+            <span class="tstate fail" data-testid="config-test-fail" data-screen="fail" hidden>失败 · 401 鉴权</span></div></div>
+        </div>
+
+        <!-- 主题外观 -->
+        <div data-view="theme" data-viewgroup="cfg" hidden>
+          <div class="mhead"><h3>主题外观</h3></div>
+          <div class="mdesc">主题 / 明暗 / 强调色 / 字体，均本地持久化。</div>
+          <div class="field"><div class="fl">主题</div><div class="fc"><select class="inp"><option>墨金</option></select></div></div>
+          <div class="field"><div class="fl">明暗</div><div class="fc"><div class="seg"><span class="on">暗</span><span>亮</span><span>跟随系统</span></div></div></div>
+          <div class="field"><div class="fl">强调色</div><div class="fc"><span class="sw3"><span class="on" style="background:#d4a83e"></span><span style="background:#c47a3e"></span><span style="background:#3aa896"></span><span style="background:#b4453a"></span><span style="background:#6f74e8"></span></span></div></div>
+          <div class="field" style="border:none"><div class="fl">字体档</div><div class="fc"><div class="seg"><span class="on">默认</span><span>思源宋体</span></div></div></div>
+        </div>
+
+        <!-- 数据与存储 -->
+        <div data-view="data" data-viewgroup="cfg" hidden>
+          <div class="mhead"><h3>数据与存储</h3></div>
+          <div class="mdesc">展示后端真值（来自 health · 只读）。数据目录 = 每局一文件。</div>
+          <div class="field"><div class="fl">DICELORE_DATA_DIR</div><div class="fc"><input class="inp ro" style="flex:1" value="/home/mulei/.dicelore" readonly></div></div>
+          <div class="field"><div class="fl">sessionsDir</div><div class="fc"><input class="inp ro" style="flex:1" value="/home/mulei/.dicelore/sessions" readonly></div></div>
+          <div class="field" style="border:none"><div class="fl">DICELORE_FTS_MODE</div><div class="fc"><input class="inp ro" value="jieba" readonly></div></div>
+        </div>
+
+        <!-- 关于 -->
+        <div data-view="about" data-viewgroup="cfg" hidden>
+          <div class="mhead"><h3>关于</h3></div>
+          <div class="mdesc">给 AI 套上 GM 行为塑形框架的文字冒险引擎。</div>
+          <div class="field"><div class="fl">版本</div><div class="fc" style="font-family:var(--mono);color:var(--text2)">Dicelore v0.x（开发中）</div></div>
+          <div class="field"><div class="fl">许可</div><div class="fc" style="font-family:var(--mono);color:var(--text2)">AGPL-3.0-or-later</div></div>
+          <div class="field" style="border:none"><div class="fl">项目</div><div class="fc" style="color:var(--acc-soft)">github.com/MuLeiSY2021/dicelore</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="app.js"></script>
+<script>window.addEventListener('load',()=>{
+  const b=document.querySelector('[data-view="model"] [data-testid="config-test-btn"]');
+  const show=s=>['none','pending','ok','fail'].forEach(k=>{const el=document.querySelector('[data-testid="config-test-'+k+'"]');if(el)el.hidden=k!==s;});
+  if(b)b.addEventListener('click',()=>{show('pending');setTimeout(()=>show('ok'),700);});
+});</script>
+</body></html>

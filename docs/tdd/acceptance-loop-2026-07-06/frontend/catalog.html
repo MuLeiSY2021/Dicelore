@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh"><head><meta charset="utf-8">
+<title>Dicelore · 团本目录</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<link rel="stylesheet" href="styles.css">
+<style>
+.wrap{padding:22px 28px}
+.tbar{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.tbar h3{font-family:var(--serif);font-weight:600;font-size:18px;margin:0}.tbar .sp{flex:1}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.pack{display:flex;flex-direction:column;gap:9px;padding:15px 16px;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.pack .ph{display:flex;align-items:center;gap:10px}
+.pack .av{width:38px;height:38px;border-radius:8px;background:var(--surface2);display:flex;align-items:center;justify-content:center;color:var(--acc-soft);flex:none}
+.pack .nm{font-family:var(--serif);font-size:15.5px;color:var(--text);font-weight:600}
+.pack .vtag{margin-left:auto;font-family:var(--mono);font-size:9.5px;color:var(--text3)}
+.pack .desc{font-size:12px;color:var(--text2);line-height:1.55}
+.pack .foot{display:flex;align-items:center;gap:9px;margin-top:2px}.pack .sp{flex:1}
+.empty{display:flex;flex-direction:column;align-items:center;gap:12px;padding:60px 20px;color:var(--text2);text-align:center}
+.empty [data-lucide]{width:38px;height:38px;color:var(--text3)}
+/* 版本选择 modal */
+.vlist{display:flex;flex-direction:column;gap:6px}
+.vopt{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:12.5px}
+.vopt.on{border-color:var(--acc);background:var(--surface2)}
+.vopt .vt{font-family:var(--mono);color:var(--text);font-weight:600}
+.vopt .vd{color:var(--text3);font-size:11px;margin-left:auto}
+.vopt .latest{color:var(--acc-soft);font-size:10px;font-family:var(--mono)}
+</style></head>
+<body data-screen-default="list">
+  <div class="shell appshell">
+    <nav class="bar">
+      <span class="brand">Dicelore<span style="color:#d8553f">.</span></span>
+      <nav class="nav">
+        <a href="home.html" data-testid="nav-tab-home"><i data-lucide="home"></i>主页</a>
+        <a class="on" data-testid="nav-tab-catalog"><i data-lucide="library"></i>团本</a>
+        <a href="play.html" data-testid="nav-tab-play"><i data-lucide="dices"></i>跑团</a>
+        <a href="build.html" data-testid="nav-tab-build"><i data-lucide="hammer"></i>制作</a>
+        <a href="config.html" data-testid="nav-tab-config"><i data-lucide="settings"></i>配置</a>
+      </nav>
+      <div class="tools">
+        <span class="tool" data-testid="shell-theme"><i data-lucide="moon"></i></span>
+      </div>
+    </nav>
+
+    <div class="wrap">
+      <div class="tbar">
+        <h3>团本目录</h3><span class="sp"></span>
+        <span class="btn" data-testid="catalog-import-btn"><i data-lucide="package-open"></i>导入团本</span>
+      </div>
+
+      <!-- 有团本列表 -->
+      <div class="grid" data-testid="catalog-list" data-screen="list">
+        <div class="pack" data-testid="catalog-item">
+          <div class="ph"><span class="av"><i data-lucide="book-marked"></i></span><span class="nm">黑风寨的钟声</span><span class="vtag">3 版本 · head v0.3</span></div>
+          <div class="desc">武侠潜入团本。夜入山寨、割钟绳、斗钟三爷。含明骰裁决与倒计时钟。</div>
+          <div class="foot"><span class="sp"></span>
+            <span class="btn" data-testid="catalog-edit-btn"><i data-lucide="pencil"></i>编辑</span>
+            <span class="btn go" data-testid="catalog-start-btn" data-modal-open="verModal"><i data-lucide="play"></i>开始游戏</span>
+          </div>
+        </div>
+        <div class="pack" data-testid="catalog-item">
+          <div class="ph"><span class="av"><i data-lucide="book-marked"></i></span><span class="nm">长安十二时辰</span><span class="vtag">1 版本 · head v1.0</span></div>
+          <div class="desc">悬疑追查团本。十二时辰限时，多线并进。</div>
+          <div class="foot"><span class="sp"></span>
+            <span class="btn" data-testid="catalog-edit-btn"><i data-lucide="pencil"></i>编辑</span>
+            <span class="btn go" data-testid="catalog-start-btn" data-modal-open="verModal"><i data-lucide="play"></i>开始游戏</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 空态 -->
+      <div class="empty" data-testid="catalog-empty" data-screen="empty" hidden>
+        <i data-lucide="package-x"></i>
+        <div>还没有团本。<b>导入</b>一个团本，或去 <a href="build.html" style="color:var(--acc-soft)">制作</a> 造一个。</div>
+        <span class="btn"><i data-lucide="package-open"></i>导入团本</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 选版本 modal（点开始游戏弹出，默认选最新） -->
+<div class="modal" id="verModal" data-testid="catalog-version-modal" hidden>
+  <div class="modal-card">
+    <h3>开始游戏 · 选版本</h3>
+    <p class="msub">黑风寨的钟声 · 默认使用最新版（head）。选个版本开局。</p>
+    <div class="vlist" data-testid="catalog-version-list">
+      <div class="vopt on" data-testid="catalog-version-opt"><span class="vt">v0.3</span><span class="latest">最新 · 默认</span><span class="vd">3 分钟前 · commit a1b2c3</span></div>
+      <div class="vopt" data-testid="catalog-version-opt"><span class="vt">v0.2</span><span class="vd">昨天</span></div>
+      <div class="vopt" data-testid="catalog-version-opt"><span class="vt">v0.1</span><span class="vd">上周</span></div>
+    </div>
+    <div class="modal-foot">
+      <span class="btn" data-modal-close>取消</span>
+      <a class="btn go" href="play.html" data-testid="catalog-version-confirm"><i data-lucide="play"></i>建会话并开局</a>
+    </div>
+  </div>
+</div>
+<script src="app.js"></script>
+</body></html>

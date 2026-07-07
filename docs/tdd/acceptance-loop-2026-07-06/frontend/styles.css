@@ -1,0 +1,94 @@
+/* Dicelore 前端 · 墨金共享样式（据 wiki 视觉草图重构 · acceptance-loop 第一步·前端）
+   token + 外壳(bar/nav/tools) + 通用件(sidenav/session-bar/按钮)。页面专属样式在各页内联。 */
+:root{
+  --bg:#0c211a; --surface:#122a22; --surface2:#18342a; --line:#25433a; --line2:#33574a;
+  --text:#e9e3d1; --text2:#9aae9f; --text3:#62756a; --dial-empty:#1a392f;
+  --acc:#d4a83e; --acc-h:#e6bd5a; --acc-soft:#ecd28c; --acc-on:#13261d;
+  --ok:#5fae7e; --warn:#d99a3a; --err:#cd5b4a;
+  --serif:'Playfair Display',Georgia,serif; --sans:'Inter',system-ui,sans-serif; --mono:'JetBrains Mono',monospace;
+}
+body.light{
+  --bg:#dde8de; --surface:#eef4ed; --surface2:#e6efe5; --line:#c8d8c9; --line2:#aec4af; --dial-empty:#d3e2d4;
+  --text:#123a2c; --text2:#4b6356; --text3:#7e9488; --acc:#937420; --acc-h:#a98a2c; --acc-soft:#6f561a; --acc-on:#fff;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#06130d;font-family:var(--sans);color:var(--text)}
+body.light{background:#cdddce}
+[data-lucide]{width:16px;height:16px;stroke-width:1.6;vertical-align:middle}
+.page{max-width:1180px;margin:14px auto;padding:0 14px}
+h2{font-family:var(--serif);font-weight:600;font-size:21px;margin:0 0 4px}
+.subtitle{color:var(--text2);font-size:13px;margin:0 0 14px}
+a{color:inherit;text-decoration:none}
+
+/* 外壳 */
+.shell{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--bg);font-size:12px}
+.bar{display:flex;align-items:center;gap:16px;padding:0 14px;height:48px;background:var(--surface);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:9px;font-family:var(--serif);font-weight:700;font-size:17px}
+.nav{display:flex;gap:1px}
+.nav a{display:flex;align-items:center;gap:7px;padding:0 12px;height:48px;color:var(--text2);font-size:12.5px;font-weight:500;border-bottom:2px solid transparent;cursor:pointer}
+.nav a.on{color:var(--text);border-bottom-color:var(--acc)}
+.nav a[aria-disabled="true"]{opacity:.45;pointer-events:none}
+.nav a [data-lucide]{width:15px;height:15px}
+.tools{margin-left:auto;display:flex;align-items:center;gap:10px}
+.tool{display:flex;align-items:center;gap:5px;color:var(--text2);cursor:pointer;padding:6px 7px;border-radius:6px}
+.tool:hover{background:var(--surface2);color:var(--text)}.tool [data-lucide]{width:15px;height:15px}
+.status{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:10px;color:var(--text3);padding-left:12px;border-left:1px solid var(--line)}
+.status .dot{width:6px;height:6px;border-radius:50%;background:var(--ok);display:inline-block;margin-right:4px}
+.status .dot.w{background:var(--warn)}.status .dot.off{background:var(--text3)}
+
+/* 通用按钮 */
+.btn{display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:7px;border:1px solid var(--line2);color:var(--text2);cursor:pointer;font-size:12px}
+.btn:hover{border-color:var(--text3);color:var(--text)}
+.btn.go{background:linear-gradient(160deg,var(--acc-h),var(--acc));color:var(--acc-on);border:none;font-weight:700}
+.btn [data-lucide]{width:14px;height:14px}
+
+/* 子页型左导航（build/config 共用） */
+.body{display:flex}
+.sidenav{width:190px;background:var(--surface);border-right:1px solid var(--line);padding:10px 8px;overflow:auto}
+.sn-grp{color:var(--text3);font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:9px 8px 4px}
+.sn{display:flex;align-items:center;gap:9px;padding:8px 9px;border-radius:6px;color:var(--text2);cursor:pointer;font-size:12.5px}
+.sn:hover{background:var(--surface2);color:var(--text)}
+.sn.on{background:var(--surface2);color:var(--text)}.sn.on [data-lucide]{color:var(--acc)}
+.sn [data-lucide]{width:15px;height:15px;color:var(--text3)}
+.sn .ct{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--text3)}
+
+/* 顶栏 session bar（play/build 共用 · 滚动列所有会话） */
+.sessionbar{display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--bg);border-bottom:1px solid var(--line);overflow-x:auto}
+.sess{display:flex;flex-direction:column;gap:2px;flex:none;min-width:170px;max-width:220px;padding:7px 11px;background:var(--surface);border:1px solid var(--line);border-radius:8px;cursor:pointer}
+.sess.on{border-color:var(--acc)}
+.sess .st{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sess .sp{font-family:var(--mono);font-size:9.5px;color:var(--acc-soft)}
+.sess .sm{font-family:var(--mono);font-size:9.5px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sess .sr{font-size:10.5px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sess.new{align-items:center;justify-content:center;min-width:44px;color:var(--text3)}
+
+/* modal 弹窗 */
+.modal{position:fixed;inset:0;background:#00000088;display:flex;align-items:center;justify-content:center;z-index:50}
+.modal[hidden]{display:none}
+.modal-card{background:var(--surface);border:1px solid var(--line2);border-radius:12px;padding:20px 22px;min-width:340px;max-width:460px;box-shadow:0 20px 60px #0008}
+.modal-card h3{font-family:var(--serif);font-weight:600;font-size:17px;margin:0 0 4px}
+.modal-card .msub{color:var(--text2);font-size:12px;margin:0 0 16px}
+.modal-foot{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}
+
+/* 审核用·预览态切换 */
+.preview-switch{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3);font-family:var(--mono)}
+.preview-switch select{background:var(--surface2);border:1px solid var(--line2);border-radius:6px;color:var(--text);font-size:11px;padding:3px 6px}
+
+/* 通用开关 toggle */
+.toggle{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;color:var(--text2);cursor:pointer}
+.toggle .sw2{width:34px;height:19px;border-radius:10px;background:var(--line2);position:relative;flex:none}
+.toggle .sw2.on{background:var(--acc)}
+.toggle .sw2:after{content:"";position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;background:#fff;transition:.15s}
+.toggle .sw2.on:after{left:17px}
+
+/* 子页 tab 行（横向） */
+.tabs{display:flex;gap:2px;padding:8px 12px 0;border-bottom:1px solid var(--line);background:var(--bg);flex-wrap:wrap}
+.tabs .tab{padding:7px 12px;border-radius:6px 6px 0 0;color:var(--text2);cursor:pointer;font-size:12px;border-bottom:2px solid transparent}
+.tabs .tab.on{color:var(--text);border-bottom-color:var(--acc)}
+
+/* 修复：hidden 必须压过 class/内联 display，否则状态切换失效 */
+[hidden]{display:none!important}
+
+/* 成品页全幅外壳（index harness 用 iframe 加载；页面自身无预览壳） */
+html,body{height:100%}
+.appshell{border:none;border-radius:0;min-height:100vh}

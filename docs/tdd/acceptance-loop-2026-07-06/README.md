@@ -1,0 +1,28 @@
+# 可用性验收（TDD）· `acceptance-loop` · 2026-07-06 · 第 1 轮
+
+> 本轮工件目录。skill 定义与铁律见 [`.claude/skills/acceptance-loop/`](../../../.claude/skills/acceptance-loop/SKILL.md)。
+> **目标**：以真实用户身份端到端验 Dicelore 整套功能「对用户可不可用 + 有没有 bug」，问题落 backlog，循环到符合里程碑设想。四步 TDD：前三步写规格+测试（红），第四步实现（绿）。
+
+## 分件（按四步）
+
+| 步 | 文件 | 内容 | 状态 |
+|---|---|---|---|
+| 第零 | [`0-state-machines.md`](0-state-machines.md) | 行为状态机（A 实体 A1-A4 / B 页 B1-B6 + 映射）= 总体设计的根 | ✅ 基本定稿 |
+| 第一·后端 | [`1-backend-interface.md`](1-backend-interface.md) | 接口规约（据状态机 derive · `/sessions/{kind}` 对称面 + 现状偏差红） | ✅ 已 derive |
+| 第一·前端 | [`1-frontend-overview.md`](1-frontend-overview.md) + [`frontend/`](frontend/README.md) | 前端设计概览（selector 规约）+ 5 页墨金原型（home/catalog/play/build/config · 挂 data-testid） | ✅ 原型已落（无后端接线） |
+| 第二 | [`2-tests.md`](2-tests.md) | 大型 curl 脚本（遍历实体机每转移）+ playwright（遍历页机每转移）计划 | 🚧 脚手架（`tests/*.sh`/`*.spec.ts` 待写） |
+| — | [`findings.md`](findings.md) | 本轮抓出的偏差（RT1–RT9 + RT-B3），待真跑定论后归口 backlog | 📋 累积中 |
+| 第三 | — | 开发到 curl 全绿 / playwright 绿（只改代码，重大/不可逆冒泡） | ⬜ 未开始 |
+
+## 交接点（"剩下我来干"从这里接）
+
+第零 + 第一（后端接口对称面 + 前端墨金原型）已就位，findings 已列。**接下来（你）**：
+
+1. ~~第一·前端 html+css~~ ✅ 已落 [`frontend/`](frontend/README.md)（5 页原型 + data-testid）。剩：隐藏态切换、接后端真数据（并入第三步）。
+2. **第二·curl**：据 `1-backend-interface.md` + `2-tests.md` 清单写 `tests/curl-*.sh`（假 GM 遍历），**先跑见红**（RT1/RT6/RT7/RT-ns/RT2 会先红）。
+3. **第二·playwright**：据 `2-tests.md` + `frontend/` 的 data-testid 写 `tests/*.spec.ts`。
+4. **第三·开发到绿**：红→可逆小修当场改（不改断言）/ 重大不可逆落 backlog + 冒泡。
+
+## 铁律（防作弊 · 全程）
+
+期望来自架构、先于实现 · 红先行 · 绿只改代码 · 不信实现状态列 · 确定性+落盘。详见 skill。

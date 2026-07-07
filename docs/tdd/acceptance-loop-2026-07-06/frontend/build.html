@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh"><head><meta charset="utf-8">
+<title>Dicelore · 团本制作</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<link rel="stylesheet" href="styles.css">
+<style>
+.ctx{display:flex;align-items:center;gap:10px;padding:9px 16px;background:var(--bg);border-bottom:1px solid var(--line);font-size:12px}
+.ctx .name{font-family:var(--serif);font-size:14px;color:var(--text)}.ctx .badge{font-family:var(--mono);font-size:10px;color:var(--acc-soft);border:1px solid var(--line2);padding:1px 7px;border-radius:10px}.ctx .sp{flex:1}
+.bbody{display:flex;height:410px}
+.main{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--bg)}
+.mtool{display:flex;align-items:center;gap:9px;padding:10px 16px;border-bottom:1px solid var(--line)}.mtool .t{font-family:var(--serif);font-size:15px;color:var(--text)}.mtool .sp{flex:1}
+.mbody{flex:1;overflow:auto;padding:14px 16px;display:flex;flex-direction:column;gap:11px}
+.card{border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:12px 14px}
+.card .lbl{font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--text3);margin-bottom:5px}
+.npc .nh{display:flex;align-items:center;gap:9px;margin-bottom:9px}.npc .av{width:30px;height:30px;border-radius:6px;background:var(--surface2);display:flex;align-items:center;justify-content:center;color:var(--acc-soft)}.npc .nm{font-family:var(--serif);font-size:15px;color:var(--text)}.npc .tag{font-family:var(--mono);font-size:9.5px;color:var(--text3);border:1px solid var(--line2);padding:1px 6px;border-radius:4px}
+.npc .nb{display:flex;gap:14px}.npc .prose{flex:1;font-size:12.5px;line-height:1.7;color:var(--text2)}.npc .sheet{width:150px;flex:none;border-left:1px solid var(--line);padding-left:12px}
+.crow{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11.5px;color:var(--text2);padding:2px 0;border-bottom:1px dashed var(--line)}.crow b{color:var(--text)}
+.front-steps .s{display:flex;gap:8px;font-family:var(--mono);font-size:11.5px;color:var(--text2);padding:4px 0}.front-steps .s .g{color:var(--acc);min-width:44px}
+.ph2{font-family:var(--serif);font-size:14px;color:var(--text);margin:0 0 6px}
+.mono{font-family:var(--mono);font-size:11.5px;color:var(--text2);line-height:1.7;white-space:pre-wrap}
+.aside{width:298px;background:var(--surface);border-left:1px solid var(--line);display:flex;flex-direction:column}
+.as-h{display:flex;align-items:center;gap:8px;padding:11px 13px;border-bottom:1px solid var(--line);font-family:var(--serif);font-weight:600;font-size:13.5px}.as-h [data-lucide]{width:15px;color:var(--acc-soft)}
+.chat{flex:1;overflow:auto;padding:11px;display:flex;flex-direction:column;gap:9px}.msg{font-size:12px;line-height:1.55}
+.msg.u{align-self:flex-end;background:var(--surface2);border:1px solid var(--line);border-radius:9px 9px 2px 9px;padding:7px 10px;max-width:84%;color:var(--text)}
+.msg.a{align-self:flex-start;color:var(--text2);max-width:92%}.msg.a .who{display:flex;align-items:center;gap:5px;color:var(--acc-soft);font-size:10px;margin-bottom:3px}.msg.a .who [data-lucide]{width:12px}.msg.a .did{font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:4px}
+.cin{display:flex;gap:7px;padding:10px;border-top:1px solid var(--line)}.cin .box{flex:1;padding:7px 10px;background:var(--bg);border:1px solid var(--line);border-radius:7px;color:var(--text3);font-size:12px}.cin .send{width:32px;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,var(--acc-h),var(--acc));border-radius:7px;color:var(--acc-on)}
+.valid{border-top:1px solid var(--line);padding:10px 13px}.valid .vh{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--text);margin-bottom:7px}
+.chip{font-family:var(--mono);font-size:10px;padding:1px 7px;border-radius:10px;border:1px solid var(--line2)}.chip.ok{color:var(--ok)}.chip.warn{color:var(--warn)}
+.vitem{display:flex;gap:7px;font-size:11px;color:var(--text2);padding:4px 0;line-height:1.45}.vitem [data-lucide]{width:13px;flex:none;margin-top:1px;color:var(--warn)}.vitem .f{font-family:var(--mono);color:var(--text3)}
+.sn .stg{margin-left:auto;width:7px;height:7px;border-radius:50%;background:var(--line2)}.sn .stg.done{background:var(--ok)}.sn .stg.now{background:var(--acc)}
+</style></head>
+<body>
+  <div class="shell appshell">
+    <nav class="bar">
+      <span class="brand">Dicelore<span style="color:#d8553f">.</span></span>
+      <nav class="nav">
+        <a href="home.html" data-testid="nav-tab-home"><i data-lucide="home"></i>主页</a>
+        <a href="catalog.html" data-testid="nav-tab-catalog"><i data-lucide="library"></i>团本</a>
+        <a href="play.html" data-testid="nav-tab-play"><i data-lucide="dices"></i>跑团</a>
+        <a class="on" data-testid="nav-tab-build"><i data-lucide="hammer"></i>制作</a>
+        <a href="config.html" data-testid="nav-tab-config"><i data-lucide="settings"></i>配置</a>
+      </nav>
+      <div class="tools"><span class="tool" data-testid="shell-theme"><i data-lucide="moon"></i></span></div>
+    </nav>
+
+    <div class="sessionbar" data-testid="build-sessionbar">
+      <div class="sess on" data-testid="build-session-item"><div class="st"><i data-lucide="book-marked" style="width:13px"></i>黑风寨的钟声</div><div class="sm">草稿 v0.3 · 10 分钟前</div><div class="sr">已补 NPC 3 个</div></div>
+      <div class="sess" data-testid="build-session-item"><div class="st"><i data-lucide="book-marked" style="width:13px"></i>雾港来信</div><div class="sm">草稿 v0.1 · 前天</div><div class="sr">世界观初稿</div></div>
+      <div class="sess new"><i data-lucide="plus"></i></div>
+    </div>
+
+    <div class="ctx" data-testid="build-ctxbar">
+      <i data-lucide="book-marked" style="width:15px;color:var(--acc-soft)"></i>
+      <span class="name">黑风寨的钟声</span><span class="badge">草稿 v0.3</span><span class="sp"></span>
+      <span class="btn" data-testid="build-validate-btn"><i data-lucide="search-check"></i>校验整包</span>
+      <span class="btn" data-testid="build-import-btn"><i data-lucide="package-open"></i>导入原著</span>
+      <span class="btn go" data-testid="build-export-btn"><i data-lucide="download"></i>导出团本包</span>
+    </div>
+
+    <div class="bbody">
+      <div class="sidenav">
+        <div class="sn-grp">内容（五域）</div>
+        <div class="sn" data-nav="lore" data-navgroup="c" data-testid="build-nav-lore"><i data-lucide="globe"></i>世界设定<span class="ct">12</span></div>
+        <div class="sn on" data-nav="npc" data-navgroup="c" data-testid="build-nav-npc"><i data-lucide="users"></i>NPC<span class="ct">5</span></div>
+        <div class="sn" data-nav="pool" data-navgroup="c" data-testid="build-nav-pool"><i data-lucide="layers"></i>卡池<span class="ct">3</span></div>
+        <div class="sn" data-nav="rule" data-navgroup="c" data-testid="build-nav-rule"><i data-lucide="sliders-horizontal"></i>规则·分档<span class="ct">4</span></div>
+        <div class="sn" data-nav="state" data-navgroup="c" data-testid="build-nav-state"><i data-lucide="table"></i>状态·sheets<span class="ct">2</span></div>
+        <div class="sn-grp">叙事脚手架</div>
+        <div class="sn" data-nav="front" data-navgroup="c" data-testid="build-nav-front"><i data-lucide="swords"></i>阵线 Front<span class="ct">1</span></div>
+        <div class="sn" data-nav="plotline" data-navgroup="c" data-testid="build-nav-plotline"><i data-lucide="git-branch"></i>剧情线<span class="ct">2</span></div>
+        <div class="sn" data-nav="foreshadow" data-navgroup="c" data-testid="build-nav-foreshadow"><i data-lucide="sparkles"></i>伏笔<span class="ct">3</span></div>
+        <div class="sn" data-nav="anchor" data-navgroup="c" data-testid="build-nav-anchor"><i data-lucide="anchor"></i>锚点<span class="ct">4</span></div>
+        <div class="sn-grp">收口</div>
+        <div class="sn" data-nav="prologue" data-navgroup="c" data-testid="build-nav-prologue"><i data-lucide="scroll"></i>开场白 prologue</div>
+        <div class="sn" data-nav="manifest" data-navgroup="c" data-testid="build-nav-manifest"><i data-lucide="file-cog"></i>Manifest</div>
+        <div class="sn-grp">构建进度（guideline）</div>
+        <div class="sn"><i data-lucide="circle-check-big"></i>世界观<span class="stg done"></span></div>
+        <div class="sn"><i data-lucide="circle-dot"></i>人物<span class="stg now"></span></div>
+        <div class="sn"><i data-lucide="circle"></i>机制<span class="stg"></span></div>
+      </div>
+
+      <div class="main">
+        <div class="mtool"><span class="t" data-testid="build-editor-title">内容编辑器</span><span class="sp"></span><span class="btn"><i data-lucide="plus"></i>新建</span></div>
+        <div class="mbody" data-testid="build-editor">
+          <!-- NPC（默认） -->
+          <div data-view="npc" data-viewgroup="c">
+            <div class="card npc"><div class="nh"><span class="av"><i data-lucide="user"></i></span><span class="nm">钟三爷</span><span class="tag">头领</span><span class="tag">有 sheet 卡</span></div>
+              <div class="nb"><div class="prose"><div class="lbl">人设散文</div>黑风寨当家，使子母钟锤。耳背，逢整点必亲巡钟楼；重义轻财，最恨被人坏了规矩。</div>
+                <div class="sheet"><div class="lbl">sheet 卡</div><div class="crow"><span>HP</span><b>40</b></div><div class="crow"><span>子母钟锤</span><b>+6</b></div><div class="crow" style="border:none"><span>巡逻</span><b>整点</b></div></div></div></div>
+          </div>
+          <!-- 世界设定 -->
+          <div data-view="lore" data-viewgroup="c" hidden><div class="card"><div class="ph2">黑风寨</div><div class="mono">类型：据点\n地形：依山临崖，东门为正、后窗临崖\n守备：东门两哨 + 钟楼暗哨；子时换岗</div></div></div>
+          <!-- 卡池 -->
+          <div data-view="pool" data-viewgroup="c" hidden><div class="card"><div class="ph2">机缘（加权池 · 3 条）</div><div class="crow"><span>寨防图残页</span><b>weight 1</b></div><div class="crow"><span>守卫的酒壶</span><b>weight 3</b></div><div class="crow" style="border:none"><span>空手</span><b>weight 5</b></div></div></div>
+          <!-- 规则·分档 -->
+          <div data-view="rule" data-viewgroup="c" hidden><div class="card"><div class="ph2">潜行判定（param 分档）</div><div class="mono">expr: d20 + {潜行}\nDC: 隐蔽 10 / 常规 12 / 戒备 15</div></div></div>
+          <!-- 状态 sheets -->
+          <div data-view="state" data-viewgroup="c" hidden><div class="card"><div class="ph2">player · 张三</div><div class="crow"><span>HP</span><b>15</b></div><div class="crow"><span>金钱</span><b>77</b></div><div class="crow" style="border:none"><span>潜行</span><b>+4</b></div></div></div>
+          <!-- 阵线 Front（凶兆阶梯） -->
+          <div data-view="front" data-viewgroup="c" hidden><div class="card"><div class="ph2">阵线：钟楼示警（Clock 0/8）</div><div class="front-steps"><div class="s"><span class="g">阶 2</span>巡夜加倍</div><div class="s"><span class="g">阶 5</span>封锁后山</div><div class="s"><span class="g">阶 8</span>全寨戒严 · 触发追兵</div></div></div></div>
+          <!-- 剧情线 -->
+          <div data-view="plotline" data-viewgroup="c" hidden><div class="card"><div class="ph2">剧情线：夺图</div><div class="mono">状态：进行中\n节点：潜入 → 找暗格 → 取图 → 脱身</div></div></div>
+          <!-- 伏笔 -->
+          <div data-view="foreshadow" data-viewgroup="c" hidden><div class="card"><div class="ph2">伏笔</div><div class="crow"><span>暗格</span><b>未回收</b></div><div class="crow" style="border:none"><span>哑婆的信</span><b>已埋</b></div></div></div>
+          <!-- 锚点 -->
+          <div data-view="anchor" data-viewgroup="c" hidden><div class="card"><div class="ph2">锚点（entry / 引用锚）</div><div class="mono">#钟楼 · #暗格 · #子时换岗 · #寨防图</div></div></div>
+          <!-- 开场白 -->
+          <div data-view="prologue" data-viewgroup="c" hidden><div class="card"><div class="ph2">prologue.md（校验必填）</div><div class="mono">夜色如墨，黑风寨的钟楼在山脊上投下长影。你贴着院墙，听见院内骰盅未歇……</div></div></div>
+          <!-- Manifest -->
+          <div data-view="manifest" data-viewgroup="c" hidden><div class="card"><div class="ph2">manifest.toml</div><div class="mono">name = "黑风寨的钟声"\nversion = "0.3.0"\nflows = ["dicelore-flow-投骰裁决"]\nclock = "世界.钟楼示警"\nentry = "钟楼"</div></div></div>
+        </div>
+      </div>
+
+      <div class="aside">
+        <div class="as-h"><i data-lucide="sparkles"></i>构建助手</div>
+        <div class="chat" data-testid="build-assistant">
+          <div class="msg u">给这个团本加条「钟楼示警」的阵线，8 格钟</div>
+          <div class="msg a"><div class="who"><i data-lucide="sparkles"></i>构建助手</div>已建阵线 Front「钟楼示警」，Clock 0/8，凶兆阶梯阶 2/5/8。<div class="did" data-testid="build-assistant-toolcalls">↳ add_front · set_manifest(clock)</div></div>
+        </div>
+        <div class="cin"><span class="box">再给它埋两个伏笔…</span><span class="send"><i data-lucide="arrow-up"></i></span></div>
+        <div class="valid" data-testid="build-validate-report">
+          <div class="vh"><i data-lucide="shield-check" style="width:14px;color:var(--ok)"></i>整包校验<span class="chip ok">0 error</span><span class="chip warn">2 warn</span></div>
+          <div class="vitem"><i data-lucide="alert-triangle"></i><span><span class="f">npc/哑婆.md</span> 缺 sheet 卡</span></div>
+          <div class="vitem"><i data-lucide="alert-triangle"></i><span><span class="f">manifest.clock</span> 引用的 attr 待声明</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="app.js"></script>
+</body></html>
