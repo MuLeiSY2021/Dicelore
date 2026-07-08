@@ -92,3 +92,40 @@ a{color:inherit;text-decoration:none}
 /* 成品页全幅外壳（index harness 用 iframe 加载；页面自身无预览壳） */
 html,body{height:100%}
 .appshell{border:none;border-radius:0;min-height:100vh}
+
+/* 全局 bay：底部浮条，仿 mac 聚焦出现（不聚焦隐形）· 配置在配置页 */
+.bay-wrap{position:fixed;left:0;right:0;bottom:0;height:18px;z-index:39}
+.bay{position:fixed;left:50%;bottom:10px;transform:translateX(-50%) translateY(10px);display:flex;align-items:center;gap:7px;padding:7px 12px;background:var(--surface);border:1px solid var(--line2);border-radius:13px;box-shadow:0 12px 36px #000b;opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease;z-index:40}
+.bay-btn{display:flex;align-items:center;gap:7px;padding:6px 13px;border:1px solid var(--line2);border-radius:8px;color:var(--text2);font-size:12px;cursor:pointer;background:var(--surface);white-space:nowrap}
+.bay-btn:hover{border-color:var(--text3);color:var(--text)}.bay-btn.on{border-color:var(--acc);color:var(--acc-soft)}
+.bay-btn [data-lucide]{width:14px}
+.bay .sp{flex:1}.bay .seq{font-family:var(--mono);font-size:10px;color:var(--text3)}
+.bay-sep{width:1px;height:18px;background:var(--line2);margin:0 3px;flex:none}
+/* bay 导航：默认展开=横排页签；收起=≡弹 popover（跑团页默认收起） */
+.bay-tabs{display:flex;align-items:center;gap:1px}
+.bay-tab{display:flex;align-items:center;gap:5px;padding:6px 10px;border-radius:7px;color:var(--text3);cursor:pointer;text-decoration:none;font-size:11.5px}.bay-tab:hover{background:var(--surface2);color:var(--text)}.bay-tab.on{color:var(--acc-soft);background:var(--surface2)}.bay-tab[aria-disabled="true"]{opacity:.4;pointer-events:none}.bay-tab [data-lucide]{width:14px}.bay-tab .bt-n{font-size:11.5px}
+.dock::-webkit-scrollbar{width:6px}.dock::-webkit-scrollbar-track{background:transparent}.dock::-webkit-scrollbar-thumb{background:var(--line2);border-radius:3px;border:1px solid var(--bg);background-clip:padding-box}.dock::-webkit-scrollbar-thumb:hover{background:var(--acc-soft);background-clip:padding-box}
+.bay-nav-collapse{display:flex;padding:6px 9px}.bay-nav-collapse [data-lucide]{width:14px}
+.bay-nav-open{display:none}
+body.bay-nav-collapsed .bay-tabs,body.bay-nav-collapsed .bay-nav-collapse{display:none}
+body.bay-nav-collapsed .bay-nav-open{display:flex}
+.bay-nav-expand{display:flex;align-items:center;gap:7px;padding:9px 11px;border:1px dashed var(--line2);border-radius:8px;font-size:12px;color:var(--text2);cursor:pointer;margin-top:8px}.bay-nav-expand:hover{border-color:var(--acc);color:var(--text)}.bay-nav-expand [data-lucide]{width:14px}
+/* 滚动条配色（墨金） */
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--line2);border-radius:6px;border:2px solid var(--bg);background-clip:padding-box}
+::-webkit-scrollbar-thumb:hover{background:var(--acc-soft);background-clip:padding-box}
+*{scrollbar-width:thin;scrollbar-color:var(--line2) var(--bg)}
+/* 聚焦出现：热区 hover / bay 自身 hover / .show → 显现 */
+.bay-wrap:hover ~ .bay,.bay:hover,.bay.show{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
+body.bay-always .bay{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
+body.bay-hidden .bay,body.bay-hidden .bay-wrap{display:none}
+
+/* 全局 popover 浮窗（bay 入口弹起 · 点外/× 关） */
+.popover{position:fixed;inset:0;background:#00000088;display:flex;align-items:center;justify-content:center;z-index:50}.popover[hidden]{display:none}
+.pop-card{background:var(--surface);border:1px solid var(--line2);border-radius:12px;min-width:340px;max-width:480px;max-height:80vh;overflow:auto;box-shadow:0 20px 60px #0008}
+.pop-head{display:flex;align-items:center;gap:8px;padding:13px 16px;border-bottom:1px solid var(--line);font-family:var(--serif);font-weight:600;font-size:14.5px}.pop-head [data-lucide]{width:15px;color:var(--acc-soft)}.pop-head .sp{flex:1}.pop-head .x{color:var(--text3);cursor:pointer}.pop-head .x:hover{color:var(--text)}
+.pop-body{padding:12px 16px}
+.nav-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px;font-size:13px;color:var(--text);cursor:pointer}.nav-row:last-child{margin-bottom:0}.nav-row.on{border-color:var(--acc);color:var(--acc-soft)}.nav-row [data-lucide]{width:15px}.nav-row .nr-sp{flex:1}.nav-row .nr-tag{font-family:var(--mono);font-size:9.5px;color:var(--text3)}
+.nav-status{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-family:var(--mono);font-size:10px;color:var(--text3);padding:10px 4px 2px;border-top:1px solid var(--line);margin-top:10px}
+.nav-status .dot{width:6px;height:6px;border-radius:50%;background:var(--ok);display:inline-block;margin-right:4px}.nav-status .dot.w{background:var(--warn)}.nav-status .dot.off{background:var(--text3)}

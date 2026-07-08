@@ -13,7 +13,7 @@ A. 实体状态机（后端持有的持久实体）
 
 B. 页状态机（每页一台）
    B1 导航页(壳)  B2 主页(指南+最近会话摘要)  B3 团本目录页(玩的入口)
-   B4 跑团页(顶栏 bar + 回合循环)  B5 团本制作页(顶栏 bar + 自由编排)  B6 配置页(七子页)
+   B4 跑团页(顶栏 bar + 回合循环)  B5 团本制作页(bay session + 自由编排)  B6 配置页(七子页)
 ```
 
 ---
@@ -26,13 +26,14 @@ B. 页状态机（每页一台）
 stateDiagram-v2
   [*] --> 无
   无 --> 活跃 : 创建（dicegm 新局 / loregm 建团本）
-  活跃 --> 活跃 : drive-turn / rewind 到非起点
-  活跃 --> 空 : rewind 到开头（清空 = empty）
+  活跃 --> 活跃 : drive-turn / rewind 到非起点（作用当前分支）
+  活跃 --> 活跃 : branch（开新分支·copy jsonl·保留旧支）/ checkout（切当前分支）
+  活跃 --> 空 : rewind 到开头（清空当前分支 = empty）
   空 --> 活跃 : 继续（再驱动回合 / 再建）
-  活跃 --> 归档 : 域内终态·留档（dicegm 终局 / loregm 提交团本）
+  活跃 --> 归档 : 域内终态·留档（loregm 提交团本 / dicegm 经战后复盘后显式结束）
   归档 --> 活跃 : 继续（dicegm 续玩 / loregm 更新团本）
   活跃 --> 无 : 删除
-  note right of 活跃 : 带活动日期；内嵌 dicegm(A2)/loregm(A3) 域机。list / get-meta / delete 为两 kind 通用生命周期操作
+  note right of 活跃 : 带活动日期；内嵌 dicegm(A2)/loregm(A3) 域机。list / get-meta / delete 为两 kind 通用生命周期操作。**dicegm 活跃内含多分支**（每分支一 jsonl·独立 seq/快照·一当前分支）；status 取值 {活跃,空,战后复盘,归档}（战后复盘= dicegm 域特有，见 A2）
 ```
 
 ### A2. 域机 · dicegm 跑团回合循环（活跃内嵌）
@@ -54,8 +55,11 @@ stateDiagram-v2
   待选 --> 待输入 : 回合结束（携选项）
   待输入 --> 生成中 : 玩家选项（作下一回合输入）
   待输入 --> 终局 : GM game_end
-  终局 --> [*] : ⇒ 会话 活跃→归档
-  note right of 待输入 : 自由文本 drive-turn；rewind 到开头 ⇒ 会话 活跃→空；断线重连 = 快照 + 事件回填
+  终局 --> 战后复盘 : GM AI 调 game_end（唯一一次·转复盘不归档）⇒ 会话 活跃→战后复盘
+  战后复盘 --> 待输入 : 玩家 branch 回档（开新分支续玩 · 详见裁决 debrief-and-branch §二）
+  战后复盘 --> [*] : 玩家显式结束 ⇒ 会话 战后复盘→归档
+  note right of 待输入 : 自由文本 drive-turn；rewind 到开头 ⇒ 当前分支清空（会话 活跃→空）；断线重连 = 快照 + 事件回填
+  note right of 战后复盘 : messages 仍接受；AI 由 harness 加载 debrief-mode skill 切复盘模式（不推进剧情·回答提问·不硬禁机制推进 C3=忽略·靠 skill 软约束）；非纯UI态·后端持有。详见裁决 debrief-and-branch §一
 ```
 
 ### A3. 域机 · loregm 自由编排（活跃内嵌 · 作者自由文本驱动）
@@ -119,7 +123,7 @@ stateDiagram-v2
   落地 --> 团本制作页 : 去造
   落地 --> 配置页 : 去配置
   落地 --> 跑团页 : 继续最近会话（若有）
-  note right of 落地 : 核心 = **指南**（怎么用 + 使用手册在哪）；**只显示最近一个会话摘要**，不投影全量列表（全量会话在跑团页 Session 抽屉 / 制作页顶栏 bar）
+  note right of 落地 : 核心 = **指南**（怎么用 + 使用手册在哪）；**只显示最近一个会话摘要**，不投影全量列表（全量会话在跑团页 bay session / 制作页 bay session）
 ```
 
 ### B3. 团本目录页（第 2 页 · 跑团入口 · 选版本 / 导入）
@@ -150,24 +154,24 @@ stateDiagram-v2
     [*] --> 待输入
     待输入 --> 生成中 : 提交输入
     生成中 --> 待输入 : 叙事收尾(turn_ended)
-    生成中 --> 掷骰卡 : roll_staged 弹卡
-    掷骰卡 --> 生成中 : 点掷(roll_committed)
-    生成中 --> 待选 : choices 弹按钮
-    待选 --> 生成中 : 点选项
+    生成中 --> 待掷 : roll_staged（明骰内联 stream · 区间分档 + 居中按钮）
+    待掷 --> 生成中 : 点掷(roll_committed) · 结果内联
+    生成中 --> 待选 : choices 浮在输入框上
+    待选 --> 生成中 : toggle 选中 · send 提交（或输入框自定义）
     生成中 --> 错误 : error
     错误 --> 待输入 : 重试 / 跳过
   }
-  续玩层 --> 终局画面 : game_end
-  终局画面 --> 续玩层 : 继续（续玩 / 新局）
-  note right of 续玩层 : **桌面沙盘**：中央永远是跑团舞台；左右停靠被钉住的公开信息卡（角色状态/剧情线/世界书/其他团数据）；底部 `bay` 放 Session/团数据/配置入口，点开浮窗、点外关闭。玩家气泡独立于轮次卡；点 edit = 自动 rewind 到该输入前。断线重连仍走快照+events 回填。
+  续玩层 --> 战后复盘 : game_end → harness 调 enter_debrief（不遮罩 · 续玩层继续）
+  战后复盘 --> 续玩层 : 玩家 branch 回档（开新分支 · GM 不再推进剧情·回答提问）
+  note right of 续玩层 : **桌面沙盘**：中央舞台 + **右 dock**（dock-card = markdown 模板渲染器 · `dc-meta` 数据选择器默认隐/编辑显 + `dc-body` 渲染 markdown · 三按钮 edit/archive/fold · 去钉选）；底部 `bay` 放 Session/人物卡/剧情线/世界书/其他表单/配置/归档 入口，点开浮窗、点外关闭（团数据四类 = 数据浏览，非卡模板+钉选）。玩家气泡 = 轮锚点；edit → inline 确认 → rewind。断线重连走快照+events 回填。
 ```
 
-### B5. 团本制作页（第 4 页 · 顶栏 session bar + 投影 loregm 域机 A3）
+### B5. 团本制作页（第 4 页 · bay session + 投影 loregm 域机 A3）
 
 ```mermaid
 stateDiagram-v2
   [*] --> 无活动会话
-  无活动会话 --> 选内容类型 : 新建构建会话 / 点顶栏某构建会话
+  无活动会话 --> 选内容类型 : 新建构建会话 / bay 里点构建会话
   选内容类型 --> 查看编辑 : 选中（世界设定/NPC/卡池/规则·分档/state/Front/剧情线/伏笔/锚点/关系/prologue/Manifest）
   查看编辑 --> 选内容类型 : 切类型
   查看编辑 --> 助手编排中 : 对构建助手发指令（drive-turn）
@@ -175,7 +179,7 @@ stateDiagram-v2
   查看编辑 --> 校验报告 : 校验整包
   校验报告 --> 查看编辑 : 按报告(error/warn)定位改
   校验报告 --> 已导出 : 零 error → 提交 / 导出团本包
-  note right of 查看编辑 : **顶栏 session bar**：滚动列所有**构建会话**（活动日期/团本/最新）。投影 loregm 域机(A3)。右栏=构建助手对话(显示调了哪些工具)+整包校验报告(error/warn 计数+定位)；上下文条=团本名+草稿版本
+  note right of 查看编辑 : **bay session 入口**（`build-bay-btn-session`→`build-bay-popover-session` 浮窗列构建会话：活动日期/团本/最新动作 · 对齐 play 的 bay session · **无顶栏 sessionbar**）。投影 loregm 域机(A3)。右栏=构建助手对话(显示调了哪些工具)+整包校验报告(error/warn 计数+定位)；上下文条 `build-ctxbar`=团本名+草稿版本+校验/导入/导出
 ```
 
 ### B6. 配置页（第 5 页 · 最复杂也最简单 · 七子页）
@@ -213,7 +217,7 @@ stateDiagram-v2
 |---|---|---|
 | B2 主页 | A1 **最近一个会话**(摘要) + health 运行态 | 指南为主·加载 |
 | B3 团本目录 | A4 catalog(团本+版本) | 加载/列表/空态·选版本·导入中 |
-| B4 跑团页 | A2 dicegm 域机 + A1 **全量会话**(顶栏 bar) | 无会话提示·未开场/续玩层·面板三态·重连 |
-| B5 制作页 | A3 loregm 域机 + A1 **全量构建会话**(顶栏 bar) | 内容类型选择·助手·校验 |
+| B4 跑团页 | A2 dicegm 域机 + A1 **全量会话**(bay session) | 无会话提示·未开场/续玩层·面板三态·重连 |
+| B5 制作页 | A3 loregm 域机 + A1 **全量构建会话**(bay session) | 内容类型选择·助手·校验 |
 | B6 配置页 | health / keys 真值（无会话） | 七子页·表单·测试三态 |
 | B1 导航页 | A1(是否有活动会话→跑团置灰) + health(运行态) | 在哪页·工具区 |

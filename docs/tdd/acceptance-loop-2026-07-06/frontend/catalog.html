@@ -29,20 +29,6 @@
 </style></head>
 <body data-screen-default="list">
   <div class="shell appshell">
-    <nav class="bar">
-      <span class="brand">Dicelore<span style="color:#d8553f">.</span></span>
-      <nav class="nav">
-        <a href="home.html" data-testid="nav-tab-home"><i data-lucide="home"></i>主页</a>
-        <a class="on" data-testid="nav-tab-catalog"><i data-lucide="library"></i>团本</a>
-        <a href="play.html" data-testid="nav-tab-play"><i data-lucide="dices"></i>跑团</a>
-        <a href="build.html" data-testid="nav-tab-build"><i data-lucide="hammer"></i>制作</a>
-        <a href="config.html" data-testid="nav-tab-config"><i data-lucide="settings"></i>配置</a>
-      </nav>
-      <div class="tools">
-        <span class="tool" data-testid="shell-theme"><i data-lucide="moon"></i></span>
-      </div>
-    </nav>
-
     <div class="wrap">
       <div class="tbar">
         <h3>团本目录</h3><span class="sp"></span>
@@ -77,7 +63,6 @@
       </div>
     </div>
   </div>
-</div>
 
 <!-- 选版本 modal（点开始游戏弹出，默认选最新） -->
 <div class="modal" id="verModal" data-testid="catalog-version-modal" hidden>
@@ -92,6 +77,28 @@
     <div class="modal-foot">
       <span class="btn" data-modal-close>取消</span>
       <a class="btn go" href="play.html" data-testid="catalog-version-confirm"><i data-lucide="play"></i>建会话并开局</a>
+    </div>
+  </div>
+</div>
+
+<!-- 全局 bay（fixed · 仿 mac 聚焦出现） -->
+<div class="bay-wrap"></div>
+<div class="bay" data-testid="app-bay">
+  <span class="bay-tabs" data-testid="app-bay-nav-tabs"><a class="bay-tab" href="home.html" data-testid="nav-tab-home"><i data-lucide="home"></i><span class="bt-n">主页</span></a><a class="bay-tab" href="catalog.html" data-testid="nav-tab-catalog"><i data-lucide="library"></i><span class="bt-n">目录</span></a><a class="bay-tab" href="play.html" data-testid="nav-tab-play"><i data-lucide="dices"></i><span class="bt-n">跑团</span></a><a class="bay-tab" href="build.html" data-testid="nav-tab-build"><i data-lucide="hammer"></i><span class="bt-n">制作</span></a><a class="bay-tab" href="config.html" data-testid="nav-tab-config"><i data-lucide="settings"></i><span class="bt-n">配置</span></a></span><span class="bay-btn bay-nav-collapse" data-testid="app-bay-nav-collapse" title="收起导航"><i data-lucide="chevrons-right"></i></span><span class="bay-btn bay-nav-open" data-bay="nav" data-testid="app-bay-nav"><i data-lucide="menu"></i>导航</span>
+  <span class="bay-sep"></span>
+  <a class="bay-btn" href="config.html" data-testid="app-bay-config"><i data-lucide="settings"></i>配置</a>
+</div>
+<div class="popover" id="bay-nav" data-testid="app-bay-popover-nav" hidden>
+  <div class="pop-card">
+    <div class="pop-head"><i data-lucide="menu"></i>导航<span class="sp"></span><span class="x" data-bay-close><i data-lucide="x"></i></span></div>
+    <div class="pop-body">
+      <a class="nav-row" href="home.html" data-testid="nav-row-home"><i data-lucide="home"></i>主页<span class="nr-sp"></span><span class="nr-tag">home</span></a>
+      <a class="nav-row on" data-testid="nav-row-catalog"><i data-lucide="library"></i>团本目录<span class="nr-sp"></span><span class="nr-tag">catalog</span></a>
+      <a class="nav-row" href="play.html" data-testid="nav-row-play"><i data-lucide="dices"></i>跑团<span class="nr-sp"></span><span class="nr-tag">play</span></a>
+      <a class="nav-row" href="build.html" data-testid="nav-row-build"><i data-lucide="hammer"></i>团本制作<span class="nr-sp"></span><span class="nr-tag">build</span></a>
+      <a class="nav-row" href="config.html" data-testid="nav-row-config"><i data-lucide="settings"></i>配置<span class="nr-sp"></span><span class="nr-tag">config</span></a>
+      <div class="bay-nav-expand" data-testid="app-bay-nav-expand"><i data-lucide="panel-left-open"></i>展开常驻导航</div>
+      <div class="nav-status" data-testid="shell-runstatus"><span><span class="dot"></span>模型 Opus 4.8</span><span><span class="dot"></span>MCP</span><span><span class="dot w"></span>notify 未配</span></div>
     </div>
   </div>
 </div>

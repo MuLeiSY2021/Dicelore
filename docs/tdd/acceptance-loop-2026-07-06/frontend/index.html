@@ -30,7 +30,7 @@ iframe{flex:1;width:100%;border:none;background:var(--bg)}
 
     <div class="hbody">
       <div class="idxnav" id="nav">
-        <div class="hint">左边点一个状态 → 右侧 iframe 加载对应成品页的那一个态（互斥、不叠）。状态取自 0-state-machines.md。</div>
+        <div class="hint">左边点一个状态 → 右侧 iframe 加载对应成品页的那一个态（互斥、不叠）。状态取自 0-state-machines.md。<br>所有页去顶栏，nav 收进底部 bay（仿 mac 聚焦出现，默认隐形）；iframe 内把鼠标移到底部即可唤出 bay，或访问带 <code>#baybar=show</code> 的项强制常驻。</div>
 
         <div class="grp-l">主页 <span class="m">B2</span></div>
         <div class="item" data-src="home.html">落地页 · 指南+最近会话<span class="s">home</span></div>
@@ -39,15 +39,25 @@ iframe{flex:1;width:100%;border:none;background:var(--bg)}
         <div class="item" data-src="catalog.html#s=list">有团本列表<span class="s">#s=list</span></div>
         <div class="item" data-src="catalog.html#s=empty">空态<span class="s">#s=empty</span></div>
 
-        <div class="grp-l">跑团 <span class="m">B4 · dicegm A2</span></div>
+        <div class="grp-l">跑团 <span class="m">B4 · dicegm A2 · 桌面沙盘</span></div>
         <div class="item" data-src="play.html#s=none">无会话<span class="s">none</span></div>
         <div class="item" data-src="play.html#s=kickoff">未开场<span class="s">kickoff</span></div>
-        <div class="item" data-src="play.html#s=input">待输入<span class="s">input</span></div>
+        <div class="item" data-src="play.html#s=input">待输入 · 沙盘<span class="s">input</span></div>
+        <div class="item" data-src="play.html#s=input&baybar=show">└ bay 常驻唤出<span class="s">baybar=show</span></div>
+        <div class="item" data-src="play.html#s=input&bay=nav">└ 导航浮窗<span class="s">bay=nav</span></div>
+        <div class="item" data-src="play.html#s=input&bay=session">└ Session 浮窗<span class="s">bay=session</span></div>
+        <div class="item" data-src="play.html#s=input&bay=chara">└ 人物卡·数据浏览<span class="s">bay=chara</span></div>
+<div class="item" data-src="play.html#s=input&bay=plotline">└ 剧情线·数据浏览<span class="s">bay=plotline</span></div>
+<div class="item" data-src="play.html#s=input&bay=world">└ 世界书·数据浏览<span class="s">bay=world</span></div>
+<div class="item" data-src="play.html#s=input&bay=forms">└ 其他表单·数据浏览<span class="s">bay=forms</span></div>
+<div class="item" data-src="play.html#s=input&bay=archive">└ 归档·找回<span class="s">bay=archive</span></div>
+        <div class="item" data-src="play.html#s=input&bay=config">└ 配置·防剧透浮窗<span class="s">bay=config</span></div>
+        <div class="item" data-src="play.html#s=input&layout=mobile">└ 移动端布局<span class="s">mobile</span></div>
         <div class="item" data-src="play.html#s=generating">生成中<span class="s">generating</span></div>
-        <div class="item" data-src="play.html#s=roll">待掷（明骰）<span class="s">roll</span></div>
-        <div class="item" data-src="play.html#s=choices">待选<span class="s">choices</span></div>
+        <div class="item" data-src="play.html#s=roll">待掷（明骰·内联 stream）<span class="s">roll</span></div>
+        <div class="item" data-src="play.html#s=choices">待选（浮在输入框上）<span class="s">choices</span></div>
         <div class="item" data-src="play.html#s=error">错误<span class="s">error</span></div>
-        <div class="item" data-src="play.html#s=end">终局<span class="s">end</span></div>
+        <div class="item" data-src="play.html#s=end">终局 · 复盘态（不遮罩）<span class="s">end</span></div>
 
         <div class="grp-l">团本制作 <span class="m">B5 · loregm A3</span></div>
         <div class="item" data-src="build.html#v=lore">世界设定<span class="s">lore</span></div>

@@ -4,15 +4,32 @@
 
 | # | 类型 | finding | 归口（暂拟） |
 |---|---|---|---|
-| RT1 | ❌ 真缺口 | 两 kind 均缺显式建会话 `POST /sessions/{kind}`（dicegm 懒建 `/open`、loregm 首访懒建）→ "新会话/选团本/加载存档"入口断裂 | backlog-后端 会话生命周期 |
+| RT1 | ❌ 真缺口 | 两 kind 均缺显式建会话 `POST /sessions/{kind}`（dicegm 懒建 `/open`、loregm 首访懒建）→ "新会话/选团本/加载存档"入口断裂 | [`session-surface-flatten`](../../wiki/设计/05-现状与计划/裁决记录/session-surface-flatten.md) §三 |
 | RT2 | ⚠️ 必真跑 | dicegm `choices` 语义 wiki 自相矛盾（§2注① 绕路 vs §10.1核验 已修） | 待真跑定论 |
-| RT3 | ⚠️ 超前无契约 | `rewind`（会话分支）代码已有、接口页§6 标 v1 未覆盖 → 期望无契约可依 | 补设计契约 or backlog |
+| RT3 | ⚠️ 超前无契约 | `rewind`（会话分支）代码已有、接口页§6 标 v1 未覆盖 → 期望无契约可依 | 已并入 [`debrief-and-branch`](../../wiki/设计/05-现状与计划/裁决记录/debrief-and-branch.md) §二（RT-FE8） |
 | RT4 | ⚠️ 字段 | `SessionSummary.packName` 疑后端未填（团本名分组失效） | 真跑 → backlog |
 | RT5 | ⚠️ 语义债 | `narration_commit.seq` 是否已统一为全局 event seq | WS 验 → backlog |
-| RT6 | ⚠️ 对称缺口 | **loregm 缺会话列表**（对称于 dicegm list）→ 制作页顶栏 bar / 在建团本不可列 | 接口重构定稿 |
-| RT7 | ⚠️ 对称缺口 | **loregm 缺显式 create / get-meta**（对称于 dicegm） | 接口重构定稿 |
-| RT-ns | ⚠️ 架构对称 | `/sessions`(dicegm) vs `/lore-sessions`(loregm) **命名不对称**；理想 `/sessions/{kind}`；内部 `Session`/`TurnResult` 已统一，仅 HTTP 表皮分裂（破坏性改名，冒泡待裁决） | backlog-后端 / 主题A′ HTTP 面 |
-| RT8 | ⚠️ 能力缺口/增强 | 配置侧额外 MCP 工具（含**搜索**）未接入 GM/loregm 运行时（`FE-mcp-config` v1-deferred） | backlog-前端 FE-mcp-config / 增强 |
+| RT6 | ⚠️ 对称缺口 | **loregm 缺会话列表**（对称于 dicegm list）→ 制作页 bay session / 在建团本不可列 | [`session-surface-flatten`](../../wiki/设计/05-现状与计划/裁决记录/session-surface-flatten.md) §四 |
+| RT7 | ⚠️ 对称缺口 | **loregm 缺显式 create / get-meta**（对称于 dicegm） | [`session-surface-flatten`](../../wiki/设计/05-现状与计划/裁决记录/session-surface-flatten.md) §五 |
+| RT-ns | ⚠️ 架构对称 | `/sessions`(dicegm) vs `/lore-sessions`(loregm) **命名不对称**；理想 `/sessions/{kind}`；内部 `Session`/`TurnResult` 已统一，仅 HTTP 表皮分裂（破坏性改名，冒泡待裁决） | [`session-surface-flatten`](../../wiki/设计/05-现状与计划/裁决记录/session-surface-flatten.md) §二 |
+| RT8 | ⚠️ 能力缺口/增强 | 配置侧额外 MCP 工具（含**搜索**）未接入 GM/loregm 运行时（`FE-mcp-config` v1-deferred） | [`custom-mcp-install`](../../wiki/设计/05-现状与计划/裁决记录/custom-mcp-install.md) |
 | RT9 | ⚠️ 字段 | 跑团页 `Session` 抽屉 / 制作页 session bar 都需 {最近活动日期, 所属团本, **最新回复内容**}；`SessionSummary` 是否含"最新回复"待验（疑缺） | 真跑 → backlog |
 | RT-B3 | ⚠️ 必验 | WS `game_end` 曾从不发（映射漏），核验标已修 → 必真跑验终局画面确能触发 | 真跑 → backlog |
-| RT-FE1 | ⚠️ 设计漂移 | 当前 React `PlayPage` 仍偏「工作区/工具面板」IA；与本轮 acceptance-loop 收束出的 A2「桌面沙盘 + dock&bay + sheet 模板卡」不一致，易造成可玩性与认知负担问题 | backlog-前端 A2 信息架构 |
+| RT-FE1 | ⚠️ 设计漂移 | acceptance-loop html 原型 `play.html` 已重做为 A2「桌面沙盘 + dock&bay」IA；本轮再细化：**明骰内联 stream**（区间分档 narrate + 居中按钮 + 投出后简化结果，删掷骰弹窗）/ **暗骰 mech** 只说进行了判定、不显结果/DC、防剧透分级 / **choices 浮在输入框上方**（toggle 选中·send 提交·无 own）/ **终局=复盘态不遮罩**（续玩层继续·可问 GM/分支回档）/ 删 rewind-empty（转 kickoff）·archived / none·kickoff 充实 / GM `.reply` 轻量 / **dock-card 改 markdown 模板渲染器**（`dc-meta` 数据选择器默认隐·编辑态显源码 + `dc-body` 渲染 markdown · 三按钮 edit/archive/fold · 去钉选 · 去圆角 · dock 专属滚动条）/ **bay 团数据拆四类数据浏览**（chara/plotline/world/forms · `play-data-entry` 展开 · 非卡模板+钉选）/ **归档找回**（`play-card-archive`→`play-bay-popover-archive`·`play-archive-restore`）；但**仓库 React `PlayPage` 仍偏「工作区/工具面板」IA**，待按原型重构 | backlog-前端 A2 信息架构 |
+| RT-FE2 | ⚠️ 呈现契约部分决 | dock-card 定性已决=**前端呈现层 markdown 模板渲染器**（`dc-meta`=数据选择器 `select…where`+模板源码 `${}` · 默认隐编辑显；`dc-body`=渲染后 markdown · 数据从 `GET /presentation` 的 `sheets` 注入）；可见性硬底线=强制隐藏标记 + 防剧透额外层；DIY=**纯前端换皮不落库不查询**。**仍待 derive**：①模板 canonical 语法 ②dial/bar/Front 可视化组件 vs 纯 markdown 边界 ③作者预设查询走 `tools/*.json`(toolgen) 与玩家 DIY 的边界 | [`dock-card-template`](../../wiki/设计/05-现状与计划/裁决记录/dock-card-template.md) |
+| RT-FE3 | ⚠️ 设计漂移 | acceptance-loop html 原型已全局去顶栏、nav 收进底部 `app-bay`（仿 mac 聚焦出现，可配 focus/always/hidden）、主题收进配置页；本轮：bay 导航**默认跑团页收起/其他页展开**（横排 `nav-tab-*` **图标+短名** + `app-bay-nav-collapse`(«) 收起 / `app-bay-nav`(≡) **点击直接展开**不绕浮窗 + `app-bay-nav-expand`）+ 滚动条墨金配色（stream/dock 各自）；**仓库 React 壳仍顶栏 nav**，待按原型重构（B1 信息架构） | backlog-前端 B1/bay |
+| RT-FE4 | ❌ 投影下发缺口(核实·精确化) | store 后端线**齐全**（`store/narrative/{plotline,foreshadow,front,watcher}` + `store/world/{world,rule,anchor}`），用户没记错；缺口在**投影下发层**：① `buildPresentationModel.statusMenu` 只查 `state` 表 sheet cells、不查 plotline/foreshadow/world 表（`present/model.ts:25-34`）；② `tensionBoard` 视图已实现但自标"接线待办·无运行时消费者"（`present/tensionBoard.ts:16-18`），且只覆盖 front/plotline/foreshadow/watcher 的**未结子集**·面向 GM·不含 world/anchor/rule；③ `buildSnapshot` 未接 tensionBoard（`api/presentation.ts:15-46`）；④ `PresentationSnapshotSchema`/`PresentationChangesSchema` 无 plotline/world 字段与 delta。→ 前端"剧情线/世界书浮窗"走 GET /presentation 或 WS delta 均拿不到 plotline/world。"store 改时 hook 前端"链路对 sheets 有效、对 plotline/world 无 delta | 方向待定（扩 schema 接视图 / 前端另起端点 / 借 sheet cell）→ 裁决 |
+| RT-FE5 | ❌ schema 缺口 | 明骰内联 stream 各档 narrate：`RollBandSchema` 现仅 `{label,min,max}`（`presentation.ts:42`），**缺 per-band narration 文本** → `play-roll-bands` 各档叙事无数据源。补 `RollBand.narration`（或 narrate 走 narration stream 末段） | backlog-后端 呈现快照 / 补 schema |
+| RT-FE6 | ❌ 接口缺口 | 暗骰无消息类型/标记：`PendingRoll.shape` 仅 `outcome\|contest` 无 hidden 维度；§5 WS 10 类无暗骰 → `play-hidden-roll`"只说进行了判定、不显结果/DC"无承载。补暗骰 WS 类型 + `PendingRoll` 暗骰标记 | backlog-后端 WS / 补规约 |
+| RT-FE7 | ⚠️ 架构决策(已定调) | **战后复盘态**：A2 实体机终局→[*]→归档，无复盘态转移；B4 页机有"终局复盘→续玩层"。**定调**：`game_end`→**唯一一次**战后复盘 MCP 调用→会话进复盘态、harness 加载 skill 教 AI 复盘模式（不推进剧情、回答提问）、`messages` 仍接受 | [`debrief-and-branch`](../../wiki/设计/05-现状与计划/裁决记录/debrief-and-branch.md) §一 ✅已批准 |
+| RT-FE8 | ⚠️ 架构决策(已定调) | **rewind/branch 两功能**（RT3 扩展）：现状 `POST /rewind {toSeq?}` 直接覆盖、无契约。**定调**：rewind=覆盖**当前分支**（截断回退）；branch=新建分支=copy 一个新 jsonl；session 内多分支模型 | [`debrief-and-branch`](../../wiki/设计/05-现状与计划/裁决记录/debrief-and-branch.md) §二 ✅已批准 |
+| RT-FE9 | ⚠️ 架构决策(已定调) | 防剧透分级三档（严格/宽松/关闭）：现 `GET /events?visibleOnly=` 布尔。**定调**：前端按 `SheetCell.visible:number` 呈现三档；后端只管硬底线（强制隐藏标记永不下发），**零端点改动** | backlog-前端 呈现层 |
+| RT-FE10 | ⚠️ 架构决策(已定调) | dock-card 玩家 DIY 模板/归档态持久化：规约无接口。**定调**：纯前端 localStorage（DIY 模板+归档态）；作者预设模板走团本包 toolgen `tools/*.json`。**零后端改动**（与 RT-FE2 一致） | backlog-前端 dock-card |
+| RT-FE11 | ❌ 接口缺口 | loregm 缺活跃期 Draft 校验接口：§3 loregm 域无 validate；§4 `POST /catalog/validate` 仅对已提交包 → 制作页"校验报告"Draft 期 error/warn 无端点 | backlog-后端 loregm 域 / 补规约 |
+| RT-FE12 | ❌ 接口缺口 | loregm 域 WS 事件未规约：§5 WS 10 类仅 dicegm → 制作页"构建助手 toolcalls 显示"无事件源 | backlog-后端 loregm WS / 补规约 |
+| RT-FE13 | ⚠️ 字段 | `SessionSummary` 缺 `lastaction`（最新动作）字段：制作页 bay session 需"最新动作"（RT6 列表已定调，此字段为新缺口） | 真跑 → backlog |
+| RT-FE14 | ⚠️ 新需求 | **上下文空间可见**：`class="foot"` 加"当前上下文占用百分比"（已用 token / 模型上下文窗口）。需后端/harness 暴露当前 prompt token 数 + 模型 window size；`GET …/usage` 在建是否含 context 占用待确认 | [`usage-and-context`](../../wiki/设计/05-现状与计划/裁决记录/usage-and-context.md) §二/三 |
+| RT-FE15 | ⚠️ 新需求·机制 | **自动压缩**：上下文超限时是否自动压缩（策略/触发阈值/压缩方式待定）。harness 侧上下文管理机制，需裁决（做不做 + 策略） | [`usage-and-context`](../../wiki/设计/05-现状与计划/裁决记录/usage-and-context.md) §四 |
+| RT-FE16 | ⚠️ 裁决已有·前端未实现 | 每轮结束输出 token 消耗：设计已有裁决 [`co-play`](../../wiki/设计/05-现状与计划/裁决记录/co-play.md)（per-turn 内联）+ [`usage-stream`](../../wiki/设计/05-现状与计划/裁决记录/usage-stream.md)（`turn_ended.usage` 契约），但**前端页面未实现** → 待落地。foot 占用百分比见 RT-FE14 | backlog-前端 待落地 co-play |
+| RT-FE17 | ⚠️ 新需求 | **bay-local session usage**：bay 拆 `bay-global`(五块导航) + `bay-local`(当前板块局部 button)；bay-local 加当前 session 累计 token 消耗。`GET …/usage` 在建（规约§2），确认含 session 累计 + bay-local 数据源 | [`usage-and-context`](../../wiki/设计/05-现状与计划/裁决记录/usage-and-context.md) §五 |
+| RT-FE18 | ⚠️ 新需求·能力 | **stagebar model 切换**：`class="stagebar"` 中间加 model 切换器、随时切。现 model 在配置页设定（规约§6），运行时切换=新能力，需接口 + 会话中途切换语义（影响当前局？） | [`model-switch`](../../wiki/设计/05-现状与计划/裁决记录/model-switch.md) |

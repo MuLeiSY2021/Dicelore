@@ -8,11 +8,13 @@
 <style>
 .ctx{display:flex;align-items:center;gap:10px;padding:9px 16px;background:var(--bg);border-bottom:1px solid var(--line);font-size:12px}
 .ctx .name{font-family:var(--serif);font-size:14px;color:var(--text)}.ctx .badge{font-family:var(--mono);font-size:10px;color:var(--acc-soft);border:1px solid var(--line2);padding:1px 7px;border-radius:10px}.ctx .sp{flex:1}
-.bbody{display:flex;height:410px}
-.main{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--bg)}
+.appshell{height:100vh}
+.sidenav{flex:none;min-height:0}
+.bbody{display:flex;flex:1;min-height:0}
+.main{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--bg)}
 .mtool{display:flex;align-items:center;gap:9px;padding:10px 16px;border-bottom:1px solid var(--line)}.mtool .t{font-family:var(--serif);font-size:15px;color:var(--text)}.mtool .sp{flex:1}
-.mbody{flex:1;overflow:auto;padding:14px 16px;display:flex;flex-direction:column;gap:11px}
-.card{border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:12px 14px}
+.mbody{flex:1;overflow:auto;padding:14px 16px;display:flex;flex-direction:column;gap:11px;min-height:0}
+.card{border:1px solid var(--line);border-radius:2px;background:var(--surface);padding:12px 14px}
 .card .lbl{font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--text3);margin-bottom:5px}
 .npc .nh{display:flex;align-items:center;gap:9px;margin-bottom:9px}.npc .av{width:30px;height:30px;border-radius:6px;background:var(--surface2);display:flex;align-items:center;justify-content:center;color:var(--acc-soft)}.npc .nm{font-family:var(--serif);font-size:15px;color:var(--text)}.npc .tag{font-family:var(--mono);font-size:9.5px;color:var(--text3);border:1px solid var(--line2);padding:1px 6px;border-radius:4px}
 .npc .nb{display:flex;gap:14px}.npc .prose{flex:1;font-size:12.5px;line-height:1.7;color:var(--text2)}.npc .sheet{width:150px;flex:none;border-left:1px solid var(--line);padding-left:12px}
@@ -20,9 +22,9 @@
 .front-steps .s{display:flex;gap:8px;font-family:var(--mono);font-size:11.5px;color:var(--text2);padding:4px 0}.front-steps .s .g{color:var(--acc);min-width:44px}
 .ph2{font-family:var(--serif);font-size:14px;color:var(--text);margin:0 0 6px}
 .mono{font-family:var(--mono);font-size:11.5px;color:var(--text2);line-height:1.7;white-space:pre-wrap}
-.aside{width:298px;background:var(--surface);border-left:1px solid var(--line);display:flex;flex-direction:column}
+.aside{width:298px;flex:none;min-height:0;background:var(--surface);border-left:1px solid var(--line);display:flex;flex-direction:column}
 .as-h{display:flex;align-items:center;gap:8px;padding:11px 13px;border-bottom:1px solid var(--line);font-family:var(--serif);font-weight:600;font-size:13.5px}.as-h [data-lucide]{width:15px;color:var(--acc-soft)}
-.chat{flex:1;overflow:auto;padding:11px;display:flex;flex-direction:column;gap:9px}.msg{font-size:12px;line-height:1.55}
+.chat{flex:1;overflow:auto;padding:11px;display:flex;flex-direction:column;gap:9px;min-height:0}.msg{font-size:12px;line-height:1.55}
 .msg.u{align-self:flex-end;background:var(--surface2);border:1px solid var(--line);border-radius:9px 9px 2px 9px;padding:7px 10px;max-width:84%;color:var(--text)}
 .msg.a{align-self:flex-start;color:var(--text2);max-width:92%}.msg.a .who{display:flex;align-items:center;gap:5px;color:var(--acc-soft);font-size:10px;margin-bottom:3px}.msg.a .who [data-lucide]{width:12px}.msg.a .did{font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:4px}
 .cin{display:flex;gap:7px;padding:10px;border-top:1px solid var(--line)}.cin .box{flex:1;padding:7px 10px;background:var(--bg);border:1px solid var(--line);border-radius:7px;color:var(--text3);font-size:12px}.cin .send{width:32px;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,var(--acc-h),var(--acc));border-radius:7px;color:var(--acc-on)}
@@ -30,27 +32,10 @@
 .chip{font-family:var(--mono);font-size:10px;padding:1px 7px;border-radius:10px;border:1px solid var(--line2)}.chip.ok{color:var(--ok)}.chip.warn{color:var(--warn)}
 .vitem{display:flex;gap:7px;font-size:11px;color:var(--text2);padding:4px 0;line-height:1.45}.vitem [data-lucide]{width:13px;flex:none;margin-top:1px;color:var(--warn)}.vitem .f{font-family:var(--mono);color:var(--text3)}
 .sn .stg{margin-left:auto;width:7px;height:7px;border-radius:50%;background:var(--line2)}.sn .stg.done{background:var(--ok)}.sn .stg.now{background:var(--acc)}
+.sess-row{display:flex;flex-direction:column;gap:3px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;cursor:pointer;margin-bottom:7px}.sess-row.on{border-color:var(--acc)}.sess-row .st{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text)}.sess-row .st [data-lucide]{width:13px}.sess-row .sm{font-family:var(--mono);font-size:9.5px;color:var(--text3)}.sess-row .sr{font-size:11px;color:var(--text2)}
 </style></head>
 <body>
   <div class="shell appshell">
-    <nav class="bar">
-      <span class="brand">Dicelore<span style="color:#d8553f">.</span></span>
-      <nav class="nav">
-        <a href="home.html" data-testid="nav-tab-home"><i data-lucide="home"></i>主页</a>
-        <a href="catalog.html" data-testid="nav-tab-catalog"><i data-lucide="library"></i>团本</a>
-        <a href="play.html" data-testid="nav-tab-play"><i data-lucide="dices"></i>跑团</a>
-        <a class="on" data-testid="nav-tab-build"><i data-lucide="hammer"></i>制作</a>
-        <a href="config.html" data-testid="nav-tab-config"><i data-lucide="settings"></i>配置</a>
-      </nav>
-      <div class="tools"><span class="tool" data-testid="shell-theme"><i data-lucide="moon"></i></span></div>
-    </nav>
-
-    <div class="sessionbar" data-testid="build-sessionbar">
-      <div class="sess on" data-testid="build-session-item"><div class="st"><i data-lucide="book-marked" style="width:13px"></i>黑风寨的钟声</div><div class="sm">草稿 v0.3 · 10 分钟前</div><div class="sr">已补 NPC 3 个</div></div>
-      <div class="sess" data-testid="build-session-item"><div class="st"><i data-lucide="book-marked" style="width:13px"></i>雾港来信</div><div class="sm">草稿 v0.1 · 前天</div><div class="sr">世界观初稿</div></div>
-      <div class="sess new"><i data-lucide="plus"></i></div>
-    </div>
-
     <div class="ctx" data-testid="build-ctxbar">
       <i data-lucide="book-marked" style="width:15px;color:var(--acc-soft)"></i>
       <span class="name">黑风寨的钟声</span><span class="badge">草稿 v0.3</span><span class="sp"></span>
@@ -128,6 +113,43 @@
       </div>
     </div>
   </div>
+
+<!-- 全局 bay（fixed · 仿 mac 聚焦出现） -->
+<div class="bay-wrap"></div>
+<div class="bay" data-testid="app-bay">
+  <span class="bay-tabs" data-testid="app-bay-nav-tabs"><a class="bay-tab" href="home.html" data-testid="nav-tab-home"><i data-lucide="home"></i><span class="bt-n">主页</span></a><a class="bay-tab" href="catalog.html" data-testid="nav-tab-catalog"><i data-lucide="library"></i><span class="bt-n">目录</span></a><a class="bay-tab" href="play.html" data-testid="nav-tab-play"><i data-lucide="dices"></i><span class="bt-n">跑团</span></a><a class="bay-tab" href="build.html" data-testid="nav-tab-build"><i data-lucide="hammer"></i><span class="bt-n">制作</span></a><a class="bay-tab" href="config.html" data-testid="nav-tab-config"><i data-lucide="settings"></i><span class="bt-n">配置</span></a></span><span class="bay-btn bay-nav-collapse" data-testid="app-bay-nav-collapse" title="收起导航"><i data-lucide="chevrons-right"></i></span><span class="bay-btn bay-nav-open" data-bay="nav" data-testid="app-bay-nav"><i data-lucide="menu"></i>导航</span>
+  <span class="bay-sep"></span>
+  <span class="bay-btn" data-bay="session" data-testid="build-bay-btn-session"><i data-lucide="layers"></i>构建会话</span>
+  <a class="bay-btn" href="config.html" data-testid="app-bay-config"><i data-lucide="settings"></i>配置</a>
+</div>
+<div class="popover" id="bay-nav" data-testid="app-bay-popover-nav" hidden>
+  <div class="pop-card">
+    <div class="pop-head"><i data-lucide="menu"></i>导航<span class="sp"></span><span class="x" data-bay-close><i data-lucide="x"></i></span></div>
+    <div class="pop-body">
+      <a class="nav-row" href="home.html" data-testid="nav-row-home"><i data-lucide="home"></i>主页<span class="nr-sp"></span><span class="nr-tag">home</span></a>
+      <a class="nav-row" href="catalog.html" data-testid="nav-row-catalog"><i data-lucide="library"></i>团本目录<span class="nr-sp"></span><span class="nr-tag">catalog</span></a>
+      <a class="nav-row" href="play.html" data-testid="nav-row-play"><i data-lucide="dices"></i>跑团<span class="nr-sp"></span><span class="nr-tag">play</span></a>
+      <a class="nav-row on" data-testid="nav-row-build"><i data-lucide="hammer"></i>团本制作<span class="nr-sp"></span><span class="nr-tag">build</span></a>
+      <a class="nav-row" href="config.html" data-testid="nav-row-config"><i data-lucide="settings"></i>配置<span class="nr-sp"></span><span class="nr-tag">config</span></a>
+      <div class="bay-nav-expand" data-testid="app-bay-nav-expand"><i data-lucide="panel-left-open"></i>展开常驻导航</div>
+      <div class="nav-status" data-testid="shell-runstatus"><span><span class="dot"></span>模型 Opus 4.8</span><span><span class="dot"></span>MCP</span><span><span class="dot w"></span>notify 未配</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- bay popover：构建会话切换（对齐 play 的 bay session 入口） -->
+<div class="popover" id="bay-session" data-testid="build-bay-popover-session" hidden>
+  <div class="pop-card">
+    <div class="pop-head"><i data-lucide="layers"></i>构建会话<span class="sp"></span><span class="x" data-bay-close><i data-lucide="x"></i></span></div>
+    <div class="pop-body">
+      <div class="sess-row on" data-testid="build-session-item"><div class="st"><i data-lucide="book-marked"></i>黑风寨的钟声</div><div class="sm" data-testid="build-session-date">草稿 v0.3 · 10 分钟前</div><div class="sr" data-testid="build-session-lastaction">已补 NPC 3 个</div></div>
+      <div class="sess-row" data-testid="build-session-item"><div class="st"><i data-lucide="book-marked"></i>雾港来信</div><div class="sm" data-testid="build-session-date">草稿 v0.1 · 前天</div><div class="sr" data-testid="build-session-lastaction">世界观初稿</div></div>
+      <div class="nav-row" data-testid="build-session-new" style="justify-content:center;color:var(--text2)"><i data-lucide="plus"></i>新建构建会话</div>
+    </div>
+  </div>
 </div>
 <script src="app.js"></script>
+<script>window.addEventListener('load',()=>{
+  document.querySelectorAll('#bay-session .sess-row').forEach(s=>s.addEventListener('click',()=>{document.querySelectorAll('#bay-session .sess-row').forEach(x=>x.classList.remove('on'));s.classList.add('on');}));
+});</script>
 </body></html>

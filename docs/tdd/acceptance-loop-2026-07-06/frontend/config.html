@@ -31,18 +31,6 @@ select.inp{font-family:var(--sans)}
 </style></head>
 <body data-screen-default="none">
   <div class="shell appshell">
-    <nav class="bar">
-      <span class="brand">Dicelore<span style="color:#d8553f">.</span></span>
-      <nav class="nav">
-        <a href="home.html" data-testid="nav-tab-home"><i data-lucide="home"></i>主页</a>
-        <a href="catalog.html" data-testid="nav-tab-catalog"><i data-lucide="library"></i>团本</a>
-        <a href="play.html" data-testid="nav-tab-play"><i data-lucide="dices"></i>跑团</a>
-        <a href="build.html" data-testid="nav-tab-build"><i data-lucide="hammer"></i>制作</a>
-        <a class="on" data-testid="nav-tab-config"><i data-lucide="settings"></i>配置</a>
-      </nav>
-      <div class="tools"><span class="tool" data-testid="shell-theme"><i data-lucide="moon"></i></span></div>
-    </nav>
-
     <div class="cbody">
       <div class="sidenav">
         <div class="sn-grp">设置</div>
@@ -62,6 +50,7 @@ select.inp{font-family:var(--sans)}
           <div class="mdesc">语言与通用偏好，均本地持久化（localStorage）。</div>
           <div class="field"><div class="fl">界面语言</div><div class="fc"><div class="seg"><span class="on">中文</span><span>English</span></div></div></div>
           <div class="field"><div class="fl">自动继续最近会话<div class="sub">启动即回到上次</div></div><div class="fc"><span class="sw2 on"></span></div></div>
+          <div class="field"><div class="fl">bay 行为<div class="sub">底部入口条 · 仿 mac 聚焦</div></div><div class="fc"><div class="seg" data-testid="config-bay-mode"><span class="on" data-bay-mode="focus">聚焦出现</span><span data-bay-mode="always">常驻</span><span data-bay-mode="hidden">隐藏</span></div></div></div>
           <div class="field" style="border:none"><div class="fl">紧凑模式</div><div class="fc"><span class="sw2"></span></div></div>
         </div>
 
@@ -130,11 +119,43 @@ select.inp{font-family:var(--sans)}
       </div>
     </div>
   </div>
+
+<!-- 全局 bay（fixed · 仿 mac 聚焦出现） -->
+<div class="bay-wrap"></div>
+<div class="bay" data-testid="app-bay">
+  <span class="bay-tabs" data-testid="app-bay-nav-tabs"><a class="bay-tab" href="home.html" data-testid="nav-tab-home"><i data-lucide="home"></i><span class="bt-n">主页</span></a><a class="bay-tab" href="catalog.html" data-testid="nav-tab-catalog"><i data-lucide="library"></i><span class="bt-n">目录</span></a><a class="bay-tab" href="play.html" data-testid="nav-tab-play"><i data-lucide="dices"></i><span class="bt-n">跑团</span></a><a class="bay-tab" href="build.html" data-testid="nav-tab-build"><i data-lucide="hammer"></i><span class="bt-n">制作</span></a><a class="bay-tab" href="config.html" data-testid="nav-tab-config"><i data-lucide="settings"></i><span class="bt-n">配置</span></a></span><span class="bay-btn bay-nav-collapse" data-testid="app-bay-nav-collapse" title="收起导航"><i data-lucide="chevrons-right"></i></span><span class="bay-btn bay-nav-open" data-bay="nav" data-testid="app-bay-nav"><i data-lucide="menu"></i>导航</span>
+</div>
+<div class="popover" id="bay-nav" data-testid="app-bay-popover-nav" hidden>
+  <div class="pop-card">
+    <div class="pop-head"><i data-lucide="menu"></i>导航<span class="sp"></span><span class="x" data-bay-close><i data-lucide="x"></i></span></div>
+    <div class="pop-body">
+      <a class="nav-row" href="home.html" data-testid="nav-row-home"><i data-lucide="home"></i>主页<span class="nr-sp"></span><span class="nr-tag">home</span></a>
+      <a class="nav-row" href="catalog.html" data-testid="nav-row-catalog"><i data-lucide="library"></i>团本目录<span class="nr-sp"></span><span class="nr-tag">catalog</span></a>
+      <a class="nav-row" href="play.html" data-testid="nav-row-play"><i data-lucide="dices"></i>跑团<span class="nr-sp"></span><span class="nr-tag">play</span></a>
+      <a class="nav-row" href="build.html" data-testid="nav-row-build"><i data-lucide="hammer"></i>团本制作<span class="nr-sp"></span><span class="nr-tag">build</span></a>
+      <a class="nav-row on" data-testid="nav-row-config"><i data-lucide="settings"></i>配置<span class="nr-sp"></span><span class="nr-tag">config</span></a>
+      <div class="bay-nav-expand" data-testid="app-bay-nav-expand"><i data-lucide="panel-left-open"></i>展开常驻导航</div>
+      <div class="nav-status" data-testid="shell-runstatus"><span><span class="dot"></span>模型 Opus 4.8</span><span><span class="dot"></span>MCP</span><span><span class="dot w"></span>notify 未配</span></div>
+    </div>
+  </div>
 </div>
 <script src="app.js"></script>
 <script>window.addEventListener('load',()=>{
   const b=document.querySelector('[data-view="model"] [data-testid="config-test-btn"]');
   const show=s=>['none','pending','ok','fail'].forEach(k=>{const el=document.querySelector('[data-testid="config-test-'+k+'"]');if(el)el.hidden=k!==s;});
   if(b)b.addEventListener('click',()=>{show('pending');setTimeout(()=>show('ok'),700);});
+  // bay 行为：写 localStorage + 即时应用 body class
+  const bm=document.querySelector('[data-testid="config-bay-mode"]');
+  if(bm){
+    const cur=localStorage.getItem('bay-mode')||'focus';
+    bm.querySelectorAll('span').forEach(x=>x.classList.toggle('on',x.getAttribute('data-bay-mode')===cur));
+    bm.querySelectorAll('span').forEach(s=>s.addEventListener('click',()=>{
+      bm.querySelectorAll('span').forEach(x=>x.classList.remove('on'));s.classList.add('on');
+      const m=s.getAttribute('data-bay-mode');localStorage.setItem('bay-mode',m);
+      document.body.classList.remove('bay-always','bay-hidden');
+      if(m==='always')document.body.classList.add('bay-always');
+      if(m==='hidden')document.body.classList.add('bay-hidden');
+    }));
+  }
 });</script>
 </body></html>
