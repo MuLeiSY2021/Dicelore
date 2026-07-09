@@ -1,6 +1,6 @@
 # 裁决：叙事记忆层-谓词扩展（narrate-hook-extension）—— 触发归一 / 链接归一 / 谓词扩 has()
 
-- [ ] 用户已批准本裁决（勾上前视为未裁决，不可进交付波）
+- [x] 用户已批准本裁决（勾上前视为未裁决，不可进交付波）
 
 > 来源：叙事记忆层-谓词扩展 spec（2026-06-22，superpowers 草稿，已删——内容沉 [内层能力库 §3.1/§4.2/§4.6](../../04-子系统设计/内层能力库.md)）。spec 三件套（触发归一 watcher+`source` / 链接归一 `anchor` 边表 / 谓词扩 `has()`）**已全量实现并落 main**（`backend/src/store/narrative/` + `store/world/anchor.ts` + `expr/predicate.ts` + `store/existsMatch.ts` + `expr/evaluate.ts` + `store/evalCtx.ts` + `harness/.../handlers/event.ts`）。
 > **本裁决职责**：把 spec 的三条承重设计**正式确立为权威**（沉 [内层能力库 §3.1/§4.2/§4.6](../../04-子系统设计/内层能力库.md) 已完成），并**取代** [`a-prime-completion`](a-prime-completion.md) §2/§3 提出的相反存储方案（`front_omen` 物理子表 / `anchors_json`+`surface_trigger` 列）。因 spec 已实现，本裁决属「确立权威 + 覆盖冲突提案」性质，非待开发设计——批准后 a-prime §2/§3 标废弃、待 a-prime 整体收口时一并清理。

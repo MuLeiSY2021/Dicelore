@@ -1,6 +1,6 @@
 # 裁决：model-switch —— stagebar 运行时 model 切换（下回合生效）
 
-- [ ] 用户已批准本裁决（勾上前视为未裁决，不可进交付波）
+- [X]  用户已批准本裁决（勾上前视为未裁决，不可进交付波）
 
 > 来源：acceptance-loop 第 1 轮 RT-FE18（`class="stagebar"` 中间加 model 切换器、随时切）。
 > 用户 2026-07-08 定调：「下回合生效」。
@@ -15,11 +15,12 @@
 
 ## 二、接口
 
-| 接口 | `POST /sessions/{kind}/{id}/model` |
-|------|------|
-| 请求 | `{ model: string }` |
-| 响应 | `200 { model, effectiveAt: "next-turn" }` |
-| 语义 | 设置 `pendingModel`；下回合 `drive-turn` 起生效 |
+
+| 接口 | `POST /sessions/{kind}/{id}/model`             |
+| ---- | ---------------------------------------------- |
+| 请求 | `{ model: string }`                            |
+| 响应 | `200 { model, effectiveAt: "next-turn" }`      |
+| 语义 | 设置`pendingModel`；下回合 `drive-turn` 起生效 |
 
 - 【拟·待确认 C1：独立 `POST /model` vs `PATCH /sessions/{kind}/{id} {model}`】推荐独立 `POST /model`（语义清晰、与 `rewind`/`branches` 等元动作端点一致）。
 - `kind` ∈ dicegm|loregm【拟·待确认 C2：loregm 也支持？】推荐是——制作页 stagebar 同样可切。
@@ -46,11 +47,12 @@
 
 ## 待用户确认清单
 
-| # | 项 | 推荐值 | 你的定调 |
-|---|----|--------|----------|
-| C1 | 接口形式 | 独立 `POST /sessions/{kind}/{id}/model` | |
-| C2 | loregm 域是否也支持切 | 是（两 kind 都支持） | |
-| C3 | 切 model 后 cache 失效是否特殊处理 | 不处理（cache 按 model 自然失效） | |
+
+| #  | 项                                 | 推荐值                                 | 你的定调 |
+| -- | ---------------------------------- | -------------------------------------- | -------- |
+| C1 | 接口形式                           | 独立`POST /sessions/{kind}/{id}/model` |          |
+| C2 | loregm 域是否也支持切              | 是（两 kind 都支持）                   |          |
+| C3 | 切 model 后 cache 失效是否特殊处理 | 不处理（cache 按 model 自然失效）      |          |
 
 ---
 

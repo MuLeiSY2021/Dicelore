@@ -1,6 +1,6 @@
 # 裁决：co-play —— 跑团页每轮内联 per-turn token
 
-- [ ] 用户已批准本裁决（勾上前视为未裁决，不可进交付波）
+- [X]  用户已批准本裁决（勾上前视为未裁决，不可进交付波）
 
 > 路线图项：里程碑二 · CO 前端可视化（跑团页部分）。依赖 [usage-stream](usage-stream.md)（turn_ended.usage 契约）先合。
 > 来源：用户 2026-06-30——「per-turn 放在跑团页每一轮里，随 session 走，不单独查询」。
@@ -15,6 +15,7 @@
 interface Round { texts: string[]; usage?: UsageTotals }  // UsageTotals 从 shared 引
 const [rounds, setRounds] = useState<Round[]>([]);
 ```
+
 - `turn_started`：`setRounds(r => [...r, { texts: [] }])`（开新回合）。
 - `narration_commit`：把 `msg.text` 追加进**当前（末尾）回合**的 `texts`。
 - `turn_ended`：把 `msg.usage`（usage-stream 提供，可能 undefined）写进当前回合的 `usage`；`setGenerating(false)`。
@@ -33,11 +34,13 @@ export function estimateCostUsd(u: UsageTotals, model = "default"): number {
   return (u.inputTokens*p.in + u.outputTokens*p.out + u.cacheReadTokens*p.cacheRead + u.cacheCreationTokens*p.cacheWrite) / 1e6;
 }
 ```
+
 （单价默认值是占位，用户/部署可改；估价逻辑零不确定。）
 
 ### 3. PlayPage：每回合块尾内联一行
 
 每个 `Round` 渲染时，在该回合 narration 块**末尾**加一行小字脚注（不打断叙事、墨金弱化色）：
+
 - 有 usage：`⟨{in+out} tok · ≈${estimateCostUsd}⟩`，hover/title 展开四类明细（in/out/cacheRead/cacheWrite）。
 - 无 usage（旧消息/FAKE）：不渲染该行。
 - 文案走 i18n（`play.usage.perTurn` 等键，中/英）。

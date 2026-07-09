@@ -1,6 +1,6 @@
 # 裁决：dock-card-template —— dock-card 模板 canonical 语法 + 可视化边界 + 预设/DIY 边界
 
-- [ ] 用户已批准本裁决（勾上前视为未裁决，不可进交付波）
+- [X]  用户已批准本裁决（勾上前视为未裁决，不可进交付波）
 
 > 来源：acceptance-loop 第 1 轮 RT-FE2（dock-card 呈现契约待 derive）+ RT-FE10（模板/归档态纯前端 localStorage·已定调）。
 > 用户 2026-07-08 定调：「本轮 derive 完整 canonical」。
@@ -24,15 +24,16 @@ limit: <n>                  # 可选·限量
 ```
 
 - `select` 的 entity 来自 `GET /presentation` 的 `sheets[].entity`（对接 RT-FE4；RT-FE4 单独展开后可能扩 plotline/world entity）。
-- 多选择器：可在 dc-meta 声明多个命名选择器（`selects: { alias: {select, where}, ... }`），dc-body 用 `${alias.attr}` 引用。【拟·待确认 C1：v1 单 select vs 多 selects？推荐 v1 单 select，多选 v2】
+- 多选择器（**v2 预留**）：可在 dc-meta 声明多个命名选择器（`selects: { alias: {select, where}, ... }`），dc-body 用 `${alias.attr}` 引用。**C1 定调：v1 只支持单 `select`，多 selects 留 v2。**
 
 ### 1.2 插值语法（dc-body markdown 内）
 
-| 语法 | 语义 |
-|------|------|
-| `${<attr>}` | 当前记录的属性值 |
-| `${#each <select>}}...${{/each}}` | 循环遍历选择器结果 |
-| `${{<expr>}}...${{/if}}` | 条件块（expr 如 `${hp} < 10`）【拟·待确认 C1】 |
+
+| 语法                              | 语义                                       |
+| --------------------------------- | ------------------------------------------ |
+| `${<attr>}`                       | 当前记录的属性值                           |
+| `${#each <select>}}...${{/each}}` | 循环遍历选择器结果                         |
+| `${{<expr>}}...${{/if}}`          | 条件块（expr 如`${hp} < 10`，C1 定调支持） |
 
 - 标量场景（select 命中单条）：`${attr}` 直接取该条属性。
 - 列表场景（select 命中多条）：必须包在 `${#each}...${{/each}}` 内。
@@ -43,26 +44,29 @@ limit: <n>                  # 可选·限量
 
 ## 二、可视化组件边界（dial/bar/Front）
 
-| 组件 | 语法 | 适用 | v1 |
-|------|------|------|----|
-| dial（刻度盘） | `![dial](<attr>)` | 数值 cell（0-100） | ✅ v1 |
-| bar（进度条） | `![bar](<attr>)` | 数值 cell | ✅ v1 |
-| Front（前沿卡） | `![front](<id>)` | front 数据（依赖 RT-FE4 投影） | ⚠️ 依赖 RT-FE4 单独展开 |
+
+| 组件           | 语法              | 适用                           | v1                        |
+| -------------- | ----------------- | ------------------------------ | ------------------------- |
+| dial（刻度盘） | `![dial](<attr>)` | 数值 cell（0-100）             | ✅ v1                     |
+| bar（进度条）  | `![bar](<attr>)`  | 数值 cell                      | ✅ v1                     |
+| Front（阵线）  | `![front](<id>)`  | front 数据（依赖 RT-FE4 投影） | ⚠️ 依赖 RT-FE4 单独展开 |
 
 - 纯文本 cell（描述/状态/笔记）走标准 markdown 插值，无需特殊组件。
-- 【拟·待确认 C2：v1 可视化 = dial/bar，Front 随 RT-FE4？推荐是】
+- **C2 定调**：v1 可视化组件 = dial/bar；Front（`![front](<id>)`）随 RT-FE4，不在 v1。
+- 补充约束（RT-FE4 展开时再定）：Front 全程 `visible=0`（GM 工具，不下发玩家，见 [内层能力库 §4.6.1](../../04-子系统设计/内层能力库.md)），`![front](<id>)` 是否进玩家可见 dock-card、还是仅 GM dock——待 RT-FE4 展开时定。
 
 ## 三、作者预设 vs 玩家 DIY 边界
 
-| | 作者预设模板 | 玩家 DIY 模板 |
-|---|---|---|
-| 来源 | 团本包 toolgen `tools/*.json`（作者制作页定义·commit 进包） | 前端 localStorage |
-| 共享 | 所有玩家共享 | 仅本机 |
-| 权限 | 只读 | 可改 |
-| 数据查询 | 包内任意数据（作者授权） | 仅 `visible=1` 数据（受防剧透约束·对接 RT-FE9）【拟·待确认 C3】 |
+
+|          | 作者预设模板                                                | 玩家 DIY 模板                                            |
+| -------- | ----------------------------------------------------------- | -------------------------------------------------------- |
+| 来源     | 团本包 toolgen`tools/*.json`（作者制作页定义·commit 进包） | 前端 localStorage                                        |
+| 共享     | 所有玩家共享                                                | 仅本机                                                   |
+| 权限     | 只读                                                        | 可改                                                     |
+| 数据查询 | 包内任意数据（作者授权）                                    | 仅`visible=1` 数据（受防剧透约束·对接 RT-FE9，C3 定调） |
 
 - dock-card 编辑态：预设模板「另存为 DIY」才可改（不破坏包内只读）。
-- DIY 查询边界【拟·待确认 C3】：DIY 模板 select 仅返回 `visible=1` 的 cell（对接 RT-FE9 前端按 visible 呈现）；预设模板不受此限（作者授权全量）。推荐是。
+- DIY 查询边界（**C3 定调**）：DIY 模板 select 仅返回 `visible=1` 的 cell（对接 RT-FE9 前端按 visible 呈现）；预设模板不受此限（作者授权全量）。
 
 ## 四、归档态（对接 RT-FE10）
 
@@ -77,13 +81,14 @@ limit: <n>                  # 可选·限量
 
 ---
 
-## 待用户确认清单
+## 定调记录（C1/C2/C3 已确认）
 
-| # | 项 | 推荐值 | 你的定调 |
-|---|----|--------|----------|
-| C1 | v1 单 select vs 多 selects；是否支持条件块 `${{expr}}` | v1 单 select + 支持条件块 | |
-| C2 | v1 可视化组件范围 | dial/bar（Front 随 RT-FE4） | |
-| C3 | DIY 模板查询边界：仅 visible=1 vs 全量 | 仅 visible=1（对接 RT-FE9） | |
+
+| #  | 项                                                    | 推荐值                      | 已定调                    |
+| -- | ----------------------------------------------------- | --------------------------- | ------------------------- |
+| C1 | v1 单 select vs 多 selects；是否支持条件块`${{expr}}` | v1 单 select + 支持条件块   | v1 单 select + 支持条件块 |
+| C2 | v1 可视化组件范围                                     | dial/bar（Front 随 RT-FE4） | 仅 dial/bar               |
+| C3 | DIY 模板查询边界：仅 visible=1 vs 全量                | 仅 visible=1（对接 RT-FE9） | 仅 visible=1              |
 
 ---
 

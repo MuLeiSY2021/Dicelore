@@ -5,6 +5,8 @@
 > 来源：acceptance-loop 第 1 轮 RT-FE14（foot 上下文占用%）+ RT-FE15（自动压缩）+ RT-FE17（bay-local session usage）。
 > 用户 2026-07-08 定调：RT-FE15「复用 cc agent sdk 实现」；RT-FE14/17「扩 GET /usage 含 context+session」。
 > 现状核实：Agent SDK `query()` 的 `result.usage` 已采集四类 token（`harness/src/runtime/agent.ts:16-21` TurnUsage）→ `recordUsage` 落库（`DiceSession.ts:145`）；但 `streamTurn.ts:41` 标「带外计量、不进玩家所见」——未广播前端。`buildQueryOptions`（`gmAssembly.ts:54-67`）未装配 compaction 选项。
+>
+> ⚠️ **前提依赖**：本裁决 §一「history 随回合累积」前提依赖 [gm-session-continuity](gm-session-continuity.md) 裁决——现状每回合开新 SDK session、LLM history **不跨回合累积**（`GmQueryOptions` 无 `resume`、SDK `session_id` 只进日志未存库）。必须先修续接（一个团本一个 SDK session），本裁决的 `contextTokens` 累积 / auto-compact / 自动丢弃老记录才有落点。**交付顺序：gm-session-continuity 先于本裁决进波。**
 
 ---
 
@@ -47,11 +49,11 @@ sessionTotal  = Σ 各轮 (inputTokens + outputTokens + cacheRead + cacheCreatio
 
 ## 四、RT-FE15 自动压缩（复用 Agent SDK · 不自研）
 
-- **复用 Agent SDK 默认 auto-compact**：上下文接近窗口上限时 SDK 自动 summarize 旧回合。dicelore **不自研压缩**。
-- `buildQueryOptions` 透传 auto-compact option【拟·待确认 C1：SDK 0.3.185 的 option 名（`autoCompact`?）+ 默认值（默认开?）—— 实现时查证 0.3.185 API】。
-- config 暴露 `autoCompact` 开关（可选·默认开·透传 SDK）。
-- **降级方案**：若 SDK 0.3.185 无显式 auto-compact option / 默认已开 → 不装配、依赖默认行为；RT-FE15 退化为「仅 foot 提示 + 手动 rewind」。
-- 压缩触发后，`contextTokens` 应下降（旧回合被 summarize）—— foot 占用% 可观测压缩效果。
+> 查证（2026-07-09）：SDK 0.3.185 **有** auto-compact，但配置在 **Settings** 类型（`sdk.d.ts:5985` `autoCompactEnabled` + `5785` `autoCompactWindow`），**不在 query `Options` 类型**。dicelore 当前 `settingSources: []`（不读盘上 settings）→ 走 SDK 默认 auto-compact 行为。主动控制需经 settings 通道，非 `buildQueryOptions` options。
+
+- **主方案**：依赖 SDK 默认 auto-compact（上下文接近窗口上限时 SDK 自动 summarize 旧回合）。dicelore **不自研压缩**。主动开关经 settings 通道透传 `autoCompactEnabled`【拟·待确认 C1：settings 透传方式 + SDK 默认值（默认开?）】。
+- **降级方案**：若 SDK auto-compact（summarize）不适用/不可控 → dicelore 自实现「**自动丢弃老记录**」（滑动窗口：`contextPct` 超阈值时丢弃最早 LLM 回合，保留近期 + canon 辅助重建）。**不退化为手动 rewind**——玩家不应被 token 管理打断（机制最小化·对齐前端设计偏好）。依赖 [gm-session-continuity](gm-session-continuity.md) 续接的 LLM history 才有老回合可丢弃。
+- 压缩/丢弃触发后，`contextTokens` 应下降（旧回合被 summarize 或丢弃）—— foot 占用% 可观测效果。
 
 ## 五、RT-FE17 bay-local session usage
 
@@ -79,7 +81,7 @@ export const CONTEXT_WINDOW: Record<string, number> = {
 
 | # | 项 | 推荐值 | 你的定调 |
 |---|----|--------|----------|
-| C1 | Agent SDK 0.3.185 auto-compact option 名 + 默认行为 | `autoCompact`·默认开·透传 SDK（实现时查证） | |
+| C1 | SDK auto-compact 主动控制方式 + 默认值 | 已查证：`autoCompactEnabled` 是 **Settings** 字段非 query Options；dicelore `settingSources:[]` 走默认。待查：settings 透传方式 + 默认是否开 | |
 | C2 | model windowSize 表位置 | `packages/shared`（与 pricing.ts 并列） | |
 | C3 | foot 占用% 变红阈值 | 80% | 90% |
 

@@ -1,6 +1,6 @@
-# 裁决：session-surface-flatten —— 会话面对称拉平 /sessions/{kind}
+# 裁决：session-surface-flatten —— 会话面对称拉平 /sessions/ {kind}
 
-- [ ] 用户已批准本裁决（勾上前视为未裁决，不可进交付波）
+- [X]  用户已批准本裁决（勾上前视为未裁决，不可进交付波）
 
 > 来源：acceptance-loop 第 1 轮 RT-ns（命名不对称）+ RT1（两侧缺显式建会话）+ RT6（loregm 缺列表）+ RT7（loregm 缺 meta）。四项一组，都是会话面对称问题。
 > 用户 2026-07-08 定调：「本轮拉平 /sessions/{kind}」。
@@ -24,23 +24,25 @@
 
 ## 二、破坏性改名映射
 
-| 现状 | 拉平后 |
-|------|--------|
-| `GET /sessions`（dicegm 列表） | `GET /sessions/dicegm` |
-| `POST /sessions/{id}/open`（dicegm 懒建） | `POST /sessions/dicegm`（显式建·见§三） |
-| `/sessions/{id}`（dicegm meta/删除） | `/sessions/dicegm/{id}` |
-| `/sessions/{id}/{choices,roll,...}`（dicegm 子资源） | `/sessions/dicegm/{id}/{...}` |
-| `/lore-sessions`（loregm 列表·缺） | `GET /sessions/loregm`（补·见§四） |
-| `/lore-sessions/{id}`（loregm meta·缺） | `GET /sessions/loregm/{id}`（补·见§五） |
-| `/lore-sessions/{id}/{materials,draft}` | `/sessions/loregm/{id}/{...}` |
+
+| 现状                                                 | 拉平后                                    |
+| ---------------------------------------------------- | ----------------------------------------- |
+| `GET /sessions`（dicegm 列表）                       | `GET /sessions/dicegm`                    |
+| `POST /sessions/{id}/open`（dicegm 懒建）            | `POST /sessions/dicegm`（显式建·见§三） |
+| `/sessions/{id}`（dicegm meta/删除）                 | `/sessions/dicegm/{id}`                   |
+| `/sessions/{id}/{choices,roll,...}`（dicegm 子资源） | `/sessions/dicegm/{id}/{...}`             |
+| `/lore-sessions`（loregm 列表·缺）                  | `GET /sessions/loregm`（补·见§四）      |
+| `/lore-sessions/{id}`（loregm meta·缺）             | `GET /sessions/loregm/{id}`（补·见§五） |
+| `/lore-sessions/{id}/{materials,draft}`              | `/sessions/loregm/{id}/{...}`             |
 
 ## 三、补显式建会话（RT1）
 
-| 接口 | `POST /sessions/{kind}` |
-|------|------|
+
+| 接口        | `POST /sessions/{kind}`                                               |
+| ----------- | --------------------------------------------------------------------- |
 | dicegm 请求 | `{teamId, version?}`（version 省略=默认最新版→ validatePack 信任闸） |
-| loregm 请求 | `{name?}`（团本工作名） |
-| 响应 | `201 {sessionId, kind}` |
+| loregm 请求 | `{name?}`（团本工作名）                                               |
+| 响应        | `201 {sessionId, kind}`                                               |
 
 - **移除懒建**：dicegm `/open` 懒建、loregm 首访 `/messages`\|`/materials` 懒建 —— 一律改为显式 `POST /sessions/{kind}` 先建会话再操作。【拟·待确认 C2：懒建是否保留为兜底？倾向完全移除，单源。】
 
@@ -78,11 +80,12 @@
 
 ## 待用户确认清单
 
-| # | 项 | 推荐值 | 你的定调 |
-|---|----|--------|----------|
-| C1 | 迁移策略：v1 直接改 / 保留 /lore-sessions 过渡别名 | 直接改·不加别名 | |
-| C2 | 懒建（/open、首访懒建）是否保留为兜底 | 完全移除（单源） | |
-| C3 | SessionSummary 的 lastaction/lastReply/packName 哪些必填 | 全部可空（按 kind 有意义则填） | |
+
+| #  | 项                                                       | 推荐值                         | 你的定调           |
+| -- | -------------------------------------------------------- | ------------------------------ | ------------------ |
+| C1 | 迁移策略：v1 直接改 / 保留 /lore-sessions 过渡别名       | 直接改·不加别名               | 直接改·不加别名   |
+| C2 | 懒建（/open、首访懒建）是否保留为兜底                    | 完全移除（单源）               | 完全移除           |
+| C3 | SessionSummary 的 lastaction/lastReply/packName 哪些必填 | 全部可空（按 kind 有意义则填） | packName可不能空啊 |
 
 ---
 
