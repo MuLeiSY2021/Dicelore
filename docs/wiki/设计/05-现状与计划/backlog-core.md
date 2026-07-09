@@ -89,7 +89,7 @@
 - **用户判断**：**跑团侧 store 方案有必要大改，至少与团本侧设计对齐**。应**先统一术语 + 重新概念化 sheet + store 对齐团本**，再谈主题A 的叙事脚手架（A 建在此之上）。
 - **路由**：把决策写进对应设计页「决策与权衡」节（两侧术语统一表 + store 重构方案），**与团本构建（组件5/6，里程碑一在建）协同设计**，别两侧继续分叉。
 - **落地方向（用户提案）**：给 MCP 加「叙事层」(几张表)、**废弃通用 `sheet`**，改为一组一等 kind/表：`player` / `npc` / `world` / `rule` / `watcher` / `front` / `pool`——每类有自己的表与工具，而非全塞进 `(entity,attr,value)` 通用格，直解「sheet 临时空间误当人物卡」根因。**待商榷**：① 与现四域(sheet/event/world/rule)如何重映射(world/rule/pool/watcher 已有、npc/player/front 需升一等)；② 原 sheet 的「临时空间」真实职责是否单列一类；③ 与团本 import(组件5/6)对齐。
-- **进度（2026-06-24 重评）🚧 地基已完、工具面暴露未做**：方案见 spec [运行时数据层重构-叙事层](../../../superpowers/specs/2026-06-21-运行时数据层重构-叙事层-design.md)（拱心石＝物理表精简 + kind 视图 + 业务工具；非"每概念一张物理表"，relation/flag/clock 是 `state` 的行形态）。
+- **进度（2026-06-24 重评）🚧 地基已完、工具面暴露未做**：方案已沉 wiki：[核心概念 §2 D6](../02-领域模型/核心概念.md) + [内层能力库 §4](../04-子系统设计/内层能力库.md)（拱心石＝物理表精简 + kind 视图 + 业务工具；非"每概念一张物理表"，relation/flag/clock 是 `state` 的行形态）；欠账见 [a-prime-completion](裁决记录/a-prime-completion.md)。
   - ✅ **改名段**已落 `main`：`sheet→state`(+`kind`/`rel_*`/`clock_*` 列)、`event→log`(+`is_moment`)、`world_doc→lore`、fts 随改（见设计页决策节）。
   - ✅ **补充改名** `rule_doc→rule`/`world_pool→pool` 已落。
   - ✅ **叙事/记忆物理表** `front`/`plotline`/`foreshadow`/`history`(+`anchor`) **已建** + store CRUD + `tensionBoard`/`frontOmenList` 聚合（present 层）。
