@@ -12,7 +12,7 @@
 | 第一 | [`frontend/`](frontend/README.md) | 前端原型 html+css（5 页墨金 · home/catalog/play/build/config · `index.html` 逐态预览 · 挂 data-testid）= 可见的共享样例（BDD）· 含 07-09 修复轮 home/catalog/config/build 细节补全 | ✅ 原型已落（无后端接线） |
 | 第二 | [`1-frontend-overview.md`](1-frontend-overview.md) | 前端 overview（据原型回写 · selector 规约）+ 前端数据需求清单 + 收口门 | ✅ 收口（双向核对通过·dock-card 命名分裂已修+31 处漏记已补+2 处多写已标期望·转移映射引 2-tests.md） |
 | 第三 | [`1-backend-interface.md`](1-backend-interface.md) | 后端接口协议（被前端数据需求驱动 · `/sessions/{kind}` 对称面 + 现状偏差红） | 🚧 已同步 07-09 前端设计（usage 扩/model 切换/`turn_ended.usage`/自定义 MCP 登记 RT8 + presentation RT-FE4）·超前项标待批准裁决·偏差待第四步真跑定论 |
-| 第四 | [`2-tests.md`](2-tests.md) | 大型 curl 脚本（遍历实体机每转移）+ playwright（遍历页机每转移）计划 | 🚧 脚手架（`tests/*.sh`/`*.spec.ts` 待写） |
+| 第四 | [`2-tests.md`](2-tests.md) | 大型 curl 脚本（遍历实体机每转移）+ playwright（遍历页机每转移）计划 | ✅ 已写已跑见红：curl PASS=31 FAIL=11 BLOCKED=4（[`transcript`](tests/curl-run-transcript.txt)）+ playwright FAILED=71 PASSED=0（[`transcript`](tests/pw-run-transcript.txt)·15 spec：B1/B2/B3/B6 单 + B4 拆6 + B5 拆5） |
 | — | [`findings.md`](findings.md) | 本轮抓出的偏差（RT1–RT9 + RT-B3 + RT-FE1…20），待真跑定论后归口 backlog | 📋 累积中 |
 | 第五 | — | 开发到 curl 全绿 / playwright 绿（只改代码，重大/不可逆冒泡） | ⬜ 未开始 |
 
@@ -24,7 +24,7 @@
 2. ~~第二·overview 收口~~ ✅ 双向核对通过（html↔overview 229 testid 全覆盖·命名分裂 `dc-*`→`play-card-*` 已修·31 处漏记已补·`play-session-pack`/`play-archive-restore` 多写已标期望·`play-stage` 并入 `play-stage-shell`）。
 3. **第三步收口**：backend-interface 已同步 07-09 前端设计（运行时观测族：`GET /usage` 扩 context+session+perTurn / `POST …/model` / `turn_ended.usage`+loregm 响应内联 usage / build 用量浮窗对称；自定义 MCP 登记 CRUD RT8；presentation RT-FE4 plotline/world 投影缺口·超前项标 ⚠️ 待批准裁决）·待第四步真跑验偏差。
 4. **第四·curl**：据 `1-backend-interface.md` + `2-tests.md` 清单写 `tests/curl-*.sh`（假 GM 遍历），**先跑见红**（RT1/RT6/RT7/RT-ns/RT2 会先红）。
-5. **第四·playwright**：据 `2-tests.md` + `frontend/` 的 data-testid 写 `tests/*.spec.ts`。
+5. **第四·playwright**（✅ 已完成）：据 `2-tests.md` + overview 的 data-testid 写 `tests/pw/*.spec.ts`——**针对真前端 React app（vite 5173）的可执行规约，非静态原型**（原型只是 testid 源/BDD 共享样例）。15 spec（B1/B2/B3/B6 单 + B4 拆6 + B5 拆5 + config/helpers/seed）已跑见红 71/71（[`transcript`](tests/pw-run-transcript.txt)·红全为原型 testid 真前端缺失·无基建错·workers:1 串行避 429）。绿待第五步。
 6. **第五·开发到绿**：红→可逆小修当场改（不改断言）/ 重大不可逆落 backlog + 冒泡。
 
 ## 铁律（防作弊 · 全程）

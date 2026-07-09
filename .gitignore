@@ -19,3 +19,7 @@ dist/
 
 # eval 隔离启动器默认数据根(install.sh 铺;不入库)
 .dicelore-eval/
+
+# 测试运行产物(playwright outputDir 落 log/、临时 test-results)——不入库
+log/
+test-results/

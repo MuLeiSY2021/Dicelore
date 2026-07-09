@@ -41,8 +41,9 @@
 
 - **大型 curl 脚本（bash）**：起隔离后端（`eval-backend-setup`，`DICELORE_FAKE_GM=1`），用假 GM **确定性遍历实体状态机每条转移**；逐端点 `curl` + 断言期望 status + body 形状（引 wiki 形状）。全程落盘、可复现（铁律 5）。
   - 假 GM 走"教练档"（`FakeDiceGm` 的 `CanonScript`：roll/choice/gameEnd/error）驱动 dicegm 五条主线；loregm 侧需脚本化确定性驱动（若缺是本 skill 的新造件）。
-- **playwright**：据落地原型 html+css，驱动**页状态机每条转移**、断言可见状态。
-- 断言从状态机/接口协议来，**先于代码**；首跑见红证明它真在测（铁律 2）。
+- **playwright**：写**针对真前端（React app · vite dev server）的可执行规约**——据原型 + overview 的 `data-testid` + 后端接口/curl 的数据形状，驱动**页状态机每条转移**、断言可见状态。**原型 html+css 不是 playwright 的被测目标**：它是 BDD 共享样例（可见的期望 + testid 源），playwright 跑的是真前端 app。spec 首跑必红（真前端 IA/testid 未对齐原型 = finding），前端按原型重构到 testid 对齐 + 接真数据才绿。
+  - 配置：spec 自带 `playwright.config` 指向真前端 dev server（`reuseExistingServer`）+ 后端代理；**不**用 `file://` 指静态原型。seed 复用 curl track 的 fixture（`POST /catalog/commit` 造团本 → `POST /sessions/{kind}/open` 开局）。
+  - 断言从状态机/接口协议来，**先于代码**；首跑见红证明它真在测（铁律 2）。
 
 ## 第五步 · 开发到绿 + 分诊
 

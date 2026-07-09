@@ -32,7 +32,7 @@ description: 可用性验收循环（TDD+BDD 范例·前端驱动后端）——
 从 wiki 架构意图推导（不锚代码），画两类状态机：**实体状态机**（会话生命周期 + 域机 + catalog）与**页状态机**（各页一台）。这是后面所有原型、接口与测试的来源，先把动态图景定对，接口只是实体机每条转移的触发器、原型只是页机每条态的可见呈现。建模法与 Dicelore 现有模型 → [`references/state-machine-model.md`](references/state-machine-model.md)。**每轮从最新一轮的状态机出发精修、别从零重画**（重画必漂移）。
 
 **第一步 · 前端原型先行（html+css · 可见的共享样例）**
-据页状态机，落**一套 html+css 原型**（可承 wiki 视觉草图），配一个 `frontend/index.html` harness 按 `data-screen`/hash 逐页逐态预览——**开浏览器即看到实际页面长什么样、怎么交互**。这是 BDD 的共享样例：具体的、可见的，先于文字契约对齐所有人脑中行为。原型仍是期望（从页状态机推导，**不锚现有 React 代码**——铁律 1）。目的不是美术定稿，而是给每页**确定的结构 + 稳定 `data-testid` 选择器 + 关键交互**，同时充当后续 playwright 的锚。
+据页状态机，落**一套 html+css 原型**（可承 wiki 视觉草图），配一个 `frontend/index.html` harness 按 `data-screen`/hash 逐页逐态预览——**开浏览器即看到实际页面长什么样、怎么交互**。这是 BDD 的共享样例：具体的、可见的，先于文字契约对齐所有人脑中行为。原型仍是期望（从页状态机推导，**不锚现有 React 代码**——铁律 1）。目的不是美术定稿，而是给每页**确定的结构 + 稳定 `data-testid` 选择器 + 关键交互**，同时充当后续 playwright spec 的 testid/视觉锚——**原型本身不被 playwright 跑**，它是期望（BDD 共享样例），不是被测目标。
 
 **第二步 · 前端 overview（据原型回写）+ 收口门**
 据已落地的原型**回写**前端设计概览：逐页结构/选择器/关键交互——选择器直接从原型 html 抄，不另起炉灶。这一步是「文档化原型」，让原型可被测试引用、可被后端推导。同时**列「前端数据需求清单」**：原型每个动态区域需要后端喂什么数据（如跑团页 dock-card 需 sheet cells、明骰需 per-band narrate、暗骰需 hidden 标记）→ 喂给第三步。
@@ -43,11 +43,11 @@ description: 可用性验收循环（TDD+BDD 范例·前端驱动后端）——
 
 **第四步 · curl 脚本（bash）+ playwright（红）**
 - curl 脚本据接口协议，用假 GM 确定性**遍历实体状态机每条转移**，逐端点断言期望 status + body 形状（引 wiki，不看代码输出）。
-- playwright 据落地原型 html+css，驱动页状态机每条转移、断言可见状态。
+- playwright 写**针对真前端（React app · vite dev server）的可执行规约**：据原型 + overview 的 `data-testid` + 后端接口/curl 的数据形状，驱动**页状态机每条转移**、断言可见状态。**原型 html+css 不是 playwright 的被测目标**——它是 BDD 共享样例（可见的期望 + testid 源），playwright 跑的是真前端 app。spec 首跑必红（真前端 IA/testid 未对齐原型 = finding，如 RT-FE1/RT-FE3），前端按原型重构到 testid 对齐 + 接真数据才绿。
 - 两者**首跑都应见红**（铁律 2）。模式 → [`references/interface-and-tests.md`](references/interface-and-tests.md)。
 
 **第五步 · 开发到测试全绿**
-开发后端使 curl 脚本全绿、前端接真数据使 playwright 绿。只改代码不改断言（铁律 3）。红 = 被测 bug：**可逆小修当场改**；**重大/不可逆**（架构改、破坏性改名、需用户裁决）→ 落 backlog + 冒泡，不自作主张。分诊与归口 → [`references/interface-and-tests.md`](references/interface-and-tests.md)。
+开发后端使 curl 脚本全绿、前端按原型重构到 testid 对齐 + 接真数据使 playwright 绿。只改代码不改断言（铁律 3）。红 = 被测 bug：**可逆小修当场改**；**重大/不可逆**（架构改、破坏性改名、需用户裁决）→ 落 backlog + 冒泡，不自作主张。分诊与归口 → [`references/interface-and-tests.md`](references/interface-and-tests.md)。
 
 > 范例 0706 轮的实际产物顺序即为：状态机 → 前端原型(已落地) → 前端 overview(已落地) → 后端接口规约(已落地) → findings 表。后续轮照此 outside-in 推进。
 
