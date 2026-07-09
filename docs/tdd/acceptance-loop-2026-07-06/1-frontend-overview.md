@@ -1,8 +1,9 @@
-# 第一步 B · 前端设计概览（据页状态机 · playwright 的锚）
+# 第二步 · 前端 overview（据第一步原型回写 · playwright 的锚）
 
-> 属 `acceptance-loop` 第一步（前端 track）。据 [0-state-machines.md](0-state-machines.md) 的 B 页状态机，落**一套 html+css**——目的不是美术定稿，而是给每页**确定的结构 + 稳定选择器 + 关键交互**，作为第二步 playwright 驱动页状态机每条转移的锚。可承 wiki 视觉草图 [`玩家客户端-视觉草图/`](../../wiki/设计/04-子系统设计/玩家客户端-视觉草图/README.md)（home/play/build/config 四页 HTML·墨金）。
+> 属 `acceptance-loop` 第二步（前端 track）。据 [0-state-machines.md](0-state-machines.md) 的 B 页状态机，对已落地的 [`frontend/`](frontend/) 原型**回写**——每页**确定的结构 + 稳定 `data-testid` 选择器 + 关键交互**，作为第四步 playwright 驱动页状态机每条转移的锚。选择器直接从原型 html 抄，不另起炉灶。可承 wiki 视觉草图 [`玩家客户端-视觉草图/`](../../wiki/设计/04-子系统设计/玩家客户端-视觉草图/README.md)（home/play/build/config 四页 HTML·墨金）。
 >
-> **状态：脚手架**。下面是每页的结构/选择器**规约**（期望，来自状态机，先于实现）；`html+css 落地` 与逐页 playwright 由后续填（见 [2-tests.md](2-tests.md)）。
+> 本步同时产出**前端数据需求清单**（每个动态区域需后端喂什么），喂给第三步后端接口协议。**收口门**：原型逐态可预览 + overview 与原型选择器对得上 + 数据需求清单成形，才进第三步。
+> **状态：脚手架**。下面是每页的结构/选择器**规约**（期望，来自状态机，先于实现）；逐页 playwright 由第四步填（见 [2-tests.md](2-tests.md)）。
 
 ## 选择器约定
 
@@ -60,5 +61,5 @@
 
 - [x] `frontend/` 下 5 页 html + 共享 `styles.css`/`app.js`（重构自 wiki 视觉草图），挂全上述 `data-testid`。见 [`frontend/README.md`](frontend/README.md)。
 - [x] 本轮迭代已落地：去顶栏 + bay（导航默认跑团收起/其他展开 · ≡直接展开）、dock-card markdown 模板渲染器（edit/archive/fold · 去钉选）、明骰内联 stream / 暗骰 mech 分级、choices 浮层（toggle·send）、终局=复盘态不遮罩、团数据四类数据浏览、归档找回、滚动条墨金 + flex 滚动修法（play dock / build bbody 各自 calc 视口 + 子项 `flex:none` + 容器 `min-height:0`，卡去纯圆角 `border-radius:2px`）。
-- [ ] 隐藏态（`play-noSession-hint`/`catalog-empty`/`play-input`/`play-postmortem-input`/`config-test-*`/`play-bay-popover-*`）第三步据实际状态切换。
-- [ ] 与状态机每条转移对应的可见状态可断言（供 playwright · 第二步）。
+- [ ] 隐藏态（`play-noSession-hint`/`catalog-empty`/`play-input`/`play-postmortem-input`/`config-test-*`/`play-bay-popover-*`）第五步据实际状态切换。
+- [ ] 与状态机每条转移对应的可见状态可断言（供 playwright · 第四步）。

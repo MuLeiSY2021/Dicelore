@@ -31,8 +31,8 @@
 
 浏览器直接开各 `*.html`（静态、无需服务）；或用 harness `index.html` 按状态/浮窗逐态预览。主题/色板可点。
 
-## 待办（第二/三步）
+## 待办（第四/五步）
 
 - [ ] playwright 据这些 `data-testid` 写页机转移 spec（`../2-tests.md`）。
-- [ ] 第三步：接后端真数据（替换静态占位），使 playwright 绿。
-- [ ] 隐藏态（`play-noSession-hint` / `catalog-empty` / `play-input` / `play-postmortem-input` / `config-test-*` / `play-bay-popover-*`）第三步据实际状态切换。
+- [ ] 第五步：接后端真数据（替换静态占位），使 playwright 绿。
+- [ ] 隐藏态（`play-noSession-hint` / `catalog-empty` / `play-input` / `play-postmortem-input` / `config-test-*` / `play-bay-popover-*`）第五步据实际状态切换。

@@ -1,6 +1,6 @@
-# 第二步 · 测试（大型 curl 脚本 + playwright）
+# 第四步 · 测试（大型 curl 脚本 + playwright）
 
-> 属 `acceptance-loop` 第二步。据 [1-backend-interface.md](1-backend-interface.md)（curl）与 [1-frontend-overview.md](1-frontend-overview.md)（playwright）。**首跑都应见红**（铁律 2）；断言引 wiki 形状、不看代码输出（铁律 1）；假 GM 确定性、全程落盘、可复现（铁律 5）。
+> 属 `acceptance-loop` 第四步。据 [1-backend-interface.md](1-backend-interface.md)（curl）与 [1-frontend-overview.md](1-frontend-overview.md) + [`frontend/`](frontend/)（playwright）。**首跑都应见红**（铁律 2）；断言引 wiki 形状、不看代码输出（铁律 1）；假 GM 确定性、全程落盘、可复现（铁律 5）。
 > **状态：脚手架**——下面是要覆盖的转移清单 + 脚本骨架约定；`tests/curl-*.sh` 与 `tests/*.spec.ts` 待写。
 
 ## curl 脚本（bash · 遍历实体状态机每条转移）

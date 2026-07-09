@@ -1,6 +1,7 @@
-# 第一步 A · 后端接口规约（据状态机 derive · `/sessions/{kind}` 对称面）
+# 第三步 · 后端接口协议（被前端数据需求驱动 · `/sessions/{kind}` 对称面）
 
-> 属 `acceptance-loop` 第一步（后端 track）。**据 [0-state-machines.md](0-state-machines.md) 每条转移 derive**；期望响应形状引 wiki（接口§=玩家客户端-接口.md、构建§=团本构建工具链.md），**不看代码输出**（铁律 1）。推导法 → skill `references/interface-and-tests.md`。
+> 属 `acceptance-loop` 第三步（后端 track · 前端预览收口后补齐）。**据 [0-state-machines.md](0-state-machines.md) 每条转移 + [1-frontend-overview.md](1-frontend-overview.md) 的前端数据需求清单 derive**；期望响应形状引 wiki（接口§=玩家客户端-接口.md、构建§=团本构建工具链.md），**不看代码输出**（铁律 1）。推导法 → skill `references/interface-and-tests.md`。
+> **前端驱动后端**：接口服务于前端已定的数据需求。**架构仲裁**：前端原型冒出的、超出实体机/wiki 的数据需求 = finding（超前/新需求），落 backlog/裁决记录，不自动塞进接口。
 > **理想面对称**：会话是一个实体、按 `kind ∈ {dicegm, loregm}` 参数化——两 kind 共享生命周期骨架，域子资源各异，catalog 独立。内部 `Session`/`TurnResult` 已统一，HTTP 表皮也应对齐。**现状 `/sessions`(dicegm) vs `/lore-sessions`(loregm) 不对称 = 待拉平的红**（RT-ns）。
 > 「现状」列对照真实路由、**非 wiki 状态列**（铁律 4）：✅ 在 / ❌ 缺 / ⚠️ 存疑或超前 / 🔀 存在但路径不对称。
 
