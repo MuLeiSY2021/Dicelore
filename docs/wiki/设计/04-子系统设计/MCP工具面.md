@@ -373,9 +373,9 @@ game_end: { reason: z.string(), outcome?: z.string() } → { ended: true, event_
 
 ### 7.2 声明式生成工具并入工具面（toolgen → 运行时面）
 
-> **本节职责**：记「团本声明 / 标准库声明 编译出的业务工具如何并入本运行时工具面」的接缝与现状。设计意图见 [声明式工具生成层 spec](../../../superpowers/specs/2026-06-22-声明式工具生成层-design.md)（DT-1~9）、引擎模块见 [团本构建工具链 §7](团本构建工具链.md)；本节只记**工具面侧的并入机制 + 实现现状**（单源不重复 spec）。
+> **本节职责**：记「团本声明 / 标准库声明 编译出的业务工具如何并入本运行时工具面」的接缝与现状。设计意图见 [团本构建工具链 §7](团本构建工具链.md)（DT-1~9，原声明式工具生成层 spec 已沉该节）、引擎模块同节；本节只记**工具面侧的并入机制 + 实现现状**（单源不重复）。
 
-§1–§7.1 的工具是**框架硬编码**的运行时工具面（`mcp/tools.ts` 的 `TOOLS`：resolver/sheet/event/world/io 五族；运行时 mcp 工具面在 `harness/src/dicegm/mcp/**`，toolgen 编译引擎纯件在 `backend/src/toolgen/**`，见后端双路径架构决策节）。spec §9 定「生成工具并入同一工具面」——团本 `tools:` 声明 + 框架标准库声明经 `toolgen.compileTool` 编译后，**与硬编码工具并列注册进同一 `createMcpServer`**，GM 侧无感（同 `dicelore_` 前缀，类别走 MCP annotation `source:"generated"`，[spec §6](../../../superpowers/specs/2026-06-22-声明式工具生成层-design.md)）。
+§1–§7.1 的工具是**框架硬编码**的运行时工具面（`mcp/tools.ts` 的 `TOOLS`：resolver/sheet/event/world/io 五族；运行时 mcp 工具面在 `harness/src/dicegm/mcp/**`，toolgen 编译引擎纯件在 `backend/src/toolgen/**`，见后端双路径架构决策节）。[团本构建工具链 §7](团本构建工具链.md) 定「生成工具并入同一工具面」——团本 `tools:` 声明 + 框架标准库声明经 `toolgen.compileTool` 编译后，**与硬编码工具并列注册进同一 `createMcpServer`**，GM 侧无感（同 `dicelore_` 前缀，类别走 MCP annotation `source:"generated"`）。
 
 **接缝三处**（实现落点）：
 
@@ -383,9 +383,9 @@ game_end: { reason: z.string(), outcome?: z.string() } → { ended: true, event_
 |---|---|---|
 | **编译产物 → ToolDef 适配** | toolgen 与 `mcp/` 之间（新建适配层） | `compileTool` 出 `{name, desc, handler(db,args)}`，须配 `decl.params`（`{p:"string"\|"int"\|"number"}`）生成 zod `inputSchema`、补 `outputSchema`/`annotations`（`source:"generated"`），适配成 [§7 工具清单](#7-内层原子--外层工具映射--工具清单) 的 `ToolDef` 形状 |
 | **注册接缝** | `createMcpServer(db, deps)`（见下「in-process 工厂」节） | 接受额外的生成工具集（标准库 + 团本声明），与 `TOOLS` 并列 `registerTool`——这是 spec §9「挂载点已存在、不为它改结构」的兑现点 |
-| **import 装载** | `backend/src/catalog/import.ts` + manifest `tools:` 段 | import 时读团本 `tools:`/`include:`、经**共享 validator**（[spec §7 双校验](../../../superpowers/specs/2026-06-22-声明式工具生成层-design.md)）重验、`compileTool`，交给会话级 MCP server |
+| **import 装载** | `backend/src/catalog/import.ts` + manifest `tools:` 段 | import 时读团本 `tools:`/`include:`、经**共享 validator**（[团本构建工具链 §7 双校验](团本构建工具链.md)）重验、`compileTool`，交给会话级 MCP server |
 
-**实现现状（2026-06-25 核对）✅ 框架标准库已接 / 🚧 团本侧待接**：接缝①②已落地——`backend/src/toolgen/toToolDef.ts` `toolgenToToolDef(decl)` 适配 `compileTool` 产物为 `ToolDef`（zod schema、出参包 `{result}`、读 `readOnlyHint=true`）；`createMcpServer(db, deps, extraTools?)` 加可选 `extraTools` 入口（DT-9 守约：现有 19 工具零改动），`wrapToolForTest` 同步并入。框架标准库叙事工具（`backend/src/stdlib/narration.ts` 八工具）已能经 `createMcpServer(db, {}, narrationStdlibTools())` 注册、dogfooding 集成测试端到端验证（落库 + 承重墙不破 + 坏声明编译期拒）。接缝③（团本 `tools:` 段 import 装载）🚧 未接——需 manifest schema + 共享 validator（[团本与manifest](团本与manifest.md)），是独立后续。详 [backlog-core 主题A′②③](../05-现状与计划/backlog-core.md)。
+**实现现状（2026-07-09 核对）✅ 框架标准库 + 团本侧均已接**：接缝①②③均落地——`backend/src/toolgen/toToolDef.ts` `toolgenToToolDef(decl)` 适配 `compileTool` 产物为 `ToolDef`（zod schema、出参包 `{result}`、读 `readOnlyHint=true`）；`createMcpServer(db, deps, extraTools?)` 加可选 `extraTools` 入口（DT-9 守约：现有工具零改动），`wrapToolForTest` 同步并入。框架标准库叙事工具（`backend/src/stdlib/narration.ts` 八工具）经 `createMcpServer(db, {}, narrationStdlibTools())` 注册、dogfooding 集成测试端到端验证（落库 + 承重墙不破 + 坏声明编译期拒）。接缝③团本 `tools:` 段 import 装载亦已落（`catalog/import.ts` 回传 toolDefs + `build/pack/validate.ts` Rule 8 复用 `compileTool` 校验，2026-06-26 ✅）。详 [backlog-core 主题A′②③](../05-现状与计划/backlog-core.md)。
 
 ---
 
