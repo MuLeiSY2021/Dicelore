@@ -9,7 +9,7 @@
 .ctx{display:flex;align-items:center;gap:10px;padding:9px 16px;background:var(--bg);border-bottom:1px solid var(--line);font-size:12px}
 .ctx .name{font-family:var(--serif);font-size:14px;color:var(--text)}.ctx .badge{font-family:var(--mono);font-size:10px;color:var(--acc-soft);border:1px solid var(--line2);padding:1px 7px;border-radius:10px}.ctx .sp{flex:1}
 .appshell{height:100vh}
-.sidenav{flex:none;min-height:0}
+.sidenav{flex:none;min-height:0;overflow:auto}
 .bbody{display:flex;flex:1;min-height:0}
 .main{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--bg)}
 .mtool{display:flex;align-items:center;gap:9px;padding:10px 16px;border-bottom:1px solid var(--line)}.mtool .t{font-family:var(--serif);font-size:15px;color:var(--text)}.mtool .sp{flex:1}
@@ -33,6 +33,25 @@
 .vitem{display:flex;gap:7px;font-size:11px;color:var(--text2);padding:4px 0;line-height:1.45}.vitem [data-lucide]{width:13px;flex:none;margin-top:1px;color:var(--warn)}.vitem .f{font-family:var(--mono);color:var(--text3)}
 .sn .stg{margin-left:auto;width:7px;height:7px;border-radius:50%;background:var(--line2)}.sn .stg.done{background:var(--ok)}.sn .stg.now{background:var(--acc)}
 .sess-row{display:flex;flex-direction:column;gap:3px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;cursor:pointer;margin-bottom:7px}.sess-row.on{border-color:var(--acc)}.sess-row .st{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text)}.sess-row .st [data-lucide]{width:13px}.sess-row .sm{font-family:var(--mono);font-size:9.5px;color:var(--text3)}.sess-row .sr{font-size:11px;color:var(--text2)}
+.sess-status{font-family:var(--mono);font-size:9px;padding:1px 6px;border-radius:8px;margin-left:auto;border:1px solid var(--line2)}.sess-status.active{color:var(--ok);border-color:var(--ok)}.sess-status.archived{color:var(--text3)}
+.npc .nh .sp{flex:1}.card-act{color:var(--text3);cursor:pointer;padding:2px}.card-act:hover{color:var(--acc-soft)}.card-act [data-lucide]{width:14px}
+.msg.gen{align-self:flex-start;color:var(--text3);font-size:11.5px;display:flex;align-items:flex-start;gap:7px}.msg.gen .spin{width:13px;height:13px;border:2px solid var(--line2);border-top-color:var(--acc);border-radius:50%;animation:spin 1s linear infinite;flex:none;margin-top:1px}@keyframes spin{to{transform:rotate(360deg)}}
+.msg.gen .gen-body{display:flex;flex-direction:column;gap:5px}
+.msg.gen .gen-tools{display:flex;flex-direction:column;gap:2px;padding-left:2px}
+.msg.gen .gen-tool{font-family:var(--mono);font-size:10px;color:var(--text3)}
+.msg.gen .gen-cancel{align-self:flex-start;font-size:10.5px;padding:4px 9px;color:var(--warn);border-color:var(--warn);margin-top:3px}.msg.gen .gen-cancel:hover{color:var(--err);border-color:var(--err)}
+.msg.err{align-self:flex-start;font-size:11px;color:var(--err);background:rgba(205,91,74,.1);border:1px solid rgba(205,91,74,.3);border-radius:7px;padding:7px 10px;display:flex;gap:7px;align-items:flex-start}.msg.err [data-lucide]{width:13px;flex:none;margin-top:1px}
+.vitem[data-jump]{cursor:pointer;border-radius:5px;padding:4px 6px;margin:0 -6px}.vitem[data-jump]:hover{background:var(--surface2)}.vitem[data-jump] .f{text-decoration:underline dotted}
+.vok{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--ok);padding:6px 0}.vok [data-lucide]{width:14px}
+.mat-drop{border:1px dashed var(--line2);border-radius:8px;padding:16px;text-align:center;color:var(--text3);font-size:11.5px;display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer}.mat-drop:hover{border-color:var(--acc);color:var(--text2)}.mat-drop [data-lucide]{width:18px}
+.mat-list{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+.mat-row{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text2);padding:6px 8px;background:var(--bg);border:1px solid var(--line);border-radius:6px}.mat-row [data-lucide]{width:13px;color:var(--text3)}.mat-row .mn{font-family:var(--mono);color:var(--text)}.mat-row .msp{flex:1}.mat-row .dim{font-family:var(--mono);font-size:10px;color:var(--text3)}.mat-prog{width:60px;height:5px;border-radius:3px;background:var(--dial-empty);overflow:hidden;flex:none}.mat-fill{display:block;height:100%;background:linear-gradient(90deg,var(--ok),var(--acc-soft))}
+.nosession,.exported{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;padding:48px 20px;text-align:center}.nosession .ns-t,.exported .ex-t{font-family:var(--serif);font-size:17px;color:var(--text)}.nosession .ns-sub,.exported .ex-sub{font-size:12px;color:var(--text3)}.ns-btns{display:flex;gap:9px;margin-top:6px}.ns-recent{font-size:11px;color:var(--acc-soft);margin-top:4px;cursor:pointer;text-decoration:underline}
+.sn[data-goto]{cursor:pointer}.sn[data-goto]:hover{color:var(--text)}
+/* 创建表单 modal 复用件 */
+.field{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)}.field .fl{width:90px;flex:none;color:var(--text);font-size:12.5px}.field .fc{flex:1;display:flex;align-items:center;gap:9px}
+.inp{background:var(--bg);border:1px solid var(--line);border-radius:6px;color:var(--text);font-size:12px;padding:7px 10px;font-family:var(--mono)}
+.modal-card.wide{max-width:520px}
 </style></head>
 <body>
   <div class="shell appshell">
@@ -41,7 +60,24 @@
       <span class="name">黑风寨的钟声</span><span class="badge">草稿 v0.3</span><span class="sp"></span>
       <span class="btn" data-testid="build-validate-btn"><i data-lucide="search-check"></i>校验整包</span>
       <span class="btn" data-testid="build-import-btn"><i data-lucide="package-open"></i>导入原著</span>
-      <span class="btn go" data-testid="build-export-btn"><i data-lucide="download"></i>导出团本包</span>
+      <span class="btn" data-testid="build-commit-btn" title="commit 版本到 catalog·会话活跃→归档（A3）"><i data-lucide="git-commit"></i>提交版本到库</span>
+      <span class="btn go" data-testid="build-export-btn" title="导出 Pack 文件包（A4）"><i data-lucide="download"></i>导出团本包</span>
+    </div>
+
+    <!-- 无活动会话整屏态（B5 [*]→无活动会话·期望态·harness #st=none 切） -->
+    <div class="nosession" data-testid="build-noSession-hint" hidden>
+      <i data-lucide="hammer" style="width:28px;color:var(--acc-soft)"></i>
+      <div class="ns-t">还没有构建会话</div>
+      <div class="ns-sub">新建一个构建会话，或从最近会话继续。</div>
+      <div class="ns-btns"><span class="btn go" data-testid="build-session-new-main"><i data-lucide="plus"></i>新建构建会话</span></div>
+      <div class="ns-recent" data-testid="build-none-recent">最近：雾港来信 · 前天（点此恢复）</div>
+    </div>
+    <!-- 已导出/提交态（A3 提交→归档·期望态·harness #st=exported 切） -->
+    <div class="exported" data-testid="build-exported" hidden>
+      <i data-lucide="check-circle-2" style="width:24px;color:var(--ok)"></i>
+      <div class="ex-t">已提交版本到库</div>
+      <div class="ex-sub">黑风寨的钟声 v0.3.0 · commit a1b2c3 · 会话已归档</div>
+      <div class="ns-btns"><span class="btn" data-testid="build-exported-continue">继续编辑此版本</span><span class="btn go" data-testid="build-exported-tocatalog">回库查看</span></div>
     </div>
 
     <div class="bbody">
@@ -57,44 +93,70 @@
         <div class="sn" data-nav="plotline" data-navgroup="c" data-testid="build-nav-plotline"><i data-lucide="git-branch"></i>剧情线<span class="ct">2</span></div>
         <div class="sn" data-nav="foreshadow" data-navgroup="c" data-testid="build-nav-foreshadow"><i data-lucide="sparkles"></i>伏笔<span class="ct">3</span></div>
         <div class="sn" data-nav="anchor" data-navgroup="c" data-testid="build-nav-anchor"><i data-lucide="anchor"></i>锚点<span class="ct">4</span></div>
+        <div class="sn" data-nav="relation" data-navgroup="c" data-testid="build-nav-relation"><i data-lucide="git-graph"></i>关系<span class="ct">3</span></div>
         <div class="sn-grp">收口</div>
         <div class="sn" data-nav="prologue" data-navgroup="c" data-testid="build-nav-prologue"><i data-lucide="scroll"></i>开场白 prologue</div>
         <div class="sn" data-nav="manifest" data-navgroup="c" data-testid="build-nav-manifest"><i data-lucide="file-cog"></i>Manifest</div>
-        <div class="sn-grp">构建进度（guideline）</div>
-        <div class="sn"><i data-lucide="circle-check-big"></i>世界观<span class="stg done"></span></div>
-        <div class="sn"><i data-lucide="circle-dot"></i>人物<span class="stg now"></span></div>
-        <div class="sn"><i data-lucide="circle"></i>机制<span class="stg"></span></div>
+        <div class="sn-grp">素材</div>
+        <div class="sn" data-nav="materials" data-navgroup="c" data-testid="build-nav-materials"><i data-lucide="paperclip"></i>素材包<span class="ct">2</span></div>
+        <div class="sn-grp">构建进度（guideline · 点可跳转）</div>
+        <div class="sn" data-goto="materials" data-testid="build-guideline-source"><i data-lucide="circle-check-big"></i>摸源·清洗<span class="stg done"></span></div>
+        <div class="sn" data-goto="lore" data-testid="build-guideline-world"><i data-lucide="circle-check-big"></i>世界观<span class="stg done"></span></div>
+        <div class="sn" data-goto="npc" data-testid="build-guideline-npc"><i data-lucide="circle-dot"></i>NPC·卡池<span class="stg now"></span></div>
+        <div class="sn" data-goto="rule" data-testid="build-guideline-rule"><i data-lucide="circle"></i>机制·分档<span class="stg"></span></div>
+        <div class="sn" data-goto="manifest" data-testid="build-guideline-manifest"><i data-lucide="circle"></i>manifest 收口<span class="stg"></span></div>
       </div>
 
       <div class="main">
-        <div class="mtool"><span class="t" data-testid="build-editor-title">内容编辑器</span><span class="sp"></span><span class="btn"><i data-lucide="plus"></i>新建</span></div>
+        <div class="mtool"><span class="t" data-testid="build-editor-title">内容编辑器</span><span class="sp"></span><span class="btn" data-testid="build-card-new"><i data-lucide="plus"></i>新建</span></div>
         <div class="mbody" data-testid="build-editor">
           <!-- NPC（默认） -->
           <div data-view="npc" data-viewgroup="c">
-            <div class="card npc"><div class="nh"><span class="av"><i data-lucide="user"></i></span><span class="nm">钟三爷</span><span class="tag">头领</span><span class="tag">有 sheet 卡</span></div>
+            <div class="card npc"><div class="nh"><span class="av"><i data-lucide="user"></i></span><span class="nm">钟三爷</span><span class="tag">头领</span><span class="tag">有 sheet 卡</span><span class="sp"></span><span class="card-act" data-testid="build-card-edit" title="inline 编辑（§2.2 Web 门面用户直改）"><i data-lucide="pencil"></i></span><span class="card-act" data-testid="build-card-del" title="删除"><i data-lucide="trash-2"></i></span></div>
               <div class="nb"><div class="prose"><div class="lbl">人设散文</div>黑风寨当家，使子母钟锤。耳背，逢整点必亲巡钟楼；重义轻财，最恨被人坏了规矩。</div>
                 <div class="sheet"><div class="lbl">sheet 卡</div><div class="crow"><span>HP</span><b>40</b></div><div class="crow"><span>子母钟锤</span><b>+6</b></div><div class="crow" style="border:none"><span>巡逻</span><b>整点</b></div></div></div></div>
           </div>
           <!-- 世界设定 -->
-          <div data-view="lore" data-viewgroup="c" hidden><div class="card"><div class="ph2">黑风寨</div><div class="mono">类型：据点\n地形：依山临崖，东门为正、后窗临崖\n守备：东门两哨 + 钟楼暗哨；子时换岗</div></div></div>
+          <div data-view="lore" data-viewgroup="c" hidden><div class="card"><div class="ph2">黑风寨</div><div class="mono">类型：据点
+地形：依山临崖，东门为正、后窗临崖
+守备：东门两哨 + 钟楼暗哨；子时换岗</div></div></div>
           <!-- 卡池 -->
           <div data-view="pool" data-viewgroup="c" hidden><div class="card"><div class="ph2">机缘（加权池 · 3 条）</div><div class="crow"><span>寨防图残页</span><b>weight 1</b></div><div class="crow"><span>守卫的酒壶</span><b>weight 3</b></div><div class="crow" style="border:none"><span>空手</span><b>weight 5</b></div></div></div>
           <!-- 规则·分档 -->
-          <div data-view="rule" data-viewgroup="c" hidden><div class="card"><div class="ph2">潜行判定（param 分档）</div><div class="mono">expr: d20 + {潜行}\nDC: 隐蔽 10 / 常规 12 / 戒备 15</div></div></div>
+          <div data-view="rule" data-viewgroup="c" hidden><div class="card"><div class="ph2">潜行判定（param 分档）</div><div class="mono">expr: d20 + {潜行}
+DC: 隐蔽 10 / 常规 12 / 戒备 15</div></div></div>
           <!-- 状态 sheets -->
           <div data-view="state" data-viewgroup="c" hidden><div class="card"><div class="ph2">player · 张三</div><div class="crow"><span>HP</span><b>15</b></div><div class="crow"><span>金钱</span><b>77</b></div><div class="crow" style="border:none"><span>潜行</span><b>+4</b></div></div></div>
           <!-- 阵线 Front（凶兆阶梯） -->
           <div data-view="front" data-viewgroup="c" hidden><div class="card"><div class="ph2">阵线：钟楼示警（Clock 0/8）</div><div class="front-steps"><div class="s"><span class="g">阶 2</span>巡夜加倍</div><div class="s"><span class="g">阶 5</span>封锁后山</div><div class="s"><span class="g">阶 8</span>全寨戒严 · 触发追兵</div></div></div></div>
           <!-- 剧情线 -->
-          <div data-view="plotline" data-viewgroup="c" hidden><div class="card"><div class="ph2">剧情线：夺图</div><div class="mono">状态：进行中\n节点：潜入 → 找暗格 → 取图 → 脱身</div></div></div>
+          <div data-view="plotline" data-viewgroup="c" hidden><div class="card"><div class="ph2">剧情线：夺图</div><div class="mono">状态：进行中
+节点：潜入 → 找暗格 → 取图 → 脱身</div></div></div>
           <!-- 伏笔 -->
           <div data-view="foreshadow" data-viewgroup="c" hidden><div class="card"><div class="ph2">伏笔</div><div class="crow"><span>暗格</span><b>未回收</b></div><div class="crow" style="border:none"><span>哑婆的信</span><b>已埋</b></div></div></div>
           <!-- 锚点 -->
           <div data-view="anchor" data-viewgroup="c" hidden><div class="card"><div class="ph2">锚点（entry / 引用锚）</div><div class="mono">#钟楼 · #暗格 · #子时换岗 · #寨防图</div></div></div>
+          <!-- 关系图谱（期望态·relation 属 a-prime §5 待裁决） -->
+          <div data-view="relation" data-viewgroup="c" hidden><div class="card"><div class="ph2">关系图谱（锚点边表）</div><div class="mono">钟三爷 —敌对→ 张三
+钟三爷 —主从→ 哑婆
+#钟楼 ←触发→ #暗格
+#寨防图 → 藏于 → #暗格</div></div></div>
           <!-- 开场白 -->
           <div data-view="prologue" data-viewgroup="c" hidden><div class="card"><div class="ph2">prologue.md（校验必填）</div><div class="mono">夜色如墨，黑风寨的钟楼在山脊上投下长影。你贴着院墙，听见院内骰盅未歇……</div></div></div>
           <!-- Manifest -->
-          <div data-view="manifest" data-viewgroup="c" hidden><div class="card"><div class="ph2">manifest.toml</div><div class="mono">name = "黑风寨的钟声"\nversion = "0.3.0"\nflows = ["dicelore-flow-投骰裁决"]\nclock = "世界.钟楼示警"\nentry = "钟楼"</div></div></div>
+          <div data-view="manifest" data-viewgroup="c" hidden><div class="card"><div class="ph2">manifest.toml</div><div class="mono">name = "黑风寨的钟声"
+version = "0.3.0"
+flows = ["dicelore-flow-投骰裁决"]
+clock = "世界.钟楼示警"
+entry = "钟楼"</div></div></div>
+          <!-- 素材包（FE-build-upload 里程碑二·期望态·流式上传大源不经 LLM 中继） -->
+          <div data-view="materials" data-viewgroup="c" hidden><div class="card"><div class="ph2">素材包（流式上传·POST /lore-sessions/:id/materials）</div>
+            <div class="mat-drop" data-testid="build-materials-drop"><i data-lucide="upload-cloud"></i>拖拽文件到此 / 点选文件</div>
+            <div class="mat-list" data-testid="build-materials-list">
+              <div class="mat-row"><i data-lucide="file-text"></i><span class="mn">原著.txt</span><span class="msp"></span><span class="mat-prog"><span class="mat-fill" style="width:100%"></span></span><span class="dim">1.2MB·已落盘</span><span class="card-act"><i data-lucide="trash-2"></i></span></div>
+              <div class="mat-row"><i data-lucide="file-text"></i><span class="mn">设定.md</span><span class="msp"></span><span class="mat-prog"><span class="mat-fill" style="width:64%"></span></span><span class="dim">上传中 64%</span><span class="card-act"><i data-lucide="x"></i></span></div>
+            </div>
+          </div></div>
         </div>
       </div>
 
@@ -102,17 +164,36 @@
         <div class="as-h"><i data-lucide="sparkles"></i>构建助手</div>
         <div class="chat" data-testid="build-assistant">
           <div class="msg u">给这个团本加条「钟楼示警」的阵线，8 格钟</div>
-          <div class="msg a"><div class="who"><i data-lucide="sparkles"></i>构建助手</div>已建阵线 Front「钟楼示警」，Clock 0/8，凶兆阶梯阶 2/5/8。<div class="did" data-testid="build-assistant-toolcalls">↳ add_front · set_manifest(clock)</div></div>
+          <div class="msg a"><div class="who"><i data-lucide="sparkles"></i>构建助手</div>已建阵线 Front「钟楼示警」，Clock 0/8，凶兆阶梯阶 2/5/8。<div class="did" data-testid="build-assistant-toolcalls">↳ add_front · set_manifest(clock)</div><div class="turn-usage" data-testid="build-turn-usage" title="model opus-4-8 · in 5100 / out 720 / cacheRead 12400 / cacheWrite 680">⟨<span class="tu-model">opus-4-8</span> · <span class="up">↑5 100</span> <span class="down">↓720</span> tok · ≈$0.038⟩</div></div>
+          <!-- 助手编排中（A3 编排中态·期望态·流式 toolcall + 可中止） -->
+          <div class="msg gen" data-testid="build-generating"><span class="spin"></span><div class="gen-body"><div>助手编排中…</div><div class="gen-tools" data-testid="build-generating-tools"><div class="gen-tool">↳ search_lore · 摸源「钟楼」</div><div class="gen-tool">↳ add_npc · 哑婆</div></div><span class="btn gen-cancel" data-testid="build-generating-cancel"><i data-lucide="square"></i>中止本轮</span></div></div>
+          <!-- loregm turn error（D3 body.error 通道·期望态） -->
+          <div class="msg err" data-testid="build-assistant-error"><i data-lucide="alert-circle"></i><span>上一轮出错：add_front 引用的 clock attr 未声明。点校验报告可定位。</span></div>
         </div>
         <div class="cin"><span class="box">再给它埋两个伏笔…</span><span class="send"><i data-lucide="arrow-up"></i></span></div>
         <div class="valid" data-testid="build-validate-report">
           <div class="vh"><i data-lucide="shield-check" style="width:14px;color:var(--ok)"></i>整包校验<span class="chip ok">0 error</span><span class="chip warn">2 warn</span></div>
-          <div class="vitem"><i data-lucide="alert-triangle"></i><span><span class="f">npc/哑婆.md</span> 缺 sheet 卡</span></div>
-          <div class="vitem"><i data-lucide="alert-triangle"></i><span><span class="f">manifest.clock</span> 引用的 attr 待声明</span></div>
+          <div class="vitem" data-testid="build-validate-item" data-jump="npc" title="点击定位到 npc/哑婆.md"><i data-lucide="alert-triangle"></i><span><span class="f">npc/哑婆.md</span> 缺 sheet 卡</span></div>
+          <div class="vitem" data-testid="build-validate-item" data-jump="manifest" title="点击定位到 manifest.clock"><i data-lucide="alert-triangle"></i><span><span class="f">manifest.clock</span> 引用的 attr 待声明</span></div>
+          <!-- 全绿态（零 error 零 warn·hidden·harness #st=ok 切） -->
+          <div class="vok" data-testid="build-validate-ok" hidden><i data-lucide="check-circle-2"></i>整包通过校验·可提交</div>
         </div>
       </div>
     </div>
   </div>
+
+<!-- 新建构建会话表单（A3 无→活跃·建团本需元数据） -->
+<div class="modal" id="buildNewModal" data-testid="build-new-modal" hidden>
+  <div class="modal-card wide">
+    <h3>新建构建会话</h3>
+    <p class="msub">填团本元数据，助手会据此起步编排（也可后补）。</p>
+    <div class="field"><div class="fl">团本名</div><div class="fc"><input class="inp" data-testid="build-new-name" placeholder="黑风寨的钟声" style="flex:1"></div></div>
+    <div class="field"><div class="fl">flows</div><div class="fc"><input class="inp" data-testid="build-new-flows" placeholder="dicelore-flow-投骰裁决" style="flex:1"></div></div>
+    <div class="field"><div class="fl">clock</div><div class="fc"><input class="inp" data-testid="build-new-clock" placeholder="世界.钟楼示警" style="flex:1"></div></div>
+    <div class="field" style="border:none"><div class="fl">entry</div><div class="fc"><input class="inp" data-testid="build-new-entry" placeholder="钟楼" style="flex:1"></div></div>
+    <div class="modal-foot"><span class="btn" data-modal-close>取消</span><span class="btn go" data-testid="build-new-confirm"><i data-lucide="check"></i>创建</span></div>
+  </div>
+</div>
 
 <!-- 全局 bay（fixed · 仿 mac 聚焦出现） -->
 <div class="bay-wrap"></div>
@@ -120,6 +201,7 @@
   <span class="bay-tabs" data-testid="app-bay-nav-tabs"><a class="bay-tab" href="home.html" data-testid="nav-tab-home"><i data-lucide="home"></i><span class="bt-n">主页</span></a><a class="bay-tab" href="catalog.html" data-testid="nav-tab-catalog"><i data-lucide="library"></i><span class="bt-n">目录</span></a><a class="bay-tab" href="play.html" data-testid="nav-tab-play"><i data-lucide="dices"></i><span class="bt-n">跑团</span></a><a class="bay-tab" href="build.html" data-testid="nav-tab-build"><i data-lucide="hammer"></i><span class="bt-n">制作</span></a><a class="bay-tab" href="config.html" data-testid="nav-tab-config"><i data-lucide="settings"></i><span class="bt-n">配置</span></a></span><span class="bay-btn bay-nav-collapse" data-testid="app-bay-nav-collapse" title="收起导航"><i data-lucide="chevrons-right"></i></span><span class="bay-btn bay-nav-open" data-bay="nav" data-testid="app-bay-nav"><i data-lucide="menu"></i>导航</span>
   <span class="bay-sep"></span>
   <span class="bay-btn" data-bay="session" data-testid="build-bay-btn-session"><i data-lucide="layers"></i>构建会话</span>
+  <span class="bay-btn" data-bay="usage" data-testid="build-bay-btn-usage" title="用量详情：session 累计 / 各 MCP 消耗 / 记忆占用"><i data-lucide="coins"></i>用量</span>
   <a class="bay-btn" href="config.html" data-testid="app-bay-config"><i data-lucide="settings"></i>配置</a>
 </div>
 <div class="popover" id="bay-nav" data-testid="app-bay-popover-nav" hidden>
@@ -142,14 +224,122 @@
   <div class="pop-card">
     <div class="pop-head"><i data-lucide="layers"></i>构建会话<span class="sp"></span><span class="x" data-bay-close><i data-lucide="x"></i></span></div>
     <div class="pop-body">
-      <div class="sess-row on" data-testid="build-session-item"><div class="st"><i data-lucide="book-marked"></i>黑风寨的钟声</div><div class="sm" data-testid="build-session-date">草稿 v0.3 · 10 分钟前</div><div class="sr" data-testid="build-session-lastaction">已补 NPC 3 个</div></div>
-      <div class="sess-row" data-testid="build-session-item"><div class="st"><i data-lucide="book-marked"></i>雾港来信</div><div class="sm" data-testid="build-session-date">草稿 v0.1 · 前天</div><div class="sr" data-testid="build-session-lastaction">世界观初稿</div></div>
+      <div class="sess-row on" data-testid="build-session-item" data-sess><div class="st"><i data-lucide="book-marked"></i>黑风寨的钟声<span class="sess-status active">活跃</span></div><div class="sm" data-testid="build-session-date">草稿 v0.3 · 10 分钟前</div><div class="sr" data-testid="build-session-lastaction">已补 NPC 3 个</div></div>
+      <div class="sess-row" data-testid="build-session-item" data-sess><div class="st"><i data-lucide="book-marked"></i>雾港来信<span class="sess-status archived">已归档</span></div><div class="sm" data-testid="build-session-date">v0.1 · 前天</div><div class="sr" data-testid="build-session-lastaction">世界观初稿</div></div>
       <div class="nav-row" data-testid="build-session-new" style="justify-content:center;color:var(--text2)"><i data-lucide="plus"></i>新建构建会话</div>
+    </div>
+  </div>
+</div>
+
+<!-- bay popover：用量详情（RT-FE14/16/17 · 期望态·依赖未批准裁决 usage-and-context+co-build · 含 MCP/记忆分项超前需求） -->
+<div class="popover" id="bay-usage" data-testid="build-bay-popover-usage" hidden>
+  <div class="pop-card">
+    <div class="pop-head"><i data-lucide="coins"></i>用量详情<span class="sp"></span><span class="x" data-bay-close><i data-lucide="x"></i></span></div>
+    <div class="pop-body usage-detail">
+      <div class="ud-sec"><div class="ud-h">当前构建会话 · opus-4-8</div>
+        <div class="ud-row"><span>累计 token</span><span class="ud-v"><b>8.6k</b> <span class="dim">↑5.1k ↓720 · cache 13.1k</span></span></div>
+        <div class="ud-row"><span>估价</span><span class="ud-v">≈$0.038</span></div>
+        <div class="ud-row"><span>上下文占用</span><span class="ud-v"><span class="ud-dial" data-testid="build-context-dial" title="76k/200k"><svg viewBox="0 0 36 36" class="dial-svg"><circle class="dial-bg" cx="18" cy="18" r="15.9"/><circle class="dial-fg" cx="18" cy="18" r="15.9" style="stroke-dasharray:38 100"/></svg><span class="dial-pct">38%</span></span> <span class="dim">(76k/200k)</span></span></div>
+      </div>
+      <div class="ud-sec"><div class="ud-h">按 MCP 工具消耗</div>
+        <div class="ud-row"><span><i data-lucide="wrench"></i> add_front</span><span class="ud-v">2.1k tok</span></div>
+        <div class="ud-row"><span><i data-lucide="wrench"></i> set_manifest</span><span class="ud-v">1.4k tok</span></div>
+        <div class="ud-row"><span><i data-lucide="wrench"></i> search_lore</span><span class="ud-v">0.9k tok</span></div>
+        <div class="ud-row"><span><i data-lucide="wrench"></i> validate_pack</span><span class="ud-v">0.6k tok</span></div>
+      </div>
+      <div class="ud-sec"><div class="ud-h">记忆占用</div>
+        <div class="ud-row"><span><i data-lucide="book-open"></i> 世界设定</span><span class="ud-v">2.1k tok <span class="dim">· 12 条</span></span></div>
+        <div class="ud-row"><span><i data-lucide="users"></i> NPC/sheet</span><span class="ud-v">1.8k tok <span class="dim">· 5 卡</span></span></div>
+        <div class="ud-row"><span><i data-lucide="git-branch"></i> 剧情/伏笔</span><span class="ud-v">0.8k tok</span></div>
+      </div>
+      <div class="ud-sec"><div class="ud-h">各轮 · per-turn</div>
+        <div class="ud-row"><span class="dim">轮 2 · 刚才</span><span class="ud-v">↑5.1k ↓720 · opus-4-8</span></div>
+        <div class="ud-row"><span class="dim">轮 1</span><span class="ud-v">↑2.4k ↓440 · opus-4-8</span></div>
+      </div>
     </div>
   </div>
 </div>
 <script src="app.js"></script>
 <script>window.addEventListener('load',()=>{
-  document.querySelectorAll('#bay-session .sess-row').forEach(s=>s.addEventListener('click',()=>{document.querySelectorAll('#bay-session .sess-row').forEach(x=>x.classList.remove('on'));s.classList.add('on');}));
+  const st=(location.hash.match(/st=(\w+)/)||[])[1];
+  if(st==='none'){const b=document.querySelector('.bbody');if(b)b.style.display='none';const n=document.querySelector('[data-testid="build-noSession-hint"]');if(n)n.hidden=false;}
+  if(st==='exported'){const e=document.querySelector('[data-testid="build-exported"]');if(e)e.hidden=false;}
+  if(st==='ok'){const r=document.querySelector('[data-testid="build-validate-report"]');if(r){r.querySelector('.vh').innerHTML='<i data-lucide="shield-check" style="width:14px;color:var(--ok)"></i>整包校验<span class="chip ok">0 error</span><span class="chip ok">0 warn</span>';r.querySelectorAll('.vitem').forEach(v=>v.hidden=true);const ok=r.querySelector('[data-testid="build-validate-ok"]');if(ok)ok.hidden=false;if(window.lucide)lucide.createIcons();}}
+});</script>
+<script>window.addEventListener('load',()=>{
+  // guideline 阶段可点跳转（与内容 nav 映射）
+  document.querySelectorAll('[data-goto]').forEach(s=>s.addEventListener('click',()=>{const nav=document.querySelector('[data-nav="'+s.getAttribute('data-goto')+'"]');if(nav)nav.click();toast('跳转到「'+nav.textContent.trim()+'」');}));
+  // inline 编辑：为每个内容卡自动补 edit/del（只读类型也补·§2.2 Web 门面用户直改）
+  const ACTS_NPC='<span class="card-act" data-testid="build-card-edit" title="inline 编辑"><i data-lucide="pencil"></i></span><span class="card-act" data-testid="build-card-del" title="删除"><i data-lucide="trash-2"></i></span>';
+  const ACTS_GEN='<span style="float:right;display:flex;gap:4px"><span class="card-act" data-testid="build-card-edit" title="inline 编辑"><i data-lucide="pencil"></i></span><span class="card-act" data-testid="build-card-del" title="删除"><i data-lucide="trash-2"></i></span></span>';
+  const ensureCardActs=()=>{
+    document.querySelectorAll('[data-view][data-viewgroup="c"] .card').forEach(card=>{
+      if(card.querySelector('[data-testid="build-card-edit"]'))return;
+      if(card.classList.contains('npc')){const sp=card.querySelector('.nh .sp');if(sp)sp.insertAdjacentHTML('beforebegin',ACTS_NPC);}
+      else{const h=card.querySelector('.ph2');if(h)h.insertAdjacentHTML('afterbegin',ACTS_GEN);}
+    });
+    if(window.lucide)lucide.createIcons();
+  };
+  ensureCardActs();
+  document.querySelectorAll('[data-nav][data-navgroup="c"]').forEach(n=>n.addEventListener('click',()=>setTimeout(ensureCardActs,0)));
+  // inline 编辑/删除（事件委托）
+  const editor=document.querySelector('[data-testid="build-editor"]');
+  if(editor)editor.addEventListener('click',e=>{
+    const del=e.target.closest('[data-testid="build-card-del"]'),edit=e.target.closest('[data-testid="build-card-edit"]');
+    if(del){const card=del.closest('.card');if(confirm('删除这条条目？')){card.remove();toast('已删除条目','warn');}return;}
+    if(edit){const card=edit.closest('.card');if(card.querySelector('.inline-form'))return;
+      const target=card.querySelector('.mono')||card.querySelector('.prose');
+      const cur=target?target.textContent:'';
+      card.classList.add('editing');
+      const f=document.createElement('div');f.className='inline-form';
+      f.innerHTML='<textarea rows="4">'+cur+'</textarea><div class="if-row"><span class="btn icancel">取消</span><span class="btn go isave">保存</span></div>';
+      card.appendChild(f);
+      f.querySelector('.icancel').addEventListener('click',()=>{card.classList.remove('editing');f.remove();});
+      f.querySelector('.isave').addEventListener('click',()=>{if(target)target.textContent=f.querySelector('textarea').value;card.classList.remove('editing');f.remove();toast('已保存条目','ok');});
+    }
+  });
+  // mtool「新建」：当前 nav 加新卡（编辑态）
+  const newBtn=document.querySelector('[data-testid="build-card-new"]');
+  if(newBtn)newBtn.addEventListener('click',()=>{
+    const on=document.querySelector('[data-view][data-viewgroup="c"]:not([hidden])');if(!on)return;
+    const card=document.createElement('div');card.className='card editing';
+    card.innerHTML='<div class="ph2">新条目</div><div class="mono"></div>';
+    const f=document.createElement('div');f.className='inline-form';
+    f.innerHTML='<textarea rows="4" placeholder="写点什么…"></textarea><div class="if-row"><span class="btn icancel">取消</span><span class="btn go isave">保存</span></div>';
+    card.appendChild(f);on.appendChild(card);
+    f.querySelector('.icancel').addEventListener('click',()=>card.remove());
+    f.querySelector('.isave').addEventListener('click',()=>{card.querySelector('.mono').textContent=f.querySelector('textarea').value||'（空）';card.classList.remove('editing');f.remove();ensureCardActs();toast('已新建条目','ok');});
+    on.scrollTop=on.scrollHeight;
+  });
+  // 助手编排：中止本轮
+  const cancel=document.querySelector('[data-testid="build-generating-cancel"]');
+  if(cancel)cancel.addEventListener('click',()=>{const g=document.querySelector('[data-testid="build-generating"]');if(g)g.remove();toast('已中止本轮编排','warn');});
+  // commit → exported 过渡（warn 不阻断·仅提示）
+  const commit=document.querySelector('[data-testid="build-commit-btn"]');
+  if(commit)commit.addEventListener('click',()=>{
+    const rep=document.querySelector('[data-testid="build-validate-report"]');const warn=rep&&rep.querySelector('.chip.warn');
+    if(warn&&!confirm('当前有 warn（不阻断），确认提交版本到库？'))return;
+    const ex=document.querySelector('[data-testid="build-exported"]');if(ex)ex.hidden=false;toast('已提交版本·会话已归档','ok');
+  });
+  // exported-continue / tocatalog
+  const ec=document.querySelector('[data-testid="build-exported-continue"]');
+  if(ec)ec.addEventListener('click',()=>{const ex=document.querySelector('[data-testid="build-exported"]');if(ex)ex.hidden=true;toast('继续编辑','ok');});
+  // import-btn → 联动 materials 视图
+  const imp=document.querySelector('[data-testid="build-import-btn"]');
+  if(imp)imp.addEventListener('click',()=>{const nav=document.querySelector('[data-nav="materials"]');if(nav)nav.click();toast('导入原著·已切到素材包视图','ok');});
+  // 无活动会话「最近」可点 → 恢复
+  const nr=document.querySelector('[data-testid="build-none-recent"]');
+  if(nr)nr.addEventListener('click',()=>{const b=document.querySelector('.bbody');if(b)b.style.display='';const n=document.querySelector('[data-testid="build-noSession-hint"]');if(n)n.hidden=true;toast('已恢复会话：雾港来信','ok');});
+  // 新建构建会话 → 创建表单 modal
+  document.querySelectorAll('[data-testid="build-session-new"], [data-testid="build-session-new-main"]').forEach(b=>b.addEventListener('click',()=>{const m=document.getElementById('buildNewModal');if(m)m.hidden=false;}));
+  const newConfirm=document.querySelector('[data-testid="build-new-confirm"]');
+  if(newConfirm)newConfirm.addEventListener('click',()=>{
+    const name=document.querySelector('[data-testid="build-new-name"]').value||'新团本';
+    const m=document.getElementById('buildNewModal');if(m)m.hidden=true;
+    const b=document.querySelector('.bbody');if(b)b.style.display='';
+    const n=document.querySelector('[data-testid="build-noSession-hint"]');if(n)n.hidden=true;
+    const cn=document.querySelector('[data-testid="build-ctxbar"] .name');if(cn)cn.textContent=name;
+    toast('已创建构建会话：'+name,'ok');
+  });
 });</script>
 </body></html>

@@ -4,6 +4,7 @@
 > **前端驱动后端**：接口服务于前端已定的数据需求。**架构仲裁**：前端原型冒出的、超出实体机/wiki 的数据需求 = finding（超前/新需求），落 backlog/裁决记录，不自动塞进接口。
 > **理想面对称**：会话是一个实体、按 `kind ∈ {dicegm, loregm}` 参数化——两 kind 共享生命周期骨架，域子资源各异，catalog 独立。内部 `Session`/`TurnResult` 已统一，HTTP 表皮也应对齐。**现状 `/sessions`(dicegm) vs `/lore-sessions`(loregm) 不对称 = 待拉平的红**（RT-ns）。
 > 「现状」列对照真实路由、**非 wiki 状态列**（铁律 4）：✅ 在 / ❌ 缺 / ⚠️ 存疑或超前 / 🔀 存在但路径不对称。
+> **状态：已同步 07-09 前端设计**——运行时观测/控制族（`GET /usage` 扩 context+session+perTurn / `POST …/model` 运行时切换 / `turn_ended.usage`+loregm 响应内联 usage / build 用量浮窗对称）+ 自定义 MCP 登记 CRUD（RT8）+ presentation 的 RT-FE4 plotline/world 投影缺口已并入；超前项一律标 ⚠️ **待批准裁决**（裁决文件用户未勾·不进接口·红态）。偏差待第四步真跑定论。
 
 ## 1. 会话生命周期（两 kind 对称骨架）
 
@@ -16,7 +17,7 @@
 | （元信息） | `GET /sessions/{kind}/{id}` | — | `{sessionId, kind, status(活跃/空/战后复盘/归档), title, ended}` | dicegm ✅（wiki 标"桩"待验）；loregm ❌ **无 meta** = **RT7**。`status=战后复盘` 见裁决 `debrief-and-branch` §一 |
 | 活跃→无 删除 | `DELETE /sessions/{kind}/{id}` | — | 删库+注销/删工作区 | dicegm ✅；loregm ✅ |
 | 未开场→活跃 开场 | `POST /sessions/{kind}/{id}/start` | — | 幂等·流式开场（dicegm prologue；loregm 首轮/身份开场） | dicegm ✅ kickoff；loregm ⚠️ 是否有对称开场待定 |
-| 活跃→活跃 drive-turn | `POST /sessions/{kind}/{id}/messages` | `{text}` | `202 {turnId, error?}`（loregm error 经 body、状态钉 202） | dicegm ✅；loregm ✅ |
+| 活跃→活跃 drive-turn | `POST /sessions/{kind}/{id}/messages` | `{text}` | `202 {turnId, error?, usage?}`（loregm error 经 body·状态钉 202；**loregm usage 随响应内联**=[usage-stream](../../wiki/设计/05-现状与计划/裁决记录/usage-stream.md) §3·v1 不落库；dicegm usage 经 WS `turn_ended.usage` 非响应） | dicegm ✅；loregm ✅（`usage` 字段=待批准裁决 [usage-stream]） |
 | 活跃→空/活跃 rewind | `POST /sessions/{kind}/{id}/rewind` | `{toSeq?}`（省略/到头=空） | 回退到 seq（**覆盖当前分支**·截断） | dicegm ⚠️ `/rewind` 有但**无契约**=**RT3**；loregm ❓ 未定。rewind vs branch 两功能见裁决 `debrief-and-branch` §二=**RT-FE8**；dry-run 预览前端据 events 本地算 |
 
 > 现状**命名不对称**（dicegm=`/sessions/*`、loregm=`/lore-sessions/*`）= **RT-ns**（破坏性改名，冒泡待裁决）。上表"理想接口"是拉平后的目标面，"现状"列记实际偏差。
@@ -29,14 +30,15 @@
 |---|---|---|---|---|
 | 待选→下一回合 | `POST …/choices {eventId, optionIndex}` | `202 {turnId}` | 接口§2 | ⚠️ 语义矛盾必真跑（绕路 vs 已修）=**RT2** |
 | 明骰/暗骰 | `POST …/roll {eventId}` | `202`；无待掷 `409` | 接口§2 | ✅。`pendingRoll` 期望形状：`{eventId, shape, label, yourSide, dc?, bands:[{label,min,max,**narration**}]}`（per-band narration=**RT-FE5**）；暗骰标记=**RT-FE6**（shape 加 `hidden` 维度或独立 `hidden:true`·只说进行了判定不显结果/DC） |
-| 呈现快照 | `GET …/presentation` | §1 全量快照 | 接口§1/§2 | ✅ |
+| 呈现快照 | `GET …/presentation` | §1 全量快照（**现仅 `sheets` entity→cell**·plotline/world 投影下发缺口=**RT-FE4**·前端暂借 sheet cell 承载） | 接口§1/§2 | ✅(sheets) / ⚠️ plotline+world=待扩 |
 | 重连回填 | `GET …/events?since=&visibleOnly=` | `{events[]}` | 接口§2 | ✅（代码领先，wiki §2 待纠）。防剧透三档=前端按 `SheetCell.visible:number` 呈现严格/宽松/关闭、后端只管硬底线（强制隐藏永不下发）·零端点改动=**RT-FE9** |
 | 源浏览 | `GET …/browse?source=world\|rule\|log&q=` | 命中条目 | 接口§9.4 | ✅ |
 | 分支·新建 | `POST …/branches` | `{fromSeq?,name?}` | `201 {branchId,sessionId,fromSeq,isCurrent:true}`（copy 当前分支 jsonl·新分支成当前） | 构建§6 ❌ 无契约=**RT-FE8**（裁决 `debrief-and-branch` §二） |
 | 分支·列表/切换 | `GET …/branches` / `POST …/branches/{bid}/checkout` | — / `200 {branchId,presentation}` | 列当前+所有分支；checkout 切当前分支+返该分支快照 | ❌ 无契约=**RT-FE8** |
 | 战后复盘 | 复用 `game_end` MCP（调用后转复盘态不归档） | game_end 现有返回 + `status:"debrief"` | 幂等·dicegm 域·GM AI 调用 | ⚠️ 语义变=**RT-FE7**（裁决 `debrief-and-branch` §一·C1=复用 game_end） |
 | WS 流 | `GET …/ws`（先 snapshot 再增量） | 10 类消息（见 §5） | 接口§3+4 | ✅（逐条待验） |
-| 成本 | `GET …/usage` | 只读用量投影 | 里程碑二⬜ | ✅ 在建 |
+| 用量投影 | `GET …/usage` | `{model,contextTokens,contextWindow,contextPct,sessionTotal,perTurn[]}`（context+session+perTurn 扩·RT-FE14/17·[usage-and-context](../../wiki/设计/05-现状与计划/裁决记录/usage-and-context.md) §二） | 里程碑二 | ⚠️ base 聚合 ✅已合 main·context/session/perTurn 扩=**待批准裁决** |
+| 运行时切 model | `POST …/model` | `{model}` → `200 {model, effectiveAt:"next-turn"}`（下回合生效·RT-FE18·[model-switch](../../wiki/设计/05-现状与计划/裁决记录/model-switch.md)） | — | ❌ 无端点=**待批准裁决** |
 
 ## 3. loregm 域子资源（对应 A3 自由编排 / B5 制作页）
 
@@ -49,6 +51,9 @@
 | 搜索（额外 MCP） | 经配置侧登记的额外 MCP | — | 视觉§6 | ❌ 未接运行时=**RT8** |
 | Draft 校验 | `POST …/draft/validate` | `[{level,path,msg}]`（活跃期 Draft·非已提交包） | 构建§6 | ❌ 无=**RT-FE11** |
 | WS 流 | `GET …/ws` | loregm 域 WS 事件（见 §5.2） | 构建§6 | ❌ 未规约=**RT-FE12** |
+| 运行时切 model | `POST …/model` | 同 dicegm（两 kind·[model-switch](../../wiki/设计/05-现状与计划/裁决记录/model-switch.md) C2） | — | ❌ 待批准裁决 |
+
+> **loregm 用量语义**（07-09 前端增量·build 用量浮窗对称 play）：per-turn usage 经 `POST …/messages` 响应内联（[usage-stream](../../wiki/设计/05-现状与计划/裁决记录/usage-stream.md) §3·**v1 不落库**）·**无 `GET …/usage`**；用量详情浮窗的 session 累计 / 上下文占用圆盘（`build-context-dial`）= **超前**（loregm v1 不落库·无聚合源）·待裁决。MCP/记忆分项同 RT-FE19·不进接口。
 
 ## 4. catalog 团本产物库（独立 · 对应 A4 / B3 团本目录页）
 
@@ -73,7 +78,7 @@
 | `roll_staged` | `{pendingRoll}` | 接口§3+4 | ✅ |
 | `roll_committed` | `{eventId,rolls,total,dc?,outcome}` | 接口§3+4 | ✅ |
 | `hidden_roll` | `{eventId,label}`（暗骰·只说进行了判定·不显结果/DC） | 接口§3+4 | ❌ 无=**RT-FE6** |
-| `turn_ended` | `{turnId,seq}` | 接口§3+4 | 待验 |
+| `turn_ended` | `{turnId,seq,usage?}`（usage=本回合四类 token·[usage-stream](../../wiki/设计/05-现状与计划/裁决记录/usage-stream.md) §1·optional 向后兼容·对接 co-play RT-FE16） | 接口§3+4 | ⚠️ `usage` 字段=待批准裁决 |
 | `game_end` | `{reason,outcome}` | 接口§3+4 | ⚠️ 曾从不发，必验=**RT-B3** |
 | `error` | `{code,message}` | 接口§3+4 | 待验 |
 
@@ -96,6 +101,8 @@
 | 服务器真值 | `GET /diagnostics/health` | `{port,fakeGm,model,mcp工具数,notify,sessionsDir,ftsMode}` | 接口§9.4 | ✅ |
 | 模型连接测试 | `POST /diagnostics/model-test` | FAKE 短路 / 真模式探活辨 401/403 | 接口§9.4 | ✅ |
 | 自定义 MCP 测试 | `POST /diagnostics/mcp-test` | SSE 可达 / stdio 命令存在 | 接口§9.4 | ✅ |
+| 自定义 MCP 登记 | `GET/POST/PUT/DELETE /diagnostics/mcp-config[/{instance}]` | 客制 MCP 增删改·收敛 `mcp-config.json` env（[custom-mcp-install](../../wiki/设计/05-现状与计划/裁决记录/custom-mcp-install.md) §四·RT8） | 接口§9.4 | ❌ 未接运行时=**待批准裁决** |
+| MCP 启停 | `PATCH /diagnostics/mcp-config/{instance} {enabled}` | 运行时是否注入工具表（out-of-canon 徽） | — | ❌ 待批准裁决 |
 | key 托管 | `keys` CRUD | POST/GET/GET:id/DELETE | 里程碑二⬜/SEC2 | ✅ 在建 |
 | 缝A 进程内回调 | `onCanonWrite`（v1 默认） | 规范态写→映射 delta/roll_committed | 接口§5.1 | ✅ |
 | 缝A webhook | `POST /internal/notify` | `204` fire-and-forget | 接口§5.2 | ❌ 未来（非 bug） |
@@ -111,17 +118,18 @@
 /sessions/{kind}/{id}/start          开场
 /sessions/{kind}/{id}/messages       drive-turn
 /sessions/{kind}/{id}/rewind         覆盖当前分支（到头=空）
-/sessions/dicegm/{id}/{choices,roll,presentation,events,browse,ws,usage,branches}   dicegm 域子资源
+/sessions/dicegm/{id}/{choices,roll,presentation,events,browse,ws,usage,branches,model}   dicegm 域子资源（model=运行时切换·待裁决）
 /sessions/dicegm/{id}/branches/{bid}/checkout                                       分支切换
 game_end MCP（复用·调用后转复盘态不归档）                                          战后复盘态（RT-FE7）
-/sessions/loregm/{id}/{materials,draft,draft/validate,ws}                           loregm 域子资源（RT-FE11/12）
+/sessions/loregm/{id}/{materials,draft,draft/validate,ws,model}                     loregm 域子资源（RT-FE11/12·model 待裁决）
 /catalog, /catalog/{id}/{files,tag}, /catalog/{commit,validate}             独立产物库
-/diagnostics/{health,model-test,mcp-test}, /keys, /internal/notify          配置/缝A
+/diagnostics/{health,model-test,mcp-test,mcp-config[/{instance}]}, /keys, /internal/notify   配置/缝A（mcp-config=客制 MCP 登记·待裁决）
 ```
 
 现状偏差集中在：
 - **会话命名不对称（RT-ns）+ 两侧缺显式建会话（RT1）+ loregm 缺列表/元信息（RT6/RT7）**——curl 指向"理想面"时先红的点；
 - **前端大改暴露的新缺口**：明骰 per-band narration（RT-FE5）/ 暗骰 WS 类型（RT-FE6）/ 战后复盘态+enter_debrief（RT-FE7）/ branch 子资源（RT-FE8）/ loregm Draft 校验（RT-FE11）/ loregm WS（RT-FE12）/ SessionSummary.lastaction（RT-FE13）；
+- **运行时观测/控制族**（07-09 前端增量·play/build 对称）：用量扩 context+session+perTurn（RT-FE14/17·[usage-and-context](../../wiki/设计/05-现状与计划/裁决记录/usage-and-context.md)）/ `turn_ended.usage`+loregm 响应内联 usage（RT-FE16·[usage-stream](../../wiki/设计/05-现状与计划/裁决记录/usage-stream.md)/[co-play](../../wiki/设计/05-现状与计划/裁决记录/co-play.md)/[co-build](../../wiki/设计/05-现状与计划/裁决记录/co-build.md)）/ 运行时切 model（RT-FE18·[model-switch](../../wiki/设计/05-现状与计划/裁决记录/model-switch.md)）/ 自定义 MCP 登记 CRUD（RT8·[custom-mcp-install](../../wiki/设计/05-现状与计划/裁决记录/custom-mcp-install.md)）；均**待批准裁决**（裁决文件用户未勾）·不自动进接口·红态。用量浮窗 MCP/记忆分项（RT-FE19）= 超前·裁决 `GET /usage` 未含·**不进接口**；
 - **已定调零后端改动项**：防剧透三档前端按 visible 呈现（RT-FE9）/ dock-card 模板+归档态纯前端 localStorage（RT-FE10）；
 - **待真跑定论**：RT2/RT4/RT5/RT-B3/RT9/RT13。
-其中 RT-FE7/RT-FE8 走裁决 `debrief-and-branch`（用户批准后进交付波）；RT-FE9/RT-FE10 落 backlog-前端；RT-FE5/RT-FE6/RT-FE11/RT-FE12/RT-FE13 落 backlog-后端（补 schema/接口）。
+其中 RT-FE7/RT-FE8 走裁决 `debrief-and-branch`（用户批准后进交付波）；RT-FE9/RT-FE10 落 backlog-前端；RT-FE5/RT-FE6/RT-FE11/RT-FE12/RT-FE13 落 backlog-后端（补 schema/接口）；RT-FE14/16/17/18+RT8 走对应裁决（usage-and-context/usage-stream/co-play/co-build/model-switch/custom-mcp-install·用户批准后进交付波）；RT-FE19 落 backlog-后端（超前·待裁决扩 `GET /usage`）。

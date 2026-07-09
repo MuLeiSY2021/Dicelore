@@ -26,6 +26,7 @@
 - **叙事流**：narrate `prose`（serif 无框）≠ GM 正文回复 `.reply`（去边框/小字/淡色）≠ 暗骰 `mech`；玩家气泡 = 轮锚点，edit 有 inline 确认。
 - **build 页对齐 play 滚动机制**：`bbody` 去 fixed `410px`、改 `flex:1;min-height:0` + shell `height:100vh`；sidenav/aside `flex:none` 不被压缩；main/mbody/chat `min-height:0` 让溢出滚动而非压扁子项（同 play dock 修法，见 memory `anko-driver-flex-scroll-fix`）；内容卡 `border-radius:2px` 去纯圆角。
 - **build 会话切换进 bay**（对齐 play）：删顶栏 `sessionbar`，改 bay `build-bay-btn-session`→`build-bay-popover-session` 浮窗列构建会话（`build-session-item`/`-date`/`-lastaction` + `build-session-new`）；顶部只留 `build-ctxbar` 上下文条。
+- **运行时观测/控制族**（期望态·依赖未批准裁决·红态）：stagebar 中段 `play-model-switch`（model 切换·下回合生效·RT-FE18）、foot 下方常驻 `play-context-usage`（上下文占用%·>80% 变红·RT-FE14）、stream 回合块尾 `play-turn-usage` / `build-turn-usage`（per-turn：model+↑上传+↓下载+估价·RT-FE16/co-build）、bay `play-bay-btn-usage`/`build-bay-btn-usage`→`*-bay-popover-usage`（用量详情浮窗：session 累计 / 各 MCP 消耗 / 记忆占用 / 上下文 / per-turn·RT-FE14/16/17）。静态占位，交互/真数据待第五步。
 
 ## 看
 

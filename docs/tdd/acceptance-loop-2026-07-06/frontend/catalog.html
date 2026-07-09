@@ -9,6 +9,11 @@
 .wrap{padding:22px 28px}
 .tbar{display:flex;align-items:center;gap:10px;margin-bottom:16px}
 .tbar h3{font-family:var(--serif);font-weight:600;font-size:18px;margin:0}.tbar .sp{flex:1}
+.tbar .search{display:flex;align-items:center;gap:7px;padding:7px 11px;background:var(--surface);border:1px solid var(--line);border-radius:8px}
+.tbar .search [data-lucide]{width:14px;color:var(--text3)}
+.tbar .search input{background:none;border:none;color:var(--text);font-size:12.5px;outline:none;width:180px}
+.tbar .search input::placeholder{color:var(--text3)}
+.tbar .filter{background:var(--surface);border:1px solid var(--line);border-radius:8px;color:var(--text2);font-size:12px;padding:7px 9px;cursor:pointer}
 .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
 .pack{display:flex;flex-direction:column;gap:9px;padding:15px 16px;background:var(--surface);border:1px solid var(--line);border-radius:10px}
 .pack .ph{display:flex;align-items:center;gap:10px}
@@ -16,40 +21,71 @@
 .pack .nm{font-family:var(--serif);font-size:15.5px;color:var(--text);font-weight:600}
 .pack .vtag{margin-left:auto;font-family:var(--mono);font-size:9.5px;color:var(--text3)}
 .pack .desc{font-size:12px;color:var(--text2);line-height:1.55}
+.metatags{display:flex;flex-wrap:wrap;gap:5px}
+.metatags .tag{font-family:var(--mono);font-size:9.5px;color:var(--acc-soft);border:1px solid var(--line2);padding:1px 7px;border-radius:8px}
+.cast{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px;color:var(--text3)}
+.cast .cast-l{font-family:var(--mono);font-size:10px}
+.cast .chip{font-size:10.5px;color:var(--text2);background:var(--bg);border:1px solid var(--line);padding:1px 7px;border-radius:6px}
+.sess-hint{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;color:var(--acc-soft);background:var(--surface2);border-radius:6px;padding:5px 9px}
+.sess-hint [data-lucide]{width:12px}.sess-hint .sh-sp{flex:1}.sess-hint a{color:var(--acc-soft);text-decoration:underline}
 .pack .foot{display:flex;align-items:center;gap:9px;margin-top:2px}.pack .sp{flex:1}
+.pack .btn[data-testid="catalog-delete-btn"]{padding:7px 9px;color:var(--text3)}.pack .btn[data-testid="catalog-delete-btn"]:hover{color:var(--err)}
 .empty{display:flex;flex-direction:column;align-items:center;gap:12px;padding:60px 20px;color:var(--text2);text-align:center}
 .empty [data-lucide]{width:38px;height:38px;color:var(--text3)}
+.empty .e-btns{display:flex;gap:9px}
 /* 版本选择 modal */
-.vlist{display:flex;flex-direction:column;gap:6px}
-.vopt{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:12.5px}
+.vlist{display:flex;flex-direction:column;gap:7px}
+.vopt{display:flex;flex-direction:column;gap:5px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:12.5px}
 .vopt.on{border-color:var(--acc);background:var(--surface2)}
+.vopt .vrow{display:flex;align-items:center;gap:10px}
 .vopt .vt{font-family:var(--mono);color:var(--text);font-weight:600}
 .vopt .vd{color:var(--text3);font-size:11px;margin-left:auto}
 .vopt .latest{color:var(--acc-soft);font-size:10px;font-family:var(--mono)}
+.vopt .vchangelog{font-size:11px;color:var(--text2);line-height:1.5;padding-left:2px}
+.vopt .vdiff{font-family:var(--mono);font-size:10.5px;color:var(--text3);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 9px;line-height:1.6;white-space:pre-wrap}
+.vopt .vdiff .add{color:var(--ok)}.vopt .vdiff .del{color:var(--err)}
+.modal-card.wide{max-width:560px}
 </style></head>
 <body data-screen-default="list">
   <div class="shell appshell">
     <div class="wrap">
       <div class="tbar">
         <h3>团本目录</h3><span class="sp"></span>
-        <span class="btn" data-testid="catalog-import-btn"><i data-lucide="package-open"></i>导入团本</span>
+        <span class="search"><i data-lucide="search"></i><input data-testid="catalog-search" placeholder="搜团本名 / 题材"></span>
+        <select class="filter" data-testid="catalog-filter"><option value="">全部题材</option><option>武侠</option><option>悬疑</option><option>奇幻</option></select>
+        <span class="btn" data-testid="catalog-import-btn" data-modal-open="impModal"><i data-lucide="package-open"></i>导入团本</span>
+      </div>
+
+      <!-- 加载骨架（B3 第一态·harness #s=loading） -->
+      <div class="grid" data-testid="catalog-loading" data-screen="loading" hidden>
+        <div class="skeleton sk-card"></div><div class="skeleton sk-card"></div>
+        <div class="skeleton sk-card"></div><div class="skeleton sk-card"></div>
       </div>
 
       <!-- 有团本列表 -->
       <div class="grid" data-testid="catalog-list" data-screen="list">
-        <div class="pack" data-testid="catalog-item">
+        <div class="pack" data-testid="catalog-item" data-pack-name="黑风寨的钟声" data-pack-id="heifeng">
           <div class="ph"><span class="av"><i data-lucide="book-marked"></i></span><span class="nm">黑风寨的钟声</span><span class="vtag">3 版本 · head v0.3</span></div>
           <div class="desc">武侠潜入团本。夜入山寨、割钟绳、斗钟三爷。含明骰裁决与倒计时钟。</div>
+          <div class="metatags"><span class="tag">武侠</span><span class="tag">潜入</span><span class="tag">明骰</span></div>
+          <div class="cast"><span class="cast-l">角色：</span><span class="chip">钟三爷</span><span class="chip">哑婆</span><span class="chip">张三</span></div>
+          <div class="sess-hint" data-testid="catalog-item-session"><i data-lucide="history"></i>有存档 · 进度 2/5 · 3 分钟前<span class="sh-sp"></span><a href="play.html">续玩</a></div>
           <div class="foot"><span class="sp"></span>
-            <span class="btn" data-testid="catalog-edit-btn"><i data-lucide="pencil"></i>编辑</span>
+            <span class="btn" data-testid="catalog-delete-btn" title="删除团本"><i data-lucide="trash-2"></i></span>
+            <a class="btn" href="build.html?id=heifeng" data-testid="catalog-edit-btn" title="编辑草稿（默认 head）"><i data-lucide="pencil"></i>编辑</a>
+            <span class="btn" data-testid="catalog-item-version" data-modal-open="verModal"><i data-lucide="git-branch"></i>v0.3</span>
             <span class="btn go" data-testid="catalog-start-btn" data-modal-open="verModal"><i data-lucide="play"></i>开始游戏</span>
           </div>
         </div>
-        <div class="pack" data-testid="catalog-item">
+        <div class="pack" data-testid="catalog-item" data-pack-name="长安十二时辰" data-pack-id="changan">
           <div class="ph"><span class="av"><i data-lucide="book-marked"></i></span><span class="nm">长安十二时辰</span><span class="vtag">1 版本 · head v1.0</span></div>
           <div class="desc">悬疑追查团本。十二时辰限时，多线并进。</div>
+          <div class="metatags"><span class="tag">悬疑</span><span class="tag">限时</span></div>
+          <div class="cast"><span class="cast-l">角色：</span><span class="chip">张小敬</span><span class="chip">李泌</span></div>
           <div class="foot"><span class="sp"></span>
-            <span class="btn" data-testid="catalog-edit-btn"><i data-lucide="pencil"></i>编辑</span>
+            <span class="btn" data-testid="catalog-delete-btn" title="删除团本"><i data-lucide="trash-2"></i></span>
+            <a class="btn" href="build.html?id=changan" data-testid="catalog-edit-btn"><i data-lucide="pencil"></i>编辑</a>
+            <span class="btn" data-testid="catalog-item-version" data-modal-open="verModal"><i data-lucide="git-branch"></i>v1.0</span>
             <span class="btn go" data-testid="catalog-start-btn" data-modal-open="verModal"><i data-lucide="play"></i>开始游戏</span>
           </div>
         </div>
@@ -59,24 +95,60 @@
       <div class="empty" data-testid="catalog-empty" data-screen="empty" hidden>
         <i data-lucide="package-x"></i>
         <div>还没有团本。<b>导入</b>一个团本，或去 <a href="build.html" style="color:var(--acc-soft)">制作</a> 造一个。</div>
-        <span class="btn"><i data-lucide="package-open"></i>导入团本</span>
+        <div class="e-btns">
+          <span class="btn" data-testid="catalog-import-btn-empty" data-modal-open="impModal"><i data-lucide="package-open"></i>导入团本</span>
+          <span class="btn go" data-testid="catalog-sample-btn"><i data-lucide="sparkles"></i>造个示例团本</span>
+        </div>
       </div>
     </div>
   </div>
 
-<!-- 选版本 modal（点开始游戏弹出，默认选最新） -->
+<!-- 选版本 modal（点开始游戏/版本入口弹出，默认选最新；团本名参数化） -->
 <div class="modal" id="verModal" data-testid="catalog-version-modal" hidden>
   <div class="modal-card">
     <h3>开始游戏 · 选版本</h3>
-    <p class="msub">黑风寨的钟声 · 默认使用最新版（head）。选个版本开局。</p>
+    <p class="msub"><span data-testid="catalog-version-packname">黑风寨的钟声</span> · 默认使用最新版（head）。选个版本开局，点版本可展开看差异。</p>
     <div class="vlist" data-testid="catalog-version-list">
-      <div class="vopt on" data-testid="catalog-version-opt"><span class="vt">v0.3</span><span class="latest">最新 · 默认</span><span class="vd">3 分钟前 · commit a1b2c3</span></div>
-      <div class="vopt" data-testid="catalog-version-opt"><span class="vt">v0.2</span><span class="vd">昨天</span></div>
-      <div class="vopt" data-testid="catalog-version-opt"><span class="vt">v0.1</span><span class="vd">上周</span></div>
+      <div class="vopt on" data-testid="catalog-version-opt" data-version="v0.3">
+        <div class="vrow"><span class="vt">v0.3</span><span class="latest">最新 · 默认</span><span class="vd">3 分钟前 · commit a1b2c3</span></div>
+        <div class="vchangelog">+ 哑婆 sheet 卡 · 修钟楼示警阶梯阶 5 文案</div>
+        <div class="vdiff" hidden><span class="add">+</span> npc/哑婆.md (sheet 卡 +28 行)
+<span class="add">+</span> rule/潜行.md (DC 戒备 14→15)
+<span class="del">-</span> 移除 npc/旧看守.md</div>
+      </div>
+      <div class="vopt" data-testid="catalog-version-opt" data-version="v0.2">
+        <div class="vrow"><span class="vt">v0.2</span><span class="vd">昨天 · commit 9f8e7d</span></div>
+        <div class="vchangelog">+ 钟楼示警 Front · 卡池机缘 3 条</div>
+        <div class="vdiff" hidden><span class="add">+</span> front/钟楼示警.md (Clock 0/8)
+<span class="add">+</span> pool/机缘.md (3 条加权)</div>
+      </div>
+      <div class="vopt" data-testid="catalog-version-opt" data-version="v0.1">
+        <div class="vrow"><span class="vt">v0.1</span><span class="vd">上周 · commit 3a2b1c</span></div>
+        <div class="vchangelog">初版：世界观 + 钟三爷 + prologue</div>
+        <div class="vdiff" hidden><span class="add">+</span> lore/黑风寨.md
+<span class="add">+</span> npc/钟三爷.md
+<span class="add">+</span> prologue.md</div>
+      </div>
     </div>
     <div class="modal-foot">
       <span class="btn" data-modal-close>取消</span>
       <a class="btn go" href="play.html" data-testid="catalog-version-confirm"><i data-lucide="play"></i>建会话并开局</a>
+    </div>
+  </div>
+</div>
+
+<!-- 导入流程 modal（A4 validatePack 信任闸 · 文件选择→校验→入库） -->
+<div class="modal" id="impModal" data-testid="catalog-import-modal" hidden>
+  <div class="modal-card wide">
+    <h3>导入团本</h3>
+    <p class="msub">选择团本包（.zip），本地过 validatePack 信任闸后入目录。校验 error 阻断、warn 提示。</p>
+    <div class="imp-steps"><span class="step on" data-imp-step="pick">1 选文件</span><span class="step" data-imp-step="validate">2 校验</span><span class="step" data-imp-step="done">3 入库</span></div>
+    <div class="imp-drop" data-testid="catalog-import-drop"><i data-lucide="upload-cloud"></i><span>拖拽团本包到此 / 点选文件</span><span style="font-size:10.5px;color:var(--text3)">支持 .zip · 信任闸 validatePack</span></div>
+    <input type="file" data-testid="catalog-import-file" hidden accept=".zip,.tar.gz,application/zip">
+    <div class="imp-log" data-testid="catalog-import-log" hidden></div>
+    <div class="modal-foot">
+      <span class="btn" data-modal-close>取消</span>
+      <span class="btn go" data-testid="catalog-import-confirm" hidden><i data-lucide="check"></i>确认入库</span>
     </div>
   </div>
 </div>
@@ -103,4 +175,64 @@
   </div>
 </div>
 <script src="app.js"></script>
+<script>window.addEventListener('load',()=>{
+  // 版本 modal：打开时填团本名 + 重置选中最新
+  const vname=document.querySelector('[data-testid="catalog-version-packname"]');
+  document.querySelectorAll('[data-modal-open="verModal"]').forEach(b=>b.addEventListener('click',()=>{
+    const pack=b.closest('[data-testid="catalog-item"]');
+    if(pack&&vname)vname.textContent=pack.getAttribute('data-pack-name');
+    const opts=document.querySelectorAll('[data-testid="catalog-version-opt"]');
+    opts.forEach((o,i)=>{o.classList.toggle('on',i===0);const d=o.querySelector('.vdiff');if(d)d.hidden=true;});
+  }));
+  // vopt 点击：选中 + 展开/收起 diff（版本差异可见化）
+  document.querySelectorAll('[data-testid="catalog-version-opt"]').forEach(o=>o.addEventListener('click',()=>{
+    document.querySelectorAll('[data-testid="catalog-version-opt"]').forEach(x=>{if(x!==o)x.classList.remove('on');});
+    o.classList.add('on');
+    const d=o.querySelector('.vdiff');if(d)d.hidden=!d.hidden;
+  }));
+  // 删除团本（原型·toast 反馈）
+  document.querySelectorAll('[data-testid="catalog-delete-btn"]').forEach(b=>b.addEventListener('click',()=>{
+    const pack=b.closest('[data-testid="catalog-item"]');const name=pack?pack.getAttribute('data-pack-name'):'';
+    toast('已删除「'+name+'」（原型不真删）','warn');
+  }));
+  // 造示例团本
+  const sample=document.querySelector('[data-testid="catalog-sample-btn"]');
+  if(sample)sample.addEventListener('click',()=>toast('示例团本已生成（原型不真加）','ok'));
+  // 搜索 / 筛选
+  const search=document.querySelector('[data-testid="catalog-search"]'),filter=document.querySelector('[data-testid="catalog-filter"]');
+  const applyFilter=()=>{
+    const q=(search?search.value:'').trim().toLowerCase(),f=filter?filter.value:'';
+    document.querySelectorAll('[data-testid="catalog-item"]').forEach(p=>{
+      const name=(p.getAttribute('data-pack-name')||'').toLowerCase();
+      const desc=(p.querySelector('.desc')?.textContent||'').toLowerCase();
+      const tags=[...p.querySelectorAll('.metatags .tag')].map(t=>t.textContent);
+      const mq=!q||name.includes(q)||desc.includes(q);
+      const mf=!f||tags.includes(f);
+      p.style.display=(mq&&mf)?'':'none';
+    });
+  };
+  if(search)search.addEventListener('input',applyFilter);
+  if(filter)filter.addEventListener('change',applyFilter);
+  // 导入流程（A4 validatePack 信任闸）
+  const impDrop=document.querySelector('[data-testid="catalog-import-drop"]');
+  const impFile=document.querySelector('[data-testid="catalog-import-file"]');
+  const impLog=document.querySelector('[data-testid="catalog-import-log"]');
+  const impConfirm=document.querySelector('[data-testid="catalog-import-confirm"]');
+  const steps={pick:document.querySelector('[data-imp-step="pick"]'),validate:document.querySelector('[data-imp-step="validate"]'),done:document.querySelector('[data-imp-step="done"]')};
+  const setStep=k=>['pick','validate','done'].forEach(s=>{const el=steps[s];if(!el)return;el.classList.remove('on','done');if(s===k)el.classList.add('on');if(['pick','validate'].indexOf(s)<['pick','validate','done'].indexOf(k))el.classList.add('done');});
+  const resetImp=()=>{setStep('pick');if(impLog){impLog.hidden=true;impLog.innerHTML='';}if(impConfirm)impConfirm.hidden=true;if(impFile)impFile.value='';};
+  document.querySelectorAll('[data-modal-open="impModal"]').forEach(b=>b.addEventListener('click',resetImp));
+  const openFile=()=>{if(impFile)impFile.click();};
+  if(impDrop)impDrop.addEventListener('click',openFile);
+  if(impFile)impFile.addEventListener('change',()=>{
+    const fn=impFile.files[0]?.name||'团本包.zip';
+    setStep('validate');
+    if(impLog){impLog.hidden=false;impLog.innerHTML='> 读取 '+fn+' …\n> 解析 manifest.toml …\n> <span class="ok">✓</span> name/version/flows 齐全\n> <span class="ok">✓</span> prologue.md 存在\n> <span class="warn">⚠</span> npc/哑婆.md 缺 sheet 卡（warn·不阻断）\n> <span class="ok">✓</span> validatePack 通过：0 error / 1 warn';}
+    setTimeout(()=>{setStep('done');if(impConfirm)impConfirm.hidden=false;toast('校验通过·可入库','ok');},900);
+  });
+  if(impConfirm)impConfirm.addEventListener('click',()=>{
+    const m=document.getElementById('impModal');if(m)m.hidden=true;
+    toast('已导入团本（原型不真加）','ok');
+  });
+});</script>
 </body></html>

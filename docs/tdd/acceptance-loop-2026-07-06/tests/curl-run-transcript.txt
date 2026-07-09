@@ -1,0 +1,67 @@
+
+━━━ A1 会话生命周期（两 kind 对称骨架）━━━
+  ✗ RT1 dicegm 显式建会话 POST /sessions/dicegm →201{sessionId,kind} — status=404≠201 [code=404 body=404 Not Found]
+  ✗ RT1 loregm 显式建会话 POST /sessions/loregm →201{sessionId,kind} — status=404≠201 [code=404 body=404 Not Found]
+  ✓ dicegm 列表 GET /sessions →200{sessions[]}
+  ✗ RT6 loregm 列表 GET /lore-sessions →200{sessions[]} — status=404≠200 [code=404 body=404 Not Found]
+  ✓ [fixture] dicegm 懒建+drive-turn POST /messages →202{turnId}
+  ✓ dicegm 元信息 GET /sessions/:id →200{sessionId,ended,title}
+  ✗ RT7 loregm 元信息 GET /lore-sessions/:id →200{sessionId,kind,status,title,ended} — status=404≠200 [code=404 body=404 Not Found]
+  ✓ dicegm 开场 POST /:id/start →202{turnId}（幂等）
+  ✓ RT3 rewind POST /:id/rewind →202（覆盖当前分支·到头=空）
+  ✓ dicegm 删除 DELETE /sessions/:id →200{ok}
+  → A1: pass=6 fail=4 blocked=0
+
+━━━ A2 dicegm 域子资源 ━━━
+  ✓ 呈现快照 GET /:id/presentation →200（含 sheets·plotline/world=RT-FE4 待扩）
+  ✓ 重连回填 GET /:id/events?since= →200{events[]}
+  ✓ 防剧透 visibleOnly=true 仍 200{events[]}
+  ✓ 源浏览 GET /:id/browse?source=world →200{source,entries}
+  ✓ RT-FE14/17 用量 GET /:id/usage →200{model,contextTokens,contextWindow,contextPct,sessionTotal,perTurn}
+  ✗ RT-FE18 运行时切 model POST /:id/model →200{model,effectiveAt} — status=404≠200 [code=404 body=404 Not Found]
+  ⛔ 明骰 POST /:id/roll →202；无待掷 409（含 per-band narration RT-FE5） — BLOCKED: fake-GM 教练档 CanonScript 未接 HTTP/env，无法挂起 pendingRoll（缺件·见 findings）
+  ⛔ 暗骰 WS hidden_roll + PendingRoll.hidden 标记（RT-FE6） — BLOCKED: 同上：教练档未接 HTTP
+  ⛔ choices POST /:id/choices →202（RT2 语义必真跑） — BLOCKED: fake-GM 教练档未接 HTTP，无法挂起 pendingChoice
+  ✗ RT-FE8 分支新建 POST /:id/branches →201{branchId} — status=404≠201 [code=404 body=404 Not Found]
+  ✗ RT-FE8 分支列表 GET /:id/branches →200 — status=404≠200 [code=404 body=404 Not Found]
+  ✓ WS 连接 GET /:id/ws 升级成功（首连无 since= 不重发=by design·frames 可为 0）
+  ⛔ WS 10 类消息逐条验（game_end 必验 RT-B3） — BLOCKED: fake-GM 教练档未接 HTTP，roll_staged/choices/hidden_roll/game_end 无法触发；turn_started/narration_commit/turn_ended 可达但需协调 drive-turn；?since=N 重连补叙述历史未测
+  → A2: pass=6 fail=3 blocked=4
+
+━━━ A3 loregm 域子资源 ━━━
+  ✓ loregm drive-turn POST /lore-sessions/:id/messages →202{turnId[,error,usage]}
+  ✓ loregm Draft 检视 GET /lore-sessions/:id/draft →200{files,snapshot}
+  ✓ loregm 素材上传 POST /lore-sessions/:id/materials →200{path,bytes}
+  ✗ RT-FE11 loregm Draft 校验 POST /lore-sessions/:id/draft/validate →200[{level,path,msg}] — status=404≠200 [code=404 body=404 Not Found]
+  ⚠ RT-FE12 loregm WS 探针：ERROR:Received network error or non-101 status code.（裁决拟 events 见 §5.2·待批准）
+  ✗ RT-FE18 loregm 切 model POST /lore-sessions/:id/model →200 — status=404≠200 [code=404 body=404 Not Found]
+  ✓ loregm 删除 DELETE /lore-sessions/:id →200{ok}
+  → A3: pass=5 fail=2 blocked=0
+
+━━━ A4 catalog 团本产物库 ━━━
+  ✓ 目录 GET /catalog →200{adventure[]}
+  ✓ 提交版本 POST /catalog/commit →201{adventureId,commitId}
+    fixture adventureId=f6d6e07b-13aa-5797-a711-48bee2415dae commitId=61e94612679bd157f8b97ec7baf4e3fd79fd1205
+  ✓ 版本包文件 GET /catalog/:id/files?ref=head →200{files[]非空}
+  ✓ 整包校验 POST /catalog/validate →200{ok}
+  ✓ 打标签 POST /catalog/:id/tag →201
+  ✓ import 开局 POST /sessions/:id/open{adventureId,ref=commitId} →201{sessionId,imported}
+  ✗ F-open-head-ref POST /:id/open{ref=head} →201（端点应解析 head·对齐 /files） — status=500≠201 [code=500 body=Internal Server Error]
+  ✗ F-open-500 无效包 POST /:id/open →4xx（应结构化拒·非 500） — status=500≠400 [code=500 body=Internal Server Error]
+  → A4: pass=6 fail=2 blocked=0
+
+━━━ §6 配置 / 诊断 ━━━
+  ✓ health GET /diagnostics/health →200{fakeGm,port,model,mcp.toolCount,notify,storage}
+  ✓ model-test POST /diagnostics/model-test →200{ok,fake}
+  ✓ mcp-test POST /diagnostics/mcp-test →200{ok}
+  ✗ RT8 自定义 MCP 列表 GET /diagnostics/mcp-config →200 — status=404≠200 [code=404 body=404 Not Found]
+  ✗ RT8 自定义 MCP 新增 POST /diagnostics/mcp-config →201 — status=404≠201 [code=404 body=404 Not Found]
+  ✓ key 存 POST /keys →201
+  ✓ key 列表 GET /keys →200{keys}
+  ✓ key 删 DELETE /keys/:id →204
+  → §6: pass=6 fail=2 blocked=0
+
+════════════════════════════════════════
+  总计：PASS=29  FAIL=13  BLOCKED=4
+════════════════════════════════════════
+红=被测 bug（铁律3 不改断言→改代码或落 backlog）；BLOCKED=测试基建缺件（记 finding）。

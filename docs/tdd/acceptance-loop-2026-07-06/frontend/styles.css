@@ -99,7 +99,7 @@ html,body{height:100%}
 .bay-btn{display:flex;align-items:center;gap:7px;padding:6px 13px;border:1px solid var(--line2);border-radius:8px;color:var(--text2);font-size:12px;cursor:pointer;background:var(--surface);white-space:nowrap}
 .bay-btn:hover{border-color:var(--text3);color:var(--text)}.bay-btn.on{border-color:var(--acc);color:var(--acc-soft)}
 .bay-btn [data-lucide]{width:14px}
-.bay .sp{flex:1}.bay .seq{font-family:var(--mono);font-size:10px;color:var(--text3)}
+.bay .sp{flex:1}
 .bay-sep{width:1px;height:18px;background:var(--line2);margin:0 3px;flex:none}
 /* bay 导航：默认展开=横排页签；收起=≡弹 popover（跑团页默认收起） */
 .bay-tabs{display:flex;align-items:center;gap:1px}
@@ -129,3 +129,76 @@ body.bay-hidden .bay,body.bay-hidden .bay-wrap{display:none}
 .nav-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px;font-size:13px;color:var(--text);cursor:pointer}.nav-row:last-child{margin-bottom:0}.nav-row.on{border-color:var(--acc);color:var(--acc-soft)}.nav-row [data-lucide]{width:15px}.nav-row .nr-sp{flex:1}.nav-row .nr-tag{font-family:var(--mono);font-size:9.5px;color:var(--text3)}
 .nav-status{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-family:var(--mono);font-size:10px;color:var(--text3);padding:10px 4px 2px;border-top:1px solid var(--line);margin-top:10px}
 .nav-status .dot{width:6px;height:6px;border-radius:50%;background:var(--ok);display:inline-block;margin-right:4px}.nav-status .dot.w{background:var(--warn)}.nav-status .dot.off{background:var(--text3)}
+
+/* === 运行时观测/控制族（RT-FE14/16/17/18 · 期望态·依赖未批准裁决） === */
+/* stagebar model 切换器（RT-FE18 · 下回合生效） */
+.model-switch{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border:1px solid var(--line2);border-radius:7px;color:var(--text2);font-size:11px;font-family:var(--mono);cursor:pointer;background:var(--surface)}
+.model-switch:hover{border-color:var(--acc);color:var(--acc-soft)}
+.model-switch .ms-cur{color:var(--text)}.model-switch [data-lucide]{width:13px}
+
+/* foot 区上下文占用条（RT-FE14 · 常驻·>80% 变红提示 rewind/开新局） */
+.ctx-bar{display:flex;align-items:center;gap:8px;padding:5px 14px;background:var(--bg);border-bottom:1px solid var(--line);font-size:10.5px;font-family:var(--mono);color:var(--text3)}
+.ctx-bar .ctx-label{color:var(--text2)}
+.ctx-bar .ctx-track{flex:1;max-width:180px;height:5px;border-radius:3px;background:var(--dial-empty);overflow:hidden}
+.ctx-bar .ctx-fill{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--ok),var(--acc-soft))}
+.ctx-bar .ctx-pct{color:var(--text2);min-width:34px;text-align:right}
+.ctx-bar.danger .ctx-fill{background:linear-gradient(90deg,var(--warn),var(--err))}
+.ctx-bar.danger .ctx-pct{color:var(--err)}
+.ctx-bar .ctx-hint{display:none;align-items:center;gap:4px;color:var(--warn);font-size:10px}
+.ctx-bar .ctx-hint [data-lucide]{width:12px}
+.ctx-bar.danger .ctx-hint{display:inline-flex}
+
+/* 回合块尾 per-turn usage（RT-FE16 · 小字弱化·不打断叙事·hover 展开） */
+.turn-usage{font-family:var(--mono);font-size:9.5px;color:var(--text3);text-align:right;max-width:680px;margin:2px auto 10px;opacity:.7}
+.turn-usage:hover{opacity:1;color:var(--text2)}
+
+/* turn-usage ↑上传/↓下载 颜色（RT-FE16） */
+.turn-usage .tu-model{color:var(--acc-soft)}
+.turn-usage .up{color:var(--text2)}
+.turn-usage .down{color:var(--text3)}
+
+/* 用量详情弹窗（RT-FE14/16/17 · 含 MCP/记忆分项超前需求） */
+.usage-detail .ud-sec{padding:8px 0;border-bottom:1px solid var(--line)}.usage-detail .ud-sec:last-child{border-bottom:none}
+.usage-detail .ud-h{font-size:11.5px;color:var(--acc-soft);font-family:var(--mono);margin-bottom:6px}
+.usage-detail .ud-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:4px 0;font-size:11.5px;color:var(--text2)}
+.usage-detail .ud-row [data-lucide]{width:13px;color:var(--text3);margin-right:4px}
+.usage-detail .ud-v{font-family:var(--mono);font-size:11px;color:var(--text);display:flex;align-items:center;gap:6px}
+.usage-detail .ud-v .dim,.usage-detail .dim{color:var(--text3);font-size:10px}
+.usage-detail .ud-dial{position:relative;width:46px;height:46px;flex:none}
+.usage-detail .ud-dial .dial-svg{width:100%;height:100%;transform:rotate(-90deg)}
+.usage-detail .ud-dial .dial-bg{fill:none;stroke:var(--dial-empty);stroke-width:3}
+.usage-detail .ud-dial .dial-fg{fill:none;stroke:var(--acc-soft);stroke-width:3;stroke-linecap:round}
+.usage-detail .ud-dial .dial-pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10.5px;color:var(--text);font-weight:600}
+.usage-detail .ud-dial.danger .dial-fg{stroke:var(--err)}
+
+/* === finding 修复共享件（2026-07-09）=== */
+/* toast 持久化反馈 */
+.toast-wrap{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:90;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+.toast{background:var(--surface);border:1px solid var(--line2);border-left:3px solid var(--acc-soft);border-radius:8px;padding:9px 16px;font-size:12.5px;color:var(--text);box-shadow:0 8px 30px #000a;opacity:0;transform:translateY(-6px);transition:opacity .2s,transform .2s;max-width:80vw}
+.toast.in{opacity:1;transform:translateY(0)}.toast.out{opacity:0;transform:translateY(-6px)}
+.toast.ok{border-left-color:var(--ok)}.toast.err{border-left-color:var(--err)}.toast.warn{border-left-color:var(--warn)}
+/* flash 定位高亮 */
+.card.flash,.pack.flash{animation:flash 1.3s ease}
+@keyframes flash{0%{box-shadow:0 0 0 2px var(--acc),0 0 18px #d4a83e55}100%{box-shadow:0 0 0 2px transparent}}
+/* 加载骨架 */
+.skeleton{background:linear-gradient(90deg,var(--surface) 25%,var(--surface2) 37%,var(--surface) 63%);background-size:400% 100%;animation:sk 1.4s ease infinite;border-radius:8px}
+@keyframes sk{0%{background-position:100% 0}100%{background-position:0 0}}
+.sk-card{height:78px;border:1px solid var(--line);margin-bottom:12px}
+/* inline 编辑态（build 通用） */
+.card.editing{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc)}
+.card .inline-form{display:flex;flex-direction:column;gap:7px;margin-top:8px}
+.card .inline-form textarea,.card .inline-form input{background:var(--bg);border:1px solid var(--line2);border-radius:6px;color:var(--text);font-size:12px;padding:7px 9px;font-family:var(--sans);resize:vertical;width:100%}
+.card .inline-form .if-row{display:flex;gap:7px;justify-content:flex-end}
+/* 可点列表行 hover */
+.sess-row[data-sess]{cursor:pointer}.sess-row[data-sess]:hover{border-color:var(--text3)}
+/* 导入流程区（catalog/build 共用） */
+.imp-drop{border:1px dashed var(--line2);border-radius:10px;padding:34px 18px;text-align:center;color:var(--text3);font-size:12.5px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:10px}
+.imp-drop:hover{border-color:var(--acc);color:var(--text2)}.imp-drop [data-lucide]{width:26px}
+.imp-steps{display:flex;gap:7px;align-items:center;font-family:var(--mono);font-size:10.5px;color:var(--text3);margin:12px 0 10px}
+.imp-steps .step{padding:3px 9px;border:1px solid var(--line);border-radius:10px}.imp-steps .step.on{color:var(--acc-soft);border-color:var(--acc)}.imp-steps .step.done{color:var(--ok);border-color:var(--ok)}
+.imp-log{font-family:var(--mono);font-size:11px;color:var(--text2);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;max-height:160px;overflow:auto;line-height:1.6;white-space:pre-wrap}
+.imp-log .err{color:var(--err)}.imp-log .warn{color:var(--warn)}.imp-log .ok{color:var(--ok)}
+/* 角落运行态徽章（home 落地页） */
+.runstatus-pill{position:fixed;top:12px;right:16px;display:flex;align-items:center;gap:9px;font-family:var(--mono);font-size:10px;color:var(--text3);padding:6px 11px;background:var(--surface);border:1px solid var(--line);border-radius:9px;z-index:30;opacity:.85}
+.runstatus-pill .dot{width:6px;height:6px;border-radius:50%;background:var(--ok);display:inline-block;margin-right:4px}
+.runstatus-pill .dot.w{background:var(--warn)}.runstatus-pill .dot.off{background:var(--text3)}

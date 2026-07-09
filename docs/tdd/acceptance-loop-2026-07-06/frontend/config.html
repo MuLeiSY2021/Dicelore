@@ -18,7 +18,7 @@
 .inp.ro{color:var(--text3);border-style:dashed}
 select.inp{font-family:var(--sans)}
 .seg{display:flex;border:1px solid var(--line2);border-radius:7px;overflow:hidden}.seg span{padding:6px 13px;font-size:12px;color:var(--text2);cursor:pointer}.seg span.on{background:var(--surface2);color:var(--text)}
-.sw2{width:38px;height:21px;border-radius:11px;background:var(--line2);position:relative;cursor:pointer}.sw2.on{background:var(--acc)}.sw2:after{content:"";position:absolute;top:2px;left:2px;width:17px;height:17px;border-radius:50%;background:#fff}.sw2.on:after{left:19px}
+.sw2{width:38px;height:21px;border-radius:11px;background:var(--line2);position:relative;cursor:pointer;flex:none}.sw2.on{background:var(--acc)}.sw2:after{content:"";position:absolute;top:2px;left:2px;width:17px;height:17px;border-radius:50%;background:#fff}.sw2.on:after{left:19px}
 .srv{display:flex;align-items:center;gap:13px;padding:13px 15px;border:1px solid var(--line);border-radius:9px;background:var(--surface);margin-bottom:9px}
 .srv .ico{width:36px;height:36px;border-radius:8px;background:var(--surface2);display:flex;align-items:center;justify-content:center;color:var(--acc-soft);flex:none}
 .srv .mid{flex:1;min-width:0}.srv .nm{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--text);font-weight:600}.srv .nm .dot{width:7px;height:7px;border-radius:50%;background:var(--ok)}.srv .nm .dot.off{background:var(--text3)}
@@ -28,6 +28,13 @@ select.inp{font-family:var(--sans)}
 .tstate{font-family:var(--mono);font-size:11px;padding:3px 9px;border-radius:6px;border:1px solid var(--line2)}.tstate.pending{color:var(--text2)}.tstate.ok{color:var(--ok);border-color:var(--ok)}.tstate.fail{color:var(--err);border-color:var(--err)}
 .note{display:flex;gap:8px;font-size:11px;color:var(--text2);line-height:1.55;background:var(--surface);border:1px solid var(--line);border-left:2px solid var(--acc);border-radius:6px;padding:9px 12px;margin-top:8px}.note [data-lucide]{width:14px;flex:none;color:var(--acc-soft);margin-top:1px}
 .sw3{display:inline-flex;gap:5px}.sw3 span{width:16px;height:16px;border-radius:50%;cursor:pointer;outline:1px solid var(--line2)}.sw3 span.on{outline:2px solid var(--text)}
+.card-act{color:var(--text3);cursor:pointer;padding:2px}.card-act:hover{color:var(--acc-soft)}.card-act [data-lucide]{width:14px}
+/* MCP 空态 + 自定义表单 */
+.mcp-empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:30px 20px;text-align:center;color:var(--text3);font-size:12px;border:1px dashed var(--line);border-radius:9px}
+.mcp-empty [data-lucide]{width:26px;color:var(--text3)}
+.cfg-table{display:flex;flex-direction:column;gap:6px;margin-bottom:9px}
+.cfg-row{display:flex;gap:7px;align-items:center}.cfg-row .inp{flex:1}.cfg-row .cfg-del{color:var(--text3);cursor:pointer}.cfg-row .cfg-del:hover{color:var(--err)}
+.modal-card.wide{max-width:540px}
 </style></head>
 <body data-screen-default="none">
   <div class="shell appshell">
@@ -47,78 +54,100 @@ select.inp{font-family:var(--sans)}
         <!-- 通用 -->
         <div data-view="general" data-viewgroup="cfg">
           <div class="mhead"><h3>通用</h3></div>
-          <div class="mdesc">语言与通用偏好，均本地持久化（localStorage）。</div>
-          <div class="field"><div class="fl">界面语言</div><div class="fc"><div class="seg"><span class="on">中文</span><span>English</span></div></div></div>
-          <div class="field"><div class="fl">自动继续最近会话<div class="sub">启动即回到上次</div></div><div class="fc"><span class="sw2 on"></span></div></div>
+          <div class="mdesc">语言与通用偏好，均本地持久化（localStorage），改完即时保存。</div>
+          <div class="field"><div class="fl">界面语言</div><div class="fc"><div class="seg" data-testid="config-lang" data-persist data-persist-msg="语言偏好已保存"><span class="on" data-lang="zh">中文</span><span data-lang="en">English</span></div></div></div>
+          <div class="field"><div class="fl">自动继续最近会话<div class="sub">启动即回到上次</div></div><div class="fc"><span class="sw2 on" data-testid="config-autocontinue" data-persist></span></div></div>
           <div class="field"><div class="fl">bay 行为<div class="sub">底部入口条 · 仿 mac 聚焦</div></div><div class="fc"><div class="seg" data-testid="config-bay-mode"><span class="on" data-bay-mode="focus">聚焦出现</span><span data-bay-mode="always">常驻</span><span data-bay-mode="hidden">隐藏</span></div></div></div>
-          <div class="field" style="border:none"><div class="fl">紧凑模式</div><div class="fc"><span class="sw2"></span></div></div>
+          <div class="field" style="border:none"><div class="fl">紧凑模式</div><div class="fc"><span class="sw2" data-testid="config-compact" data-persist></span></div></div>
         </div>
 
         <!-- 服务与网络 -->
         <div data-view="network" data-viewgroup="cfg" hidden>
           <div class="mhead"><h3>服务与网络</h3></div>
-          <div class="mdesc">主页服务端口 / 域名 / 缝A 跨进程 notify webhook（真值来自 health）。</div>
-          <div class="field"><div class="fl">主页端口</div><div class="fc"><input class="inp" value="8787"></div></div>
-          <div class="field"><div class="fl">域名 / 绑定</div><div class="fc"><input class="inp" value="127.0.0.1"></div></div>
-          <div class="field" style="border:none"><div class="fl">notify webhook<div class="sub">DICELORE_NOTIFY_URL</div></div><div class="fc"><input class="inp" style="flex:1" value="（未配 · v1 走进程内回调）"></div></div>
+          <div class="mdesc">主页服务端口 / 域名 / 缝A 跨进程 notify webhook。<b style="color:var(--text)">真值来自 health·只读</b>，不可在此改。</div>
+          <div class="field"><div class="fl">主页端口<div class="sub">来自 health</div></div><div class="fc"><input class="inp ro" data-testid="config-net-port" value="8787" readonly></div></div>
+          <div class="field"><div class="fl">域名 / 绑定<div class="sub">来自 health</div></div><div class="fc"><input class="inp ro" data-testid="config-net-host" value="127.0.0.1" readonly></div></div>
+          <div class="field" style="border:none"><div class="fl">notify webhook<div class="sub">DICELORE_NOTIFY_URL</div></div><div class="fc"><input class="inp ro" style="flex:1" data-testid="config-net-notify" value="（未配 · v1 走进程内回调）" readonly></div></div>
         </div>
 
         <!-- MCP 服务器 -->
         <div data-view="mcp" data-viewgroup="cfg" hidden>
           <div class="mhead"><h3>MCP 服务器</h3><span class="sp"></span><span class="btn go" data-testid="config-mcp-add"><i data-lucide="plus"></i>添加 MCP</span></div>
-          <div class="mdesc"><b style="color:var(--text)">规范态只走 dicelore 自己</b>；自定义 MCP 仅提供周边能力（检索/配图），归 out-of-canon。</div>
+          <div class="mdesc"><b style="color:var(--text)">规范态只走 dicelore 自己</b>；自定义 MCP 仅提供周边能力（检索/配图），归 out-of-canon。<b style="color:var(--text)">不预置任何额外 MCP（含搜索）</b>——需自行添加。</div>
           <div class="sec-l">核心 · 规范态来源</div>
           <div class="srv" data-testid="config-mcp-core"><span class="ico"><i data-lucide="dices"></i></span><div class="mid"><div class="nm">dicelore<span class="dot"></span><span class="badge core">规范态来源</span></div><div class="meta"><span>stdio · 运行时</span><span data-testid="config-mcp-toolcount">18 工具</span><span>notify 已连</span></div></div><div class="right"><span class="lock"><i data-lucide="lock"></i>必需</span></div></div>
           <div class="sec-l">自定义 · out-of-canon</div>
-          <div class="srv" data-testid="config-mcp-item"><span class="ico"><i data-lucide="search"></i></span><div class="mid"><div class="nm">联网搜索<span class="dot off"></span><span class="badge ooc">out-of-canon</span></div><div class="meta"><span>远程 SSE</span><span>1 工具</span><span style="color:var(--warn)">⚠ 未接运行时（RT8）</span></div></div><div class="right"><span class="btn" data-testid="config-test-btn"><i data-lucide="plug-zap"></i>测试</span><span class="sw2" data-testid="config-mcp-toggle"></span></div></div>
+          <div data-testid="config-mcp-list">
+            <div class="mcp-empty" data-testid="config-mcp-empty"><i data-lucide="plug-zap"></i><div>未添加自定义 MCP</div><div style="font-size:11px">点右上「添加 MCP」配置一个（检索/配图等周边能力）</div></div>
+          </div>
           <div class="note"><i data-lucide="info"></i><span>out-of-canon 落 event 留痕，但<b style="color:var(--text)">不参与 L3 审计、不发呈现 notify</b>；副作用不进快照。v1 自定义 MCP 尚未接入运行时（RT8）。</span></div>
         </div>
 
         <!-- 模型连接 -->
         <div data-view="model" data-viewgroup="cfg" hidden>
           <div class="mhead"><h3>模型连接</h3></div>
-          <div class="mdesc">哪个模型当 GM（经 Agent SDK）+ Agent 底座 + key。连接测试探活。</div>
-          <div class="field"><div class="fl">GM 模型</div><div class="fc"><select class="inp"><option>Opus 4.8</option><option>Sonnet 5</option><option>glm-5.2</option></select></div></div>
-          <div class="field"><div class="fl">Agent 底座<div class="sub">驱动 GM 的运行时</div></div><div class="fc"><div class="seg"><span class="on">Harness 默认</span><span>Claude Agent SDK</span></div></div></div>
-          <div class="field"><div class="fl">API key</div><div class="fc"><input class="inp" style="flex:1" type="password" value="sk-••••••••••••4f2a"></div></div>
-          <div class="field"><div class="fl">baseURL</div><div class="fc"><input class="inp" style="flex:1" value="https://api.anthropic.com"></div></div>
-          <div class="field" style="border:none"><div class="fl">连接测试</div><div class="fc"><span class="btn" data-testid="config-test-btn"><i data-lucide="plug-zap"></i>测试连接</span>
+          <div class="mdesc">哪个模型当 GM（经 Agent SDK）+ Agent 底座 + key。连接测试探活（演示成功/失败两态）。</div>
+          <div class="field"><div class="fl">GM 模型</div><div class="fc"><select class="inp" data-testid="config-model-select" data-persist><option>Opus 4.8</option><option>Sonnet 5</option><option>glm-5.2</option></select></div></div>
+          <div class="field"><div class="fl">Agent 底座<div class="sub">驱动 GM 的运行时</div></div><div class="fc"><div class="seg" data-testid="config-agent-base" data-persist><span class="on" data-agent="harness">Harness 默认</span><span data-agent="sdk">Claude Agent SDK</span></div></div></div>
+          <div class="field"><div class="fl">API key<div class="sub">仅存本地</div></div><div class="fc"><input class="inp" data-testid="config-key-input" style="flex:1" type="password" value="sk-••••••••••••4f2a" data-persist><span class="card-act" data-testid="config-key-toggle" title="显示/隐藏"><i data-lucide="eye"></i></span><span class="lock"><i data-lucide="shield"></i>仅存本地·不上传</span></div></div>
+          <div class="field"><div class="fl">baseURL</div><div class="fc"><input class="inp" style="flex:1" data-testid="config-baseurl" value="https://api.anthropic.com" data-persist></div></div>
+          <div class="field" style="border:none"><div class="fl">连接测试</div><div class="fc"><span class="btn" data-testid="config-model-test-btn"><i data-lucide="plug-zap"></i>测试连接</span>
             <span class="tstate" data-testid="config-test-none" data-screen="none">未测</span>
             <span class="tstate pending" data-testid="config-test-pending" data-screen="pending" hidden>测试中…</span>
             <span class="tstate ok" data-testid="config-test-ok" data-screen="ok" hidden>可达 · 探活 OK</span>
-            <span class="tstate fail" data-testid="config-test-fail" data-screen="fail" hidden>失败 · 401 鉴权</span></div></div>
+            <span class="tstate fail" data-testid="config-test-fail" data-screen="fail" hidden>失败 · 401 · error.code=UNAUTHENTICATED</span></div></div>
         </div>
 
         <!-- 主题外观 -->
         <div data-view="theme" data-viewgroup="cfg" hidden>
           <div class="mhead"><h3>主题外观</h3></div>
-          <div class="mdesc">主题 / 明暗 / 强调色 / 字体，均本地持久化。</div>
-          <div class="field"><div class="fl">主题</div><div class="fc"><select class="inp"><option>墨金</option></select></div></div>
-          <div class="field"><div class="fl">明暗</div><div class="fc"><div class="seg"><span class="on">暗</span><span>亮</span><span>跟随系统</span></div></div></div>
-          <div class="field"><div class="fl">强调色</div><div class="fc"><span class="sw3"><span class="on" style="background:#d4a83e"></span><span style="background:#c47a3e"></span><span style="background:#3aa896"></span><span style="background:#b4453a"></span><span style="background:#6f74e8"></span></span></div></div>
-          <div class="field" style="border:none"><div class="fl">字体档</div><div class="fc"><div class="seg"><span class="on">默认</span><span>思源宋体</span></div></div></div>
+          <div class="mdesc">主题 / 明暗 / 强调色 / 字体，均本地持久化，改完即时应用。</div>
+          <div class="field"><div class="fl">主题</div><div class="fc"><select class="inp" data-testid="config-theme-preset" data-persist><option>墨金</option></select></div></div>
+          <div class="field"><div class="fl">明暗</div><div class="fc"><div class="seg" data-testid="config-theme-mode"><span class="on" data-mode="dark">暗</span><span data-mode="light">亮</span><span data-mode="auto">跟随系统</span></div></div></div>
+          <div class="field"><div class="fl">强调色</div><div class="fc"><span class="sw3" data-testid="config-theme-accent"><span class="on" data-acc="gold" style="background:#d4a83e"></span><span data-acc="copper" style="background:#c47a3e"></span><span data-acc="teal" style="background:#3aa896"></span><span data-acc="crimson" style="background:#b4453a"></span><span data-acc="indigo" style="background:#6f74e8"></span></span></div></div>
+          <div class="field" style="border:none"><div class="fl">字体档</div><div class="fc"><div class="seg" data-testid="config-theme-font" data-persist><span class="on" data-font="default">默认</span><span data-font="song">思源宋体</span></div></div></div>
         </div>
 
         <!-- 数据与存储 -->
         <div data-view="data" data-viewgroup="cfg" hidden>
           <div class="mhead"><h3>数据与存储</h3></div>
-          <div class="mdesc">展示后端真值（来自 health · 只读）。数据目录 = 每局一文件。</div>
-          <div class="field"><div class="fl">DICELORE_DATA_DIR</div><div class="fc"><input class="inp ro" style="flex:1" value="/home/mulei/.dicelore" readonly></div></div>
-          <div class="field"><div class="fl">sessionsDir</div><div class="fc"><input class="inp ro" style="flex:1" value="/home/mulei/.dicelore/sessions" readonly></div></div>
-          <div class="field" style="border:none"><div class="fl">DICELORE_FTS_MODE</div><div class="fc"><input class="inp ro" value="jieba" readonly></div></div>
+          <div class="mdesc">展示后端真值（来自 health · 只读）。数据目录 = <b style="color:var(--text)">每局一文件</b>。</div>
+          <div data-testid="config-data-readonly">
+            <div class="field"><div class="fl">DICELORE_DATA_DIR</div><div class="fc"><input class="inp ro" style="flex:1" value="/home/mulei/.dicelore" readonly></div></div>
+            <div class="field"><div class="fl">sessionsDir</div><div class="fc"><input class="inp ro" style="flex:1" value="/home/mulei/.dicelore/sessions" readonly></div></div>
+            <div class="field" style="border:none"><div class="fl">DICELORE_FTS_MODE</div><div class="fc"><input class="inp ro" value="jieba" readonly></div></div>
+          </div>
         </div>
 
         <!-- 关于 -->
         <div data-view="about" data-viewgroup="cfg" hidden>
           <div class="mhead"><h3>关于</h3></div>
           <div class="mdesc">给 AI 套上 GM 行为塑形框架的文字冒险引擎。</div>
-          <div class="field"><div class="fl">版本</div><div class="fc" style="font-family:var(--mono);color:var(--text2)">Dicelore v0.x（开发中）</div></div>
+          <div class="field"><div class="fl">版本<div class="sub">来自 health</div></div><div class="fc" style="font-family:var(--mono);color:var(--text2)" data-testid="config-about-version">Dicelore v0.x（开发中）</div></div>
           <div class="field"><div class="fl">许可</div><div class="fc" style="font-family:var(--mono);color:var(--text2)">AGPL-3.0-or-later</div></div>
           <div class="field" style="border:none"><div class="fl">项目</div><div class="fc" style="color:var(--acc-soft)">github.com/MuLeiSY2021/dicelore</div></div>
         </div>
       </div>
     </div>
   </div>
+
+<!-- 添加自定义 MCP 表单（裁决 custom-mcp-install §二/三/五） -->
+<div class="modal" id="mcpAddModal" data-testid="config-mcp-add-modal" hidden>
+  <div class="modal-card wide">
+    <h3>添加自定义 MCP</h3>
+    <p class="msub">out-of-canon · 仅周边能力（检索/配图）。不参与 L3 审计、不发呈现 notify、副作用不进快照。</p>
+    <div class="field"><div class="fl">实例名<div class="sub">instanceName</div></div><div class="fc"><input class="inp" data-testid="config-mcp-instance" placeholder="my-search"></div></div>
+    <div class="field"><div class="fl">package</div><div class="fc"><input class="inp" data-testid="config-mcp-package" placeholder="@scope/mcp-server"></div></div>
+    <div class="field"><div class="fl">command</div><div class="fc"><input class="inp" data-testid="config-mcp-command" placeholder="npx"></div></div>
+    <div class="field"><div class="fl">args</div><div class="fc"><input class="inp" data-testid="config-mcp-args" placeholder="-y @scope/mcp-server"></div></div>
+    <div class="sec-l">配置项</div>
+    <div class="cfg-table" data-testid="config-mcp-config-table">
+      <div class="cfg-row"><input class="inp" placeholder="key"><input class="inp" placeholder="value"><span class="cfg-del" data-testid="config-mcp-cfg-del"><i data-lucide="x"></i></span></div>
+    </div>
+    <span class="btn" data-testid="config-mcp-config-add"><i data-lucide="plus"></i>加配置项</span>
+    <div class="modal-foot"><span class="btn" data-modal-close>取消</span><span class="btn go" data-testid="config-mcp-add-confirm"><i data-lucide="check"></i>添加</span></div>
+  </div>
+</div>
 
 <!-- 全局 bay（fixed · 仿 mac 聚焦出现） -->
 <div class="bay-wrap"></div>
@@ -141,21 +170,70 @@ select.inp{font-family:var(--sans)}
 </div>
 <script src="app.js"></script>
 <script>window.addEventListener('load',()=>{
-  const b=document.querySelector('[data-view="model"] [data-testid="config-test-btn"]');
-  const show=s=>['none','pending','ok','fail'].forEach(k=>{const el=document.querySelector('[data-testid="config-test-'+k+'"]');if(el)el.hidden=k!==s;});
-  if(b)b.addEventListener('click',()=>{show('pending');setTimeout(()=>show('ok'),700);});
+  // seg 通用切换（带 data-persist 的触发 initPersist toast；非 persist 的只切 class）
+  document.querySelectorAll('.seg').forEach(seg=>seg.querySelectorAll('span').forEach(s=>s.addEventListener('click',()=>{
+    seg.querySelectorAll('span').forEach(x=>x.classList.remove('on'));s.classList.add('on');
+  })));
+  // sw2 通用 toggle（带 data-persist 触发 toast）
+  document.querySelectorAll('.sw2[data-persist], .sw2[data-testid]').forEach(sw=>sw.addEventListener('click',()=>sw.classList.toggle('on')));
+
   // bay 行为：写 localStorage + 即时应用 body class
   const bm=document.querySelector('[data-testid="config-bay-mode"]');
   if(bm){
     const cur=localStorage.getItem('bay-mode')||'focus';
     bm.querySelectorAll('span').forEach(x=>x.classList.toggle('on',x.getAttribute('data-bay-mode')===cur));
     bm.querySelectorAll('span').forEach(s=>s.addEventListener('click',()=>{
-      bm.querySelectorAll('span').forEach(x=>x.classList.remove('on'));s.classList.add('on');
       const m=s.getAttribute('data-bay-mode');localStorage.setItem('bay-mode',m);
       document.body.classList.remove('bay-always','bay-hidden');
       if(m==='always')document.body.classList.add('bay-always');
       if(m==='hidden')document.body.classList.add('bay-hidden');
     }));
   }
+  // 主题：明暗 + 强调色 应用 + 持久化
+  const tm=document.querySelector('[data-testid="config-theme-mode"]');
+  if(tm){
+    const applyMode=m=>{document.body.classList.toggle('light',m==='light');if(window.lucide)lucide.createIcons();};
+    const savedMode=localStorage.getItem('cfg-mode');if(savedMode){tm.querySelectorAll('span').forEach(x=>x.classList.toggle('on',x.getAttribute('data-mode')===savedMode));applyMode(savedMode);}
+    tm.querySelectorAll('span').forEach(s=>s.addEventListener('click',()=>{const m=s.getAttribute('data-mode');localStorage.setItem('cfg-mode',m);applyMode(m);toast('明暗已应用·已保存','ok');}));
+  }
+  const ta=document.querySelector('[data-testid="config-theme-accent"]');
+  if(ta){
+    const savedAcc=localStorage.getItem('cfg-acc');
+    if(savedAcc){ta.querySelectorAll('span').forEach(x=>x.classList.toggle('on',x.getAttribute('data-acc')===savedAcc));setAcc(savedAcc);}
+    ta.querySelectorAll('span').forEach(s=>s.addEventListener('click',()=>{const k=s.getAttribute('data-acc');localStorage.setItem('cfg-acc',k);setAcc(k);toast('强调色已应用·已保存','ok');}));
+  }
+  // key 可见性切换
+  const kt=document.querySelector('[data-testid="config-key-toggle"]'),ki=document.querySelector('[data-testid="config-key-input"]');
+  if(kt&&ki)kt.addEventListener('click',()=>{const show=ki.type==='password';ki.type=show?'text':'password';kt.innerHTML=show?'<i data-lucide="eye-off"></i>':'<i data-lucide="eye"></i>';if(window.lucide)lucide.createIcons();});
+
+  // 模型连接测试：演示 ok/fail 交替（fail 文案接 error.code）+ hash #s=ok/fail 强制态
+  const showTest=s=>['none','pending','ok','fail'].forEach(k=>{const el=document.querySelector('[data-testid="config-test-'+k+'"]');if(el)el.hidden=k!==s;});
+  const hs=(location.hash.match(/s=(\w+)/)||[])[1];
+  if(['ok','fail','pending','none'].includes(hs))showTest(hs);
+  const tb=document.querySelector('[data-testid="config-model-test-btn"]');
+  if(tb){let n=0;tb.addEventListener('click',()=>{showTest('pending');setTimeout(()=>{n++;showTest(n%2?'ok':'fail');},900);});}
+
+  // MCP 添加表单
+  const addBtn=document.querySelector('[data-testid="config-mcp-add"]'),addModal=document.getElementById('mcpAddModal');
+  if(addBtn&&addModal)addBtn.addEventListener('click',()=>{addModal.hidden=false;});
+  const cfgTable=document.querySelector('[data-testid="config-mcp-config-table"]');
+  const cfgAdd=document.querySelector('[data-testid="config-mcp-config-add"]');
+  const rowHtml=()=>{const r=document.createElement('div');r.className='cfg-row';r.innerHTML='<input class="inp" placeholder="key"><input class="inp" placeholder="value"><span class="cfg-del" data-testid="config-mcp-cfg-del"><i data-lucide="x"></i></span>';return r;};
+  if(cfgAdd&&cfgTable)cfgAdd.addEventListener('click',()=>{const r=rowHtml();cfgTable.appendChild(r);r.querySelector('.cfg-del').addEventListener('click',()=>r.remove());if(window.lucide)lucide.createIcons();});
+  cfgTable?.querySelectorAll('.cfg-del').forEach(d=>d.addEventListener('click',()=>d.closest('.cfg-row').remove()));
+  const confirmAdd=document.querySelector('[data-testid="config-mcp-add-confirm"]');
+  const mcpList=document.querySelector('[data-testid="config-mcp-list"]');
+  if(confirmAdd&&mcpList)confirmAdd.addEventListener('click',()=>{
+    const name=document.querySelector('[data-testid="config-mcp-instance"]').value||'自定义 MCP';
+    const pkg=document.querySelector('[data-testid="config-mcp-package"]').value||'';
+    const empty=mcpList.querySelector('[data-testid="config-mcp-empty"]');if(empty)empty.remove();
+    const srv=document.createElement('div');srv.className='srv';srv.setAttribute('data-testid','config-mcp-item');
+    srv.innerHTML='<span class="ico"><i data-lucide="plug"></i></span><div class="mid"><div class="nm">'+name+'<span class="dot off"></span><span class="badge ooc">out-of-canon</span></div><div class="meta"><span>'+(pkg||'远程 SSE')+'</span><span style="color:var(--warn)">⚠ 未接运行时（RT8）</span></div></div><div class="right"><span class="btn" data-testid="config-mcp-test-btn"><i data-lucide="plug-zap"></i>测试</span><span class="sw2" data-testid="config-mcp-toggle"></span></div>';
+    mcpList.appendChild(srv);
+    srv.querySelector('.sw2').addEventListener('click',function(){this.classList.toggle('on');toast(this.classList.contains('on')?'MCP 已启用':'MCP 已禁用','ok');});
+    srv.querySelector('[data-testid="config-mcp-test-btn"]').addEventListener('click',()=>toast('MCP 探活：未接运行时（RT8）','warn'));
+    addModal.hidden=true;toast('已添加自定义 MCP（原型不持久）','ok');
+    if(window.lucide)lucide.createIcons();
+  });
 });</script>
 </body></html>

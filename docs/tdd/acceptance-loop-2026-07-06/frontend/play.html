@@ -113,6 +113,10 @@ body.layout-mobile .dock-h{display:none}
       <div class="stagebar">
         <span style="font-family:var(--serif);font-size:13px;color:var(--text)">黑风寨的钟声</span>
         <span style="font-family:var(--mono);font-size:10px;color:var(--text3)">第二幕 · 夜入山寨</span>
+        <!-- RT-FE18 model 切换器（期望态·依赖未批准裁决 model-switch · 下回合生效 · 静态占位） -->
+        <span class="model-switch" data-testid="play-model-switch" title="运行时切换 model · 下回合生效（裁决 model-switch · 待批准）">
+          <i data-lucide="cpu"></i><span class="ms-cur">sonnet-5</span><i data-lucide="chevron-down" style="width:12px"></i>
+        </span>
         <span class="sp"></span>
       </div>
 
@@ -156,6 +160,9 @@ body.layout-mobile .dock-h{display:none}
               <div class="ti"><b style="color:var(--text)">黑风寨布防</b>：东门两哨、钟楼暗哨一，子时换岗；后窗临崖无人。</div>
             </div>
 
+            <!-- RT-FE16 per-turn usage（期望态·依赖未批准裁决 co-play+usage-stream · 回合块尾内联·hover 展开四类明细） -->
+            <div class="turn-usage" data-testid="play-turn-usage" title="model sonnet-5 · in 3200 / out 480 / cacheRead 9800 / cacheWrite 410">⟨<span class="tu-model">sonnet-5</span> · <span class="up">↑3 200</span> <span class="down">↓480</span> tok · ≈$0.014⟩</div>
+
             <!-- 分割线：历史 / 本轮 -->
             <div class="divider">以上历史 · 以下本轮</div>
 
@@ -197,6 +204,13 @@ body.layout-mobile .dock-h{display:none}
           <div class="foot" data-screen="roll"><div class="rollcenter" data-testid="play-rollreq"><button class="rollbig" data-testid="play-roll-btn" id="rollBtn"><i data-lucide="dices"></i>丢骰子<span class="d">d10</span></button><div class="rollhint">这一掷决定钟绳断不断 · 点数由引擎裁定</div></div></div>
           <div class="foot" data-screen="error"><div class="errbar" data-testid="play-error"><i data-lucide="alert-circle"></i><span class="sp">GM 超时或出错：这一回合没能完成。</span><span class="btn"><i data-lucide="rotate-ccw"></i>重试</span></div></div>
           <div class="foot" data-screen="end"><div class="input" data-testid="play-postmortem-input"><span class="box">复盘 · 问 GM 任何问题，或描述想改走的分支…</span><span class="send"><i data-lucide="arrow-up"></i></span></div></div>
+          <!-- RT-FE14 上下文占用条（期望态·依赖未批准裁决 usage-and-context §三 · 常驻 foot 下方·>80% 变红提示 rewind/开新局） -->
+          <div class="ctx-bar" data-testid="play-context-usage" title="当前上下文占用 42% · 接近上限可 rewind / 开新局（裁决 usage-and-context · 待批准）">
+            <i data-lucide="gauge"></i><span class="ctx-label">上下文</span>
+            <span class="ctx-track"><span class="ctx-fill" style="width:42%"></span></span>
+            <span class="ctx-pct">42%</span>
+            <span class="ctx-hint" data-testid="play-context-hint" hidden><i data-lucide="zap"></i>即将触发压缩</span>
+          </div>
         </div>
 
         <!-- 右 dock：dock-card markdown 模板渲染器（可滚动 · 每卡 编辑/删除/折叠） -->
@@ -283,8 +297,7 @@ where attr = "世界.钟楼示警"
   <span class="bay-btn" data-bay="forms" data-testid="play-bay-btn-forms"><i data-lucide="layout-grid"></i>其他</span>
   <span class="bay-btn" data-bay="config" data-testid="play-bay-btn-config"><i data-lucide="settings"></i>配置</span>
   <span class="bay-btn" data-bay="archive" data-testid="play-bay-btn-archive"><i data-lucide="archive"></i>归档</span>
-  <span class="sp"></span>
-  <span class="seq">seq 1284</span>
+  <span class="bay-btn" data-bay="usage" data-testid="play-bay-btn-usage" title="用量详情：session 累计 / 各 MCP 消耗 / 记忆占用"><i data-lucide="coins"></i>用量</span>
 </div>
 
 <!-- bay popover：导航（≡ 收纳 5 页签 · nav-tab-* 锚点挂这） -->
@@ -383,6 +396,36 @@ where attr = "世界.钟楼示警"
     <div class="pop-head"><i data-lucide="archive"></i>归档 · 可找回<span class="sp"></span><span class="x" data-bay-close><i data-lucide="x"></i></span></div>
     <div class="pop-body" id="archiveList">
       <div class="arch-empty" data-testid="play-archive-empty">还没有归档的卡。点卡上的归档按钮，卡会移到这里，随时恢复。</div>
+    </div>
+  </div>
+</div>
+
+<!-- bay popover：用量详情（RT-FE14/16/17 · 期望态·依赖未批准裁决 usage-and-context+co-play · 含 MCP/记忆分项超前需求） -->
+<div class="popover" id="bay-usage" data-testid="play-bay-popover-usage" hidden>
+  <div class="pop-card">
+    <div class="pop-head"><i data-lucide="coins"></i>用量详情<span class="sp"></span><span class="x" data-bay-close><i data-lucide="x"></i></span></div>
+    <div class="pop-body usage-detail">
+      <div class="ud-sec"><div class="ud-h">当前会话 · sonnet-5</div>
+        <div class="ud-row"><span>累计 token</span><span class="ud-v"><b>12.4k</b> <span class="dim">↑8.2k ↓4.2k · cache 24.6k</span></span></div>
+        <div class="ud-row"><span>估价</span><span class="ud-v">≈$0.052</span></div>
+        <div class="ud-row"><span>上下文占用</span><span class="ud-v"><span class="ud-dial" data-testid="play-context-dial" title="84k/200k"><svg viewBox="0 0 36 36" class="dial-svg"><circle class="dial-bg" cx="18" cy="18" r="15.9"/><circle class="dial-fg" cx="18" cy="18" r="15.9" style="stroke-dasharray:42 100"/></svg><span class="dial-pct">42%</span></span> <span class="dim">(84k/200k)</span></span></div>
+      </div>
+      <div class="ud-sec"><div class="ud-h">按 MCP 工具消耗</div>
+        <div class="ud-row"><span><i data-lucide="wrench"></i> narrate</span><span class="ud-v">5.2k tok</span></div>
+        <div class="ud-row"><span><i data-lucide="wrench"></i> resolve_outcome</span><span class="ud-v">3.1k tok</span></div>
+        <div class="ud-row"><span><i data-lucide="wrench"></i> sheet_update</span><span class="ud-v">1.8k tok</span></div>
+        <div class="ud-row"><span><i data-lucide="wrench"></i> query_memory</span><span class="ud-v">0.9k tok</span></div>
+      </div>
+      <div class="ud-sec"><div class="ud-h">记忆占用</div>
+        <div class="ud-row"><span><i data-lucide="book-open"></i> 叙事记忆</span><span class="ud-v">2.1k tok <span class="dim">· 18 条</span></span></div>
+        <div class="ud-row"><span><i data-lucide="table"></i> 状态 sheet</span><span class="ud-v">1.4k tok <span class="dim">· cells</span></span></div>
+        <div class="ud-row"><span><i data-lucide="git-branch"></i> 伏笔/锚点</span><span class="ud-v">0.8k tok</span></div>
+      </div>
+      <div class="ud-sec"><div class="ud-h">各轮 · per-turn</div>
+        <div class="ud-row"><span class="dim">轮 3 · 刚才</span><span class="ud-v">↑3.2k ↓480 · sonnet-5</span></div>
+        <div class="ud-row"><span class="dim">轮 2</span><span class="ud-v">↑2.8k ↓510 · sonnet-5</span></div>
+        <div class="ud-row"><span class="dim">轮 1</span><span class="ud-v">↑2.4k ↓440 · sonnet-5</span></div>
+      </div>
     </div>
   </div>
 </div>

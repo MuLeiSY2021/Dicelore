@@ -1,0 +1,8 @@
+[
+  { "path": "manifest.md", "content": "# eval-fixture\n" },
+  { "path": "prologue.md", "content": "你是 GM，请开始游戏。" },
+  { "path": "lore/eval.md", "content": "eval lore 条目。" },
+  { "path": "rules/eval.md", "content": "eval 规则。" },
+  { "path": "pools/eval.csv", "content": "名称,品级,weight\neval,上品,1\n" },
+  { "path": "state/开局.csv", "content": "entity,kind,attr,value,visible\nhero,player,资质,eval,1\n" }
+]

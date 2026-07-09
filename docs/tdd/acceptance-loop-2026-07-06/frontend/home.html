@@ -10,32 +10,41 @@
 .hello{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--acc-soft)}
 .htitle{font-family:var(--serif);font-size:28px;color:var(--text);font-weight:600;margin:6px 0 4px}
 .hsub{color:var(--text2);font-size:13px;max-width:640px;line-height:1.6}
+.hsub b{color:var(--text)}
 .guide{margin:22px 0;padding:18px 22px;background:var(--surface);border:1px solid var(--line);border-radius:12px}
 .guide h3{font-family:var(--serif);font-weight:600;font-size:16px;margin:0 0 10px}
 .guide ol{margin:0;padding-left:20px;color:var(--text2);font-size:13px;line-height:1.9}
-.guide .manual{display:inline-flex;align-items:center;gap:6px;margin-top:12px;color:var(--acc-soft);font-size:12.5px;cursor:pointer}
+.guide .manual{display:inline-flex;align-items:center;gap:6px;margin-top:12px;color:var(--acc-soft);font-size:12.5px;cursor:pointer;text-decoration:none}.guide .manual:hover{text-decoration:underline}
 .guide .manual [data-lucide]{width:14px}
 .label{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin:22px 0 9px;display:flex;align-items:center;gap:8px}
 .label:after{content:"";flex:1;height:1px;background:var(--line)}
-.resume{display:flex;align-items:center;gap:18px;padding:16px 20px;background:var(--surface);border:1px solid var(--line2);border-radius:12px}
+.resume{display:flex;align-items:center;gap:18px;padding:16px 20px;background:var(--surface);border:1px solid var(--line2);border-radius:12px;text-decoration:none}
 .resume .meta{flex:1}
 .resume .scen{font-family:var(--serif);font-size:17px;color:var(--text);font-weight:600}
 .resume .where{font-family:var(--mono);font-size:11.5px;color:var(--text2);margin-top:5px}
-.resume .cont{display:flex;align-items:center;gap:8px;padding:11px 20px;background:linear-gradient(160deg,var(--acc-h),var(--acc));border:none;border-radius:9px;color:var(--acc-on);font-weight:700;font-size:14px;cursor:pointer}
+.resume .cont{display:flex;align-items:center;gap:8px;padding:11px 20px;background:linear-gradient(160deg,var(--acc-h),var(--acc));border:none;border-radius:9px;color:var(--acc-on);font-weight:700;font-size:14px;cursor:pointer;text-decoration:none}
 .resume .cont [data-lucide]{width:17px}
 .quick{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin:12px 0}
-.qcard{padding:16px;background:var(--surface);border:1px solid var(--line);border-radius:10px;cursor:pointer}
+.qcard{padding:16px;background:var(--surface);border:1px solid var(--line);border-radius:10px;cursor:pointer;text-decoration:none;position:relative}
 .qcard:hover{border-color:var(--line2)}
+.qcard.featured{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc)}
+.qcard.featured .tag-rec{position:absolute;top:9px;right:10px;font-family:var(--mono);font-size:9px;color:var(--acc-on);background:linear-gradient(160deg,var(--acc-h),var(--acc));padding:2px 7px;border-radius:8px}
 .qcard .ico{width:34px;height:34px;border-radius:8px;background:var(--surface2);display:flex;align-items:center;justify-content:center;color:var(--acc-soft)}
 .qcard .qt{font-weight:600;color:var(--text);margin-top:10px;font-size:13.5px}
 .qcard .qd{font-size:11px;color:var(--text3);margin-top:3px}
+/* 首访空态 */
+.empty-first{display:flex;flex-direction:column;align-items:center;gap:9px;padding:40px 20px;text-align:center;background:var(--surface);border:1px dashed var(--line2);border-radius:12px}
+.empty-first [data-lucide]{width:30px;color:var(--acc-soft)}
+.empty-first .ef-t{font-family:var(--serif);font-size:18px;color:var(--text)}
+.empty-first .ef-sub{font-size:12.5px;color:var(--text2);max-width:420px;line-height:1.6}
+.empty-first .btn.lg{padding:11px 22px;font-size:14px;margin-top:6px}
 </style></head>
-<body>
+<body data-screen-default="has">
   <div class="shell appshell">
     <div class="home">
-      <div class="hello">Good evening · 旅人</div>
+      <div class="hello" data-testid="home-hello">下午好 · 旅人</div>
       <div class="htitle">欢迎来到 Dicelore</div>
-      <div class="hsub">给 AI 套上 GM 行为塑形框架的文字冒险引擎。造一个团本、或续上一局。</div>
+      <div class="hsub">让 AI 当你的 <b>GM（游戏主持人）</b>，带你跑一场文字冒险。造一个 <b>团本（剧本）</b>，或续上一局存档。</div>
 
       <div class="guide" data-testid="home-guide">
         <h3>怎么开始</h3>
@@ -44,26 +53,39 @@
           <li>没有团本？去 <b>制作</b> 页丢一本小说，让构建助手造一个。</li>
           <li>跑团中随时掷骰 / 选项；断线重连自动补齐。</li>
         </ol>
-        <span class="manual" data-testid="home-manual-link"><i data-lucide="book-open"></i>阅读使用手册</span>
+        <a class="manual" href="../../../wiki/指南/README.md" data-testid="home-manual-link"><i data-lucide="book-open"></i>阅读使用手册</a>
       </div>
 
+      <!-- 有最近会话（默认·#s=has） -->
       <div class="label">最近一个会话</div>
-      <div class="resume" data-testid="home-recent-session">
+      <a class="resume" data-testid="home-recent-session" data-screen="has" href="play.html">
         <div class="meta">
           <div class="scen">黑风寨的钟声 · 第二幕「夜入山寨」</div>
           <div class="where">张三 · HP 12/15 · 金钱 77 · 进度 2/5 · 3 分钟前</div>
         </div>
-        <button class="cont" data-testid="home-recent-continue"><i data-lucide="play"></i>继续跑团</button>
+        <span class="cont" data-testid="home-recent-continue"><i data-lucide="play"></i>继续跑团</span>
+      </a>
+
+      <!-- 首访无会话空态（#s=empty · 对称 play-noSession-hint） -->
+      <div class="empty-first" data-testid="home-empty-session" data-screen="empty" hidden>
+        <i data-lucide="compass"></i>
+        <div class="ef-t">还没有进行中的会话</div>
+        <div class="ef-sub">挑一个团本立刻开局，或丢一本小说让助手造一个。</div>
+        <a class="btn go lg" href="catalog.html" data-testid="home-start-cta"><i data-lucide="play"></i>去挑团本开局</a>
+        <a class="btn" href="build.html">或去制作页造一个</a>
       </div>
 
       <div class="label">快速入口</div>
       <div class="quick">
-        <a class="qcard" href="catalog.html" data-testid="home-quick-catalog"><div class="ico"><i data-lucide="library"></i></div><div class="qt">团本目录</div><div class="qd">选团本开局 / 导入</div></a>
+        <a class="qcard featured" href="catalog.html" data-testid="home-quick-catalog"><span class="tag-rec">推荐开局</span><div class="ico"><i data-lucide="library"></i></div><div class="qt">团本目录</div><div class="qd">选团本开局 / 导入</div></a>
         <a class="qcard" href="build.html" data-testid="home-quick-build"><div class="ico"><i data-lucide="hammer"></i></div><div class="qt">团本制作</div><div class="qd">丢本小说造团本</div></a>
         <a class="qcard" href="config.html" data-testid="home-quick-config"><div class="ico"><i data-lucide="settings"></i></div><div class="qt">配置</div><div class="qd">服务 / MCP / 模型</div></a>
       </div>
     </div>
   </div>
+
+<!-- 角落运行态徽章（落地页·key 配错玩不了有提示） -->
+<div class="runstatus-pill" data-testid="home-runstatus"><span><span class="dot"></span>模型</span><span><span class="dot"></span>MCP</span><span><span class="dot w"></span>notify 未配</span></div>
 
 <!-- 全局 bay（fixed · 仿 mac 聚焦出现） -->
 <div class="bay-wrap"></div>
@@ -87,4 +109,16 @@
   </div>
 </div>
 <script src="app.js"></script>
+<script>window.addEventListener('load',()=>{
+  // 问候语：首访/回访分支 + 时段
+  const hello=document.querySelector('[data-testid="home-hello"]');
+  const visited=localStorage.getItem('home-visited');
+  const h=new Date().getHours();
+  const tod=h<6?'夜深了':h<12?'早上好':h<18?'下午好':'晚上好';
+  if(hello)hello.textContent=visited?(tod+' · 旅人 · 欢迎回来'):(tod+' · 新朋友');
+  if(!visited)localStorage.setItem('home-visited','1');
+  // 落地页强制 bay 常驻（首站新手找得到导航）
+  document.body.classList.remove('bay-hidden');document.body.classList.add('bay-always');
+  if(window.lucide)lucide.createIcons();
+});</script>
 </body></html>

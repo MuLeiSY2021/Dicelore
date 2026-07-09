@@ -34,8 +34,10 @@ iframe{flex:1;width:100%;border:none;background:var(--bg)}
 
         <div class="grp-l">主页 <span class="m">B2</span></div>
         <div class="item" data-src="home.html">落地页 · 指南+最近会话<span class="s">home</span></div>
+        <div class="item" data-src="home.html#s=empty">首访无会话空态<span class="s">#s=empty</span></div>
 
         <div class="grp-l">团本目录 <span class="m">B3 · catalog A4</span></div>
+        <div class="item" data-src="catalog.html#s=loading">加载骨架<span class="s">#s=loading</span></div>
         <div class="item" data-src="catalog.html#s=list">有团本列表<span class="s">#s=list</span></div>
         <div class="item" data-src="catalog.html#s=empty">空态<span class="s">#s=empty</span></div>
 
@@ -52,12 +54,14 @@ iframe{flex:1;width:100%;border:none;background:var(--bg)}
 <div class="item" data-src="play.html#s=input&bay=forms">└ 其他表单·数据浏览<span class="s">bay=forms</span></div>
 <div class="item" data-src="play.html#s=input&bay=archive">└ 归档·找回<span class="s">bay=archive</span></div>
         <div class="item" data-src="play.html#s=input&bay=config">└ 配置·防剧透浮窗<span class="s">bay=config</span></div>
+        <div class="item" data-src="play.html#s=input&bay=usage">└ 用量详情浮窗<span class="s">bay=usage</span></div>
         <div class="item" data-src="play.html#s=input&layout=mobile">└ 移动端布局<span class="s">mobile</span></div>
         <div class="item" data-src="play.html#s=generating">生成中<span class="s">generating</span></div>
         <div class="item" data-src="play.html#s=roll">待掷（明骰·内联 stream）<span class="s">roll</span></div>
         <div class="item" data-src="play.html#s=choices">待选（浮在输入框上）<span class="s">choices</span></div>
         <div class="item" data-src="play.html#s=error">错误<span class="s">error</span></div>
         <div class="item" data-src="play.html#s=end">终局 · 复盘态（不遮罩）<span class="s">end</span></div>
+        <div class="item" data-src="play.html#s=input&ctx=danger">└ 上下文占用&gt;90%·变红·即将压缩<span class="s">ctx=danger</span></div>
 
         <div class="grp-l">团本制作 <span class="m">B5 · loregm A3</span></div>
         <div class="item" data-src="build.html#v=lore">世界设定<span class="s">lore</span></div>
@@ -71,6 +75,12 @@ iframe{flex:1;width:100%;border:none;background:var(--bg)}
         <div class="item" data-src="build.html#v=anchor">锚点<span class="s">anchor</span></div>
         <div class="item" data-src="build.html#v=prologue">开场白<span class="s">prologue</span></div>
         <div class="item" data-src="build.html#v=manifest">Manifest<span class="s">manifest</span></div>
+        <div class="item" data-src="build.html#v=lore&bay=usage">└ 用量详情浮窗<span class="s">bay=usage</span></div>
+        <div class="item" data-src="build.html#v=relation">关系图谱<span class="s">relation</span></div>
+        <div class="item" data-src="build.html#v=materials">素材包·上传<span class="s">materials</span></div>
+        <div class="item" data-src="build.html#st=none">无活动会话态<span class="s">st=none</span></div>
+        <div class="item" data-src="build.html#st=exported">已提交/导出态<span class="s">st=exported</span></div>
+        <div class="item" data-src="build.html#v=npc&st=ok">校验全绿态<span class="s">st=ok</span></div>
 
         <div class="grp-l">配置 <span class="m">B6</span></div>
         <div class="item" data-src="config.html#v=general">通用<span class="s">general</span></div>
@@ -78,6 +88,7 @@ iframe{flex:1;width:100%;border:none;background:var(--bg)}
         <div class="item" data-src="config.html#v=mcp">MCP 服务器<span class="s">mcp</span></div>
         <div class="item" data-src="config.html#v=model">模型连接<span class="s">model</span></div>
         <div class="item" data-src="config.html#v=model&s=ok">└ 测试·成功<span class="s">ok</span></div>
+        <div class="item" data-src="config.html#v=model&s=fail">└ 测试·失败<span class="s">fail</span></div>
         <div class="item" data-src="config.html#v=theme">主题外观<span class="s">theme</span></div>
         <div class="item" data-src="config.html#v=data">数据与存储<span class="s">data</span></div>
         <div class="item" data-src="config.html#v=about">关于<span class="s">about</span></div>

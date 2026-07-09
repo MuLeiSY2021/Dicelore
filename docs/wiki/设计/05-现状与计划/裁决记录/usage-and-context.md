@@ -43,7 +43,7 @@ sessionTotal  = Σ 各轮 (inputTokens + outputTokens + cacheRead + cacheCreatio
 
 - `class="foot"` 加「当前上下文占用百分比」= `contextPct`。
 - 数据：从 `GET /usage` 或 `turn_ended.usage` WS（co-play）算。
-- 占用高（>80%【拟·待确认 C3 阈值】）变红提示 → 玩家可手动 rewind / branch / 开新局（对接 RT-FE8）。
+- 占用高（>90%·C3 已定调）变红 + `play-context-hint`「即将触发压缩」提示（对接 RT-FE15 auto-compact）→ 玩家可手动 rewind / branch / 开新局（对接 RT-FE8）。
 
 ## 四、RT-FE15 自动压缩（复用 Agent SDK · 不自研）
 
@@ -81,14 +81,14 @@ export const CONTEXT_WINDOW: Record<string, number> = {
 |---|----|--------|----------|
 | C1 | Agent SDK 0.3.185 auto-compact option 名 + 默认行为 | `autoCompact`·默认开·透传 SDK（实现时查证） | |
 | C2 | model windowSize 表位置 | `packages/shared`（与 pricing.ts 并列） | |
-| C3 | foot 占用% 变红阈值 | 80% | |
+| C3 | foot 占用% 变红阈值 | 80% | 90% |
 
 ---
 
 ## 验收
 
 - `GET /sessions/dicegm/{id}/usage` → 返回 `{model, contextTokens, contextWindow, contextPct, sessionTotal, perTurn}`。
-- foot 显示 `contextPct`，>80%（C3）变红。
+- foot 显示 `contextPct`，>90%（C3）变红 + `play-context-hint`「即将触发压缩」提示。
 - bay-local 显示 `sessionTotal`。
 - `contextTokens` = 最近一轮 `input+cacheRead+cacheCreation`（手算核对）。
 - 自动压缩：开启 autoCompact 后，长局跑到接近上限 → `contextTokens` 回落（旧回合被 summarize）。（C1 确认后）
