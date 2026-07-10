@@ -93,9 +93,12 @@ export {
   usageByTurn,
   usageByAgent,
   usageBySession,
+  usageContext,
   type UsageInput,
   type UsageRow,
   type UsageTotals,
+  type UsageContext,
+  type PerTurnUsage,
 } from "./store/usage.js";
 
 // ===== core 侧 mcp/adapter/cli/main 经裸 @dicelore/backend 消费、但不在上面公共面里的补充符号 =====

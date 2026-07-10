@@ -97,3 +97,40 @@ function totals(db: DB, where: string, key: string): UsageTotals {
 export function usageByTurn(db: DB, turnId: string): UsageTotals { return totals(db, "turn_id=?", turnId); }
 export function usageByAgent(db: DB, agent: string): UsageTotals { return totals(db, "agent=?", agent); }
 export function usageBySession(db: DB, sessionId: string): UsageTotals { return totals(db, "session_id=?", sessionId); }
+
+// ── 上下文占用派生（裁决 usage-and-context §一）──────────────────────────────
+// 从已落库的 usage_log 直接算上下文口径，无需额外采集：
+//   · contextTokens = 最近一轮 (input + cacheRead + cacheCreation)（= 该回合 prompt 总量 = 当前上下文 token）
+//   · sessionTotal  = Σ 全部行四类 token（整局累计消耗）
+//   · perTurn       = 各回合四类 token（按出现顺序，对接 co-play per-turn 内联）
+//   · model         = 最近一轮的 model（当前局模型；无 usage → ""）
+// contextWindow / contextPct 需查 CONTEXT_WINDOW 表（@dicelore/shared），故留给 API 层组合，本层只出裸数据。
+export interface PerTurnUsage extends UsageTotals { turnId: string; }
+export interface UsageContext {
+  model: string;
+  contextTokens: number;
+  sessionTotal: number;
+  perTurn: PerTurnUsage[];
+}
+
+// 单次遍历本局明细（已 per-session 物理隔离），按 turnId 保序分组求和 + 累计整局总量。
+export function usageContext(db: DB): UsageContext {
+  const rows = listUsage(db); // 按 id 升序
+  const perTurn: PerTurnUsage[] = [];
+  const byId = new Map<string, PerTurnUsage>();
+  let sessionTotal = 0;
+  let model = "";
+  for (const r of rows) {
+    let e = byId.get(r.turnId);
+    if (!e) { e = { turnId: r.turnId, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheCreationTokens: 0 }; byId.set(r.turnId, e); perTurn.push(e); }
+    e.inputTokens += r.inputTokens;
+    e.outputTokens += r.outputTokens;
+    e.cacheReadTokens += r.cacheReadTokens;
+    e.cacheCreationTokens += r.cacheCreationTokens;
+    sessionTotal += r.inputTokens + r.outputTokens + r.cacheReadTokens + r.cacheCreationTokens;
+    if (r.model) model = r.model; // 末行非空 model 胜出（当前局模型）
+  }
+  const last = perTurn[perTurn.length - 1];
+  const contextTokens = last ? last.inputTokens + last.cacheReadTokens + last.cacheCreationTokens : 0;
+  return { model, contextTokens, sessionTotal, perTurn };
+}

@@ -10,6 +10,7 @@
 import { describe, it, expect } from "vitest";
 import { openDb, initSchema, openSessionBackend } from "@dicelore/backend";
 import { createMcpServer } from "@dicelore/harness";
+import { CONTEXT_WINDOW, contextWindowFor } from "@dicelore/shared";
 import { buildQueryOptions } from "./gmAssembly.js";
 import type { PluginRef } from "../runtime/agent.js";
 
@@ -64,6 +65,28 @@ describe("buildQueryOptions（SDK 装配 offline 回归 / TB-2）", () => {
     const on = buildQueryOptions({ model: "m", mcpServer: makeMcp(), openingPrompt: "p", plugin: DICE_PLUGIN, abortController: new AbortController() });
     expect(off.settingSources).toEqual([]);
     expect(on.settingSources).toEqual([]);
+  });
+
+  // 裁决 usage-and-context C1：经 flag settings 层显式开 auto-compact（与 settingSources:[] 正交）。
+  describe("auto-compact settings 注入（C1 / usage-and-context）", () => {
+    it("显式 autoCompactEnabled:true（不依赖 SDK 默认）", () => {
+      const opts = buildQueryOptions({ model: "claude-opus-4-8", mcpServer: makeMcp(), openingPrompt: "p", abortController: new AbortController() });
+      expect(opts.settings.autoCompactEnabled).toBe(true);
+    });
+    it("autoCompactWindow = CONTEXT_WINDOW[model]（与 foot 占用% 同口径）", () => {
+      const opts = buildQueryOptions({ model: "claude-opus-4-8", mcpServer: makeMcp(), openingPrompt: "p", abortController: new AbortController() });
+      expect(opts.settings.autoCompactWindow).toBe(CONTEXT_WINDOW["claude-opus-4-8"]);
+    });
+    it("未知 model → autoCompactWindow 落 default 窗口", () => {
+      const opts = buildQueryOptions({ model: "glm-5.2", mcpServer: makeMcp(), openingPrompt: "p", abortController: new AbortController() });
+      expect(opts.settings.autoCompactWindow).toBe(contextWindowFor("glm-5.2"));
+      expect(opts.settings.autoCompactWindow).toBe(CONTEXT_WINDOW.default);
+    });
+    it("settings 与 settingSources:[] 正交并存（都装配，互不覆盖）", () => {
+      const opts = buildQueryOptions({ model: "m", mcpServer: makeMcp(), openingPrompt: "p", abortController: new AbortController() });
+      expect(opts.settingSources).toEqual([]);
+      expect(opts.settings).toEqual({ autoCompactEnabled: true, autoCompactWindow: CONTEXT_WINDOW.default });
+    });
   });
 
   describe("plugin 为空（baseline：skill 全不启）", () => {

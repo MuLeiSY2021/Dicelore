@@ -34,6 +34,16 @@ export const StreamMessageSchema = z.discriminatedUnion("type", [
   }),
   z.object({ ...base, type: z.literal("game_end"), reason: z.string(), outcome: z.string() }),
   z.object({ ...base, type: z.literal("error"), code: z.string(), message: z.string() }),
+  // 第 11 类（裁决 usage-and-context §四/§5 catalog）：上下文压缩进行态广播。
+  // harness 订阅 SDK 流：SDKStatusMessage.status==='compacting' → {phase:"start"}；
+  // compact_result==='success'|'failed'（或 SDKCompactBoundaryMessage）→ {phase:"done", result, error?}。
+  // 前端据此显/隐「正在进行上下文压缩」提示 + indeterminate 进度条；SDK 压缩不暴露数值进度，故无 progress 字段。
+  z.object({
+    ...base, type: z.literal("context_compacting"),
+    phase: z.enum(["start", "done"]),
+    result: z.enum(["success", "failed"]).optional(), // 仅 done 时带
+    error: z.string().optional(),                     // 仅 failed 时带（SDK compact_error）
+  }),
 ]);
 
 export type StreamMessage = z.infer<typeof StreamMessageSchema>;

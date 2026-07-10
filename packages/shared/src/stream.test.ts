@@ -57,4 +57,39 @@ describe("StreamMessageSchema", () => {
       });
     }
   });
+
+  it("context_compacting start（无 result）可判别", () => {
+    const m = StreamMessageSchema.parse({
+      protocol: CLIENT_PROTOCOL, type: "context_compacting", phase: "start",
+    });
+    expect(m.type).toBe("context_compacting");
+    if (m.type === "context_compacting") {
+      expect(m.phase).toBe("start");
+      expect(m.result).toBeUndefined();
+    }
+  });
+
+  it("context_compacting done success / failed 携带 result + error", () => {
+    const ok = StreamMessageSchema.parse({
+      protocol: CLIENT_PROTOCOL, type: "context_compacting", phase: "done", result: "success",
+    });
+    if (ok.type === "context_compacting") expect(ok.result).toBe("success");
+
+    const bad = StreamMessageSchema.parse({
+      protocol: CLIENT_PROTOCOL, type: "context_compacting", phase: "done", result: "failed", error: "boom",
+    });
+    if (bad.type === "context_compacting") {
+      expect(bad.result).toBe("failed");
+      expect(bad.error).toBe("boom");
+    }
+  });
+
+  it("context_compacting 拒绝非法 phase / result", () => {
+    expect(() => StreamMessageSchema.parse({
+      protocol: CLIENT_PROTOCOL, type: "context_compacting", phase: "mid",
+    })).toThrow();
+    expect(() => StreamMessageSchema.parse({
+      protocol: CLIENT_PROTOCOL, type: "context_compacting", phase: "done", result: "maybe",
+    })).toThrow();
+  });
 });

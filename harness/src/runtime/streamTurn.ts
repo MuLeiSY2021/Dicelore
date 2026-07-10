@@ -44,6 +44,9 @@ export async function streamDriverTurn(deps: StreamTurnDeps, input: TurnInput): 
         deps.onUsage?.(ev.usage, ev.model); // 转交会话落库;不广播(带外计量,不进玩家所见)
       } else if (ev.type === "sdk_session") {
         deps.onSdkSession?.(ev.id); // 转交会话存 sdk_session_id;不广播(续接指针,不进玩家所见)
+      } else if (ev.type === "context_compacting") {
+        // 上下文压缩进行态(裁决 usage-and-context §四):广播给前端显/隐「正在进行上下文压缩」提示 + indeterminate 进度条。
+        send({ protocol: CLIENT_PROTOCOL, type: "context_compacting", phase: ev.phase, ...(ev.result ? { result: ev.result } : {}), ...(ev.error ? { error: ev.error } : {}) });
       } else if (ev.type === "error") {
         // ev.code 由驱动给出可区分码(如 gm_timeout，让前端识别「超时·可重试」);省略则默认 gm_error。
         send({ protocol: CLIENT_PROTOCOL, type: "error", code: ev.code ?? "gm_error", message: ev.message });
