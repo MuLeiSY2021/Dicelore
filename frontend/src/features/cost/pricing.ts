@@ -69,4 +69,8 @@ export function formatTokens(n: number): string {
 
 // ── 兼容别名（co-play/co-build 两节点各自建 pricing、集成时统一到本 build 版；play 消费端沿用这些名）──
 export type TurnUsage = TokenUsage;
-export const fmtTokens = formatTokens;
+// play 侧紧凑 token 显示（用量浮窗多数值）：≥1000 → "3.2k"，否则原样。build 侧用上面 formatTokens("3 200" 空格风格)。
+export function fmtTokens(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+  return String(Math.max(0, Math.round(n)));
+}
