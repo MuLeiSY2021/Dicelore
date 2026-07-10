@@ -43,13 +43,13 @@ export function derivePresetCards(snap: PresentationSnapshot | null): DockCardDe
   for (const p of snap.plotlines ?? []) {
     cards.push({
       id: `plotline:${p.id}`, title: `剧情线 · ${p.title}`, Icon: GitBranch, diy: false,
-      source: `select ${p.id}\n\n## 剧情线 · ${p.title}\n状态: ${p.status}${p.summary ? `\n${p.summary}` : ""}`,
+      source: `from plotlines\nselect ${p.id}\n\n## 剧情线 · ${p.title}\n状态: ${p.status}${p.summary ? `\n${p.summary}` : ""}`,
     });
   }
   for (const l of snap.lore ?? []) {
     cards.push({
       id: `world:${l.name}`, title: `世界书 · ${l.name}`, Icon: BookOpen, diy: false,
-      source: `select ${l.name}\n\n## ${l.name}\n${l.content}`,
+      source: `from lore\nselect ${l.name}\n\n## ${l.name}\n${l.content}`,
     });
   }
   return cards;

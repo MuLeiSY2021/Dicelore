@@ -121,6 +121,17 @@ it("dock-card 渲染 sheet 派生卡（角色 · 张三）", () => {
   expect(within(dock).getByTestId("play-card-status:张三")).toHaveTextContent("HP: 12");
 });
 
+// DERIVE-1(反转)：剧情线/世界书预设卡数据在 plotlines/lore 视图集合、不在 sheets；
+// 经模板 `from` 分派后应正常渲染（旧缺陷：runSelect 只查 sheets → 查空 → 卡渲染 null 静默消失）。
+it("dock-card 渲染剧情线/世界书派生卡（from plotlines/lore，不再 null）", () => {
+  mockSession();
+  renderPlay();
+  const dock = screen.getByTestId("play-dock-right");
+  expect(within(dock).getByTestId("play-card-plotline:夺图")).toBeInTheDocument();
+  expect(within(dock).getByTestId("play-card-world:黑风寨")).toBeInTheDocument();
+  expect(within(dock).getByTestId("play-card-world:黑风寨")).toHaveTextContent("依山临崖");
+});
+
 it("model 切换：select 变更调 setModel（下回合生效）", () => {
   const setModel = vi.fn().mockResolvedValue(config);
   mockSession({ setModel });

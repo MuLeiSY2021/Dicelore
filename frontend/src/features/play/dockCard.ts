@@ -9,16 +9,31 @@
 
 // dock-card 模板引擎（裁决 dock-card-template）：
 //   模板源码 = 数据选择器(dc-meta · YAML front matter 风格) + markdown 体(dc-body 含插值)。
-//   数据源 = GET /presentation 的 sheets（entity→cell）。
+//   数据源 = GET /presentation 快照的**四个独立视图投影集合**：sheets(statusMenu)/
+//     plotlines(plotline_visible)/foreshadows(foreshadow_visible)/lore(lore_visible)。
+//   前端**绝不**把 sheets 当万能查询表；select 必须经 `from` 指名查哪个集合，runSelect 分派过去。
 // 本模块纯函数：解析模板 + 跑 select + 插值展开成最终 markdown 串。dial/bar 由渲染层拆分处理。
 //
-// 支持（v1）：单 select + where 过滤 + order/limit；插值 ${attr}；条件块 ${{expr}}...${{/if}}；
-//   循环 ${#each <select>}...${{/each}}；可视化 ![dial](attr) / ![bar](attr)。
-// DIY 边界（C3）：DIY 模板仅取 visible=1 的 cell（预设模板不受限）。
+// 支持（v1）：`from <集合>`（默认 sheets）+ 单 select + where 过滤 + order/limit；插值 ${attr}；
+//   条件块 ${{expr}}...${{/if}}；循环 ${#each <select>}...${{/each}}；可视化 ![dial](attr) / ![bar](attr)。
+// DIY 边界（C3）：DIY 模板仅取 visible=1 的 cell（预设模板不受限）；仅对 sheets 有 visible=0 意义，
+//   plotlines/foreshadows/lore 本就是「玩家可见」视图投影（恒 visible=1）。
 
-import type { SheetGroup } from "@dicelore/shared";
+import type { SheetGroup, PlotlineView, ForeshadowView, LoreView } from "@dicelore/shared";
+
+// select 可查的视图集合来源（默认 sheets，保持原型宽松态与 DIY 卡不写 from 时的行为）。
+export type ViewSource = "sheets" | "plotlines" | "foreshadows" | "lore";
+
+// runSelect 接收的视图集合 bundle（各是 GET /presentation 快照的一个独立投影）。
+export interface ViewBundle {
+  sheets: SheetGroup[];
+  plotlines?: PlotlineView[];
+  foreshadows?: ForeshadowView[];
+  lore?: LoreView[];
+}
 
 export interface TemplateMeta {
+  from?: ViewSource;
   select?: string;
   where?: { attr: string; op: string; value: string };
   order?: string;
@@ -46,16 +61,16 @@ export function parseTemplate(src: string): ParsedTemplate {
       applyMetaLine(meta, line);
     }
   } else {
-    // 宽松态：取到首个 markdown 标题(## / #)或空行块之前的 select/where/order/limit 行。
+    // 宽松态：取到首个 markdown 标题(## / #)或空行块之前的 from/select/where/order/limit 行。
     const lines = text.split("\n");
     const rest: string[] = [];
     let inHead = true;
     for (const raw of lines) {
       const line = raw.trim();
-      if (inHead && (line.startsWith("select") || line.startsWith("where") || line.startsWith("order") || line.startsWith("limit") || line.startsWith("--") || line === "")) {
+      if (inHead && (line.startsWith("from") || line.startsWith("select") || line.startsWith("where") || line.startsWith("order") || line.startsWith("limit") || line.startsWith("--") || line === "")) {
         if (line.startsWith("--")) continue; // 注释行
         if (line === "") { if (meta.select) inHead = false; continue; }
-        applyMetaLine(meta, line.replace(/^(select|where|order|limit)\s+/, "$1: "));
+        applyMetaLine(meta, line.replace(/^(from|select|where|order|limit)\s+/, "$1: "));
         continue;
       }
       inHead = false;
@@ -66,11 +81,16 @@ export function parseTemplate(src: string): ParsedTemplate {
   return { meta, body: body.trim() };
 }
 
+const VIEW_SOURCES: ViewSource[] = ["sheets", "plotlines", "foreshadows", "lore"];
+
 function applyMetaLine(meta: TemplateMeta, line: string): void {
-  const kv = /^\s*(select|where|order|limit)\s*:\s*(.+?)\s*$/.exec(line);
+  const kv = /^\s*(from|select|where|order|limit)\s*:\s*(.+?)\s*$/.exec(line);
   if (!kv) return;
   const [, key, val] = kv;
-  if (key === "select") meta.select = firstEntity(val);
+  if (key === "from") {
+    const v = stripQuotes(val).split(/\s+/)[0] as ViewSource;
+    if (VIEW_SOURCES.includes(v)) meta.from = v;
+  } else if (key === "select") meta.select = firstEntity(val);
   else if (key === "order") meta.order = val;
   else if (key === "limit") meta.limit = Number(val) || undefined;
   else if (key === "where") {
@@ -94,19 +114,47 @@ export interface CardRecord {
   cells: Record<string, { value: string; visible: number }>;
 }
 
-// 跑 select：从 sheets 里挑出匹配 entity 的记录。where 对该 entity 的某 cell 过滤。
-// diyOnlyVisible=true 时只纳入 visible=1 的 cell（DIY 边界 C3）。
-export function runSelect(meta: TemplateMeta, sheets: SheetGroup[], diyOnlyVisible = false): CardRecord[] {
-  if (!meta.select) return [];
-  const groups = sheets.filter((g) => g.entity === meta.select);
+// 把某个视图集合的每条规范化成 CardRecord（entity + cells）。
+//   sheets：g.entity + g.cells（保持现状，含 visible；diyOnlyVisible 时剔 visible=0）。
+//   plotlines：p.id 作 entity，{title,summary,status} 作 cells（视图投影恒 visible=1）。
+//   foreshadows：f.id 作 entity，{content,status} 作 cells。
+//   lore：l.name 作 entity，{content,category} 作 cells。
+function normalizeCollection(from: ViewSource, views: ViewBundle, diyOnlyVisible: boolean): CardRecord[] {
   const records: CardRecord[] = [];
-  for (const g of groups) {
-    const cells: Record<string, { value: string; visible: number }> = {};
-    for (const c of g.cells) {
-      if (diyOnlyVisible && c.visible !== 1) continue;
-      cells[c.attr] = { value: c.value, visible: c.visible };
+  const cell = (value: string | null | undefined) => ({ value: value ?? "", visible: 1 });
+  if (from === "sheets") {
+    for (const g of views.sheets) {
+      const cells: Record<string, { value: string; visible: number }> = {};
+      for (const c of g.cells) {
+        if (diyOnlyVisible && c.visible !== 1) continue;
+        cells[c.attr] = { value: c.value, visible: c.visible };
+      }
+      records.push({ entity: g.entity, cells });
     }
-    const rec: CardRecord = { entity: g.entity, cells };
+  } else if (from === "plotlines") {
+    for (const p of views.plotlines ?? []) {
+      records.push({ entity: p.id, cells: { title: cell(p.title), summary: cell(p.summary), status: cell(p.status) } });
+    }
+  } else if (from === "foreshadows") {
+    for (const f of views.foreshadows ?? []) {
+      records.push({ entity: f.id, cells: { content: cell(f.content), status: cell(f.status) } });
+    }
+  } else if (from === "lore") {
+    for (const l of views.lore ?? []) {
+      records.push({ entity: l.name, cells: { content: cell(l.content), category: cell(l.category) } });
+    }
+  }
+  return records;
+}
+
+// 跑 select：按 meta.from（默认 sheets）分派到对应视图集合，挑出匹配 entity 的记录。
+//   where 对该记录的某 cell 过滤。diyOnlyVisible=true 时只纳入 visible=1 的 cell（DIY 边界 C3，仅 sheets 有意义）。
+export function runSelect(meta: TemplateMeta, views: ViewBundle, diyOnlyVisible = false): CardRecord[] {
+  if (!meta.select) return [];
+  const all = normalizeCollection(meta.from ?? "sheets", views, diyOnlyVisible);
+  const records: CardRecord[] = [];
+  for (const rec of all) {
+    if (rec.entity !== meta.select) continue;
     if (meta.where && !passesWhere(rec, meta.where)) continue;
     records.push(rec);
   }

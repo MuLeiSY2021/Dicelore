@@ -15,7 +15,7 @@ import { useState, type ComponentType } from "react";
 import { Pencil, Archive, ChevronDown, User } from "lucide-react";
 import { Markdown } from "@/features/play/Markdown.js";
 import { parseTemplate, runSelect, expandTemplate, extractVisuals, type Visual } from "@/features/play/dockCard.js";
-import type { SheetGroup } from "@dicelore/shared";
+import type { SheetGroup, PlotlineView, ForeshadowView, LoreView } from "@dicelore/shared";
 
 export interface DockCardDef {
   id: string;
@@ -44,9 +44,13 @@ function Bar({ v }: { v: Visual }) {
   );
 }
 
-export function DockCard({ card, sheets, onArchive, onEditSource }: {
+export function DockCard({ card, sheets, plotlines, foreshadows, lore, onArchive, onEditSource }: {
   card: DockCardDef;
+  // GET /presentation 快照的四个独立视图投影集合（select 经模板 `from` 分派到其一）。
   sheets: SheetGroup[];
+  plotlines?: PlotlineView[];
+  foreshadows?: ForeshadowView[];
+  lore?: LoreView[];
   onArchive: (id: string) => void;
   onEditSource?: (id: string, source: string) => void; // DIY 编辑保存
 }) {
@@ -55,7 +59,7 @@ export function DockCard({ card, sheets, onArchive, onEditSource }: {
   const [src, setSrc] = useState(card.source);
 
   const { meta, body } = parseTemplate(src);
-  const records = runSelect(meta, sheets, card.diy);
+  const records = runSelect(meta, { sheets, plotlines, foreshadows, lore }, card.diy);
   const md = expandTemplate(body, records);
   // count=0（select 选不出数据）→ 不渲染 card；编辑态例外（要能改模板）。
   if (md == null && !editing) return null;
