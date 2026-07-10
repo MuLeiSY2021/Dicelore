@@ -8,18 +8,19 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import { Routes, Route, Outlet } from "react-router-dom";
-import { TopBar } from "@/shell/TopBar.js";
+import { Bay } from "@/shell/Bay.js";
 import HomePage from "@/features/home/HomePage.js";
 import CatalogPage from "@/features/catalog/CatalogPage.js";
 import PlayPage from "@/features/play/PlayPage.js";
 import BuildPage from "@/features/build/BuildPage.js";
 import ConfigPage from "@/features/config/ConfigPage.js";
 
+// Shell 无顶栏：只留 <Outlet/> + 全局底部 <Bay/>（导航收进 app-bay，仿 mac 聚焦）。
 function Shell() {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <TopBar />
       <div style={{ flex: 1, minHeight: 0 }}><Outlet /></div>
+      <Bay />
     </div>
   );
 }
