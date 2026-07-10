@@ -11,7 +11,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { join, resolve, isAbsolute } from "node:path";
 import { tmpdir, homedir } from "node:os";
-import { defaultDataDir, resolveDataDir, applyConfigEnv } from "./config.js";
+import { defaultDataDir, resolveDataDir, applyConfigEnv, readMcpConfig, upsertMarketplace, upsertMcpServer, setMcpServerEnabled, removeMcpServer, resolveCustomMcpServers, type MarketplaceEntry, type McpServerEntry } from "./config.js";
 
 // mock @dicelore/logs 的 getLogger，捕获 warn/error 调用
 const warnSpy = vi.fn();
@@ -190,5 +190,126 @@ describe("applyConfigEnv", () => {
     writeFileSync(join(dir, "config.toml"), "this is = = not valid toml [[[\n");
     expect(() => applyConfigEnv(dir)).toThrow();
     expect(errorSpy).toHaveBeenCalled();
+  });
+});
+
+describe("客制 MCP config.toml 读写（marketplaces / mcpServers）", () => {
+  let dir: string;
+  beforeEach(() => {
+    warnSpy.mockClear();
+    errorSpy.mockClear();
+    dir = mkdtempSync(join(tmpdir(), "dl-mcp-"));
+  });
+  afterEach(() => rmSync(dir, { recursive: true, force: true }));
+
+  it("文件不存在 → 空 marketplaces/mcpServers", () => {
+    expect(readMcpConfig(dir)).toEqual({ marketplaces: [], mcpServers: [] });
+    expect(resolveCustomMcpServers(dir)).toEqual({});
+  });
+
+  it("upsertMarketplace 写 [marketplaces.<name>] 并可回读", () => {
+    const mkt: MarketplaceEntry = { name: "acme-mkt", source: "github", repo: "acme/mcp-market", ref: "v2.0" };
+    upsertMarketplace(dir, mkt);
+    const { marketplaces } = readMcpConfig(dir);
+    expect(marketplaces).toEqual([mkt]);
+  });
+
+  it("upsertMarketplace 同名覆盖（不重复行）", () => {
+    upsertMarketplace(dir, { name: "m", source: "github", repo: "a/b" });
+    upsertMarketplace(dir, { name: "m", source: "url", url: "https://x/marketplace.json" });
+    const { marketplaces } = readMcpConfig(dir);
+    expect(marketplaces).toHaveLength(1);
+    expect(marketplaces[0]).toEqual({ name: "m", source: "url", url: "https://x/marketplace.json" });
+  });
+
+  it("upsertMcpServer 写 [mcpServers.<name>] + env 子表并可回读", () => {
+    const s: McpServerEntry = {
+      name: "bocha",
+      package: "@bocha/mcp-search@1.2.0",
+      command: "npx",
+      args: ["-y", "@bocha/mcp-search@1.2.0"],
+      fromMarketplace: "acme-mkt",
+      installed: true,
+      enabled: true,
+      outOfCanon: true,
+      env: { BOCHA_API_KEY: "secret-value" },
+    };
+    upsertMcpServer(dir, s);
+    const { mcpServers } = readMcpConfig(dir);
+    expect(mcpServers).toEqual([s]);
+  });
+
+  it("直装 npm 包（无 fromMarketplace）读写", () => {
+    const s: McpServerEntry = {
+      name: "local-py-mcp",
+      package: "some-py-mcp@0.4.0",
+      command: "uvx",
+      args: ["some-py-mcp@0.4.0"],
+      installed: true,
+      enabled: false,
+      outOfCanon: true,
+      env: { TOKEN: "t2" },
+    };
+    upsertMcpServer(dir, s);
+    const got = readMcpConfig(dir).mcpServers[0];
+    expect(got.fromMarketplace).toBeUndefined();
+    expect(got).toEqual(s);
+  });
+
+  it("marketplaces 与 mcpServers 与既有 [env] 共存于同一文件（[env] 不丢）", () => {
+    writeFileSync(join(dir, "config.toml"), '[env]\nDICELORE_FAKE_GM = "1"\n');
+    upsertMarketplace(dir, { name: "m", source: "github", repo: "a/b" });
+    upsertMcpServer(dir, {
+      name: "s", package: "p@1", command: "npx", args: ["-y", "p@1"],
+      installed: true, enabled: true, outOfCanon: true, env: {},
+    });
+    // [env] 仍能被 applyConfigEnv 消费
+    delete process.env.DICELORE_FAKE_GM;
+    try {
+      applyConfigEnv(dir);
+      expect(process.env.DICELORE_FAKE_GM).toBe("1");
+    } finally {
+      delete process.env.DICELORE_FAKE_GM;
+    }
+    expect(readMcpConfig(dir).marketplaces).toHaveLength(1);
+    expect(readMcpConfig(dir).mcpServers).toHaveLength(1);
+  });
+
+  it("setMcpServerEnabled 切开关；不存在返回 false", () => {
+    upsertMcpServer(dir, {
+      name: "s", package: "p@1", command: "npx", args: ["-y", "p@1"],
+      installed: true, enabled: true, outOfCanon: true, env: {},
+    });
+    expect(setMcpServerEnabled(dir, "s", false)).toBe(true);
+    expect(readMcpConfig(dir).mcpServers[0].enabled).toBe(false);
+    expect(setMcpServerEnabled(dir, "nope", true)).toBe(false);
+  });
+
+  it("removeMcpServer 删除；不存在返回 false", () => {
+    upsertMcpServer(dir, {
+      name: "s", package: "p@1", command: "npx", args: ["-y", "p@1"],
+      installed: true, enabled: true, outOfCanon: true, env: {},
+    });
+    expect(removeMcpServer(dir, "s")).toBe(true);
+    expect(readMcpConfig(dir).mcpServers).toHaveLength(0);
+    expect(removeMcpServer(dir, "s")).toBe(false);
+  });
+
+  it("resolveCustomMcpServers 只取 enabled && installed，映射为 stdio 配置", () => {
+    upsertMcpServer(dir, {
+      name: "on", package: "p@1", command: "npx", args: ["-y", "p@1"],
+      installed: true, enabled: true, outOfCanon: true, env: { K: "v" },
+    });
+    upsertMcpServer(dir, {
+      name: "off", package: "q@1", command: "npx", args: ["-y", "q@1"],
+      installed: true, enabled: false, outOfCanon: true, env: {},
+    });
+    upsertMcpServer(dir, {
+      name: "uninstalled", package: "r@1", command: "npx", args: ["-y", "r@1"],
+      installed: false, enabled: true, outOfCanon: true, env: {},
+    });
+    const resolved = resolveCustomMcpServers(dir);
+    expect(Object.keys(resolved)).toEqual(["on"]);
+    expect(resolved.on).toEqual({ type: "stdio", command: "npx", args: ["-y", "p@1"], env: { K: "v" } });
   });
 });

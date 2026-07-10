@@ -11,10 +11,10 @@
 // - resolveDataDir：--data-dir flag > DICELORE_DATA_DIR env > OS 默认，返回绝对路径。
 // - applyConfigEnv：读 <root>/config.toml 的 [env] 表，仅补写未设的 KEY，跳过 master key。
 
-import { readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { join, resolve, dirname } from "node:path";
 import { homedir } from "node:os";
-import { parse as parseToml } from "smol-toml";
+import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
 import { getLogger } from "@dicelore/logs";
 
 // 绝不从 config.toml [env] 注入的敏感键：master key 只能来自真实进程 env，不落配置文件。
@@ -87,4 +87,201 @@ export function applyConfigEnv(root: string): void {
       process.env[key] = String(value);
     }
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// 客制 MCP 安装（裁决 custom-mcp-install）：config.toml 的 [marketplaces.*] /
+// [mcpServers.*] 节读写。与既有 [env] 节共存于同一 <dataDir>/config.toml（单源单文件）。
+//
+// 核心 dicelore MCP（in-process·必需·锁定）不进此文件——系统固定注入；此文件只管
+// 用户装的客制 out-of-canon MCP + marketplace 源。
+//
+// 写策略（v1·可逆）：parse 整份 toml → 改对应节 → stringify 回写。副作用：注释会丢失
+// （smol-toml 无保留注释的 stringify）。config.toml 的注释样例另存 config.example.toml
+// （从不被读），故本策略对功能无损；如需保注释可后续换保序 toml 编辑器。
+// ─────────────────────────────────────────────────────────────────────────
+
+/** marketplace 源（按钮①注册）。source 决定 repo/url 语义。 */
+export interface MarketplaceEntry {
+  name: string;
+  source: "github" | "url" | "marketplace-url";
+  repo?: string; // source=github 时的 owner/repo
+  url?: string; // source=url/marketplace-url 时的清单/仓库 URL
+  ref?: string; // 可选：git ref / 分支 / tag
+}
+
+/** 客制 MCP（按钮②安装后落此）。运行时按 stdio 拉起，工具标 outOfCanon。 */
+export interface McpServerEntry {
+  name: string; // 实例名（[mcpServers.<name>]）
+  package: string; // 登记溯源（<pkg>@<version>）
+  command: string; // npx / uvx / node / 绝对路径
+  args: string[];
+  fromMarketplace?: string; // 溯源（直装时缺）
+  installed: boolean; // npx -y 预拉已执行
+  enabled: boolean; // 开关
+  outOfCanon: boolean; // 徽：非核心 dicelore MCP（恒 true）
+  env: Record<string, string>; // 配置项 table（收敛至 [mcpServers.<name>.env]）
+}
+
+export interface McpConfig {
+  marketplaces: MarketplaceEntry[];
+  mcpServers: McpServerEntry[];
+}
+
+function configPath(root: string): string {
+  return join(root, "config.toml");
+}
+
+/** 读整份 config.toml（不存在→空对象；解析失败 fail loud）。供读写共用。 */
+function readConfigToml(root: string): Record<string, unknown> {
+  let raw: string;
+  try {
+    raw = readFileSync(configPath(root), "utf8");
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") return {};
+    throw e;
+  }
+  try {
+    return parseToml(raw) as Record<string, unknown>;
+  } catch (e) {
+    getLogger().error({ err: e, path: configPath(root) }, "config.toml 解析失败");
+    throw e;
+  }
+}
+
+/** 写整份 config.toml（父目录不存在先建）。 */
+function writeConfigToml(root: string, parsed: Record<string, unknown>): void {
+  const path = configPath(root);
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, stringifyToml(parsed));
+}
+
+function asTable(v: unknown): Record<string, unknown> {
+  return v !== null && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
+}
+
+function asStringArray(v: unknown): string[] {
+  return Array.isArray(v) ? v.map((x) => String(x)) : [];
+}
+
+function parseMarketplace(name: string, raw: Record<string, unknown>): MarketplaceEntry {
+  const src = raw.source;
+  const source: MarketplaceEntry["source"] = src === "url" || src === "marketplace-url" ? src : "github";
+  return {
+    name,
+    source,
+    ...(typeof raw.repo === "string" ? { repo: raw.repo } : {}),
+    ...(typeof raw.url === "string" ? { url: raw.url } : {}),
+    ...(typeof raw.ref === "string" ? { ref: raw.ref } : {}),
+  };
+}
+
+function parseMcpServer(name: string, raw: Record<string, unknown>): McpServerEntry {
+  const env: Record<string, string> = {};
+  for (const [k, v] of Object.entries(asTable(raw.env))) env[k] = String(v);
+  return {
+    name,
+    package: typeof raw.package === "string" ? raw.package : "",
+    command: typeof raw.command === "string" ? raw.command : "npx",
+    args: asStringArray(raw.args),
+    ...(typeof raw.fromMarketplace === "string" ? { fromMarketplace: raw.fromMarketplace } : {}),
+    installed: raw.installed === true,
+    enabled: raw.enabled === true,
+    outOfCanon: raw.outOfCanon !== false, // 缺省视为 true（客制 MCP 恒 out-of-canon）
+    env,
+  };
+}
+
+/** 读 config.toml 的 [marketplaces.*] + [mcpServers.*]（不存在→空列表）。 */
+export function readMcpConfig(root: string): McpConfig {
+  const parsed = readConfigToml(root);
+  const marketplaces = Object.entries(asTable(parsed.marketplaces)).map(([name, raw]) =>
+    parseMarketplace(name, asTable(raw)),
+  );
+  const mcpServers = Object.entries(asTable(parsed.mcpServers)).map(([name, raw]) =>
+    parseMcpServer(name, asTable(raw)),
+  );
+  return { marketplaces, mcpServers };
+}
+
+/** upsert 一个 marketplace 源到 [marketplaces.<name>]（同名覆盖）。 */
+export function upsertMarketplace(root: string, entry: MarketplaceEntry): void {
+  const parsed = readConfigToml(root);
+  const table = asTable(parsed.marketplaces);
+  const body: Record<string, unknown> = { source: entry.source };
+  if (entry.repo !== undefined) body.repo = entry.repo;
+  if (entry.url !== undefined) body.url = entry.url;
+  if (entry.ref !== undefined) body.ref = entry.ref;
+  table[entry.name] = body;
+  parsed.marketplaces = table;
+  writeConfigToml(root, parsed);
+}
+
+/** upsert 一个客制 MCP 到 [mcpServers.<name>]（含 env 子表；同名覆盖）。 */
+export function upsertMcpServer(root: string, entry: McpServerEntry): void {
+  const parsed = readConfigToml(root);
+  const table = asTable(parsed.mcpServers);
+  const body: Record<string, unknown> = {
+    package: entry.package,
+    command: entry.command,
+    args: entry.args,
+    installed: entry.installed,
+    enabled: entry.enabled,
+    outOfCanon: entry.outOfCanon,
+  };
+  if (entry.fromMarketplace !== undefined) body.fromMarketplace = entry.fromMarketplace;
+  // env 子表放最后：smol-toml 把子表写在标量之后，避免 [mcpServers.<name>.env] 提前打断标量。
+  body.env = { ...entry.env };
+  table[entry.name] = body;
+  parsed.mcpServers = table;
+  writeConfigToml(root, parsed);
+}
+
+/** 切换某客制 MCP 的 enabled 开关；不存在返回 false。 */
+export function setMcpServerEnabled(root: string, name: string, enabled: boolean): boolean {
+  const parsed = readConfigToml(root);
+  const table = asTable(parsed.mcpServers);
+  const entry = table[name];
+  if (entry === undefined || typeof entry !== "object") return false;
+  (entry as Record<string, unknown>).enabled = enabled;
+  parsed.mcpServers = table;
+  writeConfigToml(root, parsed);
+  return true;
+}
+
+/** 删除某客制 MCP；不存在返回 false。 */
+export function removeMcpServer(root: string, name: string): boolean {
+  const parsed = readConfigToml(root);
+  const table = asTable(parsed.mcpServers);
+  if (!(name in table)) return false;
+  delete table[name];
+  parsed.mcpServers = table;
+  writeConfigToml(root, parsed);
+  return true;
+}
+
+/** 运行时用的 stdio MCP 配置（对齐 Agent SDK McpStdioServerConfig 子集）。 */
+export interface StdioMcpServerConfig {
+  type: "stdio";
+  command: string;
+  args: string[];
+  env?: Record<string, string>;
+}
+
+/**
+ * 解析 config.toml 里 enabled=true && installed=true 的客制 MCP，映射为运行时
+ * stdio 配置表（key=实例名）。供组合根注入 GM/loregm 运行时（gmAssembly 合并进 query）。
+ */
+export function resolveCustomMcpServers(root: string): Record<string, StdioMcpServerConfig> {
+  const out: Record<string, StdioMcpServerConfig> = {};
+  for (const s of readMcpConfig(root).mcpServers) {
+    if (!s.enabled || !s.installed) continue;
+    out[s.name] = {
+      type: "stdio",
+      command: s.command,
+      args: s.args,
+      ...(Object.keys(s.env).length > 0 ? { env: s.env } : {}),
+    };
+  }
+  return out;
 }

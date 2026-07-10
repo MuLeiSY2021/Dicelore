@@ -8,7 +8,6 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import { Hono } from "hono";
-import { existsSync } from "node:fs";
 import { lookup } from "node:dns/promises";
 import { isIP, BlockList } from "node:net";
 import { CLIENT_PROTOCOL } from "@dicelore/shared";
@@ -133,6 +132,48 @@ function defaultAllowHosts(): Set<string> {
   return hosts;
 }
 
+// 客制 MCP stdio 连接测试(裁决 custom-mcp-install §七):真按 stdio 拉起子进程 + MCP 握手 + listTools,
+// 返回可达性 + 工具数。命中 npx 缓存则秒起;超时/坏命令回可辨识失败。真实进程 env + 用户配置项 env 注入。
+export interface StdioTestResult {
+  ok: boolean;
+  toolCount?: number;
+  message: string;
+}
+export async function testStdioMcp(
+  command: string,
+  args: string[],
+  env: Record<string, string> = {},
+  timeoutMs = 8000,
+): Promise<StdioTestResult> {
+  if (!command) return { ok: false, message: "缺少 command" };
+  const { Client } = await import("@modelcontextprotocol/sdk/client/index.js");
+  const { StdioClientTransport, getDefaultEnvironment } = await import("@modelcontextprotocol/sdk/client/stdio.js");
+  const transport = new StdioClientTransport({
+    command,
+    args,
+    env: { ...getDefaultEnvironment(), ...env }, // 保留 PATH 等默认环境,叠加用户配置项 env
+    stderr: "ignore",
+  });
+  const client = new Client({ name: "dicelore-mcp-test", version: "0.0.0" }, { capabilities: {} });
+  const timer = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error(`连接超时(${timeoutMs}ms)`)), timeoutMs),
+  );
+  try {
+    await Promise.race([client.connect(transport), timer]);
+    const listed = (await Promise.race([client.listTools(), timer])) as { tools: unknown[] };
+    const toolCount = listed.tools.length;
+    return { ok: true, toolCount, message: `可连接，工具数 ${toolCount}` };
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : "stdio 连接失败" };
+  } finally {
+    try {
+      await client.close();
+    } catch {
+      /* 已断开则忽略 */
+    }
+  }
+}
+
 export function createDiagnosticsApp(deps: DiagDeps): Hono {
   const app = new Hono();
 
@@ -193,16 +234,32 @@ export function createDiagnosticsApp(deps: DiagDeps): Hono {
     }
   });
 
-  // 自定义 MCP 测试：远程 SSE → HTTP 可达性；本地 stdio → 命令路径存在性。
+  // 自定义 MCP 测试：本地 stdio → 真拉起 + 握手 + listTools(客制 out-of-canon MCP);远程 SSE → HTTP 可达性。
   app.post("/diagnostics/mcp-test", async (c) => {
-    const body = (await c.req.json().catch(() => ({}))) as { transport?: string; endpoint?: string };
+    const body = (await c.req.json().catch(() => ({}))) as {
+      transport?: string;
+      endpoint?: string;
+      command?: string;
+      args?: string[];
+      env?: Record<string, string>;
+    };
+    if (body.transport === "stdio") {
+      // 优先用结构化 command/args/env(配置页/config.toml 直传);回落 endpoint 字符串按空白拆分(旧契约)。
+      let command = (body.command ?? "").trim();
+      let args = Array.isArray(body.args) ? body.args : [];
+      if (!command && body.endpoint) {
+        const parts = body.endpoint.trim().split(/\s+/);
+        command = parts[0] ?? "";
+        args = parts.slice(1);
+      }
+      if (!command) return c.json({ ok: false, message: "缺少 command/endpoint" }, 400);
+      const env = body.env && typeof body.env === "object" ? body.env : {};
+      const start = Date.now();
+      const r = await testStdioMcp(command, args, env);
+      return c.json({ ok: r.ok, toolCount: r.toolCount, latencyMs: Date.now() - start, message: r.message }, r.ok ? 200 : 502);
+    }
     const ep = (body.endpoint || "").trim();
     if (!ep) return c.json({ ok: false, message: "缺少 endpoint" }, 400);
-    if (body.transport === "stdio") {
-      const cmd = ep.split(/\s+/)[0];
-      const exists = existsSync(cmd);
-      return c.json({ ok: exists, message: exists ? "命令路径存在" : "命令路径不存在(运行时握手才能确认工具数)" });
-    }
     const { signal, cancel } = withTimeout(5000);
     const start = Date.now();
     const guard = await checkSsrf(ep);
