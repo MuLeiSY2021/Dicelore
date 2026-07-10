@@ -11,7 +11,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { openDb, initSchema, metaGet, openSessionBackend, type DB } from "@dicelore/backend";
 import type { SessionBackend } from "@dicelore/interface";
 import { setRollGate } from "@dicelore/harness";
-import { FakeDiceGm } from "./FakeDiceGm.js";
+import { FakeDiceGm, defaultCoachCanon } from "./FakeDiceGm.js";
 import { DiceSession } from "./DiceSession.js";
 import type { TurnEvent } from "../runtime/agent.js";
 
@@ -49,7 +49,10 @@ describe("FakeDiceGm 教练档：五条玩家主线", () => {
       db, backend,
       agentFactory: () => new FakeDiceGm({ backend, canon: [
         { type: "narration", text: "你扑向高墙。" },
-        { type: "roll", context: "翻越高墙", die: "1d20", bands: [{ label: "成功", min: 11, max: 20 }] },
+        { type: "roll", context: "翻越高墙", die: "1d20", bands: [
+          { label: "失败", min: 1, max: 10 },
+          { label: "成功", min: 11, max: 20 },
+        ] },
       ] }),
     });
     const sent: any[] = [];
@@ -66,6 +69,11 @@ describe("FakeDiceGm 教练档：五条玩家主线", () => {
     expect(host.handleRoll(staged.pendingRoll.eventId)).toBe(true);
     const { turnId } = await turnP;
     expect(turnId).toBeTruthy();
+
+    // 明骰点掷后 commitPendingRoll 落 verdict(pending_roll → committed)。
+    const pr = db.prepare("SELECT status, verdict_seq FROM pending_roll WHERE event_id=?").get(staged.pendingRoll.eventId) as { status: string; verdict_seq: number | null };
+    expect(pr.status).toBe("committed");
+    expect(pr.verdict_seq).not.toBeNull();
 
     const types = sent.map((m) => m.type);
     expect(types[0]).toBe("turn_started");
@@ -176,5 +184,69 @@ describe("FakeDiceGm 教练档：五条玩家主线", () => {
     await host.handleMessage("重连后我继续");
     expect(newWs.map((m) => m.type)).toEqual(expect.arrayContaining(["turn_started", "narration_commit", "turn_ended"]));
     expect(oldWs).toHaveLength(0); // 旧连接已摘除,不再收
+  });
+
+  // 主线⑥：暗骰(hiddenRoll)——引擎就地掷 + 落 verdict,不经 gate、不挂起。
+  it("hiddenRoll 动作 → 引擎立即掷落 kind=verdict event(不经 gate)、回合正常收尾", async () => {
+    const { db, backend } = mem();
+    const host = new DiceSession("s-hidden", {
+      db, backend,
+      agentFactory: () => new FakeDiceGm({ backend, canon: [
+        { type: "narration", text: "我在幕后摇骰。" },
+        { type: "hiddenRoll", context: "暗中裁决", die: "1d100", bands: [
+          { label: "失败", min: 1, max: 50, consequence: "事与愿违" },
+          { label: "成功", min: 51, max: 100, consequence: "如你所愿" },
+        ] },
+      ] }),
+    });
+    const sent: any[] = [];
+    host.attachWs({ send: (d: string) => sent.push(JSON.parse(d)), readyState: 1 });
+
+    const { turnId } = await host.handleMessage("我暗中查探");
+    expect(turnId).toBeTruthy();
+    // verdict 已落库(暗骰不经 gate,回合不挂起)。
+    const v = db.prepare("SELECT content, data_json FROM log WHERE kind='verdict'").get() as { content: string; data_json: string } | undefined;
+    expect(v).toBeTruthy();
+    expect(v!.content).toBe("暗中裁决");
+    const data = JSON.parse(v!.data_json);
+    expect(data.roll).toBeGreaterThanOrEqual(1);
+    expect(data.roll).toBeLessThanOrEqual(100);
+    expect(["失败", "成功"]).toContain(data.band.label);
+    // 回合正常收尾(无 roll_staged 挂起)。
+    expect(sent.map((m) => m.type)).toContain("narration_commit");
+    expect(sent.map((m) => m.type)).not.toContain("roll_staged");
+    expect(sent.at(-1).type).toBe("turn_ended");
+  });
+});
+
+// ── defaultCoachCanon:按玩家发言关键字派发五主线(FAKE_GM=1 装它) ────────────────
+describe("defaultCoachCanon 关键字派发", () => {
+  const types = (t: string) => defaultCoachCanon({ text: t }).map((a) => a.type);
+
+  it("「暗骰」→ hiddenRoll(优先于明骰,避免被『骰』抢走)", () => {
+    expect(types("我要暗骰查探")).toEqual(["narration", "hiddenRoll"]);
+  });
+  it("「掷骰/检定」→ roll(明骰)", () => {
+    expect(types("我要掷骰翻墙")).toEqual(["narration", "roll"]);
+    expect(types("来个力量检定")).toEqual(["narration", "roll"]);
+  });
+  it("「选择/岔路」→ choice", () => {
+    expect(types("我该怎么选择")).toEqual(["narration", "choice"]);
+  });
+  it("「结束/终局」→ gameEnd", () => {
+    expect(types("我想结束游戏")).toEqual(["narration", "gameEnd"]);
+  });
+  it("「报错/error」→ error(单动作)", () => {
+    expect(types("模拟一个报错")).toEqual(["error"]);
+    expect(types("please trigger an error")).toEqual(["error"]);
+  });
+  it("无关键字 → 纯叙事回声", () => {
+    expect(types("我环顾四周")).toEqual(["narration"]);
+  });
+  it("canon 动作携带正确 payload(roll 含 bands、choice 含 options)", () => {
+    const roll = defaultCoachCanon({ text: "掷骰" }).find((a) => a.type === "roll");
+    expect(roll && "bands" in roll && roll.bands?.length).toBeGreaterThan(0);
+    const choice = defaultCoachCanon({ text: "选择" }).find((a) => a.type === "choice");
+    expect(choice && "options" in choice && choice.options.length).toBeGreaterThanOrEqual(2);
   });
 });

@@ -22,7 +22,7 @@ import { createRateLimit } from "./api/rateLimit.js";
 import { attachWsUpgrade } from "./api/ws.js";
 import { listSessionSummaries } from "./api/sessions.js";
 import { resolveDataDir, applyConfigEnv } from "./config.js";
-import { ensureDicePlugin, ensureLorePlugin, DiceGm, FakeDiceGm, sessionDir as harnessSessionDir, type AgentFactory, type PluginRef } from "@dicelore/harness";
+import { ensureDicePlugin, ensureLorePlugin, DiceGm, FakeDiceGm, FakeLoreGm, defaultCoachCanon, sessionDir as harnessSessionDir, type AgentFactory, type PluginRef } from "@dicelore/harness";
 
 // 数据根初始化时铺的示例配置(带注释;不落真 config.toml,避免误用示例值)。
 // [env] 小节里的 KEY=值 会被 applyConfigEnv 补进 process.env(仅当真实 env 未设);
@@ -73,6 +73,22 @@ export function resolvePort(argv: string[], env: Record<string, string | undefin
   return Number(flagVal ?? env.PORT ?? 8787);
 }
 
+/**
+ * 假 GM(DICELORE_FAKE_GM=1)的 Agent 工厂:不烧 LLM,按 init.kind 派发到两条**教练档/假构建驱动**——
+ *  · dice(缺省)→ FakeDiceGm 教练档(canon=defaultCoachCanon + 会话 backend),按玩家发言关键字驱动
+ *    掷骰(明骰)/暗骰/选择/终局/错误/叙事五主线,让 curl/e2e 无真 LLM 也能端到端打通。
+ *  · lore → FakeLoreGm 假构建驱动(经 init.buildInvoke 调 dicelore_build_* 工具写 Draft),让 Draft 非空。
+ * 缝:dice 的 backend 由 DiceSession.buildInit 注入 AgentInit.backend;lore 的 buildInvoke 由 api/lore 组合根注入。
+ * 抽成导出函数:server.test 可直接装它到 createLiveApp/createLoreApp 端到端验五主线 + Draft 非空。
+ */
+export function makeFakeAgentFactory(): AgentFactory {
+  return (init) => {
+    if (init.kind === "lore") return new FakeLoreGm(init.buildInvoke);
+    if (!init.backend) throw new Error("makeFakeAgentFactory: dice 教练档缺 AgentInit.backend(应由 DiceSession.buildInit 注入)");
+    return new FakeDiceGm({ canon: defaultCoachCanon, backend: init.backend });
+  };
+}
+
 // portOverride 缺省时在 applyConfigEnv(注入 config.toml [env] 的 PORT)之后再解析端口,
 // 使 config.toml 写 PORT 能改端口(真实 env 仍优先)。
 export function startServer(portOverride?: number): void {
@@ -97,10 +113,9 @@ export function startServer(portOverride?: number): void {
   const fake = process.env.DICELORE_FAKE_GM === "1";
   const baseline = process.env.DICELORE_BASELINE === "1"; // eval baseline:openingPrompt 去 doctrine + skills 空
   const debug = process.env.DICELORE_DEBUG === "1"; // eval/裸 CC 明骰降级:DICELORE_DEBUG=1 时 DiceSession 不注入 rollGate,core 立即掷(否则 await 永不来的 POST /roll 卡死)
-  // Agent 适配缝:据 AgentInit 产 agent。真=CC SDK 适配器(DiceGm),fake=FakeDiceGm。
-  const agentFactory: AgentFactory = fake
-    ? () => new FakeDiceGm((input) => [{ type: "narration", text: `（GM）你说：「${input.text}」。门吱呀一声开了。` }, { type: "turn_end" }])
-    : (init) => new DiceGm(init);
+  // Agent 适配缝:据 AgentInit 产 agent。真=CC SDK 适配器(DiceGm),fake=按 init.kind 派发的
+  // 教练档(dice)/假构建驱动(lore),见 makeFakeAgentFactory。
+  const agentFactory: AgentFactory = fake ? makeFakeAgentFactory() : (init) => new DiceGm(init);
   // dice/lore skill plugin:boot 期幂等 + 版本感知物化母本到数据根 $ROOT/{dice,lore}(非每回合复制),
   // 返回运行期 PluginRef(pluginDir + skills:"all");母本定位/物化失败 → ensure*Plugin 内 fail loud 返 null。
   // baseline(DICELORE_BASELINE=1)时 dice plugin 传 undefined(skill 全关,分离「教条有无」);

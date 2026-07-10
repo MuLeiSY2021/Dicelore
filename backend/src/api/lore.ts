@@ -11,7 +11,7 @@ import { Hono } from "hono";
 import { mkdirSync, createWriteStream, unlinkSync, existsSync } from "node:fs";
 import { basename, join } from "node:path";
 import { Readable } from "node:stream";
-import { list, commit, tag, checkout, validatePack, createBuildMcpServer, Draft, type CatalogDB, type PackFile } from "@dicelore/backend";
+import { list, commit, tag, checkout, validatePack, createBuildMcpServer, invokeBuildTool, Draft, type BuildCtx, type CatalogDB, type PackFile } from "@dicelore/backend";
 import { LoreSession, Rewind, SessionTranscript, sessionDir, type LoreSessionDeps, type AgentFactory, type PluginRef, type RollbackHook } from "@dicelore/harness";
 import { getLogger } from "@dicelore/logs";
 
@@ -117,13 +117,17 @@ export function createLoreApp(deps: LoreDeps): Hono {
     if (!entry) {
       // 组合根建 Draft + 构建 MCP server(BUILD_TOOLS over Draft+Catalog),注入 LoreSession。
       const draft = new Draft();
-      const mcpServer = createBuildMcpServer({ catalog: deps.catalog, draft, name: body.name });
+      const ctx: BuildCtx = { catalog: deps.catalog, draft, name: body.name };
+      const mcpServer = createBuildMcpServer(ctx);
+      // fake 假构建驱动(FAKE_GM=1)写 Draft 的通道:与真构建 GM 经 MCP 调 dicelore_build_* 工具同源,
+      // 复用 invokeBuildTool(同一 ctx)——FakeLoreGm 经 AgentInit.buildInvoke 调它让 Draft 非空。真 DiceGm 忽略。
+      const buildInvoke = (name: string, args: unknown) => invokeBuildTool(ctx, name, args);
       // workspace:sessionsDir 已接线时,首条 message 前确保 workspace 就位并透传给 agentFactory(cwd);
       // 未接线(如纯 catalog 单测)则 workspace 恒 undefined(agent 用 SDK 默认 cwd)。
       const workspace = deps.sessionsDir ? ensureWorkspace(deps.sessionsDir, id) : undefined;
       // dataDir 透传:接 deps.sessionsDir 现有来源(与 DD3 集成时对齐命名);适配器据此落 transcript
       // 到 <dataDir>/sessions/lore/<id>/<id>_session.jsonl(DD2 布局,经 harness sessionDir 纯函数)。
-      const dep: LoreSessionDeps = { mcpServer, agentFactory: deps.agentFactory, buildPrompt: deps.buildPrompt, plugin: deps.plugin, workspace, dataDir: deps.sessionsDir };
+      const dep: LoreSessionDeps = { mcpServer, agentFactory: deps.agentFactory, buildPrompt: deps.buildPrompt, plugin: deps.plugin, workspace, dataDir: deps.sessionsDir, buildInvoke };
       // lore-draft 回退钩子注册在位:数据根接线时,为本会话建 transcript 回退编排(Rewind)并注册占位钩子。
       // transcript 状态持久在 <dataDir>/sessions/lore/<id>/{_session.jsonl,HEAD}(适配器每回合从 HEAD 文件恢复),
       // 故此处的 SessionTranscript 实例与驱动侧同源(同一文件),回退端点接线属 follow-up。未接线则不建(纯 catalog 单测)。

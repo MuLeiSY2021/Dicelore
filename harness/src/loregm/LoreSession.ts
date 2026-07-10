@@ -8,7 +8,7 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { AgentFactory, PluginRef } from "../runtime/agent.js";
+import type { AgentFactory, PluginRef, BuildInvoke } from "../runtime/agent.js";
 import type { Session, TurnResult } from "../runtime/session.js";
 
 let loreTurnCounter = 0;
@@ -23,6 +23,7 @@ export interface LoreSessionDeps {
   plugin?: PluginRef; // 构建 skill plugin 引用(build-pack+build-core,boot 期物化到 $/lore);省略=不启 skill
   workspace?: string; // 素材工作区 cwd(build-agent-workspace 用;本裁决先立入参,接线属该裁决)
   dataDir?: string; // sessions 数据根(DD2 布局):透传为 AgentInit.sessionsDir,适配器据 sessionDir(dataDir,'lore',id) 落 <dataDir>/sessions/lore/<id>/<id>_session.jsonl 对话记录 + 分级日志;省略=不落 transcript(退化全局日志,对齐纯 catalog 单测)
+  buildInvoke?: BuildInvoke; // fake 假构建驱动写 Draft 的通道(组合根 api/lore 注入 = (n,a)=>invokeBuildTool(ctx,n,a));真 DiceGm 忽略、透传给 AgentInit
 }
 
 // lore 构建运行单元:驱动 agent 挂注入的构建 MCP,无 rollGate/turn-end/canon-notify。
@@ -52,6 +53,7 @@ export class LoreSession implements Session {
       sessionId: this.sessionId,
       sessionsDir: this.deps.dataDir,
       kind: "lore",
+      buildInvoke: this.deps.buildInvoke, // fake 假构建驱动写 Draft 的通道透传(真 DiceGm 忽略)
     });
     // REST 语义:跑完整轮构建反馈(narration/turn_end/error)即收尾,不向任何 WS 广播。
     let error: TurnResult["error"];

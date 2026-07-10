@@ -122,7 +122,7 @@ export class DiceSession implements Session {
 
   // 据本会话状态组装 AgentInit(每回合新建一个 agent)。baseline 强制 plugin 空(不加载 gm-core 教条 skill)。
   private buildInit(): AgentInit {
-    return { mcpServer: this.mcpServer, openingPrompt: this.openingPrompt, plugin: this.deps.baseline ? undefined : this.deps.plugin, model: this.deps.model, sessionId: this.sessionId, sessionsDir: this.deps.sessionsDir };
+    return { mcpServer: this.mcpServer, openingPrompt: this.openingPrompt, plugin: this.deps.baseline ? undefined : this.deps.plugin, model: this.deps.model, sessionId: this.sessionId, sessionsDir: this.deps.sessionsDir, backend: this.backend };
   }
 
   // RT-2：串行化所有「跑回合」入口。已有回合在跑则抛 TurnInProgressError（拒绝并发、不双开），
