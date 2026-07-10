@@ -49,6 +49,25 @@ export const PendingRollSchema = z.object({
   bands: z.array(RollBandSchema).optional(),
 });
 
+// §7(A′) 叙事层视图投影(玩家可见范围·防剧透)。front 不在此列(GM 工具、不下发玩家)。
+// plotline=玩家已知主线走向(active+closed)；foreshadow=已回收且 show 的伏笔；lore=已 show 世界设定。
+export const PlotlineViewSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  summary: z.string().nullish(),
+  status: z.string(),
+});
+export const ForeshadowViewSchema = z.object({
+  id: z.string(),
+  content: z.string(),
+  status: z.string(),
+});
+export const LoreViewSchema = z.object({
+  name: z.string(),
+  content: z.string(),
+  category: z.string().nullish(),
+});
+
 // §1 全量快照（GET /presentation 与 WS 重连补齐）
 export const PresentationSnapshotSchema = z.object({
   protocol: z.literal(CLIENT_PROTOCOL),
@@ -59,6 +78,10 @@ export const PresentationSnapshotSchema = z.object({
   choices: ChoicesViewSchema.nullable(),
   narrativeCursor: z.number(),
   pendingRoll: PendingRollSchema.nullish(),
+  // §7(A′) 叙事层字段(RT-FE4 收口)。省略=旧客户端兼容;buildSnapshot 恒下发(可空数组)。
+  plotlines: z.array(PlotlineViewSchema).optional(),
+  foreshadows: z.array(ForeshadowViewSchema).optional(),
+  lore: z.array(LoreViewSchema).optional(),
 });
 
 // §4 presentation_delta.changes（webhook 驱动的局部）
@@ -71,6 +94,14 @@ export const PresentationChangesSchema = z.object({
   watcherFired: z
     .array(z.object({ seq: z.number(), watcherId: z.number(), payload: z.string() }))
     .optional(),
+  // §7(A′) 叙事层局部增量(op=upsert 进入玩家可见/remove 退出)。web 收到后 GET /presentation 全量对账。
+  plotlines: z
+    .array(PlotlineViewSchema.extend({ op: z.enum(["upsert", "remove"]) }))
+    .optional(),
+  foreshadows: z
+    .array(ForeshadowViewSchema.extend({ op: z.enum(["upsert", "remove"]) }))
+    .optional(),
+  lore: z.array(LoreViewSchema.extend({ op: z.enum(["upsert", "remove"]) })).optional(),
 });
 export const PresentationDeltaSchema = z.object({
   seq: z.number(),
@@ -83,5 +114,9 @@ export type MechanicEntry = z.infer<typeof MechanicEntrySchema>;
 export type ChoiceOption = z.infer<typeof ChoiceOptionSchema>;
 export type ChoicesView = z.infer<typeof ChoicesViewSchema>;
 export type PendingRoll = z.infer<typeof PendingRollSchema>;
+export type PlotlineView = z.infer<typeof PlotlineViewSchema>;
+export type ForeshadowView = z.infer<typeof ForeshadowViewSchema>;
+export type LoreView = z.infer<typeof LoreViewSchema>;
 export type PresentationSnapshot = z.infer<typeof PresentationSnapshotSchema>;
+export type PresentationChanges = z.infer<typeof PresentationChangesSchema>;
 export type PresentationDelta = z.infer<typeof PresentationDeltaSchema>;

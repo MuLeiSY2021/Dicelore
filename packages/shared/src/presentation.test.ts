@@ -8,7 +8,7 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import { describe, it, expect } from "vitest";
-import { PresentationSnapshotSchema, PendingRollSchema, CLIENT_PROTOCOL } from "./index.js";
+import { PresentationSnapshotSchema, PresentationChangesSchema, PendingRollSchema, CLIENT_PROTOCOL } from "./index.js";
 
 describe("PresentationSnapshotSchema", () => {
   it("接受接口页 §1 形状的全量快照", () => {
@@ -53,5 +53,36 @@ describe("PresentationSnapshotSchema", () => {
       sheets: [], mechanics: [], choices: null, narrativeCursor: 0,
     });
     expect(snap.pendingRoll ?? null).toBeNull();
+  });
+
+  it("§7(A′) 接受叙事层字段 plotlines/foreshadows/lore", () => {
+    const snap = PresentationSnapshotSchema.parse({
+      protocol: CLIENT_PROTOCOL, sessionId: "s1", seq: 0,
+      sheets: [], mechanics: [], choices: null, narrativeCursor: 0,
+      plotlines: [{ id: "pl1", title: "追查", status: "active" }],
+      foreshadows: [{ id: "fs1", content: "断剑", status: "recalled" }],
+      lore: [{ name: "青云门", content: "正道大派" }],
+    });
+    expect(snap.plotlines).toHaveLength(1);
+    expect(snap.foreshadows?.[0]?.id).toBe("fs1");
+    expect(snap.lore?.[0]?.name).toBe("青云门");
+    // 三字段可省略(旧客户端兼容)
+    const bare = PresentationSnapshotSchema.parse({
+      protocol: CLIENT_PROTOCOL, sessionId: "s1", seq: 0,
+      sheets: [], mechanics: [], choices: null, narrativeCursor: 0,
+    });
+    expect(bare.plotlines).toBeUndefined();
+  });
+});
+
+describe("PresentationChangesSchema §7(A′) 叙事增量", () => {
+  it("接受 plotlines/foreshadows/lore 的 op=upsert/remove", () => {
+    const c = PresentationChangesSchema.parse({
+      plotlines: [{ id: "pl1", title: "追查", status: "active", op: "upsert" }],
+      foreshadows: [{ id: "fs1", content: "断剑", status: "recalled", op: "upsert" }],
+      lore: [{ name: "青云门", content: "正道大派", op: "remove" }],
+    });
+    expect(c.foreshadows?.[0]?.op).toBe("upsert");
+    expect(c.lore?.[0]?.op).toBe("remove");
   });
 });

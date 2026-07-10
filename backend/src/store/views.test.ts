@@ -59,7 +59,7 @@ describe("state 派生命名视图", () => {
       .prepare("SELECT name FROM sqlite_master WHERE type='view'")
       .all()
       .map((r: any) => r.name);
-    for (const v of ["player", "npc", "world", "relation", "clock", "tension_board"]) {
+    for (const v of ["player", "npc", "world", "relation", "clock", "tension_board", "plotline_visible", "foreshadow_visible", "lore_visible"]) {
       expect(views).toContain(v);
     }
   });
