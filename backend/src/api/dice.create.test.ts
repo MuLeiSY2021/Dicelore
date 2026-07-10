@@ -101,4 +101,27 @@ describe("POST /sessions/dicegm 显式建会话（session-surface-flatten §三�
     expect(res.status).toBe(404);
     catalog.close();
   });
+
+  // RT-open-500：无效包（信任闸门拒）建会话 → 4xx 结构化 error，非 uncaught 500。
+  it("无效团本包（缺 prologue.md）→ 400 {code:'invalid_pack', issues:[…]}，非 500", async () => {
+    const catalog = openCatalog(":memory:");
+    // commit 不校验包结构；缺 prologue.md 会在 importPack 信任闸门重验时被拒（validatePack Rule 0c）。
+    const BAD_PACK = [
+      { path: "manifest.md", content: "# 无开场\n\n- id: bad" },
+      { path: "state/开局.csv", content: "entity,kind,attr,value,visible\n韩立,player,HP,12,1\n" },
+    ];
+    const { adventureId } = commit(catalog, { name: "无开场", message: "init", files: BAD_PACK });
+    const { open } = memSessions();
+    const app = createLiveApp({ catalog, openSession: open, agentFactory: () => new FakeDiceGm([{ type: "turn_end" }]) });
+    const res = await app.request("/sessions/dicegm", {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ teamId: adventureId }),
+    });
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { code: string; issues: { level: string; file: string; msg: string }[] };
+    expect(body.code).toBe("invalid_pack");
+    expect(Array.isArray(body.issues)).toBe(true);
+    // 结构化 issues 应含 prologue.md 缺失的 error（校验失败真实原因下发客户端）。
+    expect(body.issues.some((i) => i.level === "error" && i.file === "prologue.md")).toBe(true);
+    catalog.close();
+  });
 });

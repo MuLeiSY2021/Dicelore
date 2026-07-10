@@ -12,7 +12,7 @@ import { randomUUID } from "node:crypto";
 import type { DB } from "@dicelore/interface";
 import type { SessionInfo, SessionSummary } from "@dicelore/shared";
 import { MessageRequestSchema, ChoiceRequestSchema, RollRequestSchema, CreateSessionRequestSchema } from "@dicelore/shared";
-import { loreSearch, ruleSearch, logSince, metaGet, openSessionBackend, openDb, initSchema, list } from "@dicelore/backend";
+import { loreSearch, ruleSearch, logSince, metaGet, openSessionBackend, openDb, initSchema, list, PackValidationError } from "@dicelore/backend";
 import { getLogger } from "@dicelore/logs";
 import { buildSnapshot } from "./presentation.js";
 import { getOrCreateHost, removeHost, TurnInProgressError, type AgentFactory, type PluginRef } from "@dicelore/harness";
@@ -64,7 +64,20 @@ export function createLiveApp(deps: LiveDeps): Hono {
       return c.json({ code: "unknown_team", message: "团本不存在或无已发布版本" }, 400);
     }
     const id = randomUUID();
-    getOrCreateHost(id, { ...hostDeps(id), importFrom: { catalog: deps.catalog, adventureId: body.teamId, ref } });
+    // 信任闸门(importPack)在 DiceSession 构造期同步重验团本包;拒包 throw PackValidationError。
+    // RT-open-500:捕获→映射 400 {code:"invalid_pack",issues:[…]},把结构化校验失败原因回客户端,
+    // 而非 uncaught → 500。host 未入注册表(create 回调 throw 前 map.set 未执行),无需清理。
+    try {
+      getOrCreateHost(id, { ...hostDeps(id), importFrom: { catalog: deps.catalog, adventureId: body.teamId, ref } });
+    } catch (e) {
+      if (e instanceof PackValidationError || (e != null && typeof e === "object" && (e as { code?: unknown }).code === "invalid_pack")) {
+        const issues = (e as PackValidationError).issues ?? [];
+        getLogger().warn({ sessionId: id, teamId: body.teamId, issues }, "建 dicegm 会话:团本包信任闸门拒包,返回 400 invalid_pack");
+        return c.json({ code: "invalid_pack", issues }, 400);
+      }
+      getLogger().error({ sessionId: id, teamId: body.teamId, err: e }, "建 dicegm 会话:import 未预期异常,抛给 Hono(500)");
+      throw e;
+    }
     getLogger().info({ sessionId: id, teamId: body.teamId, ref }, "建 dicegm 会话:import 团本");
     return c.json({ sessionId: id, kind: "dicegm" }, 201);
   });

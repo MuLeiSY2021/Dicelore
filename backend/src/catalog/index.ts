@@ -13,5 +13,5 @@ export {
   resolveId, commit, history, checkout, tag, list,
   type PackFile, type CommitRow, type AdventureSummary,
 } from "./catalog.js";
-export { importPack, validatePack, type ImportResult, type ImportIssue } from "./import.js";
+export { importPack, validatePack, PackValidationError, type ImportResult, type ImportIssue } from "./import.js";
 export { exportGit, importGit } from "./git.js";
