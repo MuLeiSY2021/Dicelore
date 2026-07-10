@@ -100,15 +100,22 @@ export function createLiveApp(deps: LiveDeps): Hono {
   app.get("/sessions/dicegm/:id/presentation", (c) => {
     const id = c.req.param("id");
     const host = getOrCreateHost(id, hostDeps(id));
-    return c.json(buildSnapshot(host.db, id));
+    // spoiler-tiering §一.5：includeHidden=true 时全量含 visible=0（bay 关闭档点 btn 按需拉），offset/limit 分页。
+    const includeHidden = c.req.query("includeHidden") === "true";
+    const limitRaw = c.req.query("limit");
+    const offset = Number(c.req.query("offset") ?? "0") || 0;
+    const limit = limitRaw !== undefined ? Number(limitRaw) || undefined : undefined;
+    return c.json(buildSnapshot(host.db, id, includeHidden ? { includeHidden, offset, limit } : {}));
   });
 
   // B2：叙述/事件历史回填(重连补 narrate)。?since=<seq> 取该 seq 之后的事件；
-  // ?visibleOnly=true(默认)只回可见事件。返回 { events:[{seq,kind,text,data}] }(接口页 §2)。
+  // spoiler-tiering §一.2 FE9-4：默认全量下发含 visible=0（暗骰结果/隐藏 sheet 改等）——后端不做 visible 截流。
+  // visibleOnly 参数保留(向后兼容)但默认全量：仅 ?visibleOnly=true 时才只回可见事件。
+  // 返回 { events:[{seq,kind,text,data,visible}] }(接口页 §2)——带 visible 供前端按 spoiler 档渲染。
   app.get("/sessions/dicegm/:id/events", (c) => {
     const id = c.req.param("id");
     const since = Number(c.req.query("since") ?? "0") || 0;
-    const visibleOnly = c.req.query("visibleOnly") !== "false";
+    const visibleOnly = c.req.query("visibleOnly") === "true";
     const db = getOrCreateHost(id, hostDeps(id)).db;
     const rows = logSince(db, since).filter((r) => (visibleOnly ? r.visible === 1 : true));
     const events = rows.map((r) => ({
@@ -116,6 +123,7 @@ export function createLiveApp(deps: LiveDeps): Hono {
       kind: r.kind,
       text: r.content ?? "",
       data: r.data_json ? JSON.parse(r.data_json) : undefined,
+      visible: r.visible,
     }));
     return c.json({ events });
   });
