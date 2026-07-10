@@ -24,6 +24,8 @@ type Dict = Record<string, string>;
 
 const ZH: Dict = {
   "nav.home": "主页", "nav.catalog": "团本", "nav.play": "跑团", "nav.build": "团本制作", "nav.config": "配置",
+  "bay.tab.home": "主页", "bay.tab.catalog": "目录", "bay.tab.play": "跑团", "bay.tab.build": "制作", "bay.tab.config": "配置",
+  "bay.nav": "导航", "bay.nav.collapse": "收起导航", "bay.nav.expand": "展开常驻导航",
   "bar.lang": "语言", "bar.theme": "明暗",
   "bar.model": "模型", "bar.mcp": "MCP", "bar.notify": "notify", "bar.notify.unset": "未配", "bar.notify.connected": "已连",
   // 主页
@@ -122,6 +124,8 @@ const ZH: Dict = {
 
 const EN: Dict = {
   "nav.home": "Home", "nav.catalog": "Adventures", "nav.play": "Play", "nav.build": "Build", "nav.config": "Settings",
+  "bay.tab.home": "Home", "bay.tab.catalog": "Catalog", "bay.tab.play": "Play", "bay.tab.build": "Build", "bay.tab.config": "Config",
+  "bay.nav": "Nav", "bay.nav.collapse": "Collapse nav", "bay.nav.expand": "Pin nav bar",
   "bar.lang": "Language", "bar.theme": "Theme",
   "bar.model": "Model", "bar.mcp": "MCP", "bar.notify": "notify", "bar.notify.unset": "unset", "bar.notify.connected": "connected",
   "home.greeting.morning": "Good morning", "home.greeting.afternoon": "Good afternoon",

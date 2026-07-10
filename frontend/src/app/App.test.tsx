@@ -8,12 +8,12 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import { render, screen } from "@testing-library/react";
-import { vi } from "vitest";
+import { afterEach, vi } from "vitest";
 import { MemoryRouter, Routes, Route, Outlet } from "react-router-dom";
 import { ThemeProvider } from "@/shared/theme/ThemeProvider.js";
 import { I18nProvider } from "@/shared/i18n/index.js";
 import { SettingsProvider } from "@/shared/settings/useSettings.js";
-import { TopBar } from "@/shell/TopBar.js";
+import { Bay } from "@/shell/Bay.js";
 import HomePage from "@/features/home/HomePage.js";
 import PlayPage from "@/features/play/PlayPage.js";
 
@@ -40,12 +40,13 @@ vi.mock("@/features/play/useSession.js", () => ({
   }),
 }));
 
+// Shell 无顶栏：只留 <Outlet/> + 全局底部 <Bay/>（对齐 app/router.tsx 的 Shell）。
 function tree(initial: string) {
   return (
     <I18nProvider><ThemeProvider><SettingsProvider>
       <MemoryRouter initialEntries={[initial]}>
         <Routes>
-          <Route element={<><TopBar /><Outlet /></>}>
+          <Route element={<><Outlet /><Bay /></>}>
             <Route index element={<HomePage />} />
             <Route path="play" element={<PlayPage />} />
           </Route>
@@ -55,11 +56,15 @@ function tree(initial: string) {
   );
 }
 
-it("bar 渲染四个页面导航 + 品牌 logo", () => {
+afterEach(() => { document.body.className = ""; });
+
+it("Shell 无顶栏、全局底部 app-bay 渲染五块 nav-tab", () => {
   render(tree("/"));
-  expect(screen.getByLabelText("Dicelore")).toBeInTheDocument(); // 品牌 logo lockup
-  for (const label of ["主页", "跑团", "团本制作", "配置"]) {
-    expect(screen.getByRole("link", { name: label })).toBeInTheDocument();
+  // 顶栏已删除：不存在 header.bar
+  expect(document.querySelector("header.bar")).toBeNull();
+  expect(screen.getByTestId("app-bay")).toBeInTheDocument();
+  for (const tab of ["home", "catalog", "play", "build", "config"]) {
+    expect(screen.getByTestId(`nav-tab-${tab}`)).toBeInTheDocument();
   }
 });
 
@@ -68,8 +73,7 @@ it("主页路由渲染主页壳", () => {
   expect(screen.getByText("欢迎回到案上")).toBeInTheDocument();
 });
 
-it("/play 路由渲染跑团三栏(活动轨 + 呈现台)", () => {
+it("跑团页默认收起导航（body.bay-nav-collapsed）", () => {
   render(tree("/play"));
-  expect(screen.getByLabelText("活动轨")).toBeInTheDocument();
-  expect(screen.getByLabelText("呈现台")).toBeInTheDocument();
+  expect(document.body).toHaveClass("bay-nav-collapsed");
 });
