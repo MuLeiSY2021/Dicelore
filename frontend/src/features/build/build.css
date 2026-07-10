@@ -1,0 +1,138 @@
+/* Copyright (C) 2026 MuLeiSY2021
+ *
+ * This file is part of Dicelore.
+ *
+ * Dicelore is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU Affero General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version. See <https://www.gnu.org/licenses/>.
+ *
+ * 构建页 surface 大重构（frontend-ia-rebuild §三）专属样式。忠实移植原型 build.html 的
+ * 三栏(ctx/bbody[sidenav|main|aside]) + 内容卡 + 校验报告 + 素材 + 助手 chat；
+ * portaled 到 body 的 modal/popover 用非 .build 作用域的全局类。基础 .build .ctx/.sn/.msg 等
+ * 已在 styles/shell.css 定义、此处只补新增/差异类（overflow 收口、三态、素材、usage、inline 编辑）。 */
+
+.build.appshell { height: 100%; }
+
+/* ── 三栏骨架 ── */
+.build .bbody { display: flex; flex: 1; min-height: 0; }
+.build .sidenav { flex: none; min-height: 0; overflow: auto; }   /* 缺口 #9 overflow 收口 */
+.build .main { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--bg); }
+.build .mbody { flex: 1; overflow: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 11px; min-height: 0; }
+
+/* ── 通用内容卡 ── */
+.build .card { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 12px 14px; }
+.build .card.npc { padding: 0; }
+.build .ph2 { font-family: var(--serif); font-size: 14px; color: var(--text); margin: 0 0 6px; display: flex; align-items: center; }
+.build .mono { font-family: var(--mono); font-size: 11.5px; color: var(--text2); line-height: 1.7; white-space: pre-wrap; }
+.build .card .lbl { font-size: 9.5px; letter-spacing: .05em; text-transform: uppercase; color: var(--text3); margin-bottom: 5px; }
+.build .card-acts { margin-left: auto; display: flex; gap: 9px; align-items: center; }
+.build .card-act { color: var(--text3); cursor: pointer; padding: 2px; display: flex; }
+.build .card-act:hover { color: var(--acc-soft); }
+.build .card-act .lucide { width: 14px; height: 14px; }
+
+/* NPC / state 实体卡 */
+.build .npc .av { width: 30px; height: 30px; border-radius: 6px; background: var(--surface2); display: flex; align-items: center; justify-content: center; color: var(--acc-soft); }
+.build .npc .nm { font-family: var(--serif); font-size: 15px; color: var(--text); }
+.build .npc .tag { font-family: var(--mono); font-size: 9.5px; color: var(--text3); border: 1px solid var(--line2); padding: 1px 6px; border-radius: 4px; }
+.build .npc .nh .sp { flex: 1; }
+.build .npc .sheet { flex: 1; }
+.build .npc .nb { display: flex; gap: 14px; padding: 12px 13px; }
+
+/* 阵线凶兆阶梯 */
+.build .front-steps .s { display: flex; gap: 8px; font-family: var(--mono); font-size: 11.5px; color: var(--text2); padding: 4px 0; }
+.build .front-steps .s .g { color: var(--acc); min-width: 44px; }
+
+/* ── aside 构建助手 chat ── */
+.build .aside { width: 300px; flex: none; min-height: 0; background: var(--surface); border-left: 1px solid var(--line); display: flex; flex-direction: column; }
+.build .chat { min-height: 0; }
+.build .cin .box { flex: 1; padding: 7px 10px; background: var(--bg); border: 1px solid var(--line); border-radius: 7px; color: var(--text); font-size: 12px; }
+.build .turn-usage { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-top: 4px; }
+.build .turn-usage .tu-model { color: var(--acc-soft); }
+.build .turn-usage .up { color: var(--warn); }
+.build .turn-usage .down { color: var(--ok); }
+
+/* 助手编排中态 */
+.build .msg.gen { align-self: flex-start; color: var(--text3); font-size: 11.5px; display: flex; align-items: flex-start; gap: 7px; }
+.build .msg.gen .spin { width: 13px; height: 13px; border: 2px solid var(--line2); border-top-color: var(--acc); border-radius: 50%; animation: build-spin 1s linear infinite; flex: none; margin-top: 1px; }
+@keyframes build-spin { to { transform: rotate(360deg); } }
+.build .msg.gen .gen-body { display: flex; flex-direction: column; gap: 5px; }
+.build .msg.gen .gen-tools { display: flex; flex-direction: column; gap: 2px; padding-left: 2px; }
+.build .msg.gen .gen-tool { font-family: var(--mono); font-size: 10px; color: var(--text3); }
+
+/* loregm turn error 通道 */
+.build .msg.err { align-self: flex-start; font-size: 11px; color: var(--err); background: rgba(205, 91, 74, .1); border: 1px solid rgba(205, 91, 74, .3); border-radius: 7px; padding: 7px 10px; display: flex; gap: 7px; align-items: flex-start; cursor: pointer; }
+.build .msg.err .lucide { width: 13px; height: 13px; flex: none; margin-top: 1px; }
+
+/* ── 校验报告 ── */
+.build .valid .chip.ok { color: var(--ok); }
+.build .valid .chip.warn { color: var(--warn); }
+.build .vitem[data-jump] { cursor: pointer; border-radius: 5px; padding: 4px 6px; margin: 0 -6px; }
+.build .vitem[data-jump]:hover { background: var(--surface2); }
+.build .vitem[data-jump] .f { text-decoration: underline dotted; }
+.build .vok { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--ok); padding: 6px 0; }
+.build .vok .lucide { width: 14px; height: 14px; }
+
+/* ── inline 编辑（缺口 #11） ── */
+.build .inline-form { margin-top: 8px; display: flex; flex-direction: column; gap: 7px; }
+.build .inline-form textarea { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; color: var(--text); font-family: var(--mono); font-size: 11.5px; padding: 8px; resize: vertical; }
+.build .inline-form .if-row { display: flex; gap: 7px; justify-content: flex-end; }
+.build .editor-empty { color: var(--text3); font-size: 11.5px; padding: 20px; text-align: center; }
+
+/* ── 三态整屏（无会话 / 已导出） ── */
+.build .nosession, .build .exported { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 9px; padding: 48px 20px; text-align: center; }
+.build .nosession .big, .build .exported .big { width: 28px; height: 28px; color: var(--acc-soft); }
+.build .exported .big.ok { color: var(--ok); }
+.build .ns-t, .build .ex-t { font-family: var(--serif); font-size: 17px; color: var(--text); }
+.build .ns-sub, .build .ex-sub { font-size: 12px; color: var(--text3); }
+.build .ns-btns { display: flex; gap: 9px; margin-top: 6px; }
+.build .ns-recent { font-size: 11px; color: var(--acc-soft); margin-top: 4px; cursor: pointer; text-decoration: underline; }
+
+/* ── 素材上传（缺口 #4） ── */
+.build .mat-drop { border: 1px dashed var(--line2); border-radius: 8px; padding: 16px; text-align: center; color: var(--text3); font-size: 11.5px; display: flex; align-items: center; justify-content: center; gap: 7px; cursor: pointer; }
+.build .mat-drop:hover { border-color: var(--acc); color: var(--text2); }
+.build .mat-drop .lucide { width: 18px; height: 18px; }
+.build .mat-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.build .mat-row { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text2); padding: 6px 8px; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; }
+.build .mat-row .lucide { width: 13px; height: 13px; color: var(--text3); }
+.build .mat-row .mn { font-family: var(--mono); color: var(--text); }
+.build .mat-row .msp { flex: 1; }
+.build .mat-row .dim { font-family: var(--mono); font-size: 10px; color: var(--text3); }
+.build .mat-prog { width: 60px; height: 5px; border-radius: 3px; background: var(--dial-empty); overflow: hidden; flex: none; }
+.build .mat-fill { display: block; height: 100%; background: linear-gradient(90deg, var(--ok), var(--acc-soft)); transition: width .2s ease; }
+
+/* ── 按钮（三态 / modal 复用；ctx .act 已在 shell.css，这里补通用 .act/.btn 供非 ctx 处用） ── */
+.act { display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 6px; border: 1px solid var(--line2); color: var(--text2); cursor: pointer; font-size: 11.5px; background: none; }
+.act:hover { border-color: var(--text3); color: var(--text); }
+.act.go { background: linear-gradient(160deg, var(--acc-h), var(--acc)); color: var(--acc-on); border: none; font-weight: 600; }
+.act .lucide { width: 14px; height: 14px; }
+
+/* ── portaled 到 body：bay session / usage popover 内容（非 .build 作用域） ── */
+.sess-row { display: flex; flex-direction: column; gap: 3px; padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; margin-bottom: 7px; }
+.sess-row.on { border-color: var(--acc); }
+.sess-row .st { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--text); }
+.sess-row .st .lucide { width: 13px; height: 13px; }
+.sess-row .sm { font-family: var(--mono); font-size: 9.5px; color: var(--text3); }
+.sess-row .sr { font-size: 11px; color: var(--text2); }
+.sess-status { font-family: var(--mono); font-size: 9px; padding: 1px 6px; border-radius: 8px; margin-left: auto; border: 1px solid var(--line2); }
+.sess-status.active { color: var(--ok); border-color: var(--ok); }
+.sess-status.archived { color: var(--text3); }
+.usage-detail .ud-sec { margin-bottom: 12px; }
+.usage-detail .ud-h { font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: var(--text3); margin-bottom: 6px; }
+.usage-detail .ud-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text2); padding: 3px 0; }
+.usage-detail .ud-row .lucide { width: 12px; height: 12px; vertical-align: middle; }
+.usage-detail .ud-v { color: var(--text); }
+.usage-detail .ud-v b { color: var(--text); }
+.usage-detail .dim { color: var(--text3); font-family: var(--mono); font-size: 10.5px; }
+
+/* ── portaled 到 body：新建构建会话 modal（非 .build 作用域） ── */
+.modal { position: fixed; inset: 0; background: #00000088; display: flex; align-items: center; justify-content: center; z-index: 60; }
+.modal-card { background: var(--surface); border: 1px solid var(--line2); border-radius: 12px; padding: 18px 20px; min-width: 360px; box-shadow: 0 20px 60px #0008; }
+.modal-card.wide { max-width: 520px; width: 92vw; }
+.modal-card h3 { font-family: var(--serif); font-size: 16px; color: var(--text); margin: 0 0 4px; }
+.modal-card .msub { font-size: 12px; color: var(--text3); margin: 0 0 10px; }
+.field { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+.field .fl { width: 90px; flex: none; color: var(--text); font-size: 12.5px; }
+.field .fc { flex: 1; display: flex; align-items: center; gap: 9px; }
+.inp { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; color: var(--text); font-size: 12px; padding: 7px 10px; font-family: var(--mono); }
+.modal-foot { display: flex; justify-content: flex-end; gap: 9px; margin-top: 14px; }
