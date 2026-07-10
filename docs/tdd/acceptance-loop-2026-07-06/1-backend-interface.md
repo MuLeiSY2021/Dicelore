@@ -1,135 +1,174 @@
-# 第三步 · 后端接口协议（被前端数据需求驱动 · `/sessions/{kind}` 对称面）
+# 第三步 · 后端接口协议（as-delivered · `/sessions/{kind}` 对称面）
 
-> 属 `acceptance-loop` 第三步（后端 track · 前端预览收口后补齐）。**据 [0-state-machines.md](0-state-machines.md) 每条转移 + [1-frontend-overview.md](1-frontend-overview.md) 的前端数据需求清单 derive**；期望响应形状引 wiki（接口§=玩家客户端-接口.md、构建§=团本构建工具链.md），**不看代码输出**（铁律 1）。推导法 → skill `references/interface-and-tests.md`。
-> **前端驱动后端**：接口服务于前端已定的数据需求。**架构仲裁**：前端原型冒出的、超出实体机/wiki 的数据需求 = finding（超前/新需求），落 backlog/裁决记录，不自动塞进接口。
-> **理想面对称**：会话是一个实体、按 `kind ∈ {dicegm, loregm}` 参数化——两 kind 共享生命周期骨架，域子资源各异，catalog 独立。内部 `Session`/`TurnResult` 已统一，HTTP 表皮也应对齐。**现状 `/sessions`(dicegm) vs `/lore-sessions`(loregm) 不对称 = 待拉平的红**（RT-ns）。
-> 「现状」列对照真实路由、**非 wiki 状态列**（铁律 4）：✅ 在 / ❌ 缺 / ⚠️ 存疑或超前 / 🔀 存在但路径不对称。
-> **状态：已同步 07-09 前端设计**——运行时观测/控制族（`GET /usage` 扩 context+session+perTurn / `POST …/model` 运行时切换 / `turn_ended.usage`+loregm 响应内联 usage / build 用量浮窗对称）+ 自定义 MCP 登记 CRUD（RT8）+ presentation 的 RT-FE4 plotline/world 投影缺口已并入；超前项一律标 ⚠️ **待批准裁决**（裁决文件用户未勾·不进接口·红态）。偏差待第四步真跑定论。
+> **本轮（2026-07-10）已据交付裁决更新到 as-delivered 契约**：原文件是交付前按 wiki 推导写的「理想面」；本轮据**已批准并合入 main 的裁决**（session-surface-flatten / model-switch / spoiler-tiering-and-dock-diy / usage-and-context / usage-stream / rollband-narration-and-loregm-api / hidden-roll-and-loregm-ws / debrief-and-branch / custom-mcp-install / a-prime-completion）+ **实际交付代码**（`backend/src/api/{dice,lore,sessions,usage,ws,diagnostics,mcp,keys}.ts` + `packages/shared/src/{rest,stream,presentation,context-window}.ts`）逐端点核对，改写为已交付真实形状。**代码为准**（裁决与代码不一致处见文末「裁决 vs 代码」）。下游 curl 测试据本页重写。
+>
+> 属 `acceptance-loop` 第三步（后端 track）。「现状」列语义更新为交付态：✅ 已交付并对齐 / ⚠️ 已交付但有语义/计数存疑（待真跑） / ❌ 未实现 / 🟡 交付形状与旧规约不同（curl 需按新形状写）。RT-* 标签保留作历史归口锚点。
 
 ## 1. 会话生命周期（两 kind 对称骨架）
 
-对应 A1 会话生命周期机的转移。`{kind}` ∈ `dicegm` | `loregm`。
+对应 A1 会话生命周期机。`{kind}` ∈ `dicegm` | `loregm`。**会话面已拉平**（session-surface-flatten 已交付）：dicegm 全挂 `/sessions/dicegm/*`、loregm 全挂 `/sessions/loregm/*`；旧 `/sessions/*`(dicegm 裸) 与 `/lore-sessions/*` 已删、**无别名**。
 
-| 转移(A1) | 理想接口 | 请求 | 期望响应 | 现状（dicegm / loregm） |
+| 转移(A1) | 接口 | 请求 | 期望响应 | 现状 |
 |---|---|---|---|---|
-| 无→活跃 创建 | `POST /sessions/{kind}` | dicegm `{teamId, version?}`（默认最新版）/ loregm `{name?}` | `201 {sessionId, kind}` | ❌ 两侧都缺显式新建（dicegm 懒建 `/open`；loregm 首次 `/messages`\|`/materials` 懒建）= **RT1** |
-| （列表） | `GET /sessions/{kind}` | — | `{sessions: SessionSummary[]}`（含 kind/活动日期/title/packName/started/**最新回复**/**lastaction 最新动作**） | dicegm ✅ `GET /sessions`；loregm ❌ **无列表** = **RT6**；`lastaction` 字段=**RT-FE13** |
-| （元信息） | `GET /sessions/{kind}/{id}` | — | `{sessionId, kind, status(活跃/空/战后复盘/归档), title, ended}` | dicegm ✅（wiki 标"桩"待验）；loregm ❌ **无 meta** = **RT7**。`status=战后复盘` 见裁决 `debrief-and-branch` §一 |
-| 活跃→无 删除 | `DELETE /sessions/{kind}/{id}` | — | 删库+注销/删工作区 | dicegm ✅；loregm ✅ |
-| 未开场→活跃 开场 | `POST /sessions/{kind}/{id}/start` | — | 幂等·流式开场（dicegm prologue；loregm 首轮/身份开场） | dicegm ✅ kickoff；loregm ⚠️ 是否有对称开场待定 |
-| 活跃→活跃 drive-turn | `POST /sessions/{kind}/{id}/messages` | `{text}` | `202 {turnId, error?, usage?}`（loregm error 经 body·状态钉 202；**loregm usage 随响应内联**=[usage-stream](../../wiki/设计/05-现状与计划/裁决记录/usage-stream.md) §3·v1 不落库；dicegm usage 经 WS `turn_ended.usage` 非响应） | dicegm ✅；loregm ✅（`usage` 字段=待批准裁决 [usage-stream]） |
-| 活跃→空/活跃 rewind | `POST /sessions/{kind}/{id}/rewind` | `{toSeq?}`（省略/到头=空） | 回退到 seq（**覆盖当前分支**·截断） | dicegm ⚠️ `/rewind` 有但**无契约**=**RT3**；loregm ❓ 未定。rewind vs branch 两功能见裁决 `debrief-and-branch` §二=**RT-FE8**；dry-run 预览前端据 events 本地算 |
-
-> 现状**命名不对称**（dicegm=`/sessions/*`、loregm=`/lore-sessions/*`）= **RT-ns**（破坏性改名，冒泡待裁决）。上表"理想接口"是拉平后的目标面，"现状"列记实际偏差。
+| 无→活跃 创建(dicegm) | `POST /sessions/dicegm` | `{teamId, version?}`（version 省略/`"head"`=默认最新版） | `201 {sessionId, kind:"dicegm"}` | ✅ 显式建（旧 `POST /:id/open` 懒建已删）。错误：无 catalog 注入 `400 {code:"no_catalog"}`；缺 teamId `400 {code:"bad_request"}`；团本不存在 `400 {code:"unknown_team"}`；信任闸门拒包/物化失败 `400 {code:"invalid_pack", issues:[…]}` |
+| 无→活跃 创建(loregm) | `POST /sessions/loregm` | `{name?}`（团本工作名，省略=「未命名团本」） | `201 {sessionId, kind:"loregm"}` | ✅ 显式建（旧首访懒建已删） |
+| （列表·dicegm） | `GET /sessions/dicegm` | — | `{sessions: SessionSummary[]}` | ✅。SessionSummary=`{sessionId, kind, status, title, packName(不可空·C3), started?, lastActionAt?, lastReply?, lastaction?}`。**注**：`listSessionSummaries` 实际只填 `{sessionId,kind,title,status,packName,started,lastActionAt}`；`lastReply`/`lastaction`（RT9/RT-FE13）留 schema 位、后端未回填=**⚠️ 契约位空** |
+| （列表·loregm） | `GET /sessions/loregm` | — | `{sessions: SessionSummary[]}` | ✅ 已交付（对称 dicegm；实际内容依组合根注入的 `listSessions?`，省略则空） |
+| （元信息·dicegm） | `GET /sessions/dicegm/{id}` | — | `{sessionId, kind:"dicegm", status, ended, title}` | ✅。`status`=`ended`(session_meta「ended」由 game_end MCP 落) ? `"debrief"` : `"active"`；`title`=id |
+| （元信息·loregm） | `GET /sessions/loregm/{id}` | — | `{sessionId, kind:"loregm", status, ended:false, title}` | ✅。`status`=在内存 registry(活跃)→`"active"` 否则→`"archived"`；loregm 无复盘态 `ended` 恒 false |
+| 活跃→无 删除(dicegm) | `DELETE /sessions/dicegm/{id}` | — | `200 {ok:true}` | ✅ 注销内存 host + 删 .db 文件。🟡 **返回 200 `{ok:true}` 非 204** |
+| 活跃→无 删除(loregm) | `DELETE /sessions/loregm/{id}` | — | `200 {ok:true}`（幂等） | ✅ 从 loreReg 删条目（释放 in-memory Draft） |
+| 未开场→活跃 开场 | `POST /sessions/dicegm/{id}/start` | — | `202 {turnId}`；已有回合在跑 `409 {code:"turn_in_progress"}` | ✅ dicegm kickoff（幂等·WS 流式开场）。🟡 **loregm 无对称 `/start`**——loregm 开场即首个 `POST …/messages`（对称骨架仅 dicegm 有 start） |
+| 活跃→活跃 drive-turn(dicegm) | `POST /sessions/dicegm/{id}/messages` | `{text}` | `202 {turnId}`；`409 {code:"turn_in_progress"}` | ✅。dicegm usage 不在响应体（经 WS `turn_ended.usage`） |
+| 活跃→活跃 drive-turn(loregm) | `POST /sessions/loregm/{id}/messages` | `{text}` | `202 {turnId}` \| `{turnId, error}`（领域级错误·状态仍 202） \| `{turnId, usage}`（success 轮内联本轮四类 token·usage-stream §3·v1 不落库）；会话不存在 `404 {error:{code:"NO_SESSION", message}}` | ✅（usage-stream 已交付：usage 随响应内联，无 usage 事件则不带） |
+| 活跃→回退 rewind(dicegm) | `POST /sessions/dicegm/{id}/rewind` | `{toSeq?}` \| `{toUuid?}` \| 空 | `{toSeq}`→`202 {seq}`（截断当前分支到该 seq）；`{toUuid}`→`202 {uuid}`（transcript 节点回退）；空/非法 body→`202 {snapshotId}`（撤上一轮）；无快照 `409 {code:"no_snapshot"}`；锚点无 db 快照 `409 {code:"no_snapshot_for_anchor"}`；锚点不在 transcript 树 `404 {code:"unknown_anchor"}`；有回合在跑 `409 {code:"turn_in_progress"}` | ✅ 已补契约（RT3 解）。rewind 覆盖**当前分支**（debrief-and-branch §二.4）。🟡 **loregm 无 rewind 端点** |
 
 ## 2. dicegm 域子资源（对应 A2 回合循环 / B4 跑团页）
 
-路径 `/sessions/dicegm/{id}/…`（现状在 `/sessions/{id}/…`）。
+路径 `/sessions/dicegm/{id}/…`。
 
-| 转移/需求 | 理想接口 | 期望响应 | wiki | 现状 |
-|---|---|---|---|---|
-| 待选→下一回合 | `POST …/choices {eventId, optionIndex}` | `202 {turnId}` | 接口§2 | ⚠️ 语义矛盾必真跑（绕路 vs 已修）=**RT2** |
-| 明骰/暗骰 | `POST …/roll {eventId}` | `202`；无待掷 `409` | 接口§2 | ✅。`pendingRoll` 期望形状：`{eventId, shape, label, yourSide, dc?, bands:[{label,min,max,**plan**,**narration**}]}`（per-band plan=AI真实计划+narration=玩家可见=**RT-FE5·A′修订**）；暗骰标记=**RT-FE6**（shape 加 `hidden` 维度或独立 `hidden:true`·只说进行了判定不显结果/DC） |
-| 呈现快照 | `GET …/presentation` | §1 全量快照（**现仅 `sheets` entity→cell**·plotline/world 投影下发缺口=**RT-FE4**·前端暂借 sheet cell 承载） | 接口§1/§2 | ✅(sheets) / ⚠️ plotline+world=待扩 |
-| 重连回填 | `GET …/events?since=&visibleOnly=` | `{events[]}` | 接口§2 | ✅（代码领先，wiki §2 待纠）。防剧透 spoiler 档=前端渲染层（每行为按档渲染·与 visible 正交）、visible 0/1 是 AI note+dock-card 显示依据（非硬底线）、stream/events 全量下发含 visible=0、档位存 session-meta 经统一 `POST …/config` 读写、bay visible=0 关闭档按需拉+分页=**RT-FE9**（修正原零端点/硬底线定调） |
-| 源浏览 | `GET …/browse?source=world\|rule\|log&q=` | 命中条目 | 接口§9.4 | ✅ |
-| 分支·新建 | `POST …/branches` | `{fromSeq?,name?}` | `201 {branchId,sessionId,fromSeq,isCurrent:true}`（copy 当前分支 jsonl·新分支成当前） | 构建§6 ❌ 无契约=**RT-FE8**（裁决 `debrief-and-branch` §二） |
-| 分支·列表/切换 | `GET …/branches` / `POST …/branches/{bid}/checkout` | — / `200 {branchId,presentation}` | 列当前+所有分支；checkout 切当前分支+返该分支快照 | ❌ 无契约=**RT-FE8** |
-| 战后复盘 | 复用 `game_end` MCP（调用后转复盘态不归档） | game_end 现有返回 + `status:"debrief"` | 幂等·dicegm 域·GM AI 调用 | ⚠️ 语义变=**RT-FE7**（裁决 `debrief-and-branch` §一·C1=复用 game_end） |
-| WS 流 | `GET …/ws`（先 snapshot 再增量） | 10 类消息（见 §5） | 接口§3+4 | ✅（逐条待验） |
-| 用量投影 | `GET …/usage` | `{model,contextTokens,contextWindow,contextPct,sessionTotal,perTurn[]}`（context+session+perTurn 扩·RT-FE14/17·[usage-and-context](../../wiki/设计/05-现状与计划/裁决记录/usage-and-context.md) §二） | 里程碑二 | ⚠️ base 聚合 ✅已合 main·context/session/perTurn 扩=**待批准裁决** |
-| 运行时切 model | `POST …/config {model}` | `{model}` → `200 {model, spoilerTier, ...}`（下回合生效·RT-FE18·[model-switch](../../wiki/设计/05-现状与计划/裁决记录/model-switch.md)·统一 config 端点·与 RT-FE9 同） | — | ❌ 无端点=**待批准裁决** |
+| 转移/需求 | 接口 | 请求 → 期望响应 | 现状 |
+|---|---|---|---|
+| 待选→下一回合 | `POST …/choices` | `{eventId, optionIndex}` → `202 {turnId}`；无 pending choice `409 {code:"no_pending_choice"}`；有回合在跑 `409 {code:"turn_in_progress"}` | ✅（走正式玩家选择捕获路径，非伪装 [choice] 文本；RT2 已修） |
+| 明骰 | `POST …/roll` | `{eventId}` → `202 {ok:true}`；无待掷 `409 {code:"no_pending_roll"}` | ✅。🟡 **返回 `{ok:true}` 非 `{turnId}`**（roll 只 resolve WS 驱动回合内的 pending_roll、不开新回合，无真 turnId）。`pendingRoll` 形状（经 WS `roll_staged` / snapshot 恢复）：`{eventId, shape:"outcome"\|"contest", label, yourSide:{name,exprDisplay}, dc?, bands?:[{label,min,max,plan,narration}]}`——**per-band `plan`(AI 真实计划·可含暗值)+`narration`(玩家可见)** 均全量下发（RT-FE5·A′ 已交付，显隐交前端 spoiler 档） |
+| 呈现快照 | `GET …/presentation` | `?includeHidden=&offset=&limit=` → PresentationSnapshot | ✅ 全量。快照含 `{protocol, sessionId, seq, sheets, mechanics, choices, narrativeCursor, pendingRoll, plotlines, foreshadows, lore}`——**plotlines/foreshadows/lore 叙事层视图投影已交付**（RT-FE4 收口·A′；走 `*_visible` 命名视图防剧透）。`includeHidden=true` 时 sheets 从 state 表全量取（含 visible=0，bay 关闭档按需拉），offset/limit 对扁平 cell 分页 |
+| 重连回填 | `GET …/events` | `?since=&visibleOnly=` → `{events:[{seq,kind,text,data?,visible}]}` | ✅。🟡 **默认全量下发含 visible=0**（spoiler-tiering §一.2·后端不截流）；`visibleOnly=true` 才只回可见事件（保留向后兼容·默认全量·修正原「零端点/硬底线」定调 RT-FE9） |
+| 源浏览 | `GET …/browse` | `?source=world\|rule\|log&q=` → `{source, entries:[{name,tag,snippet,canPin,ref}]}` | ✅。q 空=列全量投影，q 非空=FTS 检索；rule/log `canPin=false`，world `canPin=true` |
+| 用量投影 | `GET …/usage` | `?rows=1` → UsageReport | ✅ 已合 main（含扩展）。形状=`{session:UsageTotals, byTurn:{}, byAgent:{}, model, contextTokens, contextWindow, contextPct, sessionTotal, perTurn:[], rows?(仅 ?rows=1), memoryBreakdown?, mcpBreakdown?}`——context/session/perTurn 扩已交付（RT-FE14/17·usage-and-context §二）；`memoryBreakdown`/`mcpBreakdown`(RT-FE19) 留 optional 契约位·v1 无聚合源→不下发 |
+| 运行时切 model + 防剧透档 | `GET/POST …/config` | GET → `200 {model, spoilerTier, pendingModel?}`；POST `{model?, spoilerTier?}` → `200` 更新后完整 config | ✅ **统一 config 端点已交付**（取代旧 `POST …/model`；model-switch + spoiler-tiering + usage-and-context 三裁决协同）。`model` 设 pendingModel·**下回合生效**；`spoilerTier`(`strict\|loose\|off`) 存 session_meta·**立即生效** |
+| 分支·新建 | `POST …/branches` | `{fromSeq?, name?}` → `201 {branchId, sessionId, fromSeq, isCurrent:true}`；无库 `400 {code:"no_session_store"}` | ✅ 已交付（debrief-and-branch §二·RT-FE8）。复制当前分支（截断到 fromSeq）→ 新分支自动成当前分支 |
+| 分支·列表 | `GET …/branches` | — → `{currentBranchId, branches:[{branchId,name,createdAt,seq,isCurrent}]}` | ✅。无库 → 只 `{currentBranchId:"main", branches:[]}` 空态 |
+| 分支·切换 | `POST …/branches/{branchId}/checkout` | — → `200 {branchId, presentation}`；未知分支 `404 {code:"unknown_branch"}`；无库 `400 {code:"no_session_store"}` | ✅。切当前分支 + 返该分支 presentation 快照 |
+| 战后复盘 | 复用 `game_end` MCP（GM AI 调用后转复盘态不归档） | game_end 现有返回 + 会话 `status:"debrief"`（ended 仍 true） | ✅（debrief-and-branch §一 C1：game_end 后不直接归档、转「战后复盘」态；status 见 §1 元信息） |
+| WS 流 | `GET …/ws` | 先 snapshot 再增量（`?since=` 补叙述历史） | ✅（见 §5·12 类；逐条待真跑验） |
 
 ## 3. loregm 域子资源（对应 A3 自由编排 / B5 制作页）
 
-路径 `/sessions/loregm/{id}/…`（现状在 `/lore-sessions/{id}/…`）。
+路径 `/sessions/loregm/{id}/…`。
 
-| 转移/需求 | 理想接口 | 期望响应 | wiki | 现状 |
-|---|---|---|---|---|
-| 上传素材（可选） | `POST …/materials`（原始字节流·`?filename`） | 落盘；超限 `413`+清半成品 | 构建§3/§6 | ✅ |
-| 检视 Draft | `GET …/draft` | 分域结构化 Draft 回读 | 构建§6 | ✅ |
-| 搜索（额外 MCP） | 经配置侧登记的额外 MCP | — | 视觉§6 | ❌ 未接运行时=**RT8** |
-| Draft 校验 | `POST …/draft/validate` | `[{level,path,msg}]`（活跃期 Draft·非已提交包） | 构建§6 | ❌ 无=**RT-FE11** |
-| WS 流 | `GET …/ws` | loregm 域 WS 事件（见 §5.2） | 构建§6 | ❌ 未规约=**RT-FE12** |
-| 运行时切 model | `POST …/config {model}` | 同 dicegm（两 kind·[model-switch](../../wiki/设计/05-现状与计划/裁决记录/model-switch.md) C2·统一 config 端点） | — | ❌ 待批准裁决 |
+| 转移/需求 | 接口 | 请求 → 期望响应 | 现状 |
+|---|---|---|---|
+| 上传素材 | `POST …/materials` | 原始字节流(application/octet-stream)·文件名经 `?filename=` 或 `X-Material-Filename` header → `{path:"materials/<name>", bytes}` | ✅。文件名非法 `400 {error:{code:"bad_material_name"}}`；空 body `400 {error:{code:"empty_body"}}`；超 `DICELORE_MATERIAL_MAX_MB`(默认 100) `413 {error:{code:"material_too_large"}}`（流式掐断+清半成品）；sessionsDir 未接线 `500 {error:{code:"no_workspace"}}`；写盘失败 `500 {error:{code:"material_write_failed"}}`。**注**：materials 是 IO 端点、按 sessionId 落盘、不强制先建会话 |
+| 检视 Draft | `GET …/draft` | — → `{files:PackFile[], snapshot}`（toPackFiles=将提交的包文件·snapshot=分域结构化回读） | ✅。会话不存在 `404 {error:{code:"NO_SESSION"}}` |
+| Draft 校验 | `POST …/draft/validate` | 无 body → `{issues:[{level,path,msg}]}`（活跃期 Draft·path 用 Draft 分域路径如 world.lore.x/manifest.meta·非文件路径） | ✅ 已交付（RT-FE11；复用 core `validateDraft`）。会话不存在 `404 {error:{code:"NO_SESSION"}}` |
+| 运行时切 model + 档位 | `GET/POST …/config` | 同 dicegm（GET → `{model,spoilerTier,pendingModel?}`；POST `{model?,spoilerTier?}` → 更新后完整 config） | ✅ 已交付（两 kind 统一端点·C2）。loregm 无 session.db、config 存内存态；会话不存在 `404 {error:{code:"NO_SESSION"}}` |
+| WS 流 | `GET …/ws` | loregm 域 WS 事件（见 §5.2·5 类） | ✅ 已交付（loregm-ws 裁决 §二）。会话不存在/未接线 resolveLoreHub → 拒绝升级 |
+| 搜索（额外 MCP） | 经 `/mcp/*` 登记的客制 MCP 运行时注入 | — | ✅ 登记端点已交付（见 §6·RT8）；运行时工具表注入见 harness |
 
-> **loregm 用量语义**（07-09 前端增量·build 用量浮窗对称 play）：per-turn usage 经 `POST …/messages` 响应内联（[usage-stream](../../wiki/设计/05-现状与计划/裁决记录/usage-stream.md) §3·**v1 不落库**）·**无 `GET …/usage`**；用量详情浮窗的 session 累计 / 上下文占用圆盘（`build-context-dial`）= **超前**（loregm v1 不落库·无聚合源）·待裁决。MCP/记忆分项同 RT-FE19·不进接口。
+> **loregm 无 `GET …/usage`**：per-turn usage 经 `POST …/messages` 响应内联（usage-stream §3·v1 不落库·无聚合源）。用量浮窗 session 累计/上下文圆盘（build-context-dial）v1 无源→前端侧超前项，非后端端点。
 
 ## 4. catalog 团本产物库（独立 · 对应 A4 / B3 团本目录页）
 
-| 需求 | 接口 | 期望响应 | wiki | 现状 |
-|---|---|---|---|---|
-| 目录 | `GET /catalog` | 团本列表+版本概要 | 构建§6 | ✅ |
-| 提交版本 | `POST /catalog/commit` | 新版本 | 构建§6 | ✅ |
-| 版本包文件 | `GET /catalog/{id}/files?ref=head` | 全部包文件（head 端点解析） | 构建 D3 | ✅ |
-| 整包校验 | `POST /catalog/validate` | `[{level,path,msg}]` | 构建§6/§1 | ✅ |
-| 打标签 | `POST /catalog/{id}/tag` | 版本打标 | 构建§6 | ✅ |
-| 开始游戏 import | （建 dicegm 会话时选版本·默认最新→ validatePack） | dicegm 就绪 | 构建§6/D3 | 依 RT1（无显式建会话） |
-
-## 5. WS 消息目录（server→client · 对应 A2 转移的推送）
-
-| `type` | payload | wiki | 现状 |
+| 需求 | 接口 | 请求 → 期望响应 | 现状 |
 |---|---|---|---|
-| `turn_started` | `{turnId}` | 接口§3+4 | 待验 |
-| `narration_delta` | `{turnId,text}` | 接口§3+4 | ❌ 未实现（非 bug，token 级流式待接） |
-| `narration_commit` | `{seq,text}` | 接口§3+4 | ⚠️ `seq` 语义债待验=**RT5** |
-| `presentation_delta` | `{seq,changes}` | 接口§3+4 | ✅ |
-| `choices` | §1 choices 形状 | 接口§3+4 | ✅ |
-| `roll_staged` | `{pendingRoll}` | 接口§3+4 | ✅ |
-| `roll_committed` | `{eventId,rolls,total,dc?,outcome}` | 接口§3+4 | ✅ |
-| `hidden_roll` | `{eventId,label}`（暗骰·只说进行了判定·不显结果/DC） | 接口§3+4 | ❌ 无=**RT-FE6** |
-| `turn_ended` | `{turnId,seq,usage?}`（usage=本回合四类 token·[usage-stream](../../wiki/设计/05-现状与计划/裁决记录/usage-stream.md) §1·optional 向后兼容·对接 co-play RT-FE16） | 接口§3+4 | ⚠️ `usage` 字段=待批准裁决 |
-| `game_end` | `{reason,outcome}` | 接口§3+4 | ⚠️ 曾从不发，必验=**RT-B3** |
-| `error` | `{code,message}` | 接口§3+4 | 待验 |
+| 目录 | `GET /catalog` | — → `{adventure: [...]}` | ✅。🟡 **响应 key = `adventure`**（含 `id`/`head` 等；非 `sessions`/`catalog`） |
+| 提交版本 | `POST /catalog/commit` | `{name, message, files:PackFile[]}` → `201` 新版本 | ✅ |
+| 版本包文件 | `GET /catalog/{adventureId}/files` | `?ref=head`（缺省=head·端点层从 catalog list 解析 head commitId 再 checkout） → `{files:PackFile[]}`（未知/空团本→`{files:[]}`） | ✅（BE-checkout-head：core checkout 不认 "head" 关键字，端点层先解析） |
+| 整包校验 | `POST /catalog/validate` | `{files:PackFile[]}` → validatePack 结果 `[{level,path,msg}]` | ✅ |
+| 打标签 | `POST /catalog/{adventureId}/tag` | `{commitId, label}` → `201 {ok:true}` | ✅ |
+| 开始游戏 import | 建 dicegm 会话时选版本（`POST /sessions/dicegm {teamId, version?}`·默认最新→validatePack 信任闸门） | dicegm 就绪(201) | ✅（见 §1·import 在 DiceSession 构造期同步重验） |
 
-### 5.2 loregm 域 WS 事件（制作页构建助手 · RT-FE12 · 【拟·待裁决】）
+## 5. dicegm 域 WS 消息目录（server→client）
 
-> 现状 §5 仅规约 dicegm 域 10 类；制作页"构建助手 toolcalls 显示"+"即写即读 Draft 刷新"+"校验报告"无事件源。下列事件形状为**拟**，待沉淀裁决。
+`GET /sessions/dicegm/{id}/ws`。`StreamMessageSchema` 判别联合，**12 个成员**（每条带 `protocol`）：
+
+| `type` | payload | 现状 |
+|---|---|---|
+| `turn_started` | `{turnId}` | ✅ |
+| `narration_delta` | `{turnId, text}` | ❌ 未实现（非 bug·token 级流式待接） |
+| `narration_commit` | `{seq, text}` | ⚠️ `seq` 语义债待验（RT5） |
+| `presentation_delta` | `{delta:{seq, changes}}` | ✅。changes 含 sheets/mechanics/reveal/watcherFired + **plotlines/foreshadows/lore（op=upsert\|remove·A′ 叙事增量）** |
+| `choices` | `{choices:{eventId, options:[{index,label,consequence}]}}` | ✅ |
+| `roll_staged` | `{pendingRoll}`（形状见 §2·含 bands.plan/narration） | ✅ |
+| `roll_committed` | `{eventId, rolls:[], total, dc?, outcome}` | ✅ |
+| `hidden_roll` | `{eventId, label, result, dc?, band?:{label,consequence}}` | ✅ 已交付（RT-FE6）。🟡 **携带完整 result/dc/band**（非仅 {eventId,label}）——GM 主动掷、event visible=0，前端按 spoiler 档决定显多少（严格档只显 label） |
+| `turn_ended` | `{turnId, seq, usage?:{inputTokens,outputTokens,cacheReadTokens,cacheCreationTokens}}` | ✅（usage optional·向后兼容·usage-stream §1·RT-FE16） |
+| `game_end` | `{reason, outcome}` | ⚠️ 曾从不发·必真跑验（RT-B3） |
+| `error` | `{code, message}` | ✅ |
+| `context_compacting` | `{phase:"start"\|"done", result?:"success"\|"failed", error?}` | ✅ 已交付（usage-and-context §四）。上下文压缩进行态；SDK 不暴露数值进度→无 progress 字段。**注**：代码注释称其「第 11 类」，但含 hidden_roll 后 schema 实为 12 成员（见文末计数存疑） |
+
+### 5.2 loregm 域 WS 事件（制作页构建助手 · loregm-ws 裁决已交付）
+
+`GET /sessions/loregm/{id}/ws`。`LoreStreamMessageSchema` 判别联合，**5 个成员**（与 dicegm 共用 wsHub 骨架、枚举不同）：
 
 | `type` | payload | 说明 |
 |---|---|---|
-| `turn_started` / `turn_ended` | `{turnId}` / `{turnId,seq}` | 同 dicegm 回合骨架 |
-| `toolcall` | `{tool, args, result?, ok}` | 构建助手调 `write_lore`/`add_npc`/`add_pool`/`write_rule`/`set_manifest`… 的逐条通知 → 前端"显示调了哪些工具" |
-| `draft_delta` | `{seq, changes}` | Draft 增量（即写即读刷新）·对齐 `GET …/draft` 分域结构 |
-| `validate_result` | `{issues:[{level,path,msg}]}` | `POST …/draft/validate` 结果推送（RT-FE11） |
-| `error` | `{code,message}` | 同 dicegm |
+| `turn_started` | `{turnId}` | send_to_builder 收指令、开始一轮 |
+| `turn_ended` | `{turnId, seq}` | build GM 一轮跑完（seq=Draft 修订号·对接 get_draft 回读） |
+| `toolcall` | `{tool, args, result?, ok}` | build GM 每调一次构建工具（前端「显示调了哪些工具」·onToolcall hook） |
+| `draft_delta` | `{seq, changes:[{section}]}` | build GM 写 Draft（onBuilderWrite hook·即写即读刷新·对齐 GET …/draft 分域） |
+| `error` | `{code, message}` | 构建出错 |
 
-## 6. 配置 / 诊断（对应 B6 配置页 · 缝A/安全/成本）
+> 🟡 **`validate_result` 事件未交付**（旧规约 §5.2「拟」列过）：推后 v2；on-demand 校验由同步端点 `POST …/draft/validate`（RT-FE11）覆盖。
 
-| 需求 | 接口 | 期望响应 | wiki | 现状 |
-|---|---|---|---|---|
-| 服务器真值 | `GET /diagnostics/health` | `{port,fakeGm,model,mcp工具数,notify,sessionsDir,ftsMode}` | 接口§9.4 | ✅ |
-| 模型连接测试 | `POST /diagnostics/model-test` | FAKE 短路 / 真模式探活辨 401/403 | 接口§9.4 | ✅ |
-| 自定义 MCP 测试 | `POST /diagnostics/mcp-test` | SSE 可达 / stdio 命令存在 | 接口§9.4 | ✅ |
-| 自定义 MCP 登记 | `GET/POST/PUT/DELETE /diagnostics/mcp-config[/{instance}]` | 客制 MCP 增删改·收敛 `mcp-config.json` env（[custom-mcp-install](../../wiki/设计/05-现状与计划/裁决记录/custom-mcp-install.md) §四·RT8） | 接口§9.4 | ❌ 未接运行时=**待批准裁决** |
-| MCP 启停 | `PATCH /diagnostics/mcp-config/{instance} {enabled}` | 运行时是否注入工具表（out-of-canon 徽） | — | ❌ 待批准裁决 |
-| key 托管 | `keys` CRUD | POST/GET/GET:id/DELETE | 里程碑二⬜/SEC2 | ✅ 在建 |
-| 缝A 进程内回调 | `onCanonWrite`（v1 默认） | 规范态写→映射 delta/roll_committed | 接口§5.1 | ✅ |
-| 缝A webhook | `POST /internal/notify` | `204` fire-and-forget | 接口§5.2 | ❌ 未来（非 bug） |
-| 限流 | per-session | 60s/120 默认，超 `429`+`Retry-After` | server 限流 | ✅（阈值待验） |
+## 6. 配置 / 诊断 / 客制 MCP（对应 B6 配置页 · 缝A/安全/成本）
+
+### 6.1 诊断自检（`/diagnostics/*`）
+
+| 需求 | 接口 | 期望响应 | 现状 |
+|---|---|---|---|
+| 服务器真值 | `GET /diagnostics/health` | `{protocol, fakeGm, port, model:{gm,configured,baseUrl}, mcp:{name,transport,toolCount,running}, notify:{url,configured}, storage:{sessionsDir,ftsMode}}` | ✅ |
+| 模型连接测试 | `POST /diagnostics/model-test` | `{baseUrl?, key?, gm?}` → FAKE 短路 `{ok,fake:true,latencyMs,message}`；真模式对 `<base>/v1/models` 探活辨 401/403；SSRF 白名单拒 `400` | ✅（SSRF 防护已交付：挡私网/环回/元数据段·限 https·DNS rebinding 防护） |
+| 自定义 MCP 测试 | `POST /diagnostics/mcp-test` | stdio：`{transport:"stdio", command, args?, env?}`（回落 `endpoint` 空白拆分）→ 真拉起+握手+listTools·`{ok,toolCount,latencyMs,message}`(ok?200:502)·缺 command `400`；SSE：`{endpoint}` → HTTP 可达性·SSRF 拒 `400` | ✅ **已支持结构化 stdio**（custom-mcp-install §七） |
+| key 托管 | `POST/GET /keys` · `GET/DELETE /keys/{id}` | POST `{label,provider,secret}` → `201` KeyMeta(不回明文)·缺参 `400`·无主密钥 `503`；GET `/keys` → `{keys:KeyMeta[]}`；GET `/keys/{id}` → KeyMeta(`404` 不存在)；DELETE → `204`(`404` 本不存在) | ✅（SEC2·ADR-0027） |
+
+> 🟡 **旧 `GET/POST/PUT/DELETE/PATCH /diagnostics/mcp-config[/{instance}]` 已不存在**——被 §6.2 的 `/mcp/*` 端点族 + `config.toml` 收敛取代（custom-mcp-install §五）；`mcp-test` 仍留在 `/diagnostics`。
+
+### 6.2 客制 MCP 安装（`/mcp/*` · custom-mcp-install 已交付·取代旧 mcp-config）
+
+| 需求 | 接口 | 请求 → 期望响应 | 现状 |
+|---|---|---|---|
+| 加 marketplace（按钮①） | `POST /mcp/marketplaces` | `{source(GitHub slug/URL/直连 .json URL), name?}` → `{ok:true, marketplace, mcps:ManifestMcp[]}`；源非法/拉清单失败 `400 {ok:false,message}` | ✅ |
+| 列 marketplace 源 | `GET /mcp/marketplaces` | — → `{marketplaces:[...]}` | ✅ |
+| 安装（按钮②） | `POST /mcp/install` | `{spec, name?, command?, args?, env?}`（marketplace 装 `spec="<mcp>@<marketplace>"`；直装 `spec="<pkg>@<ver>"`）→ npx -y 预拉 → `{ok:true, server:McpServerEntry, message}`；缺 spec `400`；缺必填 env `400`；清单无此 MCP `404`；预拉失败 `502` | ✅。🟡 **安装路径 = `POST /mcp/install`**（非 `/mcp/servers`） |
+| 列已装客制 MCP | `GET /mcp/servers` | — → `{servers:McpServerEntry[]}`（含 `enabled`/`outOfCanon`/`fromMarketplace?`/`installed`） | ✅ |
+| 启停开关 | `POST /mcp/servers/{name}/toggle` | `{enabled}` → `{ok:true, name, enabled}`；未找到 `404 {ok:false}` | ✅。🟡 **切开关 = POST `/toggle`**（非 `PATCH /mcp/servers/{name}`） |
+| 删客制 MCP | `DELETE /mcp/servers/{name}` | — → `{ok:true, name}`；未找到 `404 {ok:false}` | ✅ |
+
+### 6.3 缝A / 限流（不变）
+
+| 需求 | 接口 | 期望响应 | 现状 |
+|---|---|---|---|
+| 缝A 进程内回调 | `onCanonWrite`（v1 默认） | 规范态写→映射 delta/roll_committed | ✅ |
+| 缝A webhook | `POST /internal/notify` | `204` fire-and-forget | ❌ 未来（非 bug） |
+| 限流 | per-session | 60s/120 默认·超 `429`+`Retry-After` | ✅（阈值待验） |
 
 ---
 
-## 拉平后的目标面（一句话）
+## as-delivered 目标面（一句话）
 
 ```
-/sessions/{kind}                     创建 / 列表          kind ∈ dicegm|loregm
-/sessions/{kind}/{id}                元信息(status 含战后复盘) / 删除
-/sessions/{kind}/{id}/start          开场
-/sessions/{kind}/{id}/messages       drive-turn
-/sessions/{kind}/{id}/rewind         覆盖当前分支（到头=空）
-/sessions/dicegm/{id}/{choices,roll,presentation,events,browse,ws,usage,branches,config}   dicegm 域子资源（config=运行时切 model+防剧透档位·待裁决）
-/sessions/dicegm/{id}/branches/{bid}/checkout                                       分支切换
-game_end MCP（复用·调用后转复盘态不归档）                                          战后复盘态（RT-FE7）
-/sessions/loregm/{id}/{materials,draft,draft/validate,ws,config}                     loregm 域子资源（RT-FE11/12·config 待裁决）
-/catalog, /catalog/{id}/{files,tag}, /catalog/{commit,validate}             独立产物库
-/diagnostics/{health,model-test,mcp-test,mcp-config[/{instance}]}, /keys, /internal/notify   配置/缝A（mcp-config=客制 MCP 登记·待裁决）
+/sessions/dicegm                                  创建({teamId,version?}→201) / 列表
+/sessions/dicegm/{id}                             元信息(status:active|debrief) / 删除(200 {ok})
+/sessions/dicegm/{id}/start                        开场(202 {turnId})           ← dicegm 独有
+/sessions/dicegm/{id}/messages                     drive-turn(202 {turnId})
+/sessions/dicegm/{id}/rewind                       {toSeq?|toUuid?|空}→202；覆盖当前分支
+/sessions/dicegm/{id}/{choices,roll,presentation,events,browse,ws,usage,config}   dicegm 域子资源
+/sessions/dicegm/{id}/branches[/{bid}/checkout]    分支 新建/列表/切换
+game_end MCP（复用·调用后转复盘态不归档·status=debrief）
+
+/sessions/loregm                                  创建({name?}→201) / 列表
+/sessions/loregm/{id}                             元信息(status:active|archived) / 删除(200 {ok})
+/sessions/loregm/{id}/messages                     drive-turn(202 {turnId|turnId,error|turnId,usage})
+/sessions/loregm/{id}/{materials,draft,draft/validate,ws,config}   loregm 域子资源（无 start/rewind/usage）
+
+/catalog, /catalog/{id}/{files,tag}, /catalog/{commit,validate}    独立产物库（GET /catalog→{adventure}）
+/diagnostics/{health,model-test,mcp-test}, /keys[/{id}]            诊断 + key 托管
+/mcp/{marketplaces,install,servers[/{name}[/toggle]]}             客制 MCP 安装（取代旧 mcp-config）
+/internal/notify                                                  缝A webhook（未来）
 ```
 
-现状偏差集中在：
-- **会话命名不对称（RT-ns）+ 两侧缺显式建会话（RT1）+ loregm 缺列表/元信息（RT6/RT7）**——curl 指向"理想面"时先红的点；
-- **前端大改暴露的新缺口**：明骰 per-band narration（RT-FE5）/ 暗骰 WS 类型（RT-FE6）/ 战后复盘态+enter_debrief（RT-FE7）/ branch 子资源（RT-FE8）/ loregm Draft 校验（RT-FE11）/ loregm WS（RT-FE12）/ SessionSummary.lastaction（RT-FE13）；
-- **运行时观测/控制族**（07-09 前端增量·play/build 对称）：用量扩 context+session+perTurn（RT-FE14/17·[usage-and-context](../../wiki/设计/05-现状与计划/裁决记录/usage-and-context.md)）/ `turn_ended.usage`+loregm 响应内联 usage（RT-FE16·[usage-stream](../../wiki/设计/05-现状与计划/裁决记录/usage-stream.md)/[co-play](../../wiki/设计/05-现状与计划/裁决记录/co-play.md)/[co-build](../../wiki/设计/05-现状与计划/裁决记录/co-build.md)）/ 运行时切 model（RT-FE18·[model-switch](../../wiki/设计/05-现状与计划/裁决记录/model-switch.md)）/ 自定义 MCP 登记 CRUD（RT8·[custom-mcp-install](../../wiki/设计/05-现状与计划/裁决记录/custom-mcp-install.md)）；均**待批准裁决**（裁决文件用户未勾）·不自动进接口·红态。用量浮窗 MCP/记忆分项（RT-FE19）= 超前·裁决 `GET /usage` 未含·**不进接口**；
-- **已定调项**：防剧透 spoiler 档=前端渲染层（与 visible 正交）、visible 0/1 是 AI note+dock-card 依据（stream 全发·非硬底线）、档位存 session-meta 经 `POST …/config` 读写（RT-FE9·修正原零端点/硬底线定调·与 model 并入同端点）/ dock-card 模板+归档态纯前端 localStorage（RT-FE10·零后端改动）；
-- **待真跑定论**：RT2/RT4/RT5/RT-B3/RT9/RT13。
-其中 RT-FE7/RT-FE8 走裁决 `debrief-and-branch`（用户批准后进交付波）；RT-FE9/RT-FE10 落 backlog-前端；RT-FE5/RT-FE6/RT-FE11/RT-FE12/RT-FE13 落 backlog-后端（补 schema/接口）；RT-FE14/16/17/18+RT8 走对应裁决（usage-and-context/usage-stream/co-play/co-build/model-switch/custom-mcp-install·用户批准后进交付波）；RT-FE19 落 backlog-后端（超前·待裁决扩 `GET /usage`）。
+## 裁决 vs 代码 · 交付形状与旧规约差异（curl 编写要点）
+
+以下为**核对代码后确认的、与旧「理想面」规约或裁决初稿不同**的真实形状（🟡=需按代码写测试；不影响功能对错、但断言字段/码需照此）：
+
+1. **`POST …/roll` 返回 `{ok:true}` 而非 `{turnId}`**——roll 只 resolve WS 回合内的 pending_roll、不开新回合，无真 turnId 可返；状态仍 202。
+2. **会话 DELETE 返回 `200 {ok:true}` 而非 204**（dicegm/loregm 皆然）；对比 `DELETE /keys/{id}` 才是 204。
+3. **`GET /catalog` 响应 key = `adventure`**（非 `sessions`/`catalog`）。
+4. **WS `hidden_roll` 携带完整结果** `{eventId, label, result, dc?, band?}`——旧规约 §5 草案写「只 `{eventId,label}`·不显结果/DC」。裁决 hidden-roll 定调「防剧透=前端渲染层」，故后端全量下发、显隐交前端 spoiler 档（与 spoiler-tiering「stream 全发·非硬底线」一致）。测试应断言 result/band 存在，而非缺席。
+5. **dicegm WS 成员实为 12 个**（含 hidden_roll + context_compacting），但 `stream.ts` 代码注释仍称 context_compacting 为「第 11 类」——计数注释未随 hidden_roll 增补更新（文档计数债，非功能 bug）。
+6. **loregm WS 无 `validate_result` 事件**（旧 §5.2「拟」列过）——推后 v2；由同步端点 `POST …/draft/validate` 覆盖。实际交付 5 类：turn_started/turn_ended/toolcall/draft_delta/error。
+7. **loregm 无 `/start`、无 `/rewind`、无 `/usage` 端点**——对称骨架里 start/rewind/usage 是 dicegm 域独有；loregm 开场即首个 `/messages`、用量随 messages 响应内联。
+8. **客制 MCP 端点是 `/mcp/*` 独立面，非 `/diagnostics/mcp-config`**：安装=`POST /mcp/install`（非 `POST /mcp/servers`）、启停=`POST /mcp/servers/{name}/toggle`（非 `PATCH`）。裁决 custom-mcp-install 只描述「按钮①/②」行为、未钉死路径字符串，代码路径为准。旧规约的 `/diagnostics/mcp-config` 路由**从未实现**、已被取代。`mcp-test` 仍在 `/diagnostics/mcp-test` 且已支持结构化 stdio。
+9. **loregm/NO_SESSION 错误体形状 = `{error:{code,message}}`**（嵌套 error 对象），dicegm 侧多为 `{code}`（扁平）——两域错误体形状不完全一致，测试按各端点实际写。
+10. **SessionSummary `lastReply`/`lastaction` 字段后端未回填**（RT9/RT-FE13）：schema 有位、`listSessionSummaries` 只回 `{sessionId,kind,title,status,packName,started,lastActionAt}`。测试勿断言 lastReply/lastaction 有值。
