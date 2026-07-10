@@ -11,7 +11,7 @@ import { Hono } from "hono";
 import { randomUUID } from "node:crypto";
 import type { DB } from "@dicelore/interface";
 import type { SessionInfo, SessionSummary } from "@dicelore/shared";
-import { MessageRequestSchema, ChoiceRequestSchema, RollRequestSchema, CreateSessionRequestSchema } from "@dicelore/shared";
+import { MessageRequestSchema, ChoiceRequestSchema, RollRequestSchema, CreateSessionRequestSchema, SessionConfigUpdateSchema } from "@dicelore/shared";
 import { loreSearch, ruleSearch, logSince, metaGet, openSessionBackend, openDb, initSchema, list } from "@dicelore/backend";
 import { getLogger } from "@dicelore/logs";
 import { buildSnapshot } from "./presentation.js";
@@ -87,6 +87,25 @@ export function createLiveApp(deps: LiveDeps): Hono {
   });
 
   app.get("/sessions/dicegm", (c) => c.json({ sessions: deps.listSessions?.() ?? [] }));
+
+  // 统一 session config（model-switch + spoiler-tiering + usage-and-context 三份裁决协同）。
+  //   GET  → 200 {model, spoilerTier, pendingModel?}（读回完整 config）。
+  //   POST → 200 更新后完整 config；body 部分更新 {model?, spoilerTier?}：
+  //          · model     设 pendingModel、下回合 drive-turn 起生效（buildInit 读 current_model）；
+  //          · spoilerTier 存 session_meta、立即生效（前端渲染层消费）。
+  // config-endpoint 节点独占本端点——其余 feature 节点勿另建 config 路由。
+  app.get("/sessions/dicegm/:id/config", (c) => {
+    const host = getOrCreateHost(c.req.param("id"), hostDeps(c.req.param("id")));
+    return c.json(host.getConfig());
+  });
+  app.post("/sessions/dicegm/:id/config", async (c) => {
+    const id = c.req.param("id");
+    const body = SessionConfigUpdateSchema.parse(await c.req.json());
+    const host = getOrCreateHost(id, hostDeps(id));
+    host.setConfig(body);
+    getLogger().info({ sessionId: id, update: body }, "更新 dicegm session config（model 下回合生效 / spoilerTier 立即）");
+    return c.json(host.getConfig());
+  });
 
   // 删会话:注销内存 host + 删 .db 文件。
   app.delete("/sessions/dicegm/:id", (c) => {

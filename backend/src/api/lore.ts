@@ -16,7 +16,7 @@ import { list, commit, tag, checkout, validatePack, createBuildMcpServer, invoke
 import { LoreSession, Rewind, SessionTranscript, sessionDir, type LoreSessionDeps, type AgentFactory, type PluginRef, type RollbackHook } from "@dicelore/harness";
 import { getLogger } from "@dicelore/logs";
 import type { SessionInfo, SessionSummary } from "@dicelore/shared";
-import { CreateSessionRequestSchema } from "@dicelore/shared";
+import { CreateSessionRequestSchema, SessionConfigUpdateSchema } from "@dicelore/shared";
 
 export interface LoreDeps {
   catalog: CatalogDB;
@@ -170,6 +170,25 @@ export function createLoreApp(deps: LoreDeps): Hono {
     const status = loreReg.has(id) ? "active" : "archived";
     const info: SessionInfo = { sessionId: id, kind: "loregm", status, ended: false, title: id };
     return c.json(info);
+  });
+
+  // 统一 session config（model-switch + spoiler-tiering，两 kind 都支持——C2）。loregm 无 session.db，
+  // config 存内存态（LoreSession 内），会话须先经 POST /sessions/loregm 显式建（不存在 → 404）。
+  //   GET  → 200 {model, spoilerTier, pendingModel?}；POST 部分更新 {model?, spoilerTier?} → 200 更新后完整 config。
+  //   model 下回合生效（下回合 handleMessage 起切）、spoilerTier 立即生效。config-endpoint 节点独占本端点。
+  app.get("/sessions/loregm/:id/config", (c) => {
+    const entry = loreReg.get(c.req.param("id"));
+    if (!entry) return c.json({ error: { code: "NO_SESSION", message: "loregm 会话不存在(先 POST /sessions/loregm 显式建会话)" } }, 404);
+    return c.json(entry.session.getConfig());
+  });
+  app.post("/sessions/loregm/:id/config", async (c) => {
+    const id = c.req.param("id");
+    const body = SessionConfigUpdateSchema.parse(await c.req.json());
+    const entry = loreReg.get(id);
+    if (!entry) return c.json({ error: { code: "NO_SESSION", message: "loregm 会话不存在(先 POST /sessions/loregm 显式建会话)" } }, 404);
+    entry.session.setConfig(body);
+    getLogger().info({ sessionId: id, update: body }, "更新 loregm session config（model 下回合生效 / spoilerTier 立即）");
+    return c.json(entry.session.getConfig());
   });
 
   // 构建会话:agent 经构建 MCP 造包(需 LLM driver)。会话须先经 POST /sessions/loregm 显式建(C2)。

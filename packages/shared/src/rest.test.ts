@@ -13,6 +13,9 @@ import {
   SessionKindSchema,
   CreateSessionResponseSchema,
   SessionInfoSchema,
+  SessionConfigUpdateSchema,
+  SessionConfigSchema,
+  SpoilerTierSchema,
 } from "./rest.js";
 
 describe("SessionKindSchema", () => {
@@ -84,5 +87,31 @@ describe("SessionInfoSchema（对称元信息含 kind + status）", () => {
     const parsed = SessionInfoSchema.parse({ sessionId: "s1", kind: "loregm", status: "active", ended: false, title: "s1" });
     expect(parsed.kind).toBe("loregm");
     expect(parsed.status).toBe("active");
+  });
+});
+
+describe("统一 session config schema（model-switch + spoiler-tiering）", () => {
+  it("SpoilerTierSchema 只认 strict/loose/off", () => {
+    expect(SpoilerTierSchema.parse("strict")).toBe("strict");
+    expect(SpoilerTierSchema.parse("loose")).toBe("loose");
+    expect(SpoilerTierSchema.parse("off")).toBe("off");
+    expect(() => SpoilerTierSchema.parse("hidden")).toThrow();
+  });
+
+  it("SessionConfigUpdateSchema 部分更新：空对象合法（都可选）", () => {
+    expect(SessionConfigUpdateSchema.parse({})).toEqual({});
+    expect(SessionConfigUpdateSchema.parse({ model: "claude-haiku-4-5-20251001" })).toEqual({ model: "claude-haiku-4-5-20251001" });
+    expect(SessionConfigUpdateSchema.parse({ spoilerTier: "off" })).toEqual({ spoilerTier: "off" });
+    expect(SessionConfigUpdateSchema.parse({ model: "x", spoilerTier: "loose" })).toEqual({ model: "x", spoilerTier: "loose" });
+  });
+
+  it("SessionConfigUpdateSchema 非法 spoilerTier → 抛错", () => {
+    expect(() => SessionConfigUpdateSchema.parse({ spoilerTier: "bogus" })).toThrow();
+  });
+
+  it("SessionConfigSchema 响应：model+spoilerTier 必填、pendingModel 可选", () => {
+    expect(SessionConfigSchema.parse({ model: "glm-5.2", spoilerTier: "strict" })).toEqual({ model: "glm-5.2", spoilerTier: "strict" });
+    expect(SessionConfigSchema.parse({ model: "glm-5.2", spoilerTier: "strict", pendingModel: "claude-haiku-4-5-20251001" }).pendingModel).toBe("claude-haiku-4-5-20251001");
+    expect(() => SessionConfigSchema.parse({ spoilerTier: "strict" })).toThrow();
   });
 });
