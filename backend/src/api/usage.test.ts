@@ -29,7 +29,7 @@ describe("GET /sessions/:id/usage — token 用量查询端点(只读投影)", (
     const { openSession } = makeRegistry();
     const app = createUsageApp({ openSession });
 
-    const res = await app.request("/sessions/s-empty/usage");
+    const res = await app.request("/sessions/dicegm/s-empty/usage");
     expect(res.status).toBe(200);
     const body = (await res.json()) as UsageReport;
     expect(body.session).toEqual(ZERO);
@@ -48,7 +48,7 @@ describe("GET /sessions/:id/usage — token 用量查询端点(只读投影)", (
     recordUsage(db, { sessionId: "s1", turnId: "t1", agent: "build", model: "m", inputTokens: 20, outputTokens: 7, cacheReadTokens: 0, cacheCreationTokens: 3 });
     recordUsage(db, { sessionId: "s1", turnId: "t2", agent: "gm", model: "m", inputTokens: 1, outputTokens: 1, cacheReadTokens: 0, cacheCreationTokens: 0 });
 
-    const res = await app.request("/sessions/s1/usage");
+    const res = await app.request("/sessions/dicegm/s1/usage");
     expect(res.status).toBe(200);
     const body = (await res.json()) as UsageReport;
 
@@ -77,7 +77,7 @@ describe("GET /sessions/:id/usage — token 用量查询端点(只读投影)", (
     const db2 = openSession("s2");
     recordUsage(db2, { sessionId: "s2", turnId: "tX", agent: "build", model: "m", inputTokens: 999, outputTokens: 999, cacheReadTokens: 0, cacheCreationTokens: 0 });
 
-    const res = await app.request("/sessions/s1/usage?rows=1");
+    const res = await app.request("/sessions/dicegm/s1/usage?rows=1");
     expect(res.status).toBe(200);
     const body = (await res.json()) as UsageReport;
     expect(body.rows).toHaveLength(1);

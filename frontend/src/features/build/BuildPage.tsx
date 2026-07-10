@@ -18,7 +18,7 @@ import {
   listCatalog, getCatalogFiles, validateCatalog, commitPack,
   type AdventureSummary, type PackFile, type ValidateIssue,
 } from "@/features/catalog/api.js";
-import { postBuildMessage } from "@/features/build/api.js";
+import { postBuildMessage, createLoreSession } from "@/features/build/api.js";
 import { parsePack } from "@/features/build/parsePack.js";
 
 type CType = "world" | "npc" | "pool" | "rule" | "front" | "manifest";
@@ -39,6 +39,9 @@ export default function BuildPage() {
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
+  // session-surface-flatten：loregm 会话须先显式建(C2 移除懒建)。按 adventureId 缓存已建的 loregm sessionId,
+  // 首次发言时懒建一次(每个在造团本一个构建会话)。
+  const loreSessions = useRef<Record<string, string>>({});
 
   useEffect(() => {
     listCatalog().then((p) => { setAdventures(p); if (p[0]) setActive(p[0]); }).catch(() => setAdventures([]));
@@ -83,7 +86,13 @@ export default function BuildPage() {
     setChat((c) => [...c, { role: "u", text }]);
     setBusy(true);
     try {
-      const { turnId } = await postBuildMessage(`build-${active.id}`, text, active.name);
+      // 首次对该团本发言时显式建构建会话、缓存其 sessionId。
+      let loreId = loreSessions.current[active.id];
+      if (!loreId) {
+        loreId = await createLoreSession(active.name);
+        loreSessions.current[active.id] = loreId;
+      }
+      const { turnId } = await postBuildMessage(loreId, text);
       setChat((c) => [...c, { role: "a", text: t("build.chat.received", { id: turnId.slice(0, 8), refresh: t("build.refresh") }) }]);
     } catch (err: unknown) {
       setChat((c) => [...c, { role: "a", text: t("build.chat.error", { msg: err instanceof Error ? err.message : "" }) }]);

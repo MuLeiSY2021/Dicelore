@@ -30,12 +30,16 @@ export async function commitPack(name: string, message: string, files: PackFile[
   return (await res.json()) as { adventureId: string; commitId: string };
 }
 
-// 开新局:选团本版本 import → 运行库(POST /sessions/:id/open)。
-export async function openPlaySession(sessionId: string, adventureId: string, ref: string): Promise<void> {
-  const res = await fetch(`/sessions/${encodeURIComponent(sessionId)}/open`, {
-    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ adventureId, ref }),
+// 显式建游玩会话(session-surface-flatten §三)：POST /sessions/dicegm {teamId, version?} → 201 {sessionId, kind}。
+// 取代旧 openPlaySession(客户端选 id + /open 懒建)：服务端生成 sessionId、import 团本版本(version 省略=最新版)。
+// 返回服务端生成的 sessionId 供跳转跑团页。
+export async function createPlaySession(teamId: string, version?: string): Promise<string> {
+  const res = await fetch("/sessions/dicegm", {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify(version === undefined ? { teamId } : { teamId, version }),
   });
-  if (!res.ok) throw await apiError(res, "open");
+  if (!res.ok) throw await apiError(res, "create play session");
+  return ((await res.json()) as { sessionId: string }).sessionId;
 }
 
 // 读团本版本全部包文件(团本制作页中央渲染)。

@@ -17,7 +17,7 @@ import {
 export interface RevealCard { seq: number; target: string; text: string }
 export interface GameEnd { reason: string; outcome: string }
 
-// WS 客户端：连 /sessions/:id/ws，分发流消息(接口页 §3+4 全部 10 种)。
+// WS 客户端：连 /sessions/dicegm/:id/ws，分发流消息(接口页 §3+4 全部 10 种)。
 // 在原对账基础上补：生成中态(turn_started/ended)、错误提示(error)、终局(game_end)、揭示自动钉(presentation_delta.changes.reveal)、choice 闭环。
 export function useSession(sessionId: string) {
   const [snapshot, setSnapshot] = useState<PresentationSnapshot | null>(null);
@@ -83,7 +83,7 @@ export function useSession(sessionId: string) {
     // 连接 + 断线自动重连(指数退避，最长 5s)；重连后 refetch 全量对账补齐。
     const connect = () => {
       const proto = location.protocol === "https:" ? "wss" : "ws";
-      ws = new WebSocket(`${proto}://${location.host}/sessions/${encodeURIComponent(sessionId)}/ws`);
+      ws = new WebSocket(`${proto}://${location.host}/sessions/dicegm/${encodeURIComponent(sessionId)}/ws`);
       wsRef.current = ws;
       ws.onopen = () => { retry = 0; };
       ws.onmessage = handle;

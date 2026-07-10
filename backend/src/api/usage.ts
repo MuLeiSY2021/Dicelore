@@ -62,7 +62,7 @@ function groupBy(rows: UsageRow[], keyOf: (r: UsageRow) => string): Record<strin
 export function createUsageApp(deps: UsageDeps): Hono {
   const app = new Hono();
 
-  app.get("/sessions/:id/usage", (c) => {
+  app.get("/sessions/dicegm/:id/usage", (c) => {
     const id = c.req.param("id");
     const db = deps.openSession(id);
     const rows = listUsage(db);

@@ -14,7 +14,7 @@ import { FakeDiceGm } from "@dicelore/harness";
 describe("orchestrator 动作进", () => {
   it("POST /sessions/:id/messages → 202 {turnId}", async () => {
     const app = createLiveApp({ agentFactory: () => new FakeDiceGm([{ type: "turn_end" }]) });
-    const res = await app.request("/sessions/s1/messages", {
+    const res = await app.request("/sessions/dicegm/s1/messages", {
       method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text: "我推门" }),
     });
     expect(res.status).toBe(202);
@@ -23,7 +23,7 @@ describe("orchestrator 动作进", () => {
 
   it("GET /sessions/:id/presentation → §1 快照(含 pendingRoll:null)", async () => {
     const app = createLiveApp({ agentFactory: () => new FakeDiceGm([{ type: "turn_end" }]) });
-    const res = await app.request("/sessions/sp/presentation");
+    const res = await app.request("/sessions/dicegm/sp/presentation");
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.protocol).toBe("dicelore.client/1");
@@ -32,8 +32,8 @@ describe("orchestrator 动作进", () => {
 
   it("POST /sessions/:id/roll 无待掷 → 409", async () => {
     const app = createLiveApp({ agentFactory: () => new FakeDiceGm([{ type: "turn_end" }]) });
-    await app.request("/sessions/s2/messages", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text: "x" }) });
-    const res = await app.request("/sessions/s2/roll", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ eventId: 999 }) });
+    await app.request("/sessions/dicegm/s2/messages", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text: "x" }) });
+    const res = await app.request("/sessions/dicegm/s2/roll", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ eventId: 999 }) });
     expect(res.status).toBe(409);
   });
 });

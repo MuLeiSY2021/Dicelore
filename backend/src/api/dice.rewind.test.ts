@@ -29,7 +29,7 @@ describe("POST /sessions/:id/rewind（SNAP-1 读档）", () => {
 
     // 跑一回合（turnEnd 自动 checkpoint，存 HP=10）。
     db.prepare("INSERT OR REPLACE INTO state (entity, attr, value) VALUES ('你','HP','10')").run();
-    const mres = await app.request(`/sessions/${id}/messages`, {
+    const mres = await app.request(`/sessions/dicegm/${id}/messages`, {
       method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text: "推门" }),
     });
     expect(mres.status).toBe(202);
@@ -37,7 +37,7 @@ describe("POST /sessions/:id/rewind（SNAP-1 读档）", () => {
 
     // 回合后改状态 → rewind 应抹掉。
     db.prepare("UPDATE state SET value='3' WHERE entity='你' AND attr='HP'").run();
-    const res = await app.request(`/sessions/${id}/rewind`, {
+    const res = await app.request(`/sessions/dicegm/${id}/rewind`, {
       method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({}),
     });
     expect(res.status).toBe(202);
@@ -53,7 +53,7 @@ describe("POST /sessions/:id/rewind（SNAP-1 读档）", () => {
     removeHost(id);
     const db: DB = openDb(":memory:"); initSchema(db);
     const app = createLiveApp({ agentFactory: () => new FakeDiceGm([{ type: "turn_end" }]), openSession: () => db });
-    const res = await app.request(`/sessions/${id}/rewind`, {
+    const res = await app.request(`/sessions/dicegm/${id}/rewind`, {
       method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({}),
     });
     expect(res.status).toBe(409);
@@ -93,7 +93,7 @@ describe("POST /sessions/:id/rewind（TR3：带 toUuid 锤到 transcript uuid）
     db.prepare("UPDATE state SET value='3' WHERE entity='你' AND attr='HP'").run();
     db.prepare("INSERT INTO state (entity, attr, value) VALUES ('你','金币','99')").run();
 
-    const res = await app.request(`/sessions/${id}/rewind`, {
+    const res = await app.request(`/sessions/dicegm/${id}/rewind`, {
       method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ toUuid: uuidA }),
     });
     expect(res.status).toBe(202);
@@ -112,7 +112,7 @@ describe("POST /sessions/:id/rewind（TR3：带 toUuid 锤到 transcript uuid）
     const id = "rewind-uuid-2";
     const { app, t } = setup(id);
     t.turnEnd("t1"); // 树内有节点，但请求一个不存在的 uuid
-    const res = await app.request(`/sessions/${id}/rewind`, {
+    const res = await app.request(`/sessions/dicegm/${id}/rewind`, {
       method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ toUuid: "not-in-tree" }),
     });
     expect(res.status).toBe(404);
@@ -124,7 +124,7 @@ describe("POST /sessions/:id/rewind（TR3：带 toUuid 锤到 transcript uuid）
     const id = "rewind-uuid-3";
     const { app, t } = setup(id);
     const uuid = t.turnEnd("t1"); // 节点在树内，但未 checkpoint 该锚点
-    const res = await app.request(`/sessions/${id}/rewind`, {
+    const res = await app.request(`/sessions/dicegm/${id}/rewind`, {
       method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ toUuid: uuid }),
     });
     expect(res.status).toBe(409);

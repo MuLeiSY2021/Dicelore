@@ -94,7 +94,7 @@ describe("主线① 掷骰", () => {
 
     // 玩家点掷：roll(eventId) → POST /sessions/s1/roll
     await act(async () => { await result.current.roll(7); });
-    expect(fetchMock).toHaveBeenCalledWith("/sessions/s1/roll", expect.objectContaining({ method: "POST" }));
+    expect(fetchMock).toHaveBeenCalledWith("/sessions/dicegm/s1/roll", expect.objectContaining({ method: "POST" }));
 
     // 引擎掷完广播 roll_committed → pendingRoll 清空 + turn_ended 收尾
     act(() => { instances[0].emit({ protocol: CLIENT_PROTOCOL, type: "roll_committed", eventId: 7, rolls: [14], total: 14, dc: 12, outcome: "成功" }); });
@@ -131,7 +131,7 @@ describe("主线② 选择", () => {
     // 玩家点第 2 项 → choose → POST /sessions/s1/choices(下一回合输入=该 option)
     await act(async () => { await result.current.choose(3, 1); });
     expect(result.current.generating).toBe(true);
-    expect(fetchMock).toHaveBeenCalledWith("/sessions/s1/choices", expect.objectContaining({ method: "POST" }));
+    expect(fetchMock).toHaveBeenCalledWith("/sessions/dicegm/s1/choices", expect.objectContaining({ method: "POST" }));
   });
 });
 
@@ -314,7 +314,7 @@ it("切会话(sessionId 变更) → 重置叙事/pendingRoll/error/gameEnd/revea
 it("旧会话的迟到 refetch 不覆盖新会话快照（sessionId 守卫）", async () => {
   installWs();
   vi.stubGlobal("fetch", vi.fn().mockImplementation((url: string) => {
-    const m = /sessions\/([^/]+)\/presentation/.exec(url);
+    const m = /sessions\/dicegm\/([^/]+)\/presentation/.exec(url);
     const sid = m ? m[1] : "?";
     return Promise.resolve({ ok: true, json: async () => ({
       protocol: CLIENT_PROTOCOL, sessionId: sid, seq: 0, sheets: [], mechanics: [], choices: null, narrativeCursor: 0, pendingRoll: null }) });

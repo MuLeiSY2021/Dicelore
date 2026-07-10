@@ -65,15 +65,15 @@ afterAll(() => {
 
 describe("build-mcp handlers", () => {
   it("open→send→检视(get_draft)→commit→检视(list_catalog/get_pack_files)闭环,不烧 LLM", async () => {
-    const sid = doOpenBuildSession();
-    expect(sid).toMatch(/^build-/);
     const name = "测试团本";
+    const sid = await doOpenBuildSession(name); // 显式建会话(服务端生成 UUID sid)
+    expect(sid).toBeTruthy();
 
-    // 会话尚未起 → get_draft 404(NO_SESSION)。
-    await expect(doGetDraft(sid)).rejects.toThrow(/404/);
+    // 从未建过的会话 → get_draft 404(NO_SESSION)。已显式建的 sid 则 Draft 存在(空)。
+    await expect(doGetDraft("never-created-xyz")).rejects.toThrow(/404/);
 
     // 第一轮:作者发"起手设定"→ 构建 GM 写 manifest/lore/prologue 到 Draft。
-    const r1 = await doSendToBuilder(sid, name, "起手:把第一章设定写进去");
+    const r1 = await doSendToBuilder(sid, "起手:把第一章设定写进去");
     expect(r1.turnId).toMatch(/-l\d+$/);
 
     // 检视未 commit 的 Draft:看到这一轮写入的产物(因构建 GM 响应不经 REST 返回,靠检视判进度)。
@@ -88,7 +88,7 @@ describe("build-mcp handlers", () => {
     expect(before.adventure.length).toBe(0);
 
     // 第二轮:作者发"提交"→ 构建 GM commit Draft 到 catalog。
-    await doSendToBuilder(sid, name, "提交这个版本");
+    await doSendToBuilder(sid, "提交这个版本");
 
     // 检视已 commit 的 catalog:团本目录现含该团本。
     const after = (await doListCatalog()) as { adventure: { id: string; name: string; head: string | null }[] };
@@ -136,7 +136,7 @@ describe("build-mcp put_material 流式上传素材", () => {
     const content = "从刚成年开始的兽人冒险。".repeat(500);
     writeFileSync(srcPath, content, "utf8");
     try {
-      const sid = doOpenBuildSession();
+      const sid = await doOpenBuildSession();
       const out = await doPutMaterial(sid, "兽人冒险.md", srcPath);
       expect(out.path).toBe("materials/兽人冒险.md");
       expect(out.bytes).toBe(Buffer.byteLength(content));
@@ -178,8 +178,8 @@ describe("doSendToBuilder 透传 error(不吞)", () => {
   });
 
   it("后端 body 带 error 时 doSendToBuilder 返回带 error(作者可见)", async () => {
-    const sid = doOpenBuildSession();
-    const r = await doSendToBuilder(sid, "出错团本", "写点设定");
+    const sid = await doOpenBuildSession("出错团本");
+    const r = await doSendToBuilder(sid, "写点设定");
     expect(r.turnId).toMatch(/-l\d+$/);
     expect(r.error).toEqual({ message: "构建工具异常", code: "tool_error" });
   });

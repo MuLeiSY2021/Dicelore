@@ -8,12 +8,15 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import { Hono } from "hono";
+import { randomUUID } from "node:crypto";
 import { mkdirSync, createWriteStream, unlinkSync, existsSync } from "node:fs";
 import { basename, join } from "node:path";
 import { Readable } from "node:stream";
 import { list, commit, tag, checkout, validatePack, createBuildMcpServer, Draft, type CatalogDB, type PackFile } from "@dicelore/backend";
 import { LoreSession, Rewind, SessionTranscript, sessionDir, type LoreSessionDeps, type AgentFactory, type PluginRef, type RollbackHook } from "@dicelore/harness";
 import { getLogger } from "@dicelore/logs";
+import type { SessionInfo, SessionSummary } from "@dicelore/shared";
+import { CreateSessionRequestSchema } from "@dicelore/shared";
 
 export interface LoreDeps {
   catalog: CatalogDB;
@@ -21,6 +24,7 @@ export interface LoreDeps {
   buildPrompt?: string; // 构建教条(→ openingPrompt)
   plugin?: PluginRef; // 构建 skill plugin(build-pack+build-core,boot 期物化到 $/lore)
   sessionsDir?: string; // sessions 数据根:每 session 工作区落 <sessionsDir>/sessions/lore/<id>/workspace/(build-agent-workspace)
+  listSessions?: () => SessionSummary[]; // loregm 会话列表(制作页 bay session 列);省略则空
 }
 
 // 每 session 持久工作区(build-agent-workspace §1):<sessionsDir>/sessions/lore/<id>/workspace/。
@@ -65,15 +69,45 @@ export function createLoreDraftHook(sessionId: string): RollbackHook {
   };
 }
 
-// lore 路径 server 面:Catalog 管理(列/建/发布) + 构建会话(agent 造包)。
-// 与 dice /sessions 路由物理分离(/lore/*、/catalog)。
+// 建/取 loregm 会话条目(Draft + 构建 MCP server + 可选 transcript 回退编排)。
+// session-surface-flatten C2：懒建完全移除——本 helper 由显式 POST /sessions/loregm 调用建会话;
+// /messages 等子资源不再懒建、只 loreReg.get(已建则用,未建则 404)。幂等:已存在直接返回。
+function ensureLoreEntry(id: string, name: string | undefined, deps: LoreDeps): { session: LoreSession; draft: Draft; rewind?: Rewind } {
+  const existing = loreReg.get(id);
+  if (existing) return existing;
+  // 组合根建 Draft + 构建 MCP server(BUILD_TOOLS over Draft+Catalog),注入 LoreSession。
+  const draft = new Draft();
+  const mcpServer = createBuildMcpServer({ catalog: deps.catalog, draft, name: name && name.length > 0 ? name : "未命名团本" });
+  // workspace:sessionsDir 已接线时确保 workspace 就位并透传给 agentFactory(cwd);
+  // 未接线(如纯 catalog 单测)则 workspace 恒 undefined(agent 用 SDK 默认 cwd)。
+  const workspace = deps.sessionsDir ? ensureWorkspace(deps.sessionsDir, id) : undefined;
+  // dataDir 透传:接 deps.sessionsDir 现有来源;适配器据此落 transcript
+  // 到 <dataDir>/sessions/lore/<id>/<id>_session.jsonl(DD2 布局,经 harness sessionDir 纯函数)。
+  const dep: LoreSessionDeps = { mcpServer, agentFactory: deps.agentFactory, buildPrompt: deps.buildPrompt, plugin: deps.plugin, workspace, dataDir: deps.sessionsDir };
+  // lore-draft 回退钩子注册在位:数据根接线时,为本会话建 transcript 回退编排(Rewind)并注册占位钩子。
+  // transcript 状态持久在 <dataDir>/sessions/lore/<id>/{_session.jsonl,HEAD}(适配器每回合从 HEAD 文件恢复),
+  // 故此处的 SessionTranscript 实例与驱动侧同源(同一文件),回退端点接线属 follow-up。未接线则不建(纯 catalog 单测)。
+  let rewind: Rewind | undefined;
+  if (deps.sessionsDir) {
+    const transcript = new SessionTranscript({ sessionDir: sessionDir(deps.sessionsDir, "lore", id), sessionId: id });
+    rewind = new Rewind(transcript);
+    rewind.register(createLoreDraftHook(id));
+  }
+  const entry = { session: new LoreSession(id, dep), draft, rewind };
+  loreReg.set(id, entry);
+  return entry;
+}
+
+// lore 路径 server 面(loregm)：Catalog 管理(列/建/发布) + 构建会话(agent 造包)。
+// HTTP 表皮拉平(session-surface-flatten)：会话面挂 /sessions/loregm/*，与 dicegm 对称;
+// Catalog 面仍在 /catalog（团本库,非会话）。
 export function createLoreApp(deps: LoreDeps): Hono {
   const app = new Hono();
 
   // 团本目录录(主页选团本玩 / 构建台列表)
   app.get("/catalog", (c) => c.json({ adventure: list(deps.catalog) }));
 
-  // 直接提交一个团本版本(程序化建包:种子/前端表单;agent 路径见 /lore-sessions)
+  // 直接提交一个团本版本(程序化建包:种子/前端表单;agent 路径见 /sessions/loregm)
   app.post("/catalog/commit", async (c) => {
     const body = (await c.req.json()) as { name: string; message: string; files: PackFile[] };
     const r = commit(deps.catalog, { name: body.name, message: body.message, files: body.files });
@@ -109,36 +143,42 @@ export function createLoreApp(deps: LoreDeps): Hono {
     return c.json({ ok: true }, 201);
   });
 
-  // 构建会话:agent 经构建 MCP 造包(需 LLM driver)
-  app.post("/lore-sessions/:id/messages", async (c) => {
+  // 显式建会话(session-surface-flatten §三)：POST /sessions/loregm {name?} → 201 {sessionId,kind}。
+  // 服务端生成 sessionId、建 Draft + 构建 MCP(+可选 transcript 回退编排)。取代首访懒建(C2 完全移除)。
+  app.post("/sessions/loregm", async (c) => {
+    const raw = await c.req.json().catch(() => ({}));
+    const body = CreateSessionRequestSchema.parse(raw ?? {});
+    const id = randomUUID();
+    ensureLoreEntry(id, body.name, deps);
+    getLogger().info({ sessionId: id, name: body.name }, "建 loregm 会话");
+    return c.json({ sessionId: id, kind: "loregm" }, 201);
+  });
+
+  // loregm 会话列表(session-surface-flatten §四)：对称于 dicegm GET /sessions/dicegm。
+  // 制作页 bay session 列构建会话(活动日期/团本/最新动作)= 此端点。
+  app.get("/sessions/loregm", (c) => c.json({ sessions: deps.listSessions?.() ?? [] }));
+
+  // loregm 会话元信息(session-surface-flatten §五)：对称于 dicegm meta。
+  // status：在内存 registry 中(活跃)→ active；否则(未加载/进程重启后)→ archived。
+  // loregm 无战后复盘态——ended 恒 false(复盘是 dicegm 域特有)。
+  app.get("/sessions/loregm/:id", (c) => {
     const id = c.req.param("id");
-    const body = (await c.req.json()) as { text: string; name: string };
-    let entry = loreReg.get(id);
+    const status = loreReg.has(id) ? "active" : "archived";
+    const info: SessionInfo = { sessionId: id, kind: "loregm", status, ended: false, title: id };
+    return c.json(info);
+  });
+
+  // 构建会话:agent 经构建 MCP 造包(需 LLM driver)。会话须先经 POST /sessions/loregm 显式建(C2)。
+  // §1 BE-lore-error-shape:handleMessage 返回 {turnId, error?}——error 属领域级(构建 GM 中途出错),
+  // turn 已实际跑完(turnId 有效)→ HTTP 保持 202 不变,靠 body 的 error 字段标失败(不改 5xx)。
+  // 调用方(build-mcp / 前端构建台)以 body.error 存在与否判成败。
+  app.post("/sessions/loregm/:id/messages", async (c) => {
+    const id = c.req.param("id");
+    const body = (await c.req.json()) as { text: string };
+    const entry = loreReg.get(id);
     if (!entry) {
-      // 组合根建 Draft + 构建 MCP server(BUILD_TOOLS over Draft+Catalog),注入 LoreSession。
-      const draft = new Draft();
-      const mcpServer = createBuildMcpServer({ catalog: deps.catalog, draft, name: body.name });
-      // workspace:sessionsDir 已接线时,首条 message 前确保 workspace 就位并透传给 agentFactory(cwd);
-      // 未接线(如纯 catalog 单测)则 workspace 恒 undefined(agent 用 SDK 默认 cwd)。
-      const workspace = deps.sessionsDir ? ensureWorkspace(deps.sessionsDir, id) : undefined;
-      // dataDir 透传:接 deps.sessionsDir 现有来源(与 DD3 集成时对齐命名);适配器据此落 transcript
-      // 到 <dataDir>/sessions/lore/<id>/<id>_session.jsonl(DD2 布局,经 harness sessionDir 纯函数)。
-      const dep: LoreSessionDeps = { mcpServer, agentFactory: deps.agentFactory, buildPrompt: deps.buildPrompt, plugin: deps.plugin, workspace, dataDir: deps.sessionsDir };
-      // lore-draft 回退钩子注册在位:数据根接线时,为本会话建 transcript 回退编排(Rewind)并注册占位钩子。
-      // transcript 状态持久在 <dataDir>/sessions/lore/<id>/{_session.jsonl,HEAD}(适配器每回合从 HEAD 文件恢复),
-      // 故此处的 SessionTranscript 实例与驱动侧同源(同一文件),回退端点接线属 follow-up。未接线则不建(纯 catalog 单测)。
-      let rewind: Rewind | undefined;
-      if (deps.sessionsDir) {
-        const transcript = new SessionTranscript({ sessionDir: sessionDir(deps.sessionsDir, "lore", id), sessionId: id });
-        rewind = new Rewind(transcript);
-        rewind.register(createLoreDraftHook(id));
-      }
-      entry = { session: new LoreSession(id, dep), draft, rewind };
-      loreReg.set(id, entry);
+      return c.json({ error: { code: "NO_SESSION", message: "loregm 会话不存在(先 POST /sessions/loregm 显式建会话)" } }, 404);
     }
-    // §1 BE-lore-error-shape:handleMessage 返回 {turnId, error?}——error 属领域级(构建 GM 中途出错),
-    // turn 已实际跑完(turnId 有效)→ HTTP 保持 202 不变,靠 body 的 error 字段标失败(不改 5xx)。
-    // 调用方(build-mcp / 前端构建台)以 body.error 存在与否判成败。
     const { turnId, error } = await entry.session.handleMessage(body.text);
     return c.json(error ? { turnId, error } : { turnId }, 202);
   });
@@ -148,7 +188,8 @@ export function createLoreApp(deps: LoreDeps): Hono {
   // ensureWorkspace → 净化 filename → 边读边写落 workspace/materials/<filename>(同名覆盖),
   // 边写边累计字节;超 DICELORE_MATERIAL_MAX_MB(默认 100)立即 destroy + unlink 半成品 + 413(不吃内存)。
   // error 属领域级但上传是 IO 端点(非构建反馈):filename 非法 400、超限 413、写盘失败 500(均清半成品)。
-  app.post("/lore-sessions/:id/materials", async (c) => {
+  // 注:materials 是按 sessionId 落盘的 IO 端点(provision workspace 而非建会话对象),不强制先建会话。
+  app.post("/sessions/loregm/:id/materials", async (c) => {
     const id = c.req.param("id");
     if (!deps.sessionsDir) {
       return c.json({ error: { code: "no_workspace", message: "sessionsDir 未接线,素材上传不可用" } }, 500);
@@ -207,22 +248,22 @@ export function createLoreApp(deps: LoreDeps): Hono {
   });
 
   // 读未 commit 的 Draft 当前态(构建中途产物)。
-  // 由来:RT-5 后 lore 是 REST only——POST /lore-sessions/:id/messages 把构建 GM 跑到 turn_end 即收尾,
+  // 由来:RT-5 后 lore 是 REST only——POST /sessions/loregm/:id/messages 把构建 GM 跑到 turn_end 即收尾,
   // 只返回 {turnId},不回传 GM 散文(不广播/不落 narration)。构建 GM 改的是 LoreSession 持有的 in-memory
   // Draft(经 dicelore_build_* 工具),commit 前 catalog 里查不到。故作者(eval 经 build-mcp,或前端构建台)
   // 要看"这一轮构建 GM 把 Draft 改成了什么"只能读这里。additive GET:不改 messages/commit 等既有端点行为,
   // 仅暴露既有 LoreSession.draft 的只读视图(toPackFiles=将提交的包文件;snapshot=分域结构化回读)。
-  // 会话不存在(从未 POST 过 messages)→ 404,与"已存在但 Draft 空"区分。
-  app.get("/lore-sessions/:id/draft", (c) => {
+  // 会话不存在(从未建过)→ 404,与"已存在但 Draft 空"区分。
+  app.get("/sessions/loregm/:id/draft", (c) => {
     const entry = getLoreEntry(c.req.param("id"));
-    if (!entry) return c.json({ error: { code: "NO_SESSION", message: "lore 会话不存在(尚未发过构建指令)" } }, 404);
+    if (!entry) return c.json({ error: { code: "NO_SESSION", message: "loregm 会话不存在(尚未建会话)" } }, 404);
     return c.json({ files: entry.draft.toPackFiles(), snapshot: entry.draft.snapshot() });
   });
 
   // 释放构建会话:从 loreReg 删 {session, draft}(每个 Draft 持完整 in-memory 包内容,
-  // 不删则常驻内存至进程退出——对比 dice 侧 removeHost + DELETE /sessions/:id 的清理)。
+  // 不删则常驻内存至进程退出——对比 dice 侧 removeHost + DELETE /sessions/dicegm/:id 的清理)。
   // 前端构建台离开/提交后应显式调它释放。会话不存在亦幂等返 ok。
-  app.delete("/lore-sessions/:id", (c) => {
+  app.delete("/sessions/loregm/:id", (c) => {
     loreReg.delete(c.req.param("id"));
     return c.json({ ok: true });
   });

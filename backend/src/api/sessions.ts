@@ -11,12 +11,14 @@ import { readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { openDb, metaGet } from "@dicelore/backend";
 import { getLogger } from "@dicelore/logs";
-import type { SessionSummary } from "@dicelore/shared";
+import type { SessionSummary, SessionKind } from "@dicelore/shared";
 
 // 枚举 dir 下的 session 子目录(每子目录 = 一个自包含 session 文件夹),开其 session.db 读 session_meta → 摘要。
-// title = sessionId(=子目录名);adventureName = 团本名(分组前缀,无则省略);started = 是否已 kickoff;updatedAt = session.db mtime。目录不可读 → []。
-// catalog.db 在 dicelore/ 下而非 sessions/,无需排除。前端渲染格式: adventureName + " · " + title。
-export function listSessionSummaries(dir: string): SessionSummary[] {
+// 统一形状(session-surface-flatten §6)：kind 由调用方按目录传入(dicegm/loregm);title = sessionId(=子目录名);
+// packName = 团本名(session_meta「adventure_name」,无则以 sessionId 兜底——C3 不可空);started = 是否已 kickoff;
+// lastActionAt = session.db mtime。目录不可读 → []。
+// catalog.db 在 dicelore/ 下而非 sessions/,无需排除。前端渲染格式: packName + " · " + title。
+export function listSessionSummaries(dir: string, kind: SessionKind): SessionSummary[] {
   let entries: string[];
   try {
     entries = readdirSync(dir);
@@ -31,21 +33,22 @@ export function listSessionSummaries(dir: string): SessionSummary[] {
       const sessionId = sub;
       const path = join(dir, sub, "session.db");
       const title = sessionId;
-      let adventureName: string | undefined;
+      let packName: string | undefined;
       let started: boolean | undefined;
-      let updatedAt: number | undefined;
+      let lastActionAt: number | undefined;
       try {
         const db = openDb(path);
         const name = metaGet(db, "adventure_name");
-        if (name) adventureName = name;
+        if (name) packName = name;
         started = metaGet(db, "started") === "1";
         db.close();
       } catch (e) {
         getLogger().warn({ err: e, path }, "读 session_meta 失败,裸 id 兜底");
       }
-      try { updatedAt = statSync(path).mtimeMs; } catch (e) {
+      try { lastActionAt = statSync(path).mtimeMs; } catch (e) {
         getLogger().warn({ err: e, path }, "stat session.db mtime 失败");
       }
-      return { sessionId, title, status: "active" as const, adventureName, started, updatedAt };
+      // packName 不可空(C3)：无团本名则以 sessionId 兜底,保证字段恒有值。
+      return { sessionId, kind, title, status: "active" as const, packName: packName ?? sessionId, started, lastActionAt };
     });
 }

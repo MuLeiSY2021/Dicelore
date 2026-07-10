@@ -13,8 +13,8 @@ import { createLoreApp } from "./lore.js";
 import { createLiveApp } from "./dice.js";
 import { FakeDiceGm } from "@dicelore/harness";
 
-describe("Play 生命周期: open→session_meta→kickoff(幂等)→delete", () => {
-  it("open 写团本名/prologue/started=0;start 跑开场且幂等;delete 200", async () => {
+describe("Play 生命周期: create→session_meta→kickoff(幂等)→delete", () => {
+  it("POST /sessions/dicegm 显式建会话写团本名/prologue/started=0;start 跑开场且幂等;delete 200", async () => {
     const catalog = openCatalog(":memory:");
     const lore = createLoreApp({ catalog, agentFactory: () => new FakeDiceGm([]) });
     const cRes = await lore.request("/catalog/commit", {
@@ -34,22 +34,26 @@ describe("Play 生命周期: open→session_meta→kickoff(幂等)→delete", ()
       agentFactory: () => new FakeDiceGm(() => [{ type: "narration", text: "夜风掠过崖口。" }, { type: "turn_end" }]),
     });
 
-    await live.request("/sessions/plife1/open", {
+    // 显式建会话:服务端生成 sessionId、import 团本。
+    const createRes = await live.request("/sessions/dicegm", {
       method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ adventureId, ref: commitId }),
+      body: JSON.stringify({ teamId: adventureId, version: commitId }),
     });
-    const db = dbs.get("plife1")!;
+    expect(createRes.status).toBe(201);
+    const { sessionId, kind } = (await createRes.json()) as { sessionId: string; kind: string };
+    expect(kind).toBe("dicegm");
+    const db = dbs.get(sessionId)!;
     expect(metaGet(db, "adventure_name")).toBe("魔道");
     expect(metaGet(db, "prologue")).toBe("夜色如墨,你立于鹰愁涧口。");
     expect(metaGet(db, "started")).toBe("0");
 
-    const r1 = (await (await live.request("/sessions/plife1/start", { method: "POST" })).json()) as { turnId: string };
+    const r1 = (await (await live.request(`/sessions/dicegm/${sessionId}/start`, { method: "POST" })).json()) as { turnId: string };
     expect(r1.turnId).toBeTruthy(); // 缝B 契约统一:start 返回 {turnId}——拿到 turnId 即已开局
     expect(metaGet(db, "started")).toBe("1");
-    const r2 = (await (await live.request("/sessions/plife1/start", { method: "POST" })).json()) as { turnId: string };
+    const r2 = (await (await live.request(`/sessions/dicegm/${sessionId}/start`, { method: "POST" })).json()) as { turnId: string };
     expect(r2.turnId).toBe(r1.turnId); // 幂等:不重跑开场,回同一开场 turnId
 
-    const del = await live.request("/sessions/plife1", { method: "DELETE" });
+    const del = await live.request(`/sessions/dicegm/${sessionId}`, { method: "DELETE" });
     expect(del.status).toBe(200);
     catalog.close();
   });

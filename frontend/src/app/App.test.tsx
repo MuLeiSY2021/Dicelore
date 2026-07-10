@@ -23,7 +23,7 @@ vi.mock("@/features/play/api.js", () => ({
   startGame: vi.fn(), deleteSession: vi.fn(),
 }));
 vi.mock("@/features/catalog/api.js", () => ({
-  commitPack: vi.fn(), openPlaySession: vi.fn(),
+  commitPack: vi.fn(), createPlaySession: vi.fn(),
 }));
 vi.mock("@/shared/api/http.js", () => ({
   getHealth: vi.fn().mockResolvedValue({

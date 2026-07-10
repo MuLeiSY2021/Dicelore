@@ -11,7 +11,7 @@
 // eval 入口(D1):包后端 play 接口为 MCP 工具。后端 URL=env DICELORE_PLAY_URL;数据根=env DICELORE_DATA_DIR。
 // 关键:narration 只经 WS 流式(streamDriverTurn 不落库),故 send_message/start_game 工具内连 WS
 // 收 narration_commit→turn_ended,返回 GM 散文;get_presentation 取机械态快照(sheets/mechanics/choices/seq；
-// 无 ended——终局态在 GET /sessions/:id;pendingRoll 在 Phase 1 恒 null)。
+// 无 ended——终局态在 GET /sessions/dicegm/:id;pendingRoll 在 Phase 1 恒 null)。
 // 工具 handler 抽纯函数(可测,见 play-mcp.test.ts);main() 起 stdio McpServer。参照 @dicelore/harness dicegm/mcp/server.ts。
 // 落 harness/eval-dicegm/(非 src):import @modelcontextprotocol/sdk,经 tsx 直跑、不进 src typecheck,作脚本。
 import { readdirSync } from "node:fs";
@@ -51,7 +51,7 @@ export const doListScenarios = async (): Promise<string[]> => {
 // 驱动一回合经 WS 收 GM 散文:narration 只流式(不落库),故开 WS → POST 触发回合 → 收 narration_commit
 // 到 turn_ended → 返回 narrations。POST /messages 与 /start 都同步等回合跑完(turnLoop 发 turn_ended 后 return)。
 export async function doTurn(sid: string, postPath: string, body: unknown): Promise<{ narrations: string[]; turnEnded: boolean }> {
-  const wsUrl = PLAY_URL().replace(/^http/, "ws") + `/sessions/${enc(sid)}/ws`;
+  const wsUrl = PLAY_URL().replace(/^http/, "ws") + `/sessions/dicegm/${enc(sid)}/ws`;
   const ws = new WebSocket(wsUrl);
   const narrations: string[] = [];
   let turnEnded = false;
@@ -68,13 +68,13 @@ export async function doTurn(sid: string, postPath: string, body: unknown): Prom
   });
   return { narrations, turnEnded };
 }
-export const doStartGame = (sid: string) => doTurn(sid, `/sessions/${enc(sid)}/start`, {});
-export const doSendMessage = (sid: string, text: string) => doTurn(sid, `/sessions/${enc(sid)}/messages`, { text });
-export const doGetPresentation = (sid: string) => jfetch(`/sessions/${enc(sid)}/presentation`);
-export const doChoose = (sid: string, eventId: number, optionIndex: number) => post(`/sessions/${enc(sid)}/choices`, { eventId, optionIndex });
-export const doRoll = (sid: string, eventId: number) => post(`/sessions/${enc(sid)}/roll`, { eventId });
+export const doStartGame = (sid: string) => doTurn(sid, `/sessions/dicegm/${enc(sid)}/start`, {});
+export const doSendMessage = (sid: string, text: string) => doTurn(sid, `/sessions/dicegm/${enc(sid)}/messages`, { text });
+export const doGetPresentation = (sid: string) => jfetch(`/sessions/dicegm/${enc(sid)}/presentation`);
+export const doChoose = (sid: string, eventId: number, optionIndex: number) => post(`/sessions/dicegm/${enc(sid)}/choices`, { eventId, optionIndex });
+export const doRoll = (sid: string, eventId: number) => post(`/sessions/dicegm/${enc(sid)}/roll`, { eventId });
 export const doBrowse = (sid: string, source: string, q: string) =>
-  jfetch(`/sessions/${enc(sid)}/browse?source=${encodeURIComponent(source)}&q=${encodeURIComponent(q)}`);
+  jfetch(`/sessions/dicegm/${enc(sid)}/browse?source=${encodeURIComponent(source)}&q=${encodeURIComponent(q)}`);
 
 async function main() {
   const server = new McpServer({ name: "dicelore-play", version: "0.1.0" });
