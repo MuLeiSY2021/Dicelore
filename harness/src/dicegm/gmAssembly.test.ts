@@ -139,4 +139,26 @@ describe("buildQueryOptions（SDK 装配 offline 回归 / TB-2）", () => {
     expect(off.mcpServers).toEqual(on.mcpServers);
     expect(off.mcpServers.dicelore.instance).toBe(on.mcpServers.dicelore.instance);
   });
+
+  // gm-session-continuity：一个团本一个 SDK session——resume 透传。
+  // 首回合(无 sdk_session_id)省略 resume(SDK 开新 session);后续回合注入 sdk_session_id → base.resume。
+  describe("resume 透传（gm-session-continuity）", () => {
+    const base = () => ({ model: "glm-5.2", mcpServer: makeMcp(), openingPrompt: "p", abortController: new AbortController() });
+
+    it("首回合(无 resume) → options 不含 resume 键(SDK 开新 session)", () => {
+      const opts = buildQueryOptions({ ...base() });
+      expect(opts.resume).toBeUndefined();
+      expect("resume" in opts).toBe(false);
+    });
+
+    it("第二回合(resume 非空) → options.resume = 传入的 sdk_session_id", () => {
+      const opts = buildQueryOptions({ ...base(), resume: "sdk-sess-abc123" });
+      expect(opts.resume).toBe("sdk-sess-abc123");
+    });
+
+    it("空串 resume 视同无值 → 省略(不传空串给 SDK)", () => {
+      const opts = buildQueryOptions({ ...base(), resume: "" });
+      expect("resume" in opts).toBe(false);
+    });
+  });
 });

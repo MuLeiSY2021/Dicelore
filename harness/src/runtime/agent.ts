@@ -23,6 +23,7 @@ export interface TurnUsage {
 export type TurnEvent =
   | { type: "narration"; text: string } // 一段散文(Phase 1 = narrate 工具调用粒度)
   | { type: "usage"; usage: TurnUsage; model?: string } // 本回合 token 用量(agent 上抛,会话经端口落库)
+  | { type: "sdk_session"; id: string } // SDK 流出的 session_id(system init 携带)——上抛供会话存库,后续回合 resume 续接 LLM 历史
   | { type: "turn_end" } // GM 本回合自然结束
   | { type: "error"; message: string; code?: string }; // 驱动/SDK 错误(code 可区分:gm_timeout 等;省略→streamTurn 默认 gm_error)
 
@@ -48,6 +49,7 @@ export interface AgentInit {
   plugin?: PluginRef; // skill plugin 引用(空=不启 skill,对齐 baseline;非空=按引用加载 + skills 开关)
   workspace?: string; // 素材工作区 cwd(lore build-agent-workspace 用;空=SDK 默认 cwd)
   model?: string; // 默认由 env / 适配器内定
+  resume?: string; // SDK 续接:上一回合存下的 sdk_session_id(首回合无值→省略→SDK 开新 session;后续注入→SDK 按此 id 加载该 session 完整 LLM 历史续接)
   sessionId?: string; // GM raw 日志用:标识会话(日志文件名)
   sessionsDir?: string; // GM raw 日志用:sessions 根目录(日志落 <dir>/dicelore/sessions/<id>.gm.log)
   kind?: "dice" | "lore"; // transcript/日志目录归属(sessionDir(sessionsDir, kind, sessionId));缺省 dice

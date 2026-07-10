@@ -129,6 +129,7 @@ export class DiceGm implements Agent {
         openingPrompt: this.init.openingPrompt,
         plugin: this.init.plugin,
         workspace: this.init.workspace,
+        resume: this.init.resume, // SDK session 续接(裁决 gm-session-continuity):首回合 undefined→省略;后续注入 sdk_session_id
         abortController: controller,
       }) as unknown as Parameters<typeof query>[0]["options"];
 
@@ -136,6 +137,13 @@ export class DiceGm implements Agent {
       for await (const msg of query({ prompt: input.text, options })) {
         msgIdx += 1;
         this.logMsg(msgIdx, msg);
+        // gm-session-continuity:SDK system init 携带本 session 的 session_id——上抛供会话存库,
+        // 下回合经 backend.metaGet("sdk_session_id") 注入 resume 续接 LLM 历史。每回合都上抛(幂等 metaSet);
+        // resume 成功时后续回合 session_id 与首回合一致(续接不换 id),存同值无害。
+        const sys = msg as { type?: string; subtype?: string; session_id?: string };
+        if (sys.type === "system" && sys.subtype === "init" && typeof sys.session_id === "string" && sys.session_id) {
+          yield { type: "sdk_session", id: sys.session_id };
+        }
         // A1：assistant text(流③ GM 思考/口白)不当 narration —— 叙事单源走 narrate MCP event
         // → onCanonWrite → mapCanonWrite → narration_commit(接口页 §5.1/§10.1 A1)。
         // 这里只消费流到 result 为止取回合结束信号,不再 yield narration(避免 GM 思考泄漏进 narrate)。
@@ -153,9 +161,16 @@ export class DiceGm implements Agent {
     } catch (e) {
       // 连接/SDK 错误(SDK 内部重试耗尽后抛)原样报;turn 无墙钟超时,故不再有 gm_timeout 分支。
       const message = e instanceof Error ? e.message : String(e);
-      this.sessionLogger.error({ err: e, turnId }, "GM runTurn 异常");
+      this.sessionLogger.error({ err: e, turnId, resume: this.init.resume ?? null }, "GM runTurn 异常");
       this.transcript?.error({ turnId, message });
-      yield { type: "error", message };
+      // gm-session-continuity §五 C4(用户最终定调=报错,非静默 fallback):本回合带 resume 却抛错 →
+      // 视为续接失败(transcript 丢失/损坏),向玩家报「历史记录丢失、需开新局」的可辨识 error(code=gm_resume_failed),
+      // 不清 id、不静默开新 session。不带 resume 的错误按一般驱动错误原样报。
+      if (this.init.resume) {
+        yield { type: "error", code: "gm_resume_failed", message: `历史记录丢失，无法续接本局，请开新局。（${message}）` };
+      } else {
+        yield { type: "error", message };
+      }
     }
   }
 }

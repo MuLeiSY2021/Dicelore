@@ -29,6 +29,7 @@ export interface GmQueryOptions {
   model: string;
   settingSources: ("project" | "user" | "local")[];
   cwd?: string;
+  resume?: string; // SDK session 续接(裁决 gm-session-continuity):非空→SDK 加载该 session 历史;省略→开新 session
   plugins?: { type: "local"; path: string }[];
   skills?: string[] | "all";
   mcpServers: {
@@ -45,16 +46,18 @@ export interface BuildQueryOptionsArgs {
   openingPrompt: string;
   plugin?: PluginRef; // skill plugin 引用(空=不启 skill,baseline)
   workspace?: string; // 素材工作区 cwd(lore build-agent-workspace 用;空=SDK 默认 cwd)
+  resume?: string; // SDK session_id 续接(裁决 gm-session-continuity):透传进 base.resume,首回合无值→省略
   abortController: AbortController;
 }
 
 // 装配 query() 的 options。纯函数：输入全显式、无副作用、不调 query()/不碰 LLM。
 export function buildQueryOptions(args: BuildQueryOptionsArgs): GmQueryOptions {
-  const { model, mcpServer, openingPrompt, plugin, workspace, abortController } = args;
+  const { model, mcpServer, openingPrompt, plugin, workspace, resume, abortController } = args;
   const base: GmQueryOptions = {
     model,
     settingSources: [], // 不读盘上 settings;plugins 正交加载
     ...(workspace ? { cwd: workspace } : {}),
+    ...(resume ? { resume } : {}), // 首回合无 resume → 省略(SDK 开新 session);后续注入 sdk_session_id 续接历史
     ...(plugin ? { plugins: [{ type: "local", path: plugin.pluginDir }] } : {}),
     skills: plugin ? plugin.skills : [], // plugin 空 → skills:[](baseline)
     mcpServers: { dicelore: { type: "sdk", name: "dicelore", instance: mcpServer } },

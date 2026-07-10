@@ -19,6 +19,9 @@ export interface StreamTurnDeps {
   // agent 上抛的 token 用量(usage 事件)回调——会话经注入的 SessionBackend.recordUsage 落库。
   // 省略则丢弃(lore/裸测试不计量)。streamTurn 不碰存储,只把事件转交回调(agent 存储无关)。
   onUsage?: (usage: TurnUsage, model?: string) => void;
+  // agent 上抛的 SDK session_id(sdk_session 事件)回调——会话 backend.metaSet("sdk_session_id",id) 存库,
+  // 下回合 resume 续接(裁决 gm-session-continuity)。省略则丢弃(lore/裸测试不续接)。
+  onSdkSession?: (id: string) => void;
 }
 
 // 驱动 Agent 事件流 → 广播 turn_started + 逐条 narration_commit；遇 error 发 error 并返回 errored。
@@ -39,6 +42,8 @@ export async function streamDriverTurn(deps: StreamTurnDeps, input: TurnInput): 
         send({ protocol: CLIENT_PROTOCOL, type: "narration_commit", seq, text: ev.text });
       } else if (ev.type === "usage") {
         deps.onUsage?.(ev.usage, ev.model); // 转交会话落库;不广播(带外计量,不进玩家所见)
+      } else if (ev.type === "sdk_session") {
+        deps.onSdkSession?.(ev.id); // 转交会话存 sdk_session_id;不广播(续接指针,不进玩家所见)
       } else if (ev.type === "error") {
         // ev.code 由驱动给出可区分码(如 gm_timeout，让前端识别「超时·可重试」);省略则默认 gm_error。
         send({ protocol: CLIENT_PROTOCOL, type: "error", code: ev.code ?? "gm_error", message: ev.message });

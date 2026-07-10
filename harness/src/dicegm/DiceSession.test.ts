@@ -335,3 +335,51 @@ describe("DiceSession baseline", () => {
     expect(captured!.plugin).toEqual(P);
   });
 });
+
+// gm-session-continuity：一个团本一个 SDK session（resume 续接 LLM 历史）。
+// DiceGm 从 SDK system init 取 session_id 上抛（sdk_session 事件）→ DiceSession metaSet 存库；
+// 下回合 buildInit 从 metaGet 读它注入 AgentInit.resume 续接。
+describe("DiceSession gm-session-continuity（sdk_session 存取 + resume 注入）", () => {
+  // 一回合上抛指定 sdk_session_id（+turn_end）的 fake agent——复刻 DiceGm 从 SDK system init 取到后的上抛。
+  function sdkSessionAgent(id: string): Agent {
+    return { async *runTurn() {
+      yield { type: "sdk_session", id };
+      yield { type: "turn_end" };
+    } };
+  }
+
+  it("kickoff 后 metaGet('sdk_session_id') 有值（DiceGm 上抛→DiceSession 存库）", async () => {
+    const db = memDb();
+    const host = newDice("sc-1", { agentFactory: () => sdkSessionAgent("sdk-kick-001"), db });
+    expect(host.backend.metaGet("sdk_session_id")).toBeUndefined(); // 开局前无
+    await host.start();
+    expect(host.backend.metaGet("sdk_session_id")).toBe("sdk-kick-001");
+  });
+
+  it("首回合 AgentInit.resume=undefined（开新 session）；第二回合注入首回合存下的 sdk_session_id", async () => {
+    const db = memDb();
+    const resumes: (string | undefined)[] = [];
+    // 捕获每回合的 init.resume，并上抛一个 sdk_session_id 供下回合注入。
+    const fac = (init: AgentInit): Agent => {
+      resumes.push(init.resume);
+      return { async *runTurn() { yield { type: "sdk_session", id: "sdk-turn-777" }; yield { type: "turn_end" }; } };
+    };
+    const host = newDice("sc-2", { agentFactory: fac, db });
+    await host.handleMessage("第一回合");
+    await host.handleMessage("第二回合");
+    expect(resumes[0]).toBeUndefined();       // 首回合：meta 无值 → resume 省略 → SDK 开新 session
+    expect(resumes[1]).toBe("sdk-turn-777");  // 第二回合：注入首回合存下的 sdk_session_id → 续接
+  });
+
+  it("重开一团（新 DiceSession/新库）不带旧 sdk_session_id → 首回合 resume=undefined（开新 session·C3）", async () => {
+    let captured: string | undefined = "unset";
+    const fac = (init: AgentInit): Agent => {
+      captured = init.resume;
+      return { async *runTurn() { yield { type: "turn_end" }; } };
+    };
+    // 全新 DiceSession（新内存库）—— meta 无 sdk_session_id。
+    const host = newDice("sc-3-new", { agentFactory: fac, db: memDb() });
+    await host.handleMessage("新局第一回合");
+    expect(captured).toBeUndefined();
+  });
+});
