@@ -34,3 +34,17 @@ export function historyList(db: DB): History[] {
     .prepare(`SELECT id, seq_from, seq_to, summary, created_seq FROM history ORDER BY id`)
     .all() as History[];
 }
+
+// 记忆工具写原语（A′ §6）：把 [seq_from, seq_to] 一段 log 压缩成一条 history 摘要。
+// summary 由 GM(agent) 读那段 log 自行拟就、经工具入参带入（优先保留 moment 语义由 GM 落笔时体现）；
+// created_seq = 压缩发生时的时间锚点 = 当前最大 log seq（空库回落 seq_to）。
+// 触发时机=GM 手动调（agent 自判何时压缩，裁决 C6）。与 markMoment 并列，是 toolgen writeMatch
+// 认得的正典写原语——声明式工具永不裸跑 SQL，只路由到此。返回新 history 行的自增 id。
+export function historyCompact(
+  db: DB,
+  h: { seq_from: number; seq_to: number; summary: string },
+): number {
+  const row = db.prepare(`SELECT COALESCE(MAX(seq), 0) AS m FROM log`).get() as { m: number };
+  const createdSeq = row.m > 0 ? row.m : h.seq_to;
+  return historyAppend(db, { ...h, created_seq: createdSeq });
+}

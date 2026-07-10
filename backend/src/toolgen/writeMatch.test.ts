@@ -118,4 +118,39 @@ describe("matchWrite", () => {
       matchWrite("INSERT INTO state (entity, attr) VALUES (:entity, :attr)")
     ).toThrow();
   });
+
+  // ── 记忆工具（A′ §6）────────────────────────────────────────────────────────
+  test("UPDATE log SET is_moment=1 WHERE seq=:p → markMoment", () => {
+    expect(
+      matchWrite("UPDATE log SET is_moment = 1 WHERE seq = :seq")
+    ).toEqual({ kind: "markMoment", seqParam: "seq" });
+  });
+
+  test("mark_moment 只认 is_moment=1（清除/其他值不匹配 → 回落其他分支并拒）", () => {
+    // is_moment = 0 不匹配 markMoment 形状，且 log 非 entity/status 表 → 抛
+    expect(() => matchWrite("UPDATE log SET is_moment = 0 WHERE seq = :seq")).toThrow();
+  });
+
+  test("INSERT INTO history (seq_from, seq_to, summary) → historyCompact", () => {
+    expect(
+      matchWrite("INSERT INTO history (seq_from, seq_to, summary) VALUES (:a, :b, :c)")
+    ).toEqual({
+      kind: "historyCompact",
+      seqFromParam: "a",
+      seqToParam: "b",
+      summaryParam: "c",
+    });
+  });
+
+  test("history INSERT 列不全（缺 summary）→ 拒", () => {
+    expect(() =>
+      matchWrite("INSERT INTO history (seq_from, seq_to) VALUES (:a, :b)")
+    ).toThrow();
+  });
+
+  test("history INSERT 含额外列（created_seq 不许声明）→ 拒", () => {
+    expect(() =>
+      matchWrite("INSERT INTO history (seq_from, seq_to, summary, created_seq) VALUES (:a, :b, :c, :d)")
+    ).toThrow();
+  });
 });
