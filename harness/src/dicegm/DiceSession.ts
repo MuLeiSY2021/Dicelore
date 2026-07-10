@@ -121,8 +121,22 @@ export class DiceSession implements Session {
   }
 
   // 据本会话状态组装 AgentInit(每回合新建一个 agent)。baseline 强制 plugin 空(不加载 gm-core 教条 skill)。
+  // gm-session-continuity:一个团本一个 SDK session——从 meta 取 sdk_session_id 注入 resume:
+  //   首回合(meta 无值)→ resume=undefined → buildQueryOptions 省略 → SDK 开新 session;
+  //   后续回合(meta 有值)→ resume=<sdk_session_id> → SDK 按此 id 加载该 session 完整 LLM 历史续接。
+  // 重开一团(新 DiceSession/新库)不带旧 id → 开新 session(C3);跨 DiceGm 实例 resume 靠 SDK 自持久化 transcript。
   private buildInit(): AgentInit {
-    return { mcpServer: this.mcpServer, openingPrompt: this.openingPrompt, plugin: this.deps.baseline ? undefined : this.deps.plugin, model: this.deps.model, sessionId: this.sessionId, sessionsDir: this.deps.sessionsDir };
+    return { mcpServer: this.mcpServer, openingPrompt: this.openingPrompt, plugin: this.deps.baseline ? undefined : this.deps.plugin, model: this.deps.model, resume: this.backend.metaGet("sdk_session_id"), sessionId: this.sessionId, sessionsDir: this.deps.sessionsDir };
+  }
+
+  // gm-session-continuity:DiceGm 从 SDK system init 取 session_id 上抛(sdk_session 事件)→ 这里存库,
+  // 下回合 buildInit 读它注入 resume 续接。幂等(续接不换 id,存同值无害);带外旁路,失败只记日志不阻断回合。
+  private onSdkSession(id: string): void {
+    try {
+      this.backend.metaSet("sdk_session_id", id);
+    } catch (e) {
+      getLogger().error({ err: e, sessionId: this.sessionId }, "存 sdk_session_id 失败(不阻断回合)");
+    }
   }
 
   // RT-2：串行化所有「跑回合」入口。已有回合在跑则抛 TurnInProgressError（拒绝并发、不双开），
@@ -155,7 +169,7 @@ export class DiceSession implements Session {
       getLogger().info({ sessionId: this.sessionId, turnId, kind: "message" }, "回合开始(玩家发言)");
       try {
         await runTurn(
-          { db: this.db, driver, hub: this.hub, sessionId: this.sessionId, turnId, runTurnEnd: (db) => this.turnEnd(db), onUsage: (u, m) => this.onUsage(turnId, u, m) },
+          { db: this.db, driver, hub: this.hub, sessionId: this.sessionId, turnId, runTurnEnd: (db) => this.turnEnd(db), onUsage: (u, m) => this.onUsage(turnId, u, m), onSdkSession: (id) => this.onSdkSession(id) },
           { text },
         );
       } catch (e) {
@@ -194,7 +208,7 @@ export class DiceSession implements Session {
       getLogger().info({ sessionId: this.sessionId, turnId, kind: "choice", eventId, optionIndex }, "回合开始(玩家选择)");
       try {
         await runTurn(
-          { db: this.db, driver, hub: this.hub, sessionId: this.sessionId, turnId, runTurnEnd: (db) => this.turnEnd(db), onUsage: (u, m) => this.onUsage(turnId, u, m) },
+          { db: this.db, driver, hub: this.hub, sessionId: this.sessionId, turnId, runTurnEnd: (db) => this.turnEnd(db), onUsage: (u, m) => this.onUsage(turnId, u, m), onSdkSession: (id) => this.onSdkSession(id) },
           { text: opt.label },
         );
       } catch (e) {
@@ -222,7 +236,7 @@ export class DiceSession implements Session {
       getLogger().info({ sessionId: this.sessionId, turnId, kind: "kickoff" }, "回合开始(开场)");
       try {
         await runTurn(
-          { db: this.db, driver, hub: this.hub, sessionId: this.sessionId, turnId, runTurnEnd: (db) => this.turnEnd(db), onUsage: (u, m) => this.onUsage(turnId, u, m) },
+          { db: this.db, driver, hub: this.hub, sessionId: this.sessionId, turnId, runTurnEnd: (db) => this.turnEnd(db), onUsage: (u, m) => this.onUsage(turnId, u, m), onSdkSession: (id) => this.onSdkSession(id) },
           { text: prologue || "[开始游戏]" },
         );
       } catch (e) {

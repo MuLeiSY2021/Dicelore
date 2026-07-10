@@ -25,6 +25,7 @@ export interface RunTurnDeps {
   turnId: string;
   runTurnEnd: (db: DB) => TurnEndResult;
   onUsage?: (usage: TurnUsage, model?: string) => void; // 透传给 streamDriverTurn:agent usage 事件→会话经端口落库
+  onSdkSession?: (id: string) => void; // 透传给 streamDriverTurn:agent sdk_session 事件→会话 metaSet 存 sdk_session_id(续接)
 }
 
 // 跑团回合：流式产出(streamDriverTurn,pkg 共享)→ 回合末跑 turn-end hook → choices/turn_ended。
