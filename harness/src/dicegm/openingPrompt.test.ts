@@ -49,6 +49,19 @@ describe("buildOpeningPrompt（signpost + prologue，教条已退役内联）", 
     expect(buildBaselinePrompt(backend)).toBe(buildOpeningPrompt(backend));
     db.close();
   });
+
+  // debrief-and-branch §一.3：game_end(meta ended 已置)后叠加战后复盘指令，切复盘行为(软约束)。
+  it("战后复盘态:ended 已置 → 叠加复盘指令(不推进剧情)；未置则不含", () => {
+    const db = openDb(":memory:"); initSchema(db);
+    metaSet(db, "prologue", "夜色如墨。");
+    const backend = openSessionBackend(db);
+    expect(buildOpeningPrompt(backend)).not.toContain("战后复盘模式");
+    metaSet(db, "ended", JSON.stringify({ reason: "团灭", seq: 3 }));
+    const p = buildOpeningPrompt(backend);
+    expect(p).toContain("战后复盘模式");
+    expect(p).toContain("不推进剧情");
+    db.close();
+  });
 });
 
 describe("ensureDicePlugin（母本物化到数据根 + fail loud）", () => {

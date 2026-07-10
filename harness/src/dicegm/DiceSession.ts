@@ -334,6 +334,32 @@ export class DiceSession implements Session {
     });
   }
 
+  // debrief-and-branch §二.4：rewind 覆盖「当前分支」——把当前分支截断到 toSeq。
+  //   ① 领域态复位到最近 turn_end_seq ≤ toSeq 的快照(无则不动,coarse)；
+  //   ② log/log_fts/snapshot 丢弃 toSeq 之后；③ 清 pending；④ 清 ended(复盘→续玩)。
+  // 经端口(restore/listSnapshots)+ 会话库原生 SQL(DiceSession 本就直写 this.db)，不新增 backend 端口方法。
+  // 串行进 runExclusive：截断与回合写 DB 不并发。
+  async rewindToSeq(toSeq: number): Promise<{ seq: number }> {
+    return this.runExclusive(async () => {
+      const snaps = this.backend.listSnapshots();
+      const best = [...snaps].reverse().find((s) => (s.turnEndSeq ?? 0) <= toSeq);
+      const tx = this.db.transaction(() => {
+        if (best) this.backend.restore(best.id);
+        this.db.prepare("DELETE FROM log WHERE seq > ?").run(toSeq);
+        try { this.db.prepare("DELETE FROM log_fts WHERE rowid > ?").run(toSeq); } catch { /* 无 fts 虚表:跳过 */ }
+        this.db.prepare("DELETE FROM snapshot WHERE turn_end_seq > ?").run(toSeq);
+        this.db.prepare("DELETE FROM pending_choice").run();
+        this.db.prepare("DELETE FROM pending_roll").run();
+        this.db.prepare("DELETE FROM session_meta WHERE key='ended'").run();
+        // 复位 log AUTOINCREMENT 高水位到 toSeq，使续玩事件从 toSeq+1 连续编号。
+        try { this.db.prepare("UPDATE sqlite_sequence SET seq=? WHERE name='log'").run(toSeq); } catch { /* 无 sqlite_sequence 行:跳过 */ }
+      });
+      tx();
+      getLogger().info({ sessionId: this.sessionId, toSeq }, "rewindToSeq:当前分支已截断到 seq");
+      return { seq: toSeq };
+    });
+  }
+
   private turnEnd(_db: DB): TurnEndResult {
     runTurnEnd(this.backend, { transcriptHasText: true, stopHookActive: false }); // 物化 choice + L3 审计
     // SNAP-1：回合边界自动落一份全量快照（存档语义）。turnSeq = 当前最大 log seq（对齐 narrativeCursor 口径）。

@@ -69,6 +69,13 @@ export { stateList, stateGet, type StateCell as RuntimeStateCell } from "./store
 // 后端 server.ts 与 eval prepareSessionDb 共用 openSession 路径规则,避免种子灌到 core 路径而后端开平铺空库。
 export { metaGet, metaSet, sessionDbPath, sessionDir, openSession, type SessionKind } from "./session/resolve.js";
 
+// 会话分支模型（debrief-and-branch §二）：branch db 键规则 + 列/切/建分支 + 复制/截断原语。
+export {
+  MAIN_BRANCH, branchDbKey, currentBranch, listBranches, checkoutBranch, createBranch,
+  cloneInto, truncateToSeq,
+  type OpenBranchDb, type BranchInfo, type BranchListResult, type CreateBranchResult,
+} from "./session/branch.js";
+
 // ===== 回合快照（SNAP-1 / ADR-0017 v1：自动持久化、存档/读档）=====
 // orchestrator turnEnd 调 checkpoint、/rewind 端点调 restore+latestSnapshot；participant 注册表供客制域接入。
 export {

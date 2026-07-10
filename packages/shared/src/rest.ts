@@ -14,7 +14,9 @@ import { z } from "zod";
 export const SessionKindSchema = z.enum(["dicegm", "loregm"]);
 
 // 会话状态（会话列表/元信息共用）。
-export const SessionStatusSchema = z.enum(["active", "archived", "ended"]);
+// debrief=战后复盘态（debrief-and-branch §一）：GM 调 game_end 后会话转此态、不直接归档，
+// AI 走复盘行为（harness debrief-mode skill 软约束）。ended 保留作向后兼容旧读值。
+export const SessionStatusSchema = z.enum(["active", "archived", "ended", "debrief"]);
 
 export const MessageRequestSchema = z.object({ text: z.string() });
 export const MessageResponseSchema = z.object({ turnId: z.string() });
@@ -92,6 +94,44 @@ export const SessionConfigSchema = z.object({
   pendingModel: z.string().optional(),
 });
 
+// rewind（覆盖当前分支，debrief-and-branch §二.4）：POST /sessions/dicegm/:id/rewind。
+//   · {toSeq} → 在当前分支截断到该 seq（其后事件丢弃、领域态复位到最近 ≤toSeq 的快照）；
+//   · {toUuid} → 按 transcript 节点回退（TR3）；· 皆省略 → 撤上一轮（最近快照）。
+export const RewindRequestSchema = z.object({
+  toSeq: z.number().optional(),
+  toUuid: z.string().optional(),
+});
+
+// 会话分支（debrief-and-branch §二）：一个 dicegm session 下多个 branch，每 branch 一份独立事件日志/快照。
+//   · 默认分支 main；当前分支承接 messages/rewind/roll/choices；新建分支自动成当前分支。
+export const BranchInfoSchema = z.object({
+  branchId: z.string(),
+  name: z.string(),
+  createdAt: z.string(),
+  seq: z.number(), // 该分支当前最大 log seq
+  isCurrent: z.boolean(),
+});
+export const BranchListResponseSchema = z.object({
+  currentBranchId: z.string(),
+  branches: z.array(BranchInfoSchema),
+});
+// 新建分支请求：fromSeq 省略=复制当前分支到当前 seq；指定=复制到该 seq（不改原分支）。name 可选。
+export const CreateBranchRequestSchema = z.object({
+  fromSeq: z.number().optional(),
+  name: z.string().optional(),
+});
+export const CreateBranchResponseSchema = z.object({
+  branchId: z.string(),
+  sessionId: z.string(),
+  fromSeq: z.number(),
+  isCurrent: z.literal(true),
+});
+// checkout 切当前分支 + 返回该分支 presentation 快照（presentation 形状见 presentation.ts；此处 unknown 占位避免循环依赖）。
+export const CheckoutResponseSchema = z.object({
+  branchId: z.string(),
+  presentation: z.unknown(),
+});
+
 export type SessionKind = z.infer<typeof SessionKindSchema>;
 export type SessionStatus = z.infer<typeof SessionStatusSchema>;
 export type MessageRequest = z.infer<typeof MessageRequestSchema>;
@@ -110,3 +150,9 @@ export type RollResponse = z.infer<typeof RollResponseSchema>;
 export type SpoilerTier = z.infer<typeof SpoilerTierSchema>;
 export type SessionConfigUpdate = z.infer<typeof SessionConfigUpdateSchema>;
 export type SessionConfig = z.infer<typeof SessionConfigSchema>;
+export type RewindRequest = z.infer<typeof RewindRequestSchema>;
+export type BranchInfo = z.infer<typeof BranchInfoSchema>;
+export type BranchListResponse = z.infer<typeof BranchListResponseSchema>;
+export type CreateBranchRequest = z.infer<typeof CreateBranchRequestSchema>;
+export type CreateBranchResponse = z.infer<typeof CreateBranchResponseSchema>;
+export type CheckoutResponse = z.infer<typeof CheckoutResponseSchema>;

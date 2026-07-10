@@ -70,13 +70,21 @@ export function makeIoTools(backend: SessionBackend): ToolDef[] {
   }
 
   function gameEndHandler(_: unknown, input: { reason: string; outcome?: string }) {
+    // debrief-and-branch §一.2：game_end 唯一一次转「战后复盘」态(不归档)；幂等——
+    // 已在复盘态(ended 已置)时重复调用返回既有 event_id、不再重复落 note、不报错。
+    const existing = backend.metaGet("ended");
+    if (existing) {
+      let seq = 0;
+      try { seq = (JSON.parse(existing) as { seq?: number }).seq ?? 0; } catch { seq = 0; }
+      return { ended: true as const, event_id: seq, status: "debrief" as const };
+    }
     const event_id = backend.logAppend({
       kind: "note",
       visible: 0,
       data_json: { reason: input.reason, outcome: input.outcome },
     });
     backend.metaSet("ended", JSON.stringify({ reason: input.reason, outcome: input.outcome, seq: event_id }));
-    return { ended: true as const, event_id };
+    return { ended: true as const, event_id, status: "debrief" as const };
   }
 
   return [
@@ -129,7 +137,8 @@ export function makeIoTools(backend: SessionBackend): ToolDef[] {
     name: "game_end",
     title: "终局信号",
     description:
-      "标记本局终结(you_death = 同工具 + reason 的语义特例)。Args: reason、outcome?。Returns: {ended:true, event_id}。" +
+      "标记本局终结(you_death = 同工具 + reason 的语义特例)。Args: reason、outcome?。Returns: {ended:true, event_id, status:'debrief'}。" +
+      "调用后会话转战后复盘态(不归档)、harness 加载 debrief-mode 复盘行为；幂等(已终结重复调返回同 event_id)。" +
       "use: 剧情自然终结/团灭。don't: 普通失败(那继续游戏)。错误: 入参非法→BAD_INPUT。",
     inputSchema: gameEndIn,
     outputSchema: gameEndOut,
