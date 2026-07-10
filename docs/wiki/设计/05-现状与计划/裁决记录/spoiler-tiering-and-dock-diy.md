@@ -1,6 +1,6 @@
 # 裁决：防剧透 spoiler 档 + visible 语义 + dock-card DIY 持久化（A 组）
 
-- [ ] 用户已批准本裁决（勾上前视为未裁决，不可进交付波）
+- [X]  用户已批准本裁决（勾上前视为未裁决，不可进交付波）
 
 > **来源**：[`docs/tdd/acceptance-loop-2026-07-06/findings.md`](../../../../../tdd/acceptance-loop-2026-07-06/findings.md) RT-FE9 / RT-FE10。
 > **接口规约稿**：[`1-backend-interface.md`](../../../../../tdd/acceptance-loop-2026-07-06/1-backend-interface.md) §2 第 34 行（RT-FE9）。
@@ -12,10 +12,11 @@
 
 ### 两层正交模型（核心·拍死）
 
-| 层面 | 是什么 | 谁定 | 取值 |
-|------|--------|------|------|
-| **visible（数据层）** | 「是否已披露给玩家」的标记。**双重角色**：① **AI 的 note**——AI 据此知道哪些能对玩家说、哪些要披露走工具（`reveal_once`/`sheet_show` 把 0→1）；② **dock-card 显示依据**——dock-card select 显 `visible=1`、隐 `visible=0` | 数据写入时（作者/GM/AI 工具） | `0` / `1` |
-| **spoiler 档（呈现层）** | 纯前端渲染档位，**每种 GM 行为**按档渲染不同详细度 | 玩家切换（存 session-meta） | `严格` / `宽松` / `关闭` |
+
+| 层面                     | 是什么                                                                                                                                                                                                                         | 谁定                          | 取值                     |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------- | ------------------------ |
+| **visible（数据层）**    | 「是否已披露给玩家」的标记。**双重角色**：① **AI 的 note**——AI 据此知道哪些能对玩家说、哪些要披露走工具（`reveal_once`/`sheet_show` 把 0→1）；② **dock-card 显示依据**——dock-card select 显 `visible=1`、隐 `visible=0` | 数据写入时（作者/GM/AI 工具） | `0` / `1`                |
+| **spoiler 档（呈现层）** | 纯前端渲染档位，**每种 GM 行为**按档渲染不同详细度                                                                                                                                                                             | 玩家切换（存 session-meta）   | `严格` / `宽松` / `关闭` |
 
 **两层正交**：visible 是数据标记（0/1），spoiler 是前端渲染档。visible=0 的数据在 stream 照发，前端按 spoiler 档 + dock-card 规则决定显不显、显多少。
 
@@ -34,6 +35,11 @@
 - `1` = **已披露**（玩家可见）。
 - **AI note 角色**：AI 看 `visible=0` 知道「这条没给玩家看，叙述里别直接说」；要披露走 `reveal_once`（快照披露一次）/ `sheet_show`（持久翻 visible=1）。
 - **dock-card 显示依据**：dock-card select 默认显 `visible=1`、隐 `visible=0`（DIY 查询边界 = `visible=1`，对接 [`dock-card-template`](dock-card-template.md) §三 C3）。
+- **dock-card 显隐巧思（拍死）**：dock-card 的显隐不看单个 cell、看 **select 结果集 count**——
+  - **count = 0 时，不渲染该 card**（不占位、不留空壳）。card 只在它确实能选出数据时才出现，避免 bay/dock 堆一堆空模板。
+  - **agent 披露触发刷新**：当 agent 把某 cell 从 `visible=0` 翻 `visible=1`（走 `reveal_once`/`sheet_show`），stream 推这一变化 → 前端**本地刷新**所有引用该 cell 的 dock-card 的 select → count 从 0 变正 → card 这时才显出来。
+  - **刷新是前端的、不查后端**：因为前端缓存了所有 `visible=1` 的数据（stream 全量下发的副产物，见「2」），select 在本地跑；visible 0→1 的增量靠 stream 推、加入本地缓存后重算 select 即可，无需回后端拉。
+  - count 从正变 0（理论上：visible 不会 1→0 回退，故 count 只增不减；除非 DIY 模板改了 select 条件）→ card 隐回去。
 - **不再有「硬底线永不下发」**：visible=0 的数据 stream 照发，前端按 spoiler 档 / dock-card 规则决定显不显。AI 能否剧透靠 L2 Principles 教（不剧透未披露内容）+ L1 工具（reveal 走工具），不靠后端截流。
 
 **2. stream 全量下发（拍死）**
@@ -86,25 +92,27 @@ GET /sessions/{kind}/{id}/config
 
 ### 决策与权衡
 
-| 项 | 定调 | 理由 |
-|----|------|------|
-| C1 visible 值域 | `0` / `1` | 是否已披露是布尔；不取三值（之前 `{0,1,2}` 设计作废） |
-| C2 visible 角色 | AI note + dock-card 显示依据 | 用户定调；AI 据此决定披露、dock-card 据此显隐 |
-| C3 stream 下发 | 全量（含 visible=0），后端不过滤 | 数据要到前端才能按 spoiler 渲染；后端截流破渲染层 |
-| C4 spoiler 档 | 前端渲染层，每行为按档渲染，与 visible 正交 | 用户定调；visible 是数据标记、spoiler 是渲染档 |
-| C5 硬底线 | **取消**「visible=0 永不下发」 | stream 照发；防剧透靠前端 spoiler + AI Principles，非后端截流 |
-| C6 bay visible=0 | 关闭档点 btn 按需拉 + 分页 | sheet 量大、全量拉卡；默认只拉 visible=1 |
-| C7 默认档 | 严格 | 对接「默认拒绝」；玩家主动切才多看 |
-| C8 档位持久化 | session-meta（`spoiler_tier`）| 会话级、跨设备保留、GM 可见 |
-| C9 端点形状 | 统一 `POST /sessions/{kind}/{id}/config`（部分更新）| 用户定调；model 也并入 |
-| C10 生效时机 | spoilerTier 立即、model 下回合 | 档位是前端渲染、立即；model 影响后端 GM、下回合 |
-| C11 spoiler 影响范围 | 各 GM 行为；不碰 narration/choices/pendingRoll | 隐藏叙事/选项/明骰破坏可玩性 |
+
+| 项                   | 定调                                                                                    | 理由                                                                 |
+| -------------------- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| C1 visible 值域      | `0` / `1`                                                                               | 是否已披露是布尔；不取三值（之前`{0,1,2}` 设计作废）                 |
+| C2 visible 角色      | AI note + dock-card 显示依据                                                            | 用户定调；AI 据此决定披露、dock-card 据此显隐                        |
+| C2a dock-card 显隐   | 看 select count：0 不渲染 card、agent 披露(visible 0→1) 时前端本地刷新 select 触发显出 | 用户巧思；前端缓存 visible=1 本地 select、不查后端；避免空 card 占位 |
+| C3 stream 下发       | 全量（含 visible=0），后端不过滤                                                        | 数据要到前端才能按 spoiler 渲染；后端截流破渲染层                    |
+| C4 spoiler 档        | 前端渲染层，每行为按档渲染，与 visible 正交                                             | 用户定调；visible 是数据标记、spoiler 是渲染档                       |
+| C5 硬底线            | **取消**「visible=0 永不下发」                                                          | stream 照发；防剧透靠前端 spoiler + AI Principles，非后端截流        |
+| C6 bay visible=0     | 关闭档点 btn 按需拉 + 分页                                                              | sheet 量大、全量拉卡；默认只拉 visible=1                             |
+| C7 默认档            | 严格                                                                                    | 对接「默认拒绝」；玩家主动切才多看                                   |
+| C8 档位持久化        | session-meta（`spoiler_tier`）                                                          | 会话级、跨设备保留、GM 可见                                          |
+| C9 端点形状          | 统一`POST /sessions/{kind}/{id}/config`（部分更新）                                     | 用户定调；model 也并入                                               |
+| C10 生效时机         | spoilerTier 立即、model 下回合                                                          | 档位是前端渲染、立即；model 影响后端 GM、下回合                      |
+| C11 spoiler 影响范围 | 各 GM 行为；不碰 narration/choices/pendingRoll                                          | 隐藏叙事/选项/明骰破坏可玩性                                         |
 
 ### 交付节点（炸成原子需求）
 
 - **FE9-1**（前端）：spoiler 档开关（严格/宽松/关闭），默认严格；切换时 `POST …/config {spoilerTier}`；档位从 `GET …/config` 读。
 - **FE9-2**（前端）：每种 GM 行为按 spoiler 档渲染（暗骰/sheet改/mechanics/...，照原型 `play.html` 各 class 定义）。
-- **FE9-3**（前端）：dock-card select 按 visible 过滤（显 `visible=1`、隐 `visible=0`）。
+- **FE9-3**（前端）：dock-card select 按 visible 过滤（显 `visible=1`、隐 `visible=0`）+ **count=0 不渲染 card**；监听 stream 的 visible 0→1 变化，本地刷新引用该 cell 的 dock-card select（count 由 0 变正时显出，不查后端）。
 - **FE9-4**（后端）：stream + `GET /events` 全量下发含 `visible=0`（废弃 `visibleOnly` 过滤或默认全量）。
 - **FE9-5**（后端）：bay 按需拉 visible=0 端点 + 分页（`includeHidden=true` + `offset/limit`，仅 spoiler=关闭 且点 btn 时调）。
 - **FE9-6**（后端 api）：挂 `GET/POST /sessions/{kind}/{id}/config` 端点；`spoilerTier` 存 session-meta 立即生效；`model` 走同端点（并入 model-switch）。**与 model-switch 修订同节点**。

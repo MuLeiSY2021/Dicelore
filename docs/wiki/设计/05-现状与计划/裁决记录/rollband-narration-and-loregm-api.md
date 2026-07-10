@@ -1,6 +1,6 @@
 # 裁决：明骰档位叙事 + loregm Draft 校验 + usage 分项（B 组·中量新裁决）
 
-- [ ] 用户已批准本裁决（勾上前视为未裁决，不可进交付波）
+- [X] 用户已批准本裁决（勾上前视为未裁决，不可进交付波）
 
 > **来源**：[`docs/tdd/acceptance-loop-2026-07-06/findings.md`](../../../../../tdd/acceptance-loop-2026-07-06/findings.md) RT-FE5 / RT-FE11 / RT-FE19。
 > **接口规约稿**：[`1-backend-interface.md`](../../../../../tdd/acceptance-loop-2026-07-06/1-backend-interface.md) §2 第 32 行（RT-FE5 期望形状）、§3 第 52 行（RT-FE11）、第 132/135 行 + §3 注（RT-FE19 超前·不进接口）。
@@ -8,22 +8,38 @@
 
 ---
 
-## §一 RT-FE5：明骰 per-band narration（RollBand 加 narration 字段）
+## §一 RT-FE5：明骰 per-band 双叙述（RollBand 加 plan + narration 两字段）
+
+> **修订注（2026-07-10）**：原 A 方案定调为每档**单** `narration` 字段。用户指出每档后果实为两层——AI 真实计划 vs 给玩家可见——合一会要么泄露暗值、要么丢机械真相。本节修订为 **A′（plan + narration 双字段）**，原单 narration 定调作废。
 
 ### 现状
 
-- [`RollBandSchema`](../../../../../packages/shared/src/presentation.ts:42) = `{ label, min, max }` —— 只有档位标签与区间，**缺每档命中后的叙事文本**。
+- [`RollBandSchema`](../../../../../packages/shared/src/presentation.ts:42) = `{ label, min, max }` —— 只有档位标签与区间，**缺每档命中后的叙事**。
 - 前端明骰内联 stream 各档 narrate 无数据源（`play-roll-bands` 各档叙事空）。
-- 规约稿 §2 第 32 行已写期望形状：`bands:[{label,min,max,narration}]`。
+- 规约稿 §2 第 32 行期望形状 `bands:[{label,min,max,narration}]` —— **单 narration**（待随本修订同步为双字段）。
 
-### A/B 抉择
+### 关键认识：每档要两条叙述
+
+明骰每档命中后的「后果」不是一个文本，是两层：
+
+- **plan**（AI 真实计划）：该档命中后世界/后果**真的**怎么走——**驱动机械层**（sheet 变更 / 后续因果 / Front 推进）、可含暗值 / 真相 / 剧透（spoiler 严格档对玩家隐）。骰前声明、锁定真实后果（anti-F2 软着陆的**机械锁**）。
+- **narration**（给玩家可见）：给玩家可见的叙述文本——可对真相**留白 / 悬疑**、不吐暗值，受可见性纪律约束（别在 narrate 散文吐隐藏数值）。前端按 spoiler 档渲染。
+
+**为何必须两条（不能合一）**：
+
+1. 真实后果（plan）要驱动 sheet 变更 / 因果链，不能丢；玩家可见叙述（narration）可「留白」（不揭露 NPC 暗中背叛、只写「你感觉不对」），二者职责正交。
+2. 与可见性纪律一致：plan 含真相 / 暗值（spoiler 严格档对玩家隐）、narration 是玩家可见呈现。合成一条要么泄露暗值（违反可见性）、要么丢失机械真相（无法驱动 sheet）。
+3. **双重声明后果在先**：机械真相锁（plan）+ 可见叙述锁（narration），骰前双锁定，比单条更强。
+
+### A/B 抉择（单 narration vs plan+narration）
 
 | 方案 | 做法 | 优劣 |
 |------|------|------|
-| **A（定调）** | `RollBand` 加 `narration: string` 字段，GM 在 `roll_staged` 声明 bands 时每档带叙事 | 数据就位于档位、前端直接渲染；对接「声明后果在先」（骰前锁定每档后果叙事，防 F2 软着陆） |
-| B | 不加字段，档位叙事走 narration stream 末段（掷骰后 GM 即兴写命中档叙事） | 违反「声明后果在先」——骰后才写后果=软着陆温床；且 narration stream 是骰后整体叙事、无档位对应 |
+| A（原定调·**作废**） | `RollBand` 加单个 `narration` | 一条文本既当真相又当可见 → 要么泄露暗值、要么丢机械真相；无法支撑留白悬疑 |
+| **A′（新定调）** | `RollBand` 加 `plan` + `narration` 两字段 | 真相 / 可见分离；plan 驱动机械、narration 留白；双重声明后果在先 |
+| B | 不加字段，档位叙事走 narration stream 末段（掷骰后即兴写） | 违反「声明后果在先」——骰后才写后果 = 软着陆温床 |
 
-**定调 A**。理由：与项目核心反讨好机制（声明后果在先、F2 双边护栏）一致；档位叙事骰前声明 = 结构性防软着陆。
+**定调 A′**。理由：真相 / 可见两层职责正交，合一会破可见性或丢机械真相；与项目核心反讨好机制（声明后果在先、F2 双边护栏、可见性纪律）一致。
 
 ### 设计
 
@@ -35,40 +51,55 @@ export const RollBandSchema = z.object({
   label: z.string(),
   min: z.number(),
   max: z.number(),
-  narration: z.string(),   // 新增：该档命中后的叙事文本（骰前声明）
+  plan: z.string(),        // 新增：AI 真实计划——该档命中后世界真的怎么走（GM 内部·驱动机械·可含暗值/剧透·骰前锁定）
+  narration: z.string(),   // 新增：给玩家可见的叙述文本（骰后前端渲染·可留白悬疑·不吐暗值）
 });
 ```
 
-- `narration` 为**必填**（非 optional）——档位必须带后果叙事，否则校验失败（对接「声明后果在先」铁律）。
-- 向后兼容：现有已 stage 的 pendingRoll 无 `narration` 字段会 schema 校验失败 → 需 GM 重新 stage。这是期望行为（旧数据本就不合规）。
+- 两字段均**必填**（非 optional）——档位必须带真实后果计划 + 可见叙述，否则校验失败（对接「声明后果在先」铁律）。
+- 向后兼容：现有已 stage 的 pendingRoll 无 `plan` / `narration` → schema 校验失败、需 GM 重新 stage。这是期望行为（旧数据本就不合规）。
 
-**2. narration 文本来源（拍死）**
+**2. 文本来源（拍死）**
 
-- 来源 = **GM 调 `resolve_outcome` / `roll_staged` 工具时声明**。GM 在掷骰前为每档写后果叙事（如档位「大胜 / 勉强 / 惨败」各一段）。
-- 文本由 GM AI 即兴生成、受 Principles 约束（声明后果在先、不软着陆）。**非团本包预设**（档位是 GM 按当前局势声明的，非作者预写）。
-- 骰出后前端按命中档（roll 结果落 `min..max` 区间）渲染该档 `narration`。
+- 两段均 **GM 调 `resolve_outcome` / `roll_staged` 工具时骰前声明**。
+- `plan` = GM 对该档真实后果的即兴计划（含机械后果：掉多少血、NPC 真实反应、暗值变化、Front 推进）；`narration` = 同后果的**玩家可见呈现版**（可省略真相细节、留白悬疑）。
+- 文本由 GM AI 即兴生成、受 Principles 约束（声明后果在先、F2 双边护栏、可见性纪律）。**非团本包预设**（档位是 GM 按当前局势声明的，非作者预写）。
 
-**3. 前端呈现（对接 RT-FE1 A2 原型）**
+**3. 下发控制（拍死·关键）**
 
-- 明骰内联 stream：掷骰前各档显示 `label + 区间`（narration 隐藏，防剧透未命中档）；掷骰后只显示命中档的 `narration`（简化结果）。
-- 未命中档的 narration **不显示**（避免剧透其他可能后果）。
+- **`plan` + `narration` 均随 `roll_staged` 全量下发前端**——bands 含完整 `{ label, min, max, plan, narration }`，后端不挑拣、不剥字段。**显隐全交 spoiler 档渲染**（对接 [RT-FE9](spoiler-tiering-and-dock-diy.md)「stream 全量下发、spoiler 是前端渲染层与 visible 正交」同款原则；plan 是 band 内字段、非独立 cell、**不走 visible 标记**）。
+- plan 虽含暗值 / 真相 / 剧透，但「该下发下发」——前端 spoiler 严格档不渲染即等同隐藏，与暗骰结果（[RT-FE6](hidden-roll-and-loregm-ws.md)）`visible=0` stream 照发同构。
+- plan 同时供后端驱动机械层：掷骰后据**命中档 plan** 执行 `sheet_update` / Front 推进等（plan 既是下发数据、也是机械驱动源，一物两用）。
+
+**4. 前端呈现（对接 RT-FE1 A2 原型 · spoiler 档渲染）**
+
+- 显隐纯由 spoiler 档决定（对接 RT-FE9），非「掷骰后才显」硬逻辑：
+
+| spoiler 档 | 骰前 | 掷骰后（命中档） | 未命中档 |
+|---|---|---|---|
+| **严格** | 各档只显 `label + 区间`（plan/narration 隐·防剧透） | 显 `narration`（plan 仍隐） | 不显 |
+| **宽松** | 各档显 `narration`（可见叙述·不含真相） | 显 `narration + plan` | 不显 |
+| **关闭** | 各档 `plan + narration` 全显（玩家自选剧透模式） | 同（已全显） | 全显（无所谓） |
 
 ### 决策与权衡
 
 | 项 | 定调 | 理由 |
 |----|------|------|
-| C1 方案 | A（RollBand 加 narration 字段） | 声明后果在先；数据就位 |
-| C2 narration 必填性 | 必填 | 档位无后果叙事 = 软着陆温床，校验拒 |
+| C1 方案 | A′（`plan` + `narration` 两字段） | 真相 / 可见分离；合一则泄露暗值或丢机械真相 |
+| C2 两字段必填 | 必填 | 档位无真实后果计划 = 机械层无驱动；无可见叙述 = 前端空 |
 | C3 文本来源 | GM 即兴声明（非团本预设） | 档位按局势动态声明，作者无法预写所有情形 |
-| C4 未命中档呈现 | 隐藏 narration | 防剧透其他后果 |
+| C4 `plan` 下发 | **随 band 全量下发**（不剥） | 该下发下发；显隐交 spoiler 档（对接 RT-FE9/FE6 同款） |
+| C5 `plan` 用途 | ① 前端 spoiler 渲染 ② 后端驱动机械层（命中档 sheet_update / Front） | 一物两用：下发数据 + 机械驱动源 |
+| C6 显隐机制 | 纯 spoiler 档渲染（严格隐 plan / 宽松骰后显 / 关闭全显） | 与 visible 正交；plan 非 cell 不走 visible 标记 |
+| C7 未命中档 | 严格 / 宽松档掷骰后不显；关闭档全显 | 防剧透其他后果 |
 
 ### 交付节点
 
-- **FE5-1**（shared）：`RollBandSchema` 加 `narration: string` 必填。
-- **FE5-2**（core/工具面）：`resolve_outcome` / `roll_staged` 工具入参 bands 每档要求 `narration`；缺失则校验失败。
-- **FE5-3**（后端 present）：pendingRoll 投影时下发 bands 含 narration。
-- **FE5-4**（前端）：明骰内联 stream 掷骰前显档位标签、掷骰后显命中档 narration。
-- 依赖：无后端承重依赖；与 RT-FE6（暗骰）正交。
+- **FE5-1**（shared）：`RollBandSchema` 加 `plan: string` + `narration: string` 两必填字段。
+- **FE5-2**（core/工具面）：`resolve_outcome` / `roll_staged` 工具入参 bands 每档要求 `plan` + `narration`；缺失则校验失败。
+- **FE5-3**（后端 present）：`roll_staged` 投影下发 bands 完整含 `plan + narration`（**不剥**）；掷骰后据命中档 `plan` 执行机械层（sheet_update / Front 推进）。
+- **FE5-4**（前端）：`plan + narration` 按 spoiler 档渲染（严格 / 宽松 / 关闭三档矩阵，见 §4）。
+- 依赖：与 RT-FE6（暗骰 visible=0 同款全量下发）/ RT-FE9（spoiler + visible 0/1 渲染层）联动；原单 narration 定调已修订为 A′。
 
 ---
 

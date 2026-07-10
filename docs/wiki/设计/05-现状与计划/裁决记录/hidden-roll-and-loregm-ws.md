@@ -1,6 +1,6 @@
 # 裁决：暗骰 WS 类型 + loregm 域 WS 事件规约（C 组·承重建模）
 
-- [ ] 用户已批准本裁决（勾上前视为未裁决，不可进交付波）
+- [X]  用户已批准本裁决（勾上前视为未裁决，不可进交付波）
 
 > **来源**：[`docs/tdd/acceptance-loop-2026-07-06/findings.md`](../../../../../tdd/acceptance-loop-2026-07-06/findings.md) RT-FE6 / RT-FE12。
 > **接口规约稿**：[`1-backend-interface.md`](../../../../../tdd/acceptance-loop-2026-07-06/1-backend-interface.md) §2 第 32 行（RT-FE6）、§5 第 80 行（`hidden_roll` 已规约占位·❌ 无实现）、§5.2（RT-FE12 草案五类）。
@@ -77,14 +77,15 @@
 
 ### 决策与权衡
 
-| 项 | 定调 | 理由 |
-|----|------|------|
-| C1 暗骰承载 | resolve 工具 `hidden:true` 入参 + 立即掷 + `hidden_roll` WS | pendingRoll 语义错位（Q1）；暗骰不等玩家 |
-| C2 pendingRoll.shape | **不扩** hidden 维度 | 暗骰不走 pendingRoll；shape 保持 outcome\|contest 仅明骰 |
-| C3 hidden_roll payload | `{eventId,label,result,dc?,band?}` 带完整结果 | 该下发下发；前端 spoiler 决定渲染多少（对接 spoiler-tiering §一） |
-| C4 暗骰结果 event | `kind=roll` + `visible=0`、stream 照发 | visible=0 是未披露标记非硬底线；stream 全量下发 |
-| C5 是否新增 event kind | 不新增 `hidden_roll` event kind | 通知层 vs 存储层分开命名 |
-| C6 暗骰与明骰流程隔离 | 暗骰不发 roll_staged/roll_committed | 那是明骰流程、混发会泄露 |
+
+| 项                     | 定调                                                       | 理由                                                               |
+| ---------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------ |
+| C1 暗骰承载            | resolve 工具`hidden:true` 入参 + 立即掷 + `hidden_roll` WS | pendingRoll 语义错位（Q1）；暗骰不等玩家                           |
+| C2 pendingRoll.shape   | **不扩** hidden 维度                                       | 暗骰不走 pendingRoll；shape 保持 outcome\|contest 仅明骰           |
+| C3 hidden_roll payload | `{eventId,label,result,dc?,band?}` 带完整结果              | 该下发下发；前端 spoiler 决定渲染多少（对接 spoiler-tiering §一） |
+| C4 暗骰结果 event      | `kind=roll` + `visible=0`、stream 照发                     | visible=0 是未披露标记非硬底线；stream 全量下发                    |
+| C5 是否新增 event kind | 不新增`hidden_roll` event kind                             | 通知层 vs 存储层分开命名                                           |
+| C6 暗骰与明骰流程隔离  | 暗骰不发 roll_staged/roll_committed                        | 那是明骰流程、混发会泄露                                           |
 
 ### 交付节点
 
@@ -115,13 +116,14 @@
 
 v1 做五类 + error：
 
-| `type` | payload | 触发 | 说明 |
-|---|---|---|---|
-| `turn_started` | `{turnId}` | `send_to_builder` 收到指令、开始一轮 | 同 dicegm 回合骨架 |
-| `turn_ended` | `{turnId, seq}` | build GM 一轮跑完 | 对接 `get_draft` 可回读 |
-| `toolcall` | `{tool, args, result?, ok}` | build GM 每调一次 `write_lore`/`add_npc`/`add_pool`/`write_rule`/`set_manifest`… | 前端「显示调了哪些工具」 |
-| `draft_delta` | `{seq, changes}` | build GM 写 Draft（onBuilderWrite hook） | 即写即读刷新、对齐 `GET …/draft` 分域结构 |
-| `error` | `{code, message}` | 构建出错 | 同 dicegm |
+
+| `type`         | payload                     | 触发                                                                             | 说明                                      |
+| -------------- | --------------------------- | -------------------------------------------------------------------------------- | ----------------------------------------- |
+| `turn_started` | `{turnId}`                  | `send_to_builder` 收到指令、开始一轮                                             | 同 dicegm 回合骨架                        |
+| `turn_ended`   | `{turnId, seq}`             | build GM 一轮跑完                                                                | 对接`get_draft` 可回读                    |
+| `toolcall`     | `{tool, args, result?, ok}` | build GM 每调一次`write_lore`/`add_npc`/`add_pool`/`write_rule`/`set_manifest`… | 前端「显示调了哪些工具」                  |
+| `draft_delta`  | `{seq, changes}`            | build GM 写 Draft（onBuilderWrite hook）                                         | 即写即读刷新、对齐`GET …/draft` 分域结构 |
+| `error`        | `{code, message}`           | 构建出错                                                                         | 同 dicegm                                 |
 
 - `validate_result`（§5.2 草案第 5 类）**推后 v2**：RT-FE11 同步端点 `POST /draft/validate` 已覆盖 on-demand 校验；WS 自动推送校验报告是锦上添花、非 v1 必需。
 
@@ -140,14 +142,15 @@ v1 做五类 + error：
 
 ### 决策与权衡
 
-| 项 | 定调 | 理由 |
-|----|------|------|
-| C1 通道 | 复用 dicegm WS（`GET /sessions/loregm/{id}/ws`） | 基础设施已建、低成本（Q3） |
-| C2 v1 事件范围 | turn_started/turn_ended/toolcall/draft_delta/error 五类 | validate_result 推后 v2（Q4） |
-| C3 toolcall 实现 | build-mcp 工具调用 hook | 类缝A、对称 dicegm onCanonWrite |
-| C4 draft_delta 实现 | onBuilderWrite hook → 分域 delta | 即写即读、对齐 get_draft 分域 |
-| C5 schema 拆分 | 拆 DiceStreamMessage / LoreStreamMessage | 类型清晰、前端按 kind 切 |
-| C6 validate_result | v2 | RT-FE11 同步端点已覆盖 on-demand |
+
+| 项                  | 定调                                                    | 理由                             |
+| ------------------- | ------------------------------------------------------- | -------------------------------- |
+| C1 通道             | 复用 dicegm WS（`GET /sessions/loregm/{id}/ws`）        | 基础设施已建、低成本（Q3）       |
+| C2 v1 事件范围      | turn_started/turn_ended/toolcall/draft_delta/error 五类 | validate_result 推后 v2（Q4）    |
+| C3 toolcall 实现    | build-mcp 工具调用 hook                                 | 类缝A、对称 dicegm onCanonWrite  |
+| C4 draft_delta 实现 | onBuilderWrite hook → 分域 delta                       | 即写即读、对齐 get_draft 分域    |
+| C5 schema 拆分      | 拆 DiceStreamMessage / LoreStreamMessage                | 类型清晰、前端按 kind 切         |
+| C6 validate_result  | v2                                                      | RT-FE11 同步端点已覆盖 on-demand |
 
 ### 交付节点
 

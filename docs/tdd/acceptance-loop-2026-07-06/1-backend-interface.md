@@ -29,7 +29,7 @@
 | 转移/需求 | 理想接口 | 期望响应 | wiki | 现状 |
 |---|---|---|---|---|
 | 待选→下一回合 | `POST …/choices {eventId, optionIndex}` | `202 {turnId}` | 接口§2 | ⚠️ 语义矛盾必真跑（绕路 vs 已修）=**RT2** |
-| 明骰/暗骰 | `POST …/roll {eventId}` | `202`；无待掷 `409` | 接口§2 | ✅。`pendingRoll` 期望形状：`{eventId, shape, label, yourSide, dc?, bands:[{label,min,max,**narration**}]}`（per-band narration=**RT-FE5**）；暗骰标记=**RT-FE6**（shape 加 `hidden` 维度或独立 `hidden:true`·只说进行了判定不显结果/DC） |
+| 明骰/暗骰 | `POST …/roll {eventId}` | `202`；无待掷 `409` | 接口§2 | ✅。`pendingRoll` 期望形状：`{eventId, shape, label, yourSide, dc?, bands:[{label,min,max,**plan**,**narration**}]}`（per-band plan=AI真实计划+narration=玩家可见=**RT-FE5·A′修订**）；暗骰标记=**RT-FE6**（shape 加 `hidden` 维度或独立 `hidden:true`·只说进行了判定不显结果/DC） |
 | 呈现快照 | `GET …/presentation` | §1 全量快照（**现仅 `sheets` entity→cell**·plotline/world 投影下发缺口=**RT-FE4**·前端暂借 sheet cell 承载） | 接口§1/§2 | ✅(sheets) / ⚠️ plotline+world=待扩 |
 | 重连回填 | `GET …/events?since=&visibleOnly=` | `{events[]}` | 接口§2 | ✅（代码领先，wiki §2 待纠）。防剧透 spoiler 档=前端渲染层（每行为按档渲染·与 visible 正交）、visible 0/1 是 AI note+dock-card 显示依据（非硬底线）、stream/events 全量下发含 visible=0、档位存 session-meta 经统一 `POST …/config` 读写、bay visible=0 关闭档按需拉+分页=**RT-FE9**（修正原零端点/硬底线定调） |
 | 源浏览 | `GET …/browse?source=world\|rule\|log&q=` | 命中条目 | 接口§9.4 | ✅ |
