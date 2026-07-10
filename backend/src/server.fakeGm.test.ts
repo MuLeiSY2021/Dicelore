@@ -41,13 +41,16 @@ async function post(app: ReturnType<typeof createLiveApp>, path: string, body: u
 afterEach(() => { for (const id of usedIds) removeHost(id); usedIds.clear(); });
 
 describe("FAKE_GM 工厂经 HTTP 打通 dice 五主线", () => {
-  it("暗骰:POST messages「暗骰」→ 引擎立即掷,presentation.mechanics 现 verdict", async () => {
+  it("暗骰:POST messages「暗骰」→ 引擎立即掷,结果 visible=0 对玩家隐(不入 presentation.mechanics)", async () => {
     const { app, dbOf } = liveApp(); const id = "fk-hidden"; usedIds.add(id);
     const res = await post(app, `/sessions/dicegm/${id}/messages`, { text: "我要暗骰查探" });
     expect(res.status).toBe(202);
+    // 暗骰结果 event visible=0:确落库(引擎立即掷),但对玩家可见的 presentation.mechanics 不含它。
+    const verdictRow = dbOf(id).prepare("SELECT visible FROM log WHERE kind='verdict'").get() as { visible: number } | undefined;
+    expect(verdictRow?.visible).toBe(0);
     const snap = await (await app.request(`/sessions/dicegm/${id}/presentation`)).json();
     const verdicts = snap.mechanics.filter((m: { kind: string }) => m.kind === "verdict");
-    expect(verdicts.length).toBeGreaterThan(0);
+    expect(verdicts.length).toBe(0);
     // 未挂起明骰(暗骰不占 pending_roll)。
     const pr = dbOf(id).prepare("SELECT COUNT(*) c FROM pending_roll WHERE status='awaiting'").get() as { c: number };
     expect(pr.c).toBe(0);

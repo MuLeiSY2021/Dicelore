@@ -42,21 +42,25 @@ export function makeResolverTools(backend: SessionBackend): ToolDef[] {
   function outcomeHandler(_: unknown, input: { context: string; die: string; bands: any[] }) {
     const r = resolveOutcome(input.die, input.bands);
     // data_json 存整档(含 plan+narration)——命中档 plan 是机械驱动源(RT-FE5 FE5-3)。
+    // 暗骰:结果 event visible=0(对玩家隐、未披露暗值;stream 照发,前端按 spoiler 档渲染)。
     const event_id = backend.logAppend({
       kind: "verdict",
       content: input.context,
+      visible: 0,
       data_json: { context: input.context, die: r.die, roll: r.roll, band: r.band },
     });
-    // 出参 band.consequence = 命中档真实后果计划(plan);向后兼容旧单一 consequence 字段。
-    return { roll: r.roll, die: r.die, band: { label: r.band.label, consequence: bandTruth(r.band) }, event_id };
+    // 出参 band.consequence = 命中档真实后果计划(plan);向后兼容旧单一 consequence 字段。context 供暗骰 WS emit。
+    return { roll: r.roll, die: r.die, band: { label: r.band.label, consequence: bandTruth(r.band) }, event_id, context: input.context };
   }
 
   function contestHandler(_: unknown, input: { context: string; a: any; b: any }) {
     const r = backend.resolveContest(input.a, input.b);
     const rolls = (s: typeof r.a) => s.ledger.terms.flatMap((t) => t.rolls ?? []);
+    // 暗骰:结果 event visible=0(对玩家隐;stream 照发,前端按 spoiler 档渲染)。
     const event_id = backend.logAppend({
       kind: "verdict",
       content: input.context,
+      visible: 0,
       data_json: { context: input.context, a: r.a, b: r.b, winner: r.winner },
     });
     return {
@@ -64,6 +68,7 @@ export function makeResolverTools(backend: SessionBackend): ToolDef[] {
       b: { name: r.b.name, total: r.b.ledger.total, rolls: rolls(r.b) },
       winner: r.winner,
       event_id,
+      context: input.context,
     };
   }
 

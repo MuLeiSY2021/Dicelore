@@ -36,6 +36,40 @@ describe("mapCanonWrite", () => {
     if (msg?.type === "roll_committed") expect(msg.outcome).toBe("成功");
   });
 
+  // RT-FE6：暗骰 resolve_outcome_hidden → hidden_roll(带 label/result/band),不塌成 presentation_delta。
+  it("resolve_outcome_hidden → hidden_roll(label=context, result=roll, band 完整)", () => {
+    const evt: CanonWriteEvent = {
+      kind: "event", seq: 50, toolName: "resolve_outcome_hidden",
+      output: { roll: 73, die: "1d100", band: { label: "成功", consequence: "识破" }, event_id: 50, context: "暗中检定谎言" },
+    };
+    const msg = mapCanonWrite(evt);
+    expect(msg?.type).toBe("hidden_roll");
+    if (msg?.type === "hidden_roll") {
+      expect(msg.eventId).toBe(50);
+      expect(msg.label).toBe("暗中检定谎言");
+      expect(msg.result).toBe(73);
+      expect(msg.band?.label).toBe("成功");
+      expect(msg.band?.consequence).toBe("识破");
+    }
+  });
+
+  // RT-FE6：暗骰 resolve_contest_hidden → hidden_roll(result=a.total, dc=b.total, band.label=winner 语义)。
+  it("resolve_contest_hidden → hidden_roll(result=a.total, dc=b.total, winner→band.label)", () => {
+    const evt: CanonWriteEvent = {
+      kind: "event", seq: 60, toolName: "resolve_contest_hidden",
+      output: { a: { name: "张三", total: 18, rolls: [18] }, b: { name: "DC", total: 15, rolls: [] }, winner: "a", event_id: 60, context: "暗中掰手腕" },
+    };
+    const msg = mapCanonWrite(evt);
+    expect(msg?.type).toBe("hidden_roll");
+    if (msg?.type === "hidden_roll") {
+      expect(msg.eventId).toBe(60);
+      expect(msg.label).toBe("暗中掰手腕");
+      expect(msg.result).toBe(18);
+      expect(msg.dc).toBe(15);
+      expect(msg.band?.label).toBe("success");
+    }
+  });
+
   // A1：narrate 是 narration 的单一来源 —— narrate event → narration_commit(text=event content)。
   it("narrate(kind=event) → narration_commit(text=event content, seq=全局 event seq)", () => {
     const evt: CanonWriteEvent = {
