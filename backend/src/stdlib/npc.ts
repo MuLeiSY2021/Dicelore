@@ -26,6 +26,15 @@ import type { ToolDef } from "@dicelore/interface";
 //     入参＝硬编码 handler，破 DT-9，故不走；任意即兴 attr 仍可用裸 sheet_update 兜底）。
 export const npcToolDecls: ToolDecl[] = [
   {
+    // 类型化读（A′ §4）：kind 由工具名携带、查 npc 视图（store/views.ts `WHERE kind='npc'`）。
+    // 投影带 `'npc' AS kind` 常量列——回给 GM 的每行显式携带 kind=npc（自证归属，替代已删的裸 sheet_list）。
+    name: "npc_list",
+    desc:
+      "列出全部 NPC 的卡格（kind=npc 全投影）。无参。Returns: 行数组 {entity, attr, value, visible, kind}（kind 恒 'npc'）。" +
+      "use: 盘点在场 NPC / 查某 NPC 属性。don't: 读玩家卡(用 player_card)/读世界态(用 world_state)。错误: 入参非法→BAD_INPUT。",
+    sql: "SELECT entity, attr, value, visible, 'npc' AS kind FROM npc ORDER BY entity, attr",
+  },
+  {
     name: "npc_register",
     desc:
       "登记一个 NPC（写其简介，落 kind=npc 首行，使该实体进入 npc 视图）。Args: npc(实体名)、简介。" +

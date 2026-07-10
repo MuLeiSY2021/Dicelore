@@ -18,24 +18,13 @@ function freshDb() { const db = openDb(":memory:"); initSchema(db); return db; }
 // 内置工具 handler 经注入 SessionBackend 调存储——按 db 造工具、handler 忽略传入的 db 形参。
 const byName = (db: any, n: string) => makeSheetTools(openSessionBackend(db)).find((t) => t.name === n)!;
 
-describe("sheet handlers", () => {
-  it("sheet_get:命中返回 value+visible;缺失返回 {value:null,visible:0}", () => {
+describe("sheet handlers（A′ §4：仅剩即兴兜底写 sheet_update）", () => {
+  it("裸 sheet_get / sheet_list 已删（类型化读替代）", () => {
     const db = freshDb();
-    stateSet(db, "张三", "HP", "30", 1);
-    expect(byName(db, "sheet_get").handler(db, { entity: "张三", attr: "HP" })).toEqual({ value: "30", visible: 1 });
-    expect(byName(db, "sheet_get").handler(db, { entity: "张三", attr: "无" })).toEqual({ value: null, visible: 0 });
-  });
-
-  it("sheet_list:前缀扫 + 分页字段", () => {
-    const db = freshDb();
-    stateSet(db, "张三", "库存:剑", "1");
-    stateSet(db, "张三", "库存:盾", "1");
-    stateSet(db, "张三", "库存:药", "3");
-    const out = byName(db, "sheet_list").handler(db, { entity: "张三", prefix: "库存:", limit: 2, offset: 0 });
-    expect(out.cells).toHaveLength(2);
-    expect(out.has_more).toBe(true);
-    expect(out.next_offset).toBe(2);
-    expect(out.truncated).toBe(false);
+    const names = makeSheetTools(openSessionBackend(db)).map((t) => t.name);
+    expect(names).toEqual(["sheet_update"]);
+    expect(names).not.toContain("sheet_get");
+    expect(names).not.toContain("sheet_list");
   });
 
   it("sheet_update:落 mutation event 透传 event_id + applied 账本", () => {
@@ -50,6 +39,17 @@ describe("sheet handlers", () => {
     expect(typeof out.event_id).toBe("number");
     expect(stateGet(db, "张三", "HP")?.value).toBe("25");
     expect(logSince(db, 0).filter((e) => e.kind === "mutation")).toHaveLength(1);
+  });
+
+  it("sheet_update:即兴写新 attr 默认落 kind=world（C4 兜底口径）", () => {
+    const db = freshDb();
+    // 全新实体/属性，无 kind 标注 → applyMutations 默认 kind=world
+    byName(db, "sheet_update").handler(db, {
+      entity: "村口古井",
+      mutations: [{ attr: "水位", op: "=", expr: "3" }],
+    });
+    const worldRows = db.prepare("SELECT entity, attr, value FROM world WHERE entity='村口古井'").all() as any[];
+    expect(worldRows).toContainEqual(expect.objectContaining({ entity: "村口古井", attr: "水位", value: "3" }));
   });
 
   it("sheet_update:非数值算术抛 NOT_NUMERIC(整批回滚由内层保证)", () => {
