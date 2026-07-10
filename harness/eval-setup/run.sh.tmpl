@@ -53,7 +53,9 @@ read_config_port() {
 if [ -n "$PORT_OVERRIDE" ]; then
   PORT="$PORT_OVERRIDE"
 else
-  PORT="$(read_config_port)"
+  # read_config_port 内部 grep 无匹配会返 1(PORT 注释态即如此),
+  # set -e+pipefail 下会让本行赋值判失败静默 exit 1 —— || true 保底,落默认端口。
+  PORT="$(read_config_port || true)"
   [ -n "${PORT:-}" ] || PORT=8787
 fi
 
