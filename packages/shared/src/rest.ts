@@ -42,11 +42,13 @@ export const SessionInfoSchema = z.object({
   title: z.string(),
 });
 // GET /sessions/{kind}/:id/events 的 wire 契约（dice.ts 端点；当前 body 内联构造、未经 Schema parse）。
+// spoiler-tiering §一.2：events 全量下发含 visible=0，随事件带 visible 字段供前端按 spoiler 档渲染。
 export const EventRowSchema = z.object({
   seq: z.number(),
   kind: z.string(),
   text: z.string(),
   data: z.unknown().optional(),
+  visible: z.number().optional(),
 });
 export const EventsResponseSchema = z.object({ events: z.array(EventRowSchema) });
 
