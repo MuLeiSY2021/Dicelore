@@ -58,7 +58,7 @@ export { exportGit, importGit } from "./catalog/index.js";
 
 // ===== 团本构建层（P5）=====
 export { Draft, commitDraft, type StateCell } from "./build/draft.js";
-export { createBuildMcpServer, invokeBuildTool, type BuildCtx, BUILD_SCHEMAS } from "./build/buildMcp.js";
+export { createBuildMcpServer, invokeBuildTool, type BuildCtx, type BuildHooks, type BuildToolcallEvent, type BuildWriteEvent, BUILD_SCHEMAS } from "./build/buildMcp.js";
 
 // ===== 运行时只读浏览（组件7 跑团页左活动轨自查源；additive 只读，不改引擎） =====
 export { loreSearch, loreGet, type Lore } from "./store/world/world.js";

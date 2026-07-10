@@ -77,32 +77,40 @@ export class Draft {
   private manifestName?: string;
   private manifestId?: string;
   private prologueText?: string;
+  // 修订号：每次写操作 +1。loregm WS 的 draft_delta.seq / turn_ended.seq 取此值（对接 get_draft 可回读）。
+  // 只读暴露；toPackFiles/snapshot 不含它（额外元信息、不进包）。
+  private _seq = 0;
+  get seq(): number { return this._seq; }
+  private bump(): void { this._seq += 1; }
 
   setManifest(a: { name?: string; id?: string }): void {
     if (a.name) this.manifestName = a.name;
     if (a.id) this.manifestId = a.id;
+    this.bump();
   }
 
   /** 设置团本开场白 prompt（必填）。同名覆盖，幂等。 */
-  setPrologue(text: string): void { this.prologueText = text; }
-  writeLore(name: string, content: string): void { this.loreDocs.set(name, content); }
-  writeRule(name: string, content: string): void { this.ruleDocs.set(name, content); }
+  setPrologue(text: string): void { this.prologueText = text; this.bump(); }
+  writeLore(name: string, content: string): void { this.loreDocs.set(name, content); this.bump(); }
+  writeRule(name: string, content: string): void { this.ruleDocs.set(name, content); this.bump(); }
   addPool(pool: string, rows: Record<string, string | number>[]): void {
     const e = this.pools.get(pool) ?? [];
     e.push(...rows);
     this.pools.set(pool, e);
+    this.bump();
   }
-  setState(cells: StateCell[]): void { this.stateRows.push(...cells); }
+  setState(cells: StateCell[]): void { this.stateRows.push(...cells); this.bump(); }
 
   /** 累积一个 Front(阵线)。相同 id 的后调用覆盖前调用(幂等写)。产出 fronts/<id>.md（正典 md 格式）。 */
   addFront(spec: FrontSpec): void {
     this.fronts.set(spec.id, spec);
+    this.bump();
   }
 
   // 叙事域(团本作者声明的一等对象): plotline 故事线 / foreshadow 伏笔 / anchor 关系。
-  addPlotline(rows: { id: string; title: string; summary?: string; status?: string }[]): void { this.plotlines.push(...rows); }
-  addForeshadow(rows: { id: string; content: string; status?: string }[]): void { this.foreshadows.push(...rows); }
-  addAnchor(rows: { owner_table: string; owner_id: string; target_table: string; target_id: string; role?: string }[]): void { this.anchors.push(...rows); }
+  addPlotline(rows: { id: string; title: string; summary?: string; status?: string }[]): void { this.plotlines.push(...rows); this.bump(); }
+  addForeshadow(rows: { id: string; content: string; status?: string }[]): void { this.foreshadows.push(...rows); this.bump(); }
+  addAnchor(rows: { owner_table: string; owner_id: string; target_table: string; target_id: string; role?: string }[]): void { this.anchors.push(...rows); this.bump(); }
 
   /** 回读 Draft 当前内容(供 read 工具)。 */
   snapshot(): {
