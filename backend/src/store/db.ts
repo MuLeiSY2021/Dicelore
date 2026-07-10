@@ -74,15 +74,18 @@ export function initSchema(db: DB): void {
     );
     CREATE TABLE IF NOT EXISTS front (
       id TEXT PRIMARY KEY, name TEXT NOT NULL, stakes TEXT,
-      clock_ref TEXT, status TEXT NOT NULL DEFAULT 'active'
+      clock_ref TEXT, status TEXT NOT NULL DEFAULT 'active',
+      visible INTEGER NOT NULL DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS plotline (
       id TEXT PRIMARY KEY, title TEXT NOT NULL, summary TEXT,
-      status TEXT NOT NULL DEFAULT 'open'
+      status TEXT NOT NULL DEFAULT 'open',
+      visible INTEGER NOT NULL DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS foreshadow (
       id TEXT PRIMARY KEY, content TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'planted'
+      status TEXT NOT NULL DEFAULT 'planted',
+      visible INTEGER NOT NULL DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS history (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -145,6 +148,16 @@ export function initSchema(db: DB): void {
   const snapCols = db.prepare("PRAGMA table_info(snapshot)").all() as { name: string }[];
   if (!snapCols.some((c) => c.name === "transcript_anchor")) {
     db.exec("ALTER TABLE snapshot ADD COLUMN transcript_anchor TEXT");
+  }
+
+  // ===== A′ §1 迁移：既有 db 的叙事三表补 visible 列 =====
+  // visible 与 status 正交（核心概念 §2.4）：0 默认隐 / 1 已 show / 2 强制隐暗值，同构 state/lore/pool。
+  // CREATE TABLE IF NOT EXISTS 不给已存在的表加列；对迁移前建的库幂等补列（旧行取默认 0）。
+  for (const t of ["front", "plotline", "foreshadow"]) {
+    const cols = db.prepare(`PRAGMA table_info(${t})`).all() as { name: string }[];
+    if (!cols.some((c) => c.name === "visible")) {
+      db.exec(`ALTER TABLE ${t} ADD COLUMN visible INTEGER NOT NULL DEFAULT 0`);
+    }
   }
 
   // ===== FTS5 全文检索虚表(Plan 2)=====

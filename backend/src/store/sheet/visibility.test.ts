@@ -12,7 +12,10 @@ import { initSchema, openDb, type DB } from "../db.js";
 import { stateGet, stateSet } from "./state.js";
 import { logSince } from "../event/record.js";
 import { loreUpsert, poolAdd } from "../world/world.js";
-import { revealOnce, sheetShow, worldShow } from "./visibility.js";
+import { revealOnce, sheetShow, worldShow, narrativeShow, narrativeRevealOnce } from "./visibility.js";
+import { frontUpsert, frontGet } from "../narrative/front.js";
+import { plotlineUpsert, plotlineGet } from "../narrative/plotline.js";
+import { foreshadowUpsert, foreshadowGet } from "../narrative/foreshadow.js";
 import { DiceloreError } from "@dicelore/errors";
 
 let db: DB;
@@ -63,6 +66,54 @@ describe("revealOnce", () => {
     expect(JSON.parse(ev.data_json!)).toMatchObject({ kind: "sheet", entity: "张三", attr: "真名", value: "赵四" });
     // 目标底层仍隐
     expect(stateGet(db, "张三", "真名")!.visible).toBe(0);
+  });
+});
+
+describe("narrativeShow（A′ §1：show 扩到叙事三表，C1 整行粒度）", () => {
+  test("plant foreshadow(visible=0) → show → visible=1 + 审计 note(对玩家隐)", () => {
+    foreshadowUpsert(db, { id: "井中影", content: "水中映出陌生的脸" });
+    expect(foreshadowGet(db, "井中影")!.visible).toBe(0);
+    narrativeShow(db, "foreshadow", "井中影");
+    expect(foreshadowGet(db, "井中影")!.visible).toBe(1);
+    const note = logSince(db, 0).find((e) => e.kind === "note");
+    expect(note!.visible).toBe(0);
+  });
+
+  test("show front / plotline 整行置 visible=1", () => {
+    frontUpsert(db, { id: "魔道入侵", name: "魔道入侵" });
+    plotlineUpsert(db, { id: "护山之争", title: "护山之争" });
+    narrativeShow(db, "front", "魔道入侵");
+    narrativeShow(db, "plotline", "护山之争");
+    expect(frontGet(db, "魔道入侵")!.visible).toBe(1);
+    expect(plotlineGet(db, "护山之争")!.visible).toBe(1);
+  });
+
+  test("暗值 visible=2 焊死,show 不揭", () => {
+    foreshadowUpsert(db, { id: "底牌伏笔", content: "隐藏杀招" });
+    db.prepare("UPDATE foreshadow SET visible=2 WHERE id='底牌伏笔'").run();
+    narrativeShow(db, "foreshadow", "底牌伏笔");
+    expect(foreshadowGet(db, "底牌伏笔")!.visible).toBe(2);
+  });
+
+  test("不存在的叙事行 → 抛 ENTITY_NOT_FOUND", () => {
+    expect(() => narrativeShow(db, "plotline", "无此线")).toThrow(DiceloreError);
+  });
+});
+
+describe("narrativeRevealOnce（A′ §1：reveal_once 扩到叙事三表）", () => {
+  test("append kind=reveal 可见 event 存内容冻结值,不碰目标 visible", () => {
+    foreshadowUpsert(db, { id: "井中影", content: "水中映出陌生的脸" });
+    const seq = narrativeRevealOnce(db, "foreshadow", "井中影");
+    const ev = logSince(db, 0).find((e) => e.seq === seq)!;
+    expect(ev.kind).toBe("reveal");
+    expect(ev.visible).toBe(1);
+    expect(JSON.parse(ev.data_json!)).toMatchObject({ kind: "foreshadow", id: "井中影" });
+    // 目标底层仍隐
+    expect(foreshadowGet(db, "井中影")!.visible).toBe(0);
+  });
+
+  test("不存在的叙事行 → 抛 ENTITY_NOT_FOUND", () => {
+    expect(() => narrativeRevealOnce(db, "front", "无此线")).toThrow(DiceloreError);
   });
 });
 

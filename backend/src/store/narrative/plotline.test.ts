@@ -18,8 +18,15 @@ describe("plotline store", () => {
   test("upsert 后 get（默认 status=open）", () => {
     plotlineUpsert(db, { id: "护山之争", title: "护山之争", summary: "魔道入侵大阵" });
     expect(plotlineGet(db, "护山之争")).toMatchObject({
-      id: "护山之争", title: "护山之争", summary: "魔道入侵大阵", status: "open",
+      id: "护山之争", title: "护山之争", summary: "魔道入侵大阵", status: "open", visible: 0,
     });
+  });
+  test("upsert 默认 visible=0；重复 upsert 不复位已 show 的 visible", () => {
+    plotlineUpsert(db, { id: "p1", title: "剧情1" });
+    expect(plotlineGet(db, "p1")!.visible).toBe(0);
+    db.prepare("UPDATE plotline SET visible=1 WHERE id='p1'").run();
+    plotlineUpsert(db, { id: "p1", title: "剧情1改", summary: "新摘要" }); // 二次 upsert
+    expect(plotlineGet(db, "p1")!.visible).toBe(1); // show 过的 visible 不被 upsert 抹回 0
   });
   test("setStatus 改 resolved；list 返回全部", () => {
     plotlineUpsert(db, { id: "p1", title: "剧情1" });

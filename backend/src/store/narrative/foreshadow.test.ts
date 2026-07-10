@@ -15,11 +15,18 @@ let db: DB;
 beforeEach(() => { db = openDb(":memory:"); initSchema(db); });
 
 describe("foreshadow store", () => {
-  test("upsert 后 get（默认 status=planted）", () => {
+  test("upsert 后 get（默认 status=planted，visible=0）", () => {
     foreshadowUpsert(db, { id: "井中影", content: "水中映出一张陌生的脸" });
     expect(foreshadowGet(db, "井中影")).toMatchObject({
-      id: "井中影", content: "水中映出一张陌生的脸", status: "planted",
+      id: "井中影", content: "水中映出一张陌生的脸", status: "planted", visible: 0,
     });
+  });
+  test("upsert 默认 visible=0；重复 upsert 不复位已 show 的 visible", () => {
+    foreshadowUpsert(db, { id: "fs1", content: "伏笔1" });
+    expect(foreshadowGet(db, "fs1")!.visible).toBe(0);
+    db.prepare("UPDATE foreshadow SET visible=1 WHERE id='fs1'").run();
+    foreshadowUpsert(db, { id: "fs1", content: "伏笔1改" });
+    expect(foreshadowGet(db, "fs1")!.visible).toBe(1);
   });
   test("setStatus 改 recalled；list 返回全部", () => {
     foreshadowUpsert(db, { id: "fs1", content: "伏笔1" });
