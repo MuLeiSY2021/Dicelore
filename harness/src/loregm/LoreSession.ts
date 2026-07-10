@@ -12,9 +12,14 @@ import { CLIENT_PROTOCOL, type LoreStreamMessage } from "@dicelore/shared";
 import type { AgentFactory, PluginRef, BuildInvoke, TurnUsage } from "../runtime/agent.js";
 import type { Session, TurnResult } from "../runtime/session.js";
 import type { WsHub } from "../runtime/wsHub.js";
+import type { SessionConfig, SessionConfigUpdate, SpoilerTier } from "@dicelore/shared";
+import { getLogger } from "@dicelore/logs";
 
 let loreTurnCounter = 0;
 function nextTurnId(id: string): string { loreTurnCounter += 1; return `${id}-l${loreTurnCounter}`; }
+
+// DiceGm 的模型回退链同源默认（init.model ?? env ?? "glm-5.2"）——loregm 无 deps.model，getConfig 回显同一有效值。
+const DEFAULT_GM_MODEL = "glm-5.2";
 
 export interface LoreSessionDeps {
   // 构建 MCP server 由组合根(backend/api/lore)建好注入(BUILD_TOOLS over Draft+Catalog)——
@@ -41,6 +46,14 @@ export interface LoreSessionDeps {
 export class LoreSession implements Session {
   readonly kind = "lore" as const;
   readonly mcpServer: McpServer;
+  // 统一 session config（model-switch + spoiler-tiering，两 kind 都支持——C2）。loregm 无 session.db，
+  // 故 config 存内存态（会话对象生命周期内有效；进程重启后 loreReg 空、会话本就需重建，无持久化需求）。
+  //   · currentModel —— 本回合生效模型（未设 → 回退 env / 默认，与 DiceGm 一致）。
+  //   · pendingModel —— 已排队、下回合起切的模型（model 下回合生效）。
+  //   · spoilerTier  —— 防剧透档（默认 strict），立即生效。
+  private currentModel?: string;
+  private pendingModel?: string;
+  private spoilerTier: SpoilerTier = "strict";
   constructor(public sessionId: string, private deps: LoreSessionDeps) {
     this.mcpServer = deps.mcpServer;
   }
@@ -49,10 +62,33 @@ export class LoreSession implements Session {
     this.deps.hub?.broadcast(this.sessionId, msg);
   }
 
+  // model-switch：下回合生效——drive-turn 开始时若有 pending 则提升为 current 并清空。
+  private promotePendingModel(): void {
+    if (this.pendingModel) {
+      this.currentModel = this.pendingModel;
+      this.pendingModel = undefined;
+      getLogger().info({ sessionId: this.sessionId, model: this.currentModel }, "loregm model 切换生效（pending→current，本回合起）");
+    }
+  }
+
+  // 统一 config 读（GET /sessions/loregm/{id}/config）。
+  getConfig(): SessionConfig {
+    const model = this.currentModel ?? process.env.DICELORE_GM_MODEL ?? DEFAULT_GM_MODEL;
+    return { model, spoilerTier: this.spoilerTier, ...(this.pendingModel ? { pendingModel: this.pendingModel } : {}) };
+  }
+
+  // 统一 config 写（POST /sessions/loregm/{id}/config，部分更新）：model 下回合生效、spoilerTier 立即生效。
+  setConfig(update: SessionConfigUpdate): void {
+    if (update.model !== undefined) this.pendingModel = update.model;
+    if (update.spoilerTier !== undefined) this.spoilerTier = update.spoilerTier;
+  }
+  }
+
   // 返回 {turnId, error?}:构建 agent 中途 error(LLM 失败/工具异常/FakeDiceGm error 档)不再被吞——
   // 循环捕获 ev.type==="error" 记 { message, code? }、turn_end 时不带 error。error 属领域级,
   // 调用方(api/lore POST messages、build-mcp doSendToBuilder)以 body.error 存在与否判成败(HTTP 保持 200/202)。
   async handleMessage(text: string): Promise<TurnResult> {
+    this.promotePendingModel(); // model-switch：下回合生效——drive-turn 开始先提升 pending→current
     const turnId = nextTurnId(this.sessionId);
     this.emit({ protocol: CLIENT_PROTOCOL, type: "turn_started", turnId });
     const driver = this.deps.agentFactory({
@@ -60,6 +96,7 @@ export class LoreSession implements Session {
       openingPrompt: this.deps.buildPrompt ?? process.env.DICELORE_BUILD_PROMPT ?? "",
       plugin: this.deps.plugin,
       workspace: this.deps.workspace,
+      model: this.currentModel, // model-switch：切换后的模型（未切 → undefined，DiceGm 回退 env/默认）
       // 可观测性:与 dicegm 同源——透传 sessionId + sessionsDir(=dataDir) + kind:'lore',
       // 适配器(DiceGm)据 sessionDir(dataDir,'lore',sessionId) 建 kind:'lore' 的 SessionTranscript,
       // loregm 对话记录落 <dataDir>/sessions/lore/<id>/<id>_session.jsonl(带外落盘,不改 REST 返回形状)。

@@ -72,6 +72,26 @@ export const SessionsListResponseSchema = z.object({ sessions: z.array(SessionSu
 export const RollRequestSchema = z.object({ eventId: z.number() });
 export const RollResponseSchema = z.object({ turnId: z.string() });
 
+// 防剧透档位（spoiler-tiering-and-dock-diy §一）：前端渲染档，默认严格。
+export const SpoilerTierSchema = z.enum(["strict", "loose", "off"]);
+
+// 统一 session config 端点（model-switch + spoiler-tiering + usage-and-context 三份裁决协同）：
+//   POST /sessions/{kind}/{id}/config —— 部分更新 body，只传要改的字段。
+//   · model       → 设 pendingModel、下回合 drive-turn 起生效（effectiveAt:"next-turn"）。
+//   · spoilerTier → 存 session-meta、立即生效（前端下次渲染按新档）。
+// 两 kind 都支持（dicegm 存 session_meta 持久化 / loregm 内存态，见各 Session 实现）。
+export const SessionConfigUpdateSchema = z.object({
+  model: z.string().optional(),
+  spoilerTier: SpoilerTierSchema.optional(),
+});
+// 统一 config 读回 / POST 后的完整 config 响应：
+//   model = 本回合生效模型（currentModel）；pendingModel = 已排队、下回合才切的模型（无待切则省略）。
+export const SessionConfigSchema = z.object({
+  model: z.string(),
+  spoilerTier: SpoilerTierSchema,
+  pendingModel: z.string().optional(),
+});
+
 export type SessionKind = z.infer<typeof SessionKindSchema>;
 export type SessionStatus = z.infer<typeof SessionStatusSchema>;
 export type MessageRequest = z.infer<typeof MessageRequestSchema>;
@@ -87,3 +107,6 @@ export type SessionSummary = z.infer<typeof SessionSummarySchema>;
 export type SessionsListResponse = z.infer<typeof SessionsListResponseSchema>;
 export type RollRequest = z.infer<typeof RollRequestSchema>;
 export type RollResponse = z.infer<typeof RollResponseSchema>;
+export type SpoilerTier = z.infer<typeof SpoilerTierSchema>;
+export type SessionConfigUpdate = z.infer<typeof SessionConfigUpdateSchema>;
+export type SessionConfig = z.infer<typeof SessionConfigSchema>;

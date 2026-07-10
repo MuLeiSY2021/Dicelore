@@ -19,8 +19,19 @@ import { runTurn, type TurnEndResult } from "./turnLoop.js";
 import { buildOpeningPrompt, buildBaselinePrompt } from "./openingPrompt.js";
 import type { AgentFactory, AgentInit, PluginRef, TurnUsage } from "../runtime/agent.js";
 import type { Session } from "../runtime/session.js";
+import type { SessionConfig, SessionConfigUpdate, SpoilerTier } from "@dicelore/shared";
 import { sessionDir, SessionTranscript } from "../runtime/transcript.js";
 import { Rewind } from "../runtime/rewind.js";
+
+// 统一 session config（model-switch + spoiler-tiering 协同）落 session_meta 的 key：
+//   · current_model —— 本回合生效模型（未设 → 回退 deps.model / env / 默认）。
+//   · pending_model —— 已排队、下回合 drive-turn 起切的模型（空串/缺失 = 无待切；无 metaDelete 故以空串表「清空」）。
+//   · spoiler_tier  —— 防剧透档（默认 strict），立即生效（前端渲染层消费）。
+const META_CURRENT_MODEL = "current_model";
+const META_PENDING_MODEL = "pending_model";
+const META_SPOILER_TIER = "spoiler_tier";
+// DiceGm 的模型回退链同源默认（this.init.model ?? env ?? "glm-5.2"）——getConfig 显式回显同一有效值。
+const DEFAULT_GM_MODEL = "glm-5.2";
 
 let turnCounter = 0; // 进程内自增,测试稳定(不依赖随机/时间)
 function nextTurnId(sessionId: string): string { turnCounter += 1; return `${sessionId}-t${turnCounter}`; }
@@ -126,7 +137,35 @@ export class DiceSession implements Session {
   //   后续回合(meta 有值)→ resume=<sdk_session_id> → SDK 按此 id 加载该 session 完整 LLM 历史续接。
   // 重开一团(新 DiceSession/新库)不带旧 id → 开新 session(C3);跨 DiceGm 实例 resume 靠 SDK 自持久化 transcript。
   private buildInit(): AgentInit {
-    return { mcpServer: this.mcpServer, openingPrompt: this.openingPrompt, plugin: this.deps.baseline ? undefined : this.deps.plugin, model: this.deps.model, resume: this.backend.metaGet("sdk_session_id"), sessionId: this.sessionId, sessionsDir: this.deps.sessionsDir, backend: this.backend };
+    return { mcpServer: this.mcpServer, openingPrompt: this.openingPrompt, plugin: this.deps.baseline ? undefined : this.deps.plugin, model: this.backend.metaGet(META_CURRENT_MODEL) ?? this.deps.model, resume: this.backend.metaGet("sdk_session_id"), sessionId: this.sessionId, sessionsDir: this.deps.sessionsDir, backend: this.backend };
+  }
+
+  // model-switch：下回合生效语义。drive-turn 开始时若有 pending_model → 提升为 current_model 并清空 pending。
+  // 当前回合已发出的 query() 不受影响（用旧 currentModel 跑完）；下一回合 buildInit 读新 current_model。
+  // 幂等：无 pending（空串/缺失）则 no-op。仅在 handleMessage/handleChoice/start 三个 drive-turn 入口调用。
+  private promotePendingModel(): void {
+    const pending = this.backend.metaGet(META_PENDING_MODEL);
+    if (pending) {
+      this.backend.metaSet(META_CURRENT_MODEL, pending);
+      this.backend.metaSet(META_PENDING_MODEL, ""); // 无 metaDelete：以空串表「已消费、无待切」
+      getLogger().info({ sessionId: this.sessionId, model: pending }, "model 切换生效（pending→current，本回合起）");
+    }
+  }
+
+  // 统一 config 读（GET /sessions/dicegm/{id}/config）：
+  //   model = 本回合生效模型（current_model ?? deps.model ?? 默认）；spoilerTier 默认 strict；pendingModel 非空才带。
+  getConfig(): SessionConfig {
+    const model = this.backend.metaGet(META_CURRENT_MODEL) ?? this.deps.model ?? DEFAULT_GM_MODEL;
+    const spoilerTier = (this.backend.metaGet(META_SPOILER_TIER) as SpoilerTier | undefined) ?? "strict";
+    const pending = this.backend.metaGet(META_PENDING_MODEL);
+    return { model, spoilerTier, ...(pending ? { pendingModel: pending } : {}) };
+  }
+
+  // 统一 config 写（POST /sessions/dicegm/{id}/config，部分更新）：
+  //   · model → 设 pending_model（下回合生效，非立即）；· spoilerTier → 设 spoiler_tier（立即生效）。
+  setConfig(update: SessionConfigUpdate): void {
+    if (update.model !== undefined) this.backend.metaSet(META_PENDING_MODEL, update.model);
+    if (update.spoilerTier !== undefined) this.backend.metaSet(META_SPOILER_TIER, update.spoilerTier);
   }
 
   // gm-session-continuity:DiceGm 从 SDK system init 取 session_id 上抛(sdk_session 事件)→ 这里存库,
@@ -164,6 +203,7 @@ export class DiceSession implements Session {
 
   async handleMessage(text: string): Promise<{ turnId: string }> {
     return this.runExclusive(async () => {
+      this.promotePendingModel(); // model-switch：下回合生效——drive-turn 开始先提升 pending→current
       const turnId = nextTurnId(this.sessionId);
       const driver = this.deps.agentFactory(this.buildInit());
       getLogger().info({ sessionId: this.sessionId, turnId, kind: "message" }, "回合开始(玩家发言)");
@@ -187,6 +227,7 @@ export class DiceSession implements Session {
   // ③ 以所选 option 作下一回合 TurnInput(玩家视角的决定文本)——不伪装成 "[choice …]" 文本喂 handleMessage。
   async handleChoice(eventId: number, optionIndex: number): Promise<{ turnId: string }> {
     return this.runExclusive(async () => {
+      this.promotePendingModel(); // model-switch：下回合生效——drive-turn 开始先提升 pending→current
       const row = this.db.prepare("SELECT data_json FROM log WHERE seq=? AND kind='choice'").get(eventId) as { data_json: string | null } | undefined;
       if (!row?.data_json) {
         // 客户端误请求(无此 choice event)——上层 API 映射 409 no_pending_choice 并 warn;此处 debug 记明确失败模式,避免双 warn。
@@ -231,6 +272,7 @@ export class DiceSession implements Session {
         return { turnId: prior ?? this.sessionId };
       }
       const prologue = this.backend.metaGet("prologue") ?? "";
+      this.promotePendingModel(); // model-switch：下回合生效——开场（首个 drive-turn）前提升 pending→current
       const turnId = nextTurnId(this.sessionId);
       const driver = this.deps.agentFactory(this.buildInit());
       getLogger().info({ sessionId: this.sessionId, turnId, kind: "kickoff" }, "回合开始(开场)");
