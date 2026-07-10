@@ -8,7 +8,8 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import { describe, it, expect } from "vitest";
-import { validatePack } from "./validate.js";
+import { validatePack, validateDraft } from "./validate.js";
+import { Draft } from "../draft.js";
 import type { PackFile } from "../../catalog/catalog.js";
 
 // ── helpers ────────────────────────────────────────────────────────────────
@@ -463,5 +464,64 @@ describe("validatePack – Rule 8: 作者面 tools/*.json", () => {
       { path: "tools/b.json", content: JSON.stringify([{ name: "dup", sql: "SELECT 2" }]) },
     ];
     expect(hasError(files, "重复")).toBe(true);
+  });
+});
+
+// ── validateDraft（RT-FE11 §二）：Draft 期校验，复用 validatePack 规则、path 用分域路径 ──
+describe("validateDraft: 活跃期 Draft 校验（复用 validatePack 规则集）", () => {
+  it("空 Draft → error，path=(draft)", () => {
+    const issues = validateDraft(new Draft());
+    const e = issues.find((i) => i.path === "(draft)");
+    expect(e?.level).toBe("error");
+    expect(e?.msg).toContain("空团本包");
+  });
+
+  it("缺 prologue → error，path=prologue（复用 Rule 0c）", () => {
+    const d = new Draft();
+    d.setManifest({ name: "T", id: "t" });
+    d.writeLore("背景", "一段世界观文本。");
+    const issues = validateDraft(d);
+    const e = issues.find((i) => i.path === "prologue");
+    expect(e?.level).toBe("error");
+  });
+
+  it("完整最小 Draft（manifest+prologue+lore）→ 无 error", () => {
+    const d = new Draft();
+    d.setManifest({ name: "T", id: "t" });
+    d.setPrologue("你是 GM。");
+    d.writeLore("背景", "一段世界观文本。");
+    const issues = validateDraft(d);
+    expect(issues.some((i) => i.level === "error")).toBe(false);
+  });
+
+  it("front 引用未定义 clock attr → warn，path 用分域路径 front.<id>（非文件路径）", () => {
+    const d = new Draft();
+    d.setManifest({ name: "T", id: "t" });
+    d.setPrologue("你是 GM。");
+    d.addFront({ id: "入侵", name: "入侵", clock_attr: "世界.入侵", clock_min: 0, clock_max: 8, omens: [] });
+    const issues = validateDraft(d);
+    const w = issues.find((i) => i.path === "front.入侵");
+    expect(w?.level).toBe("warn");
+  });
+
+  it("返回形状为 {level,path,msg}，path 是分域路径（不含 '/'）", () => {
+    const d = new Draft();
+    d.setManifest({ name: "T", id: "t" });
+    d.writeLore("背景", "世界观");
+    const issues = validateDraft(d);
+    expect(issues.length).toBeGreaterThan(0);
+    for (const i of issues) {
+      expect(["error", "warn"]).toContain(i.level);
+      expect(typeof i.path).toBe("string");
+      expect(i.path.includes("/")).toBe(false);
+      expect(typeof i.msg).toBe("string");
+    }
+  });
+
+  it("只读、幂等：多次调返同结果（Draft 未变）", () => {
+    const d = new Draft();
+    d.setManifest({ name: "T", id: "t" });
+    d.writeLore("背景", "世界观");
+    expect(validateDraft(d)).toEqual(validateDraft(d));
   });
 });
