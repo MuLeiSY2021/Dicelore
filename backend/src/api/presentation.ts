@@ -120,7 +120,6 @@ function hiddenSheets(db: DB, offset: number, limit?: number): SheetGroup[] {
   }
   return groups;
 }
-}
 
 function maxSeq(db: DB): number {
   const r = db.prepare("SELECT MAX(seq) s FROM log").get() as { s: number | null };

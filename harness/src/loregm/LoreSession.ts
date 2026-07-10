@@ -82,7 +82,6 @@ export class LoreSession implements Session {
     if (update.model !== undefined) this.pendingModel = update.model;
     if (update.spoilerTier !== undefined) this.spoilerTier = update.spoilerTier;
   }
-  }
 
   // 返回 {turnId, error?}:构建 agent 中途 error(LLM 失败/工具异常/FakeDiceGm error 档)不再被吞——
   // 循环捕获 ev.type==="error" 记 { message, code? }、turn_end 时不带 error。error 属领域级,
