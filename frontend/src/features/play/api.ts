@@ -9,7 +9,10 @@
 
 // Play 域 HTTP：游玩会话(presentation/messages/roll/choice/rewind/start/browse/list/delete)。
 
-import type { PresentationSnapshot, SessionSummary } from "@dicelore/shared";
+import type {
+  PresentationSnapshot, SessionSummary, SessionConfig, SessionConfigUpdate,
+  BranchListResponse, CreateBranchResponse,
+} from "@dicelore/shared";
 import { actionError } from "@/shared/api/http.js";
 
 // 只读：取全量呈现快照(接口页 §2 GET /sessions/:id/presentation)。增量 WS 仍阻塞。
@@ -90,4 +93,55 @@ export async function browse(sessionId: string, source: BrowseSource, q = ""): P
   const res = await fetch(`/sessions/dicegm/${encodeURIComponent(sessionId)}/browse?source=${source}&q=${encodeURIComponent(q)}`);
   if (!res.ok) throw new Error(`browse 请求失败：${res.status}`);
   return ((await res.json()) as { entries: BrowseEntry[] }).entries;
+}
+
+// 统一 session config（model-switch + spoiler-tiering 裁决）：读回 {model, spoilerTier, pendingModel?}。
+export async function getConfig(sessionId: string): Promise<SessionConfig> {
+  const res = await fetch(`/sessions/dicegm/${encodeURIComponent(sessionId)}/config`);
+  if (!res.ok) throw new Error(`config 请求失败：${res.status}`);
+  return (await res.json()) as SessionConfig;
+}
+
+// 部分更新 config：{model?} 下回合生效 / {spoilerTier?} 立即生效。返回更新后完整 config。
+export async function postConfig(sessionId: string, update: SessionConfigUpdate): Promise<SessionConfig> {
+  const res = await fetch(`/sessions/dicegm/${encodeURIComponent(sessionId)}/config`, {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(update),
+  });
+  if (!res.ok) throw await actionError(res, "更新配置");
+  return (await res.json()) as SessionConfig;
+}
+
+// 用量报告（usage-and-context 裁决）：context 占用 + session 累计 + perTurn + mcp/memory 分项。
+export interface MemorySegment { segment: string; tokens: number }
+export interface McpToolUsage { tool: string; calls: number; tokens: number }
+export interface PerTurnRow { turnId: string; inputTokens: number; outputTokens: number; cacheReadTokens: number; cacheCreationTokens: number }
+export interface UsageReport {
+  model: string;
+  contextTokens: number;
+  contextWindow: number;
+  contextPct: number;
+  sessionTotal: number;
+  perTurn: PerTurnRow[];
+  memoryBreakdown?: MemorySegment[];
+  mcpBreakdown?: McpToolUsage[];
+}
+export async function getUsage(sessionId: string): Promise<UsageReport> {
+  const res = await fetch(`/sessions/dicegm/${encodeURIComponent(sessionId)}/usage`);
+  if (!res.ok) throw new Error(`usage 请求失败：${res.status}`);
+  return (await res.json()) as UsageReport;
+}
+
+// 会话分支（debrief-and-branch §二）：列分支 / 从某 seq 新建分支（复盘态回档）。
+export async function listBranches(sessionId: string): Promise<BranchListResponse> {
+  const res = await fetch(`/sessions/dicegm/${encodeURIComponent(sessionId)}/branches`);
+  if (!res.ok) throw new Error(`branches 请求失败：${res.status}`);
+  return (await res.json()) as BranchListResponse;
+}
+export async function createBranch(sessionId: string, fromSeq?: number, name?: string): Promise<CreateBranchResponse> {
+  const res = await fetch(`/sessions/dicegm/${encodeURIComponent(sessionId)}/branches`, {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ ...(fromSeq != null ? { fromSeq } : {}), ...(name ? { name } : {}) }),
+  });
+  if (!res.ok) throw await actionError(res, "新建分支");
+  return (await res.json()) as CreateBranchResponse;
 }

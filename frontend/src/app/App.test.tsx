@@ -35,8 +35,12 @@ vi.mock("@/shared/api/http.js", () => ({
 }));
 vi.mock("@/features/play/useSession.js", () => ({
   useSession: () => ({
-    snapshot: null, narration: [], pendingRoll: null, generating: false, error: null, gameEnd: null, reveals: [],
-    postMessage: vi.fn(), roll: vi.fn(), choose: vi.fn(), dismissReveal: vi.fn(),
+    snapshot: null, rounds: [], narration: [], pendingRoll: null, rollResult: null, hiddenRolls: [],
+    generating: false, error: null, errorCode: null, gameEnd: null, reveals: [],
+    config: null, usage: null, compacting: false,
+    postMessage: vi.fn(), start: vi.fn(), roll: vi.fn(), choose: vi.fn(), rewind: vi.fn(),
+    retry: vi.fn(), skip: vi.fn(), dismissReveal: vi.fn(), setModel: vi.fn(), setSpoilerTier: vi.fn(),
+    branch: vi.fn(), refetchUsage: vi.fn(),
   }),
 }));
 

@@ -66,3 +66,7 @@ export function formatUsd(usd: number): string {
 export function formatTokens(n: number): string {
   return Math.max(0, Math.round(n)).toLocaleString("en-US").replace(/,/g, " ");
 }
+
+// ── 兼容别名（co-play/co-build 两节点各自建 pricing、集成时统一到本 build 版；play 消费端沿用这些名）──
+export type TurnUsage = TokenUsage;
+export const fmtTokens = formatTokens;

@@ -7,443 +7,358 @@
 // Software Foundation, either version 3 of the License, or (at your option)
 // any later version. See <https://www.gnu.org/licenses/>.
 
-import { useEffect, useRef, useState, Fragment, type ComponentType, type KeyboardEvent } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useEffect, useState, type KeyboardEvent } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import {
-  BookOpen, Wrench, LayoutGrid, Search, File, Pin, CheckCircle2, Dices, LayoutDashboard,
-  Grid3x3, User, Minus, X, Timer, Timer as ClockIcon, Package, Eye, Sparkles, Loader2, AlertTriangle, Flag,
-  BookMarked, ChevronDown, ChevronUp, ScrollText, Play, Trash2,
-  Scale, ArrowRightLeft, BellRing, GripVertical, RotateCcw, History,
+  Dices, Library, Hammer, Swords, ArrowUp, ArrowRight, Cpu, ChevronDown, PanelRightClose,
+  Sparkles, CheckCircle2, AlertCircle, RotateCcw, Flag, MessageSquare,
+  Pencil, Trash2, MoreHorizontal, AlertTriangle, Rewind, Gauge, Zap,
 } from "lucide-react";
+import { CONTEXT_WINDOW, type SpoilerTier } from "@dicelore/shared";
 import { useSession } from "@/features/play/useSession.js";
+import { useDock } from "@/features/play/useDock.js";
 import { Markdown } from "@/features/play/Markdown.js";
-import { useT } from "@/shared/i18n/index.js";
-import { browse, listSessions, deleteSession, type BrowseEntry } from "@/features/play/api.js";
-import { Link } from "react-router-dom";
+import { DockCard } from "@/features/play/DockCard.js";
+import { RollBands } from "@/features/play/RollBands.js";
+import { PlayBay } from "@/features/play/PlayBay.js";
+import { estimateCostUsd, fmtTokens } from "@/features/cost/pricing.js";
+import { listSessions } from "@/features/play/api.js";
 import type { SessionSummary } from "@dicelore/shared";
+import "@/features/play/play.css";
 
 const DEMO_SESSION = "demo";
-// 机械回显按 agent 不同 MCP 调用的 kind 分风格(参考视觉草图「内嵌机械回显·左金边」):
-// verdict(裁决·resolve_*) / mutation(状态变更·sheet/state 写) / watcher_fired(凶兆触发)。
-const MECH_ICON: Record<string, ComponentType<{ className?: string }>> = {
-  verdict: Scale, mutation: ArrowRightLeft, watcher_fired: BellRing,
-};
-// 左活动轨不再是固定的「设定/规则/日志」物理表分类——团本业务表段已客制化。
-// 改为：① 设定(可见 lore，按条目自带 category/tag 动态分组，天然兼容任意客制段) ② 工具(玩家自查工具)。
-type RailKey = "world" | "tools";
-const RAIL: { key: RailKey; Icon: ComponentType<{ className?: string }> }[] = [
-  { key: "world", Icon: BookOpen }, { key: "tools", Icon: Wrench },
-];
-
-const CLOCK_RE = /^\s*(\d+)\s*\/\s*(\d+)\s*$/;
-const INV_PREFIX = "库存:";
-
-function ClockDial({ cur, max }: { cur: number; max: number }) {
-  const frac = max > 0 ? Math.min(1, cur / max) : 0;
-  const deg = Math.round(frac * 360);
-  const seg = 360 / Math.max(max, 1);
-  const style = { background: `repeating-conic-gradient(from -90deg, transparent 0 ${seg - 4}deg, var(--surface2) ${seg - 4}deg ${seg}deg), conic-gradient(from -90deg, var(--acc) 0 ${deg}deg, var(--dial-empty) ${deg}deg)` };
-  return <div className="dial" style={style} aria-label={`${cur}/${max}`} />;
-}
-
-function dateBucket(iso?: string | number): "today" | "week" | "earlier" {
-  if (iso == null) return "earlier";
-  const diff = Date.now() - new Date(iso).getTime();
-  if (diff < 864e5) return "today";
-  if (diff < 7 * 864e5) return "week";
-  return "earlier";
-}
+const MODELS = Object.keys(CONTEXT_WINDOW).filter((m) => m !== "default");
 
 export default function PlayPage() {
-  const t = useT();
   const navigate = useNavigate();
   const { sessionId } = useParams();
   const sid = sessionId ?? DEMO_SESSION;
-  const { snapshot, narration, pendingRoll, generating, error, errorCode, gameEnd, reveals, postMessage, start, roll, choose, rewind, retry, skip, dismissReveal } = useSession(sid);
+  const s = useSession(sid);
+  const { snapshot, rounds, pendingRoll, rollResult, hiddenRolls, generating, error, errorCode, gameEnd, reveals,
+    config, usage, compacting, postMessage, start, roll, choose, retry, skip, setModel, setSpoilerTier, branch } = s;
+
   const [draft, setDraft] = useState("");
-  const [chosen, setChosen] = useState<number | null>(null);
-
-  // 左活动轨 / 浏览
-  const [source, setSource] = useState<RailKey>("world");
-  const [q, setQ] = useState("");
-  const [entries, setEntries] = useState<BrowseEntry[]>([]);
-  const [logEntries, setLogEntries] = useState<BrowseEntry[]>([]);
-  const [pins, setPins] = useState<BrowseEntry[]>([]);
-  // 会话栏(次级 bar，可隐藏)
-  const [barOpen, setBarOpen] = useState(true);
+  const [chosen, setChosen] = useState<Set<number>>(new Set());
+  const [kicked, setKicked] = useState(false);
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
-  const [sessionsLoaded, setSessionsLoaded] = useState(false);
-  const [kicked, setKicked] = useState(false); // 本地乐观：已点「开始游戏」
-  // 面板隐藏 / 最小化 / 拖拽重排(可选+可拖拽;默认风格=自然顺序,可一键复位)
-  const [hidden, setHidden] = useState<Set<string>>(new Set());
-  const [mini, setMini] = useState<Set<string>>(new Set());
-  const [order, setOrder] = useState<string[]>([]);
-  const [dragId, setDragId] = useState<string | null>(null);
-  const qTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [showActions, setShowActions] = useState(false);
+  const [compactCards, setCompactCards] = useState(false);
+  const [dockCollapsed, setDockCollapsed] = useState(false);
+  const [sentMsgs, setSentMsgs] = useState<string[]>([]);
+  const [rewindOpen, setRewindOpen] = useState<number | null>(null);
+  const [rewound, setRewound] = useState(false);
 
-  const orderKey = `dicelore.stage.order.${sid}`;
-  useEffect(() => {
-    try { const raw = localStorage.getItem(orderKey); setOrder(raw ? JSON.parse(raw) : []); }
-    catch { setOrder([]); }
-  }, [orderKey]);
-  const persistOrder = (next: string[]) => {
-    setOrder(next);
-    try { localStorage.setItem(orderKey, JSON.stringify(next)); } catch { /* 隐私模式忽略 */ }
-  };
-  // 把拖起的 id 落到目标 id 之前(同一序列内移动)。
-  const reorder = (targetId: string, ids: string[]) => {
-    if (!dragId || dragId === targetId) return;
-    const base = order.length ? order.filter((id) => ids.includes(id)) : ids.slice();
-    for (const id of ids) if (!base.includes(id)) base.push(id);
-    const from = base.indexOf(dragId);
-    if (from < 0) return;
-    base.splice(from, 1);
-    const to = base.indexOf(targetId);
-    base.splice(to < 0 ? base.length : to, 0, dragId);
-    persistOrder(base);
-  };
-  const resetOrder = () => persistOrder([]);
+  const dock = useDock(sid, snapshot);
+  const spoilerTier: SpoilerTier = config?.spoilerTier ?? "strict";
 
-  useEffect(() => { setChosen(null); }, [snapshot?.choices?.eventId]);
-  const reloadSessions = () => listSessions().then((s) => { setSessions(s); setSessionsLoaded(true); }).catch(() => setSessionsLoaded(true));
-  // 切会话：重置呈现台 UI 内存态（hidden/mini/pins/检索框/chosen），防旧会话残留漂到新会话。
-  // order 走 localStorage 按 sid key 自行 reload（见 orderKey effect），不在此重置。与 FE-ws-race 同源。
   useEffect(() => {
-    setKicked(false);
-    setHidden(new Set());
-    setMini(new Set());
-    setPins([]);
-    setEntries([]);
-    setLogEntries([]);
-    setQ("");
-    setChosen(null);
-    reloadSessions();
+    setKicked(false); setChosen(new Set()); setSentMsgs([]); setRewindOpen(null); setRewound(false);
+    listSessions().then(setSessions).catch(() => setSessions([]));
   }, [sid]);
 
-  // 设定源：q 防抖检索可见 lore。
-  useEffect(() => {
-    if (source !== "world") return;
-    if (qTimer.current) clearTimeout(qTimer.current);
-    qTimer.current = setTimeout(() => { browse(sid, "world", q).then(setEntries).catch(() => setEntries([])); }, 180);
-    return () => { if (qTimer.current) clearTimeout(qTimer.current); };
-  }, [sid, source, q]);
-  // 工具源：加载本局日志。
-  useEffect(() => { if (source === "tools") browse(sid, "log").then(setLogEntries).catch(() => setLogEntries([])); }, [sid, source]);
-
-  const onKey = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && draft.trim()) { postMessage(draft.trim()).catch(() => {}); setDraft(""); }
-  };
-  const togglePin = (e: BrowseEntry) => setPins((p) => (p.some((x) => x.ref === e.ref) ? p.filter((x) => x.ref !== e.ref) : [...p, e]));
-  const hide = (id: string) => setHidden((s) => new Set(s).add(id));
-  const toggleMin = (id: string) => setMini((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
-
-  const sheets = snapshot?.sheets ?? [];
-  const mechanics = snapshot?.mechanics ?? [];
   const choices = snapshot?.choices ?? null;
+  useEffect(() => { setChosen(new Set()); }, [choices?.eventId]);
 
-  // 两层 Play：未开场(开场层) → 大金按钮；已开场(续玩层) → 输入框。
-  const sessionRow = sessions.find((s) => s.sessionId === sid);
-  const started = kicked || narration.length > 0 || (snapshot?.narrativeCursor ?? 0) > 0 || sessionRow?.started === true || !!gameEnd;
-  // 无显式会话、一局都没有、且当前也没有任何活数据 → 引导去团本目录。
-  const noSessions = !sessionId && sessionsLoaded && sessions.length === 0 && sheets.length === 0 && narration.length === 0;
+  const sessionRow = sessions.find((x) => x.sessionId === sid);
+  const started = kicked || rounds.length > 0 || (snapshot?.narrativeCursor ?? 0) > 0 || sessionRow?.started === true || !!gameEnd;
+  const noSession = !sessionId && sessions.length === 0 && rounds.length === 0 && (snapshot?.sheets?.length ?? 0) === 0;
 
-  async function kickoff() {
-    setKicked(true);
-    try { await start(); } catch { setKicked(false); }
+  // 五态 data-screen 驱动（互斥）。
+  const screen: "none" | "kickoff" | "input" | "generating" | "roll" | "choices" | "error" | "end" =
+    !started ? (noSession ? "none" : "kickoff")
+    : gameEnd ? "end"
+    : error ? "error"
+    : pendingRoll ? "roll"
+    : choices ? "choices"
+    : generating ? "generating"
+    : "input";
+
+  const title = sessionRow ? ((sessionRow.packName && sessionRow.packName !== sessionRow.title ? `${sessionRow.packName} · ` : "") + sessionRow.title) : sid;
+
+  async function kickoff() { setKicked(true); try { await start(); } catch { setKicked(false); } }
+  function send(text: string) {
+    const t = text.trim(); if (!t) return;
+    setSentMsgs((m) => [...m, t]);
+    postMessage(t).catch(() => {});
+    setDraft("");
   }
-  async function removeSession(id: string) {
-    await deleteSession(id);
-    try { localStorage.removeItem(`dicelore.stage.order.${id}`); } catch { /* 隐私模式忽略 */ } // 删会话清其拖拽布局，防 localStorage 泄漏
-    const rest = sessions.filter((s) => s.sessionId !== id);
-    setSessions(rest);
-    if (id === sid) navigate(rest[0] ? `/play/${encodeURIComponent(rest[0].sessionId)}` : "/adventures");
+  const onKey = (e: KeyboardEvent<HTMLInputElement>) => { if (e.key === "Enter") send(draft); };
+  function toggleChoice(idx: number) { setChosen((c) => { const n = new Set(c); n.has(idx) ? n.delete(idx) : n.add(idx); return n; }); }
+  function sendChoices() {
+    if (!choices) { send(draft); return; }
+    const first = [...chosen][0];
+    if (first != null) choose(choices.eventId, first).catch(() => {});
+    else send(draft);
   }
 
-  // 设定按 tag 动态分组(兼容任意客制段)。
-  const grouped = new Map<string, BrowseEntry[]>();
-  for (const e of entries) { const k = e.tag ?? "未分类"; (grouped.get(k) ?? grouped.set(k, []).get(k)!).push(e); }
+  const ctxPct = Math.round((usage?.contextPct ?? 0) * 100);
+  const ctxHot = ctxPct > 90;
 
-  // 会话按日期分组。
-  const buckets: { key: "today" | "week" | "earlier"; label: string }[] = [
-    { key: "today", label: t("play.date.today") }, { key: "week", label: t("play.date.week") }, { key: "earlier", label: t("play.date.earlier") },
-  ];
-  const curRow = sessions.find((s) => s.sessionId === sid);
-  const sessTitle = (s: SessionSummary) => (s.packName && s.packName !== s.title ? `${s.packName} · ` : "") + s.title;
-  const curTitle = curRow ? sessTitle(curRow) : sid;
-
-  // 呈现台分类
-  const attrPanels = sheets.map((g) => ({
-    entity: g.entity,
-    clocks: g.cells.filter((c) => CLOCK_RE.test(c.value)),
-    inv: g.cells.filter((c) => c.attr.startsWith(INV_PREFIX)),
-    attrs: g.cells.filter((c) => !CLOCK_RE.test(c.value) && !c.attr.startsWith(INV_PREFIX)),
-  }));
-
-  // 把呈现台所有面板收成一个带稳定 id 的扁平表(自然顺序),供拖拽重排排序。
-  const stageCells: { id: string; el: JSX.Element }[] = [];
-  // 统一接线:最小化 / 隐藏 / 拖拽重排。
-  const panel = (
-    id: string, title: string, Icon: ComponentType<{ className?: string }>,
-    body: React.ReactNode, opts?: { wide?: boolean; gmTag?: string; onHide?: () => void },
-  ): JSX.Element => (
-    <Panel id={id} title={title} Icon={Icon} wide={opts?.wide} gmTag={opts?.gmTag}
-      mini={mini.has(id)} onMin={() => toggleMin(id)} onHide={() => { opts?.onHide?.(); hide(id); }}
-      dragging={dragId === id}
-      onDragStart={() => setDragId(id)} onDragEnd={() => setDragId(null)}
-      onDragOver={(e) => { e.preventDefault(); }}
-      onDrop={(e) => { e.preventDefault(); reorder(id, stageCells.map((c) => c.id)); setDragId(null); }}>
-      {body}
-    </Panel>
+  const bay = (
+    <PlayBay snapshot={snapshot} sessions={sessions} sid={sid} onSelectSession={(id) => navigate(`/play/${encodeURIComponent(id)}`)}
+      spoilerTier={spoilerTier} onSpoilerTier={(t) => setSpoilerTier(t).catch(() => {})}
+      showActions={showActions} onToggleActions={() => setShowActions((v) => !v)}
+      compactCards={compactCards} onToggleCompact={() => setCompactCards((v) => !v)}
+      archivedCards={dock.archivedCards} onRestore={dock.restore} usage={usage} />
   );
-  const push = (id: string, render: () => JSX.Element) => { if (!hidden.has(id)) stageCells.push({ id, el: render() }); };
-  for (const { entity, attrs, clocks, inv } of attrPanels) {
-    if (attrs.length > 0) push(`attr:${entity}`, () => panel(`attr:${entity}`, entity, User,
-      attrs.map((c) => <div className="row" key={c.attr}><span>{c.attr}</span><b>{c.value}</b></div>)));
-    clocks.forEach((c) => { const m = CLOCK_RE.exec(c.value)!; push(`clock:${entity}:${c.attr}`, () => panel(
-      // 领域概念=Clock(倒计时钟)；复用 lucide Timer 图标渲染(无专用 Clock 字形时)，故本地别名 ClockIcon 标明用途。
-      `clock:${entity}:${c.attr}`, t("play.panel.clock"), ClockIcon,
-      <div className="clockrow"><ClockDial cur={Number(m[1])} max={Number(m[2])} /><div className="ck"><div className="nm">{c.attr}</div><div className="v">{c.value}</div></div></div>)); });
-    if (inv.length > 0) push(`inv:${entity}`, () => panel(`inv:${entity}`, `${t("play.panel.inv")} · ${inv.length}`, Package,
-      inv.map((c) => <div className="row" key={c.attr}><span>{c.attr.slice(INV_PREFIX.length)}</span><b>{c.value}</b></div>)));
-  }
-  for (const r of reveals) push(`rev:${r.seq}`, () => panel(`rev:${r.seq}`, t("play.panel.reveal"), Eye,
-    <div className="revc"><b>{r.target.replace(/^world:/, "")}</b>　{r.text}</div>,
-    { wide: true, gmTag: `GM·${r.seq}`, onHide: () => dismissReveal(r.seq) }));
-  for (const p of pins) push(`pin:${p.ref}`, () => panel(`pin:${p.ref}`, p.name, Pin,
-    <div className="revc">{p.snippet}</div>, { wide: true }));
-  // 按用户 order 稳定排序(未列入 order 的保持自然顺序追加在后)。
-  const rank = (id: string) => { const i = order.indexOf(id); return i < 0 ? Number.MAX_SAFE_INTEGER : i; };
-  const orderedCells = stageCells.map((c, i) => ({ ...c, i })).sort((a, b) => rank(a.id) - rank(b.id) || a.i - b.i);
 
-  // 一局都没有(裸 /play) → 引导去团本目录。
-  if (noSessions) return (
+  // ── 整屏态：无会话引导 ──
+  if (screen === "none") return (
     <div className="playwrap">
-      <div className="play-empty">
-        <BookMarked className="lucide" />
-        <div className="et">{t("play.session.empty.title")}</div>
-        <div className="es">{t("play.session.empty.sub")}</div>
-        <Link className="btn go" to="/adventures"><BookMarked className="lucide" />{t("play.session.empty.cta")}</Link>
+      <div className="full" data-screen="none">
+        <div className="welc" data-testid="play-noSession-hint">
+          <div className="welc-h"><Dices className="lucide" /><span>开始一局跑团</span></div>
+          <div className="welc-sub">还没有进行中的会话。挑一个团本开局，或继续上次的存档。</div>
+          <div className="welc-actions">
+            <Link className="wa primary" to="/adventures" data-testid="play-none-catalog"><Library className="lucide" />去团本目录</Link>
+            <Link className="wa" to="/build"><Hammer className="lucide" />制作新团本</Link>
+          </div>
+          {sessions.length > 0 && (
+            <div className="welc-recent">
+              <div className="wr-h">最近会话</div>
+              {sessions.slice(0, 5).map((x) => (
+                <div className="wr-item" key={x.sessionId} data-testid="play-none-recent" role="button" tabIndex={0}
+                  onClick={() => navigate(`/play/${encodeURIComponent(x.sessionId)}`)}>
+                  <Swords className="lucide" /><div><div className="wr-t">{x.title}</div><div className="wr-s">{x.lastReply ?? ""}</div></div>
+                  <span className="wr-go"><ArrowRight className="lucide" /></span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
+      {bay}
     </div>
   );
 
-  return (
+  // ── 整屏态：未开场信息卡 ──
+  if (screen === "kickoff") return (
     <div className="playwrap">
-      {/* 次级会话栏(可隐藏，仿团本制作 ctx 栏) */}
-      {barOpen ? (
-        <div className="playbar">
-          <BookMarked className="lucide" />
-          <span className="name">{curTitle}</span>
-          <label className="sessel"><ScrollText className="lucide" />
-            <select aria-label={t("play.bar.session")} value={sid} onChange={(e) => navigate(`/play/${e.target.value}`)}>
-              {sessions.length === 0 && <option value={sid}>{t("play.bar.nosession")}</option>}
-              {buckets.map((b) => {
-                const items = sessions.filter((s) => dateBucket(s.lastActionAt) === b.key);
-                return items.length === 0 ? null : (
-                  <optgroup key={b.key} label={b.label}>
-                    {items.map((s) => <option key={s.sessionId} value={s.sessionId}>{sessTitle(s)} · {t(`status.${s.status}`)}</option>)}
-                  </optgroup>
-                );
-              })}
+      <div className="full" data-screen="kickoff">
+        <div className="kc">
+          <div className="kc-pack" data-testid="play-kickoff-pack">
+            <div className="kc-title">{title}</div>
+            {sessionRow?.packName && <div className="kc-sub">{sessionRow.packName}</div>}
+            <div className="kc-desc">点击开始，GM 将播报开场（prologue），随后出现输入框。</div>
+          </div>
+          <button className="big" data-testid="play-kickoff-btn" onClick={kickoff} disabled={kicked}>
+            <Dices className="lucide" />{kicked ? "开场中…" : "点击开始游戏"}
+          </button>
+          <div className="kc-foot">GM 将播报开场（prologue），随后出现输入框</div>
+        </div>
+      </div>
+      {bay}
+    </div>
+  );
+
+  // ── 续玩层：桌面沙盘 ──
+  return (
+    <div className="playwrap" data-screen={screen}>
+      <div data-testid="play-stage-shell" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+        <div className="stagebar">
+          <span style={{ fontFamily: "var(--serif)", fontSize: "13px", color: "var(--text)" }}>{title}</span>
+          {sessionRow?.packName && <span style={{ fontFamily: "var(--mono)", fontSize: "10px", color: "var(--text3)" }}>{sessionRow.packName}</span>}
+          <label className="model-switch" data-testid="play-model-switch" title="运行时切换 model · 下回合生效">
+            <Cpu className="lucide" />
+            <select aria-label="切换模型" value={config?.model ?? ""} onChange={(e) => setModel(e.target.value).catch(() => {})}>
+              {config?.model && !MODELS.includes(config.model) && <option value={config.model}>{config.model}</option>}
+              {MODELS.map((m) => <option key={m} value={m}>{m}</option>)}
             </select>
+            {config?.pendingModel && <span className="ms-pending" title={`下回合切至 ${config.pendingModel}`}>→{config.pendingModel}</span>}
+            <ChevronDown className="lucide" style={{ width: 12 }} />
           </label>
           <span className="sp" />
-          {/* 读档（SNAP-1 v1）：自动恢复最近存档。已开场（已有快照）才显示——v1 是存档/读档，非手动回滚按钮。 */}
-          {started && (
-            <button className="collapse" data-testid="rewind" aria-label={t("play.rewind")} title={t("play.rewind.hint")}
-              onClick={() => { if (confirm(t("play.rewind.confirm"))) rewind().catch(() => {}); }}><History className="lucide" /></button>
-          )}
-          {curRow && (
-            <button className="collapse" aria-label={t("play.session.delete")} title={t("play.session.delete")}
-              onClick={() => { if (confirm(`${t("play.session.delete")}：${curTitle}?`)) removeSession(sid); }}><Trash2 className="lucide" /></button>
-          )}
-          <button className="collapse" aria-label={t("play.bar.hide")} title={t("play.bar.hide")} onClick={() => setBarOpen(false)}><ChevronUp className="lucide" /></button>
         </div>
-      ) : (
-        <button className="playbar mini" aria-label={t("play.bar.show")} onClick={() => setBarOpen(true)}>
-          <ChevronDown className="lucide" /><span className="name">{curTitle}</span>
-        </button>
-      )}
 
-      <div className="play">
-        <aside className="rail" aria-label="活动轨">
-          {RAIL.map(({ key, Icon }) => (
-            <button key={key} className={"ic" + (source === key ? " on" : "")} title={t(`play.rail.${key}`)} aria-label={t(`play.rail.${key}`)}
-              aria-pressed={source === key} onClick={() => setSource(key)}><Icon className="lucide" /></button>
-          ))}
-          <span className="sp" />
-          <button className="ic" title={t("play.rail.add")}><LayoutGrid className="lucide" /></button>
-        </aside>
-
-        <aside className="browse" aria-label="自查源">
-          {source === "world" ? (
-            <>
-              <div className="bh"><BookOpen className="lucide" />{t("play.rail.world")}</div>
-              <label className="bsearch"><Search className="lucide" />
-                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("play.search.world")} aria-label={t("play.search.world")}
-                  style={{ background: "none", border: "none", color: "inherit", outline: "none", width: "100%", font: "inherit" }} />
-              </label>
-              <div className="tree">
-                {entries.length === 0 ? <div className="leaf"><span className="nm">{t("play.tree.empty")}</span></div>
-                  : [...grouped.entries()].map(([tag, items]) => (
-                    <div key={tag}>
-                      <div className="cat"><File className="lucide" />{tag}</div>
-                      {items.map((e) => {
-                        const pinned = pins.some((x) => x.ref === e.ref);
-                        return (
-                          <div className="leaf" key={e.ref} title={e.snippet}>
-                            <span className="lic"><File className="lucide" /></span><span className="nm">{e.name}</span>
-                            {e.canPin && <button className={"pin" + (pinned ? " on" : "")} aria-label={`pin ${e.name}`} aria-pressed={pinned}
-                              onClick={() => togglePin(e)} style={{ background: "none", border: "none", cursor: "pointer" }}><Pin className="lucide" /></button>}
-                          </div>
-                        );
-                      })}
+        <div className="sandbox">
+          <div className="stage">
+            <div className={"stream" + (showActions ? " show-actions" : "")} data-testid="play-stream">
+              {rounds.map((r, ri) => (
+                <div key={ri}>
+                  {ri > 0 && sentMsgs[ri - 1] != null && (
+                    <div className="pmsg" data-testid="play-player-msg">
+                      <span className="pt">{sentMsgs[ri - 1]}</span>
+                      <span className="pa">
+                        <Pencil className="lucide" role="button" data-testid="play-player-edit" onClick={() => setRewindOpen(ri)} />
+                        <Trash2 className="lucide" data-testid="play-player-delete" />
+                        <MoreHorizontal className="lucide" data-testid="play-player-more" />
+                      </span>
                     </div>
-                  ))}
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="bh"><Wrench className="lucide" />{t("play.rail.tools")}</div>
-              <div className="tree">
-                <div className="cat"><Pin className="lucide" />{t("play.tools.pins")} · {pins.length}</div>
-                {pins.length === 0 ? <div className="leaf"><span className="nm">{t("play.tools.none")}</span></div>
-                  : pins.map((p) => (
-                    <div className="leaf" key={p.ref}><span className="lic"><Pin className="lucide" /></span><span className="nm">{p.name}</span>
-                      <button className="pin on" aria-label={`unpin ${p.name}`} onClick={() => togglePin(p)} style={{ background: "none", border: "none", cursor: "pointer" }}><X className="lucide" /></button></div>
-                  ))}
-                <div className="cat"><ScrollText className="lucide" />{t("play.tools.log")}</div>
-                {logEntries.length === 0 ? <div className="leaf"><span className="nm">{t("play.tree.empty")}</span></div>
-                  : logEntries.slice(0, 40).map((e) => (
-                    <div className="leaf" key={e.ref} title={e.snippet}><span className="lic"><ScrollText className="lucide" /></span><span className="nm">{e.snippet || e.name}</span></div>
-                  ))}
-              </div>
-            </>
-          )}
-        </aside>
-
-        <section className="center" aria-label="叙事">
-          <div className="narr">
-            {gameEnd && <div className="end" role="status"><Flag className="lucide" /><b>{gameEnd.outcome}</b><span>{gameEnd.reason}</span></div>}
-            {narration.length === 0 && mechanics.length === 0 && !gameEnd ? (
-              <p className="empty">{started ? t("play.narr.empty") : t("play.narr.prestart")}</p>
-            ) : (
-              <>
-                {narration.map((para, i) => <Markdown key={i} text={para} />)}
-                {mechanics.map((m) => {
-                  const Icon = MECH_ICON[m.kind] ?? CheckCircle2;
-                  return (
-                    <div className={`mech mech-${m.kind}`} key={m.seq}>
-                      <Icon className="lucide" />{m.text}
+                  )}
+                  {rewindOpen === ri && (
+                    <div className="rwconfirm" data-testid="play-rewind-confirm">
+                      <AlertTriangle className="lucide" style={{ color: "var(--warn)" }} />
+                      <span>编辑这句将 <b>丢弃其后回合</b>（自动 rewind 到此输入前）。</span>
+                      <span className="sp" style={{ flex: 1 }} />
+                      <span className="btn go" data-testid="play-rewind-go" role="button" tabIndex={0}
+                        onClick={() => { s.rewind().catch(() => {}); setRewindOpen(null); setRewound(true); }}>确认 rewind</span>
+                      <span className="btn" data-testid="play-rewind-cancel" role="button" tabIndex={0} onClick={() => setRewindOpen(null)}>取消</span>
                     </div>
-                  );
-                })}
-              </>
-            )}
-            {pendingRoll?.bands && pendingRoll.bands.length > 0 && (
-              <div className="ranges">
-                <div className="rt"><Dices className="lucide" />{pendingRoll.label} — {pendingRoll.yourSide.exprDisplay}</div>
-                {pendingRoll.bands.map((b) => <div className="rr" key={b.label}><span className="rg">{b.min}–{b.max}</span><span className="rd">{b.label}</span></div>)}
-              </div>
-            )}
-            {pendingRoll && (!pendingRoll.bands || pendingRoll.bands.length === 0) && (
-              <div className="mech"><Dices className="lucide" />{pendingRoll.label}：{pendingRoll.yourSide.exprDisplay}{pendingRoll.dc != null ? ` vs DC ${pendingRoll.dc}` : ""}</div>
-            )}
-            {choices && (
-              <div className="ranges">
-                {choices.options.map((o) => (
-                  <button className={"choice" + (chosen === o.index ? " sel" : "")} key={o.index} disabled={chosen !== null}
-                    onClick={() => { setChosen(o.index); choose(choices.eventId, o.index).catch(() => setChosen(null)); }}>
-                    <span className="cl">{o.label}</span><span className="cc">{o.consequence}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-            {(generating || (kicked && narration.length === 0)) && !gameEnd && <div className="gen"><Loader2 className="lucide spin" />{t("play.generating")}</div>}
-            {error && (
-              errorCode === "gm_timeout" ? (
-                // RT-1 短期方案：超时(可区分 code=gm_timeout)给「重试 / 跳过」入口。
-                // 重试=重发上一步玩家输入；跳过=放弃本回合继续。中期事务回滚/长期快照恢复另立。
-                <div className="err timeout" role="alert" data-testid="gm-timeout">
-                  <div className="t"><Timer className="lucide" /><b>{t("play.timeout.title")}</b></div>
-                  <div className="m">{error}</div>
-                  <div className="acts">
-                    <button data-testid="timeout-retry" onClick={() => retry().catch(() => {})}><RotateCcw className="lucide" />{t("play.timeout.retry")}</button>
-                    <button data-testid="timeout-skip" onClick={skip}><X className="lucide" />{t("play.timeout.skip")}</button>
-                  </div>
-                  <span className="h">{t("play.timeout.hint")}</span>
+                  )}
+                  {r.texts.map((p, pi) => <Markdown key={pi} text={p} />)}
+                  {r.usage && (
+                    <div className="turn-usage" data-testid="play-turn-usage"
+                      title={`model ${r.model ?? usage?.model ?? ""} · in ${r.usage.inputTokens} / out ${r.usage.outputTokens} / cacheRead ${r.usage.cacheReadTokens} / cacheWrite ${r.usage.cacheCreationTokens}`}>
+                      ⟨<span className="tu-model">{r.model ?? usage?.model ?? ""}</span> · <span className="up">↑{fmtTokens(r.usage.inputTokens)}</span> <span className="down">↓{fmtTokens(r.usage.outputTokens)}</span> tok · ≈${estimateCostUsd(r.model ?? usage?.model, r.usage).toFixed(3)}⟩
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div className="err"><AlertTriangle className="lucide" />{error}</div>
-              )
-            )}
-          </div>
+              ))}
 
-          <div className="split" />
-          <div className="input">
-            {pendingRoll ? (
-              <>
-                <button className="roll" onClick={() => roll(pendingRoll.eventId).catch(() => {})}>
-                  <Dices className="lucide" />{t("play.roll")}<span className="d">d{pendingRoll.shape === "outcome" ? "10" : "20"}</span>
-                </button>
-                <span className="h">{t("play.roll.hint")}</span>
-              </>
-            ) : !started ? (
-              <>
-                <button className="roll kickoff" data-testid="kickoff" onClick={kickoff} disabled={kicked}>
-                  <Play className="lucide" />{kicked ? t("play.start.busy") : t("play.start")}
-                </button>
-                <span className="h">{t("play.start.hint")}</span>
-              </>
-            ) : (
-              <input className="field" aria-label="输入" value={draft} placeholder={t("play.input.ph")}
-                onChange={(e) => setDraft(e.target.value)} onKeyDown={onKey} disabled={!!gameEnd} />
-            )}
-          </div>
-        </section>
-
-        <aside className="stage" aria-label="呈现台">
-          <div className="sh"><LayoutDashboard className="lucide" />{t("play.stage")}
-            <span className="mode">
-              {order.length > 0 && (
-                <button className="reset" aria-label={t("play.stage.reset")} title={t("play.stage.reset")} onClick={resetOrder}><RotateCcw className="lucide" /></button>
+              {rewound && (
+                <div className="rwnote" data-testid="play-rewind-note"><Rewind className="lucide" />已 rewind 到此输入前 · 后续回合已丢弃，可重新输入</div>
               )}
-              <Grid3x3 className="lucide" />{t("play.stage.grid")}
-            </span>
-          </div>
-          <div className="grid">
-            {orderedCells.length === 0 ? (
-              <div className="pan wide"><div className="pc"><span className="empty">{t("play.stage.empty")}</span></div></div>
-            ) : (
-              orderedCells.map((c) => <Fragment key={c.id}>{c.el}</Fragment>)
-            )}
-          </div>
-        </aside>
-      </div>
-    </div>
-  );
-}
 
-function Panel({ id, title, Icon, children, wide, gmTag, mini, onMin, onHide, dragging, onDragStart, onDragEnd, onDragOver, onDrop }: {
-  id: string; title: string; Icon: ComponentType<{ className?: string }>; children: React.ReactNode;
-  wide?: boolean; gmTag?: string; mini: boolean; onMin: () => void; onHide: () => void;
-  dragging?: boolean; onDragStart?: () => void; onDragEnd?: () => void;
-  onDragOver?: (e: React.DragEvent) => void; onDrop?: (e: React.DragEvent) => void;
-}) {
-  return (
-    <div className={"pan" + (wide ? " wide" : "") + (mini ? " min" : "") + (dragging ? " dragging" : "")} data-panel={id}
-      onDragOver={onDragOver} onDrop={onDrop}>
-      <div className="ph">
-        <span className="grip" draggable aria-label="拖拽排序" title="拖拽排序"
-          onDragStart={onDragStart} onDragEnd={onDragEnd}><GripVertical className="lucide" /></span>
-        <span className="pic"><Icon className="lucide" /></span><span className="pt">{title}</span>
-        <span className="ctl">
-          {gmTag && <span className="gm-tag"><Sparkles className="lucide" />{gmTag}</span>}
-          <button aria-label="最小化" onClick={onMin} style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", display: "flex" }}><Minus className="lucide" /></button>
-          <button aria-label="隐藏" onClick={onHide} style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", display: "flex" }}><X className="lucide" /></button>
-        </span>
+              {/* 机械回显 + 透视 GM 动作 toolcall */}
+              {(snapshot?.mechanics ?? []).map((m) => (
+                <div className={`mech mech-${m.kind}`} key={`mech-${m.seq}`} data-testid="play-mech">
+                  {m.kind === "watcher_fired" ? <Sparkles className="lucide" /> : <CheckCircle2 className="lucide" />}{m.text}
+                  {showActions && <span className="toolcall-inline" data-testid="play-toolcall">{m.kind}</span>}
+                </div>
+              ))}
+
+              {/* 暗骰（spoiler 档渲染：严格隐结果、关闭显全） */}
+              {hiddenRolls.map((h) => (
+                <div className="mech" key={`hidden-${h.eventId}`} data-testid="play-hidden-roll">
+                  <CheckCircle2 className="lucide" /><span className="ml">暗骰</span>
+                  {spoilerTier === "off"
+                    ? <span>GM {h.label}：{h.result}{h.dc != null ? ` vs DC ${h.dc}` : ""}{h.band ? ` · ${h.band.label}` : ""}</span>
+                    : <span>GM 进行了一次{h.label}判定</span>}
+                  <span style={{ marginLeft: "auto", fontSize: "9px", color: "var(--text3)", opacity: .6 }}>
+                    {spoilerTier === "off" ? "防剧透·关闭" : spoilerTier === "loose" ? "防剧透·宽松" : "防剧透·严格"}
+                  </span>
+                </div>
+              ))}
+
+              {/* 临时披露栈 */}
+              {reveals.map((rv) => (
+                <div className="tempstack" key={rv.seq} data-testid="play-temp-stack">
+                  <div className="th"><Sparkles className="lucide" />新披露 · 临时位（不抢常驻卡）</div>
+                  <div className="ti"><b style={{ color: "var(--text)" }}>{rv.target.replace(/^world:/, "")}</b>：{rv.text}</div>
+                </div>
+              ))}
+
+              {/* 明骰内联：区间分档 + 掷出后结果 */}
+              {pendingRoll && (
+                <div data-screen="roll" style={{ margin: "14px 0" }}>
+                  <div className="divider">待掷 · {pendingRoll.label}</div>
+                  {pendingRoll.bands && pendingRoll.bands.length > 0
+                    ? <RollBands bands={pendingRoll.bands} tier={spoilerTier} result={rollResult} />
+                    : <div className="mech"><Dices className="lucide" />{pendingRoll.label}：{pendingRoll.yourSide.exprDisplay}{pendingRoll.dc != null ? ` vs DC ${pendingRoll.dc}` : ""}</div>}
+                </div>
+              )}
+
+              {/* 生成中（无叙事时 stream 内轻提示） */}
+              {generating && rounds.length === 0 && <div className="gen"><span className="spin" />GM 生成中…</div>}
+
+              {/* 终局复盘态：不遮罩、续玩层继续 */}
+              {gameEnd && (
+                <div data-screen="end" style={{ margin: "14px 0" }} data-testid="play-endmark">
+                  <div className="divider"><span className="endmark"><Flag className="lucide" />终局 · 进入复盘</span></div>
+                  <p className="prose"><b>{gameEnd.outcome}</b> — {gameEnd.reason}</p>
+                  <div className="rwnote" style={{ borderColor: "var(--acc)", color: "var(--acc-soft)" }}>
+                    <MessageSquare className="lucide" />GM 已进入复盘：不再推进剧情，回答你关于本局的任何问题；想改走某轮可
+                    <span className="btn" role="button" tabIndex={0} data-testid="play-branch" onClick={() => branch().catch(() => {})}>分支回档</span>。
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="split" />
+
+            {/* 底部当前交互：五态互斥 */}
+            {screen === "choices" && choices && (
+              <div className="foot">
+                <div className="choices-pop">
+                  <div className="ch-h" data-testid="play-choices-hint">选 1 个 · 点选项勾选 · 再点取消 · 点发送提交（或直接在下方输入框自己写）</div>
+                  <div className="choices" data-testid="play-choices">
+                    {choices.options.map((o) => (
+                      <div key={o.index} className={"choice" + (chosen.has(o.index) ? " on" : "")} role="button" tabIndex={0}
+                        onClick={() => toggleChoice(o.index)}>{o.label}</div>
+                    ))}
+                  </div>
+                </div>
+                <div className="input" data-testid="play-input">
+                  <input className="box" aria-label="输入" value={draft} placeholder="说点什么，或做点什么，或问 GM 规则…"
+                    onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") sendChoices(); }} />
+                  <span className="send" role="button" tabIndex={0} onClick={sendChoices}><ArrowUp className="lucide" /></span>
+                </div>
+              </div>
+            )}
+            {screen === "input" && (
+              <div className="foot">
+                <div className="input" data-testid="play-input">
+                  <input className="box" aria-label="输入" value={draft} placeholder="说点什么，或做点什么，或问 GM 规则…"
+                    onChange={(e) => setDraft(e.target.value)} onKeyDown={onKey} />
+                  <span className="send" role="button" tabIndex={0} onClick={() => send(draft)}><ArrowUp className="lucide" /></span>
+                </div>
+              </div>
+            )}
+            {screen === "generating" && (
+              <div className="foot"><div className="gen" data-testid="play-generating"><span className="spin" />GM 生成中…</div></div>
+            )}
+            {screen === "roll" && pendingRoll && (
+              <div className="foot">
+                <div className="rollcenter" data-testid="play-rollreq">
+                  <button className="rollbig" data-testid="play-roll-btn" onClick={() => roll(pendingRoll.eventId).catch(() => {})}>
+                    <Dices className="lucide" />丢骰子<span className="d">d{pendingRoll.shape === "outcome" ? "10" : "20"}</span>
+                  </button>
+                  <div className="rollhint">这一掷决定结果 · 点数由引擎裁定</div>
+                </div>
+              </div>
+            )}
+            {screen === "error" && (
+              <div className="foot">
+                {errorCode === "gm_timeout" ? (
+                  <div className="errbar" data-testid="gm-timeout" style={{ flexWrap: "wrap" }}>
+                    <AlertCircle className="lucide" /><span className="sp">{error}</span>
+                    <span className="btn" role="button" tabIndex={0} data-testid="timeout-retry" onClick={() => retry().catch(() => {})}><RotateCcw className="lucide" />重试</span>
+                    <span className="btn" role="button" tabIndex={0} data-testid="timeout-skip" onClick={skip}>跳过</span>
+                  </div>
+                ) : (
+                  <div className="errbar" data-testid="play-error"><AlertCircle className="lucide" /><span className="sp">{error}</span>
+                    <span className="btn" role="button" tabIndex={0} onClick={() => retry().catch(() => {})}><RotateCcw className="lucide" />重试</span></div>
+                )}
+              </div>
+            )}
+            {screen === "end" && (
+              <div className="foot">
+                <div className="input" data-testid="play-postmortem-input">
+                  <input className="box" aria-label="复盘输入" value={draft} placeholder="复盘 · 问 GM 任何问题，或描述想改走的分支…"
+                    onChange={(e) => setDraft(e.target.value)} onKeyDown={onKey} />
+                  <span className="send" role="button" tabIndex={0} onClick={() => send(draft)}><ArrowUp className="lucide" /></span>
+                </div>
+              </div>
+            )}
+
+            {/* ctx-bar 上下文占用条（>90% 变红 + 压缩提示） */}
+            <div className={"ctx-bar" + (ctxHot ? " hot" : "")} data-testid="play-context-usage"
+              title={`当前上下文占用 ${ctxPct}% · 接近上限可 rewind / 开新局`}>
+              <Gauge className="lucide" /><span className="ctx-label">上下文</span>
+              <span className="ctx-track"><span className="ctx-fill" style={{ width: `${Math.min(100, ctxPct)}%` }} /></span>
+              <span className="ctx-pct">{ctxPct}%</span>
+              {compacting
+                ? <span className="ctx-hint" data-testid="play-context-compacting"><Zap className="lucide" />正在进行上下文压缩<span className="ctx-progress" data-testid="play-context-progress" /></span>
+                : ctxHot && <span className="ctx-hint" data-testid="play-context-hint"><Zap className="lucide" />即将触发压缩</span>}
+            </div>
+          </div>
+
+          {/* 右 dock：dock-card 模板渲染器 */}
+          <div className={"dock right" + (dockCollapsed ? " collapsed" : "") + (compactCards ? " compact" : "")} data-testid="play-dock-right">
+            <div className="dock-h"><span>公开信息卡 · markdown 模板</span>
+              <span className="dock-fold" role="button" tabIndex={0} data-testid="play-dock-fold" title="折叠 dock" onClick={() => setDockCollapsed((v) => !v)}><PanelRightClose className="lucide" /></span>
+            </div>
+            {dock.cards.map((c) => (
+              <DockCard key={c.id} card={c} sheets={snapshot?.sheets ?? []} onArchive={dock.archive} onEditSource={dock.updateDiy} />
+            ))}
+            <div className="dcard dc-add" role="button" tabIndex={0} data-testid="play-dock-add" onClick={() => dock.addDiy()}>
+              <div className="dc-head"><Sparkles className="lucide" /><span className="ttl">+ 新建 DIY 卡</span></div>
+            </div>
+          </div>
+        </div>
       </div>
-      {!mini && <div className="pc">{children}</div>}
+
+      {bay}
     </div>
   );
 }

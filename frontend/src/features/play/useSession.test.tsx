@@ -393,3 +393,54 @@ describe("RT-1 GM 超时兜底", () => {
   });
 });
 
+
+// ── co-play：narration 按回合分组 + per-turn usage ────────────────────────────
+describe("co-play 回合分组", () => {
+  it("turn_started 开新回合、narration_commit 追加当前回合、turn_ended 落 usage", async () => {
+    const instances = installWs();
+    stubFetchOk();
+    const { result } = renderHook(() => useSession("s1"));
+    await act(async () => { await Promise.resolve(); });
+
+    act(() => { instances[0].emit({ protocol: CLIENT_PROTOCOL, type: "turn_started", turnId: "t1" }); });
+    act(() => { instances[0].emit({ protocol: CLIENT_PROTOCOL, type: "narration_commit", seq: 1, text: "第一段" }); });
+    act(() => { instances[0].emit({ protocol: CLIENT_PROTOCOL, type: "turn_started", turnId: "t2" }); });
+    act(() => { instances[0].emit({ protocol: CLIENT_PROTOCOL, type: "narration_commit", seq: 2, text: "第二段" }); });
+    act(() => { instances[0].emit({ protocol: CLIENT_PROTOCOL, type: "turn_ended", turnId: "t2", seq: 3,
+      usage: { inputTokens: 3200, outputTokens: 480, cacheReadTokens: 100, cacheCreationTokens: 10 } }); });
+
+    expect(result.current.rounds).toHaveLength(2);
+    expect(result.current.rounds[0].texts).toEqual(["第一段"]);
+    expect(result.current.rounds[1].texts).toEqual(["第二段"]);
+    expect(result.current.rounds[1].usage?.inputTokens).toBe(3200);
+    expect(result.current.narration.join("")).toContain("第二段"); // 扁平兼容
+  });
+});
+
+// ── 暗骰（RT-FE6）：hidden_roll 通知累积 ──────────────────────────────────────
+describe("暗骰 hidden_roll", () => {
+  it("hidden_roll 通知累积到 hiddenRolls（不置 pendingRoll）", async () => {
+    const instances = installWs();
+    stubFetchOk();
+    const { result } = renderHook(() => useSession("s1"));
+    await act(async () => { await Promise.resolve(); });
+    act(() => { instances[0].emit({ protocol: CLIENT_PROTOCOL, type: "hidden_roll", eventId: 11, label: "潜行", result: 18, dc: 12, band: { label: "成功", consequence: "未被发现" } }); });
+    expect(result.current.pendingRoll).toBeNull();
+    expect(result.current.hiddenRolls).toHaveLength(1);
+    expect(result.current.hiddenRolls[0].result).toBe(18);
+  });
+});
+
+// ── 上下文压缩（usage-and-context §四）：context_compacting 切 compacting ──────
+describe("上下文压缩", () => {
+  it("context_compacting start→done 切换 compacting 标志", async () => {
+    const instances = installWs();
+    stubFetchOk();
+    const { result } = renderHook(() => useSession("s1"));
+    await act(async () => { await Promise.resolve(); });
+    act(() => { instances[0].emit({ protocol: CLIENT_PROTOCOL, type: "context_compacting", phase: "start" }); });
+    expect(result.current.compacting).toBe(true);
+    act(() => { instances[0].emit({ protocol: CLIENT_PROTOCOL, type: "context_compacting", phase: "done", result: "success" }); });
+    expect(result.current.compacting).toBe(false);
+  });
+});
