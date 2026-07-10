@@ -202,6 +202,50 @@ describe("createLoreApp: plugin 传入", () => {
   });
 });
 
+// usage-stream §3: POST /sessions/loregm/:id/messages 把 handleMessage 累加的本轮 usage
+// 原样搭进 202 响应体(v1 不落库,仅内联回前端);无 usage 事件则不带。
+describe("POST /sessions/loregm/:id/messages usage 透传(usage-stream §3)", () => {
+  it("driver 产 usage 事件时 body 含 usage(四类 token 之和)、HTTP 202", async () => {
+    const catalog = openCatalog(":memory:");
+    const lore = createLoreApp({
+      catalog,
+      agentFactory: () => new FakeDiceGm([
+        { type: "usage", usage: { inputTokens: 5, outputTokens: 4, cacheReadTokens: 3, cacheCreationTokens: 2 } },
+        { type: "usage", usage: { inputTokens: 1, outputTokens: 1, cacheReadTokens: 1, cacheCreationTokens: 1 } },
+        { type: "turn_end" },
+      ]),
+    });
+    const id = await createLoreSession(lore, "计量团本");
+    const res = await lore.request(`/sessions/loregm/${id}/messages`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ text: "写点设定" }),
+    });
+    expect(res.status).toBe(202);
+    const body = (await res.json()) as { turnId: string; usage?: unknown };
+    expect(body.turnId).toBeTruthy();
+    expect(body.usage).toEqual({ inputTokens: 6, outputTokens: 5, cacheReadTokens: 4, cacheCreationTokens: 3 });
+    catalog.close();
+  });
+
+  it("无 usage 事件时 body 不含 usage、HTTP 202", async () => {
+    const catalog = openCatalog(":memory:");
+    const lore = createLoreApp({
+      catalog,
+      agentFactory: () => new FakeDiceGm([{ type: "narration", text: "ok" }, { type: "turn_end" }]),
+    });
+    const id = await createLoreSession(lore, "无计量团本");
+    const res = await lore.request(`/sessions/loregm/${id}/messages`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ text: "写点设定" }),
+    });
+    expect(res.status).toBe(202);
+    const body = (await res.json()) as { turnId: string; usage?: unknown };
+    expect(body.turnId).toBeTruthy();
+    expect(body.usage).toBeUndefined();
+    catalog.close();
+  });
+});
+
 // §1 BE-lore-error-shape: POST /sessions/loregm/:id/messages 返回体带 error?。
 // 构建 GM 中途 error 属领域级(turn 已跑完、turnId 有效)→ HTTP 保持 202,靠 body.error 标失败(不改 5xx)。
 // 成功轮 body 不含 error。
