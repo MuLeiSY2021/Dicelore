@@ -27,6 +27,11 @@ const anns = (idempotent: boolean) => ({
   readOnlyHint: false, destructiveHint: false, idempotentHint: idempotent, openWorldHint: false,
 });
 
+// 命中档「真实后果文本」：RT-FE5 起 = plan(真相层·驱动机械);向后兼容旧单一 consequence。
+function bandTruth(band: { plan?: string; consequence?: string }): string {
+  return band.plan ?? band.consequence ?? "";
+}
+
 /** 内置裁决工具集（handler 闭包持注入的 SessionBackend）。 */
 export function makeResolverTools(backend: SessionBackend): ToolDef[] {
   function choiceHandler(_: unknown, input: { prompt: string; options: { label: string; consequence: string }[] }) {
@@ -36,12 +41,14 @@ export function makeResolverTools(backend: SessionBackend): ToolDef[] {
 
   function outcomeHandler(_: unknown, input: { context: string; die: string; bands: any[] }) {
     const r = resolveOutcome(input.die, input.bands);
+    // data_json 存整档(含 plan+narration)——命中档 plan 是机械驱动源(RT-FE5 FE5-3)。
     const event_id = backend.logAppend({
       kind: "verdict",
       content: input.context,
       data_json: { context: input.context, die: r.die, roll: r.roll, band: r.band },
     });
-    return { roll: r.roll, die: r.die, band: { label: r.band.label, consequence: r.band.consequence ?? "" }, event_id };
+    // 出参 band.consequence = 命中档真实后果计划(plan);向后兼容旧单一 consequence 字段。
+    return { roll: r.roll, die: r.die, band: { label: r.band.label, consequence: bandTruth(r.band) }, event_id };
   }
 
   function contestHandler(_: unknown, input: { context: string; a: any; b: any }) {
@@ -95,7 +102,7 @@ export function makeResolverTools(backend: SessionBackend): ToolDef[] {
     name: "resolve_outcome_hidden",
     title: "选项骰裁决",
     description:
-      "【暗骰·引擎自动掷】掷单骰串并按档位表命中一档。Args: context(裁决什么)、die(单骰串如 \"1d100\")、bands(≥1 档,闭区间 min/max + consequence,引擎校验不重叠/全覆盖)。" +
+      "【暗骰·引擎自动掷】掷单骰串并按档位表命中一档。Args: context(裁决什么)、die(单骰串如 \"1d100\")、bands(≥1 档,闭区间 min/max + plan(真实后果计划·驱动机械·可含暗值/剧透) + narration(玩家可见叙述·可留白),引擎校验不重叠/全覆盖)。" +
       "Returns: {roll, die, band:{label,consequence}, event_id}。use: 成败带随机度的行动。don't: 对抗双方各有加值(那用 resolve_contest_hidden)。" +
       "错误: die 非单骰串→DIE_INVALID;档位重叠/落空→RANGE_INVALID。",
     inputSchema: resolveOutcomeIn,

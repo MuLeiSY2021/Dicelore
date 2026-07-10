@@ -27,7 +27,8 @@ describe("StreamMessageSchema", () => {
     const staged = StreamMessageSchema.parse({
       protocol: CLIENT_PROTOCOL, type: "roll_staged",
       pendingRoll: { eventId: 12, shape: "outcome", label: "撬锁",
-        yourSide: { name: "张三", exprDisplay: "1d100" }, bands: [{ label: "成功", min: 1, max: 60 }] },
+        yourSide: { name: "张三", exprDisplay: "1d100" },
+        bands: [{ label: "成功", min: 1, max: 60, plan: "锁应声而开、内室尽收眼底", narration: "你屏息拨动锁芯" }] },
     });
     expect(staged.type).toBe("roll_staged");
     const committed = StreamMessageSchema.parse({
@@ -35,6 +36,17 @@ describe("StreamMessageSchema", () => {
       eventId: 12, rolls: [18], total: 18, dc: 15, outcome: "success",
     });
     expect(committed.type).toBe("roll_committed");
+  });
+
+  it("roll_staged 的 band 缺 plan/narration 被拒（RT-FE5 两字段必填）", () => {
+    expect(() =>
+      StreamMessageSchema.parse({
+        protocol: CLIENT_PROTOCOL, type: "roll_staged",
+        pendingRoll: { eventId: 12, shape: "outcome", label: "撬锁",
+          yourSide: { name: "张三", exprDisplay: "1d100" },
+          bands: [{ label: "成功", min: 1, max: 60 }] },
+      }),
+    ).toThrow();
   });
 
   it("turn_ended 无 usage 仍通过（向后兼容）", () => {

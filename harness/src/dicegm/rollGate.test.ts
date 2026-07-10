@@ -40,6 +40,29 @@ describe("PlayerRollGate(单人)", () => {
     expect(g.resolveRoll(999)).toBe(false);
   });
 
+  // RT-FE5：明骰 outcome 的 roll_staged 投影须全量携带每档 plan+narration(不剥字段)——供前端按 spoiler 档渲染。
+  it("RT-FE5：outcome roll_staged 投影 bands 完整含 plan+narration", async () => {
+    const db = openDb(":memory:"); initSchema(db);
+    const hub = new WsHub(); const sent: any[] = [];
+    hub.add("s1", { send: (d: string) => sent.push(JSON.parse(d)), readyState: 1 });
+    const eventId = stagePendingRoll(db, {
+      shape: "outcome",
+      spec: { context: "撬锁", die: "1d100", bands: [
+        { label: "失败", min: 1, max: 50, plan: "触发警报、守卫涌来(暗值:警觉+2)", narration: "锁纹丝不动" },
+        { label: "成功", min: 51, max: 100, plan: "无声打开、内室尽览", narration: "咔哒轻响" },
+      ] },
+    });
+    const g = new PlayerRollGate(openSessionBackend(db), hub, "s1");
+    g.gate(eventId);
+    await Promise.resolve();
+    const staged = sent.find((m) => m.type === "roll_staged");
+    expect(staged).toBeTruthy();
+    expect(staged.pendingRoll.bands).toEqual([
+      { label: "失败", min: 1, max: 50, plan: "触发警报、守卫涌来(暗值:警觉+2)", narration: "锁纹丝不动" },
+      { label: "成功", min: 51, max: 100, plan: "无声打开、内室尽览", narration: "咔哒轻响" },
+    ]);
+  });
+
   // RT-3：进程重启后,pending_roll 仍 awaiting 但内存 waiter 已丢(in-flight turn 连同 await gate 一并消失)。
   // 玩家点掷骰时若仅靠 waiter 解锁 → resolveRoll 找不到 waiter → 返回 false → 端点 409、verdict 永不落、卡死。
   // 修复后:无 waiter 时走「无 gate 立即掷」分支,直接 commit 并广播 roll_committed,玩家能正常完成一次掷骰。
@@ -50,7 +73,7 @@ describe("PlayerRollGate(单人)", () => {
     // 构造「重启后」状态:pending_roll 已暂存(awaiting),但 gate 是新建的(waiters 为空,模拟进程重启)。
     const eventId = stagePendingRoll(db, {
       shape: "outcome",
-      spec: { context: "撬锁", die: "1d100", bands: [{ label: "成功", min: 1, max: 100, consequence: "门开了" }] },
+      spec: { context: "撬锁", die: "1d100", bands: [{ label: "成功", min: 1, max: 100, plan: "门开了、内室尽览", narration: "锁咔哒一声" }] },
     });
     const g = new PlayerRollGate(openSessionBackend(db), hub, "s1");
     // 此前(红):resolveRoll 找不到 waiter → false → 端点 409 → 卡死。
@@ -72,7 +95,7 @@ describe("PlayerRollGate(单人)", () => {
     const hub = new WsHub();
     const eventId = stagePendingRoll(db, {
       shape: "outcome",
-      spec: { context: "撬锁", die: "1d100", bands: [{ label: "成功", min: 1, max: 100, consequence: "门开了" }] },
+      spec: { context: "撬锁", die: "1d100", bands: [{ label: "成功", min: 1, max: 100, plan: "门开了", narration: "锁响" }] },
     });
     const g = new PlayerRollGate(openSessionBackend(db), hub, "s1");
     expect(g.resolveRoll(eventId)).toBe(true);

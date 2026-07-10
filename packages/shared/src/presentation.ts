@@ -39,7 +39,15 @@ export const ChoicesViewSchema = z.object({
 });
 
 // 明骰待掷规格（只含规格、无结果；exprDisplay 如 "1d20+{说服}"，真值不下发）
-export const RollBandSchema = z.object({ label: z.string(), min: z.number(), max: z.number() });
+// RT-FE5：每档双叙述——plan(AI 真实计划·驱动机械·可含暗值/剧透·骰前锁定) + narration(玩家可见·可留白悬疑·不吐暗值)。
+// 两字段均全量随 roll_staged 下发，显隐纯交前端 spoiler 档渲染（与 visible 正交、不剥字段）。
+export const RollBandSchema = z.object({
+  label: z.string(),
+  min: z.number(),
+  max: z.number(),
+  plan: z.string(),
+  narration: z.string(),
+});
 export const PendingRollSchema = z.object({
   eventId: z.number(),
   shape: z.enum(["outcome", "contest"]),
