@@ -36,4 +36,25 @@ describe("StreamMessageSchema", () => {
     });
     expect(committed.type).toBe("roll_committed");
   });
+
+  it("turn_ended 无 usage 仍通过（向后兼容）", () => {
+    const m = StreamMessageSchema.parse({
+      protocol: CLIENT_PROTOCOL, type: "turn_ended", turnId: "t1", seq: 3,
+    });
+    expect(m.type).toBe("turn_ended");
+    if (m.type === "turn_ended") expect(m.usage).toBeUndefined();
+  });
+
+  it("turn_ended 带 usage 解析正确", () => {
+    const m = StreamMessageSchema.parse({
+      protocol: CLIENT_PROTOCOL, type: "turn_ended", turnId: "t1", seq: 3,
+      usage: { inputTokens: 100, outputTokens: 40, cacheReadTokens: 10, cacheCreationTokens: 5 },
+    });
+    expect(m.type).toBe("turn_ended");
+    if (m.type === "turn_ended") {
+      expect(m.usage).toEqual({
+        inputTokens: 100, outputTokens: 40, cacheReadTokens: 10, cacheCreationTokens: 5,
+      });
+    }
+  });
 });

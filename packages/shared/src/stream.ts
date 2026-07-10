@@ -25,7 +25,13 @@ export const StreamMessageSchema = z.discriminatedUnion("type", [
     eventId: z.number(), rolls: z.array(z.number()), total: z.number(),
     dc: z.number().optional(), outcome: z.string(),
   }),
-  z.object({ ...base, type: z.literal("turn_ended"), turnId: z.string(), seq: z.number() }),
+  z.object({
+    ...base, type: z.literal("turn_ended"), turnId: z.string(), seq: z.number(),
+    usage: z.object({
+      inputTokens: z.number(), outputTokens: z.number(),
+      cacheReadTokens: z.number(), cacheCreationTokens: z.number(),
+    }).optional(),
+  }),
   z.object({ ...base, type: z.literal("game_end"), reason: z.string(), outcome: z.string() }),
   z.object({ ...base, type: z.literal("error"), code: z.string(), message: z.string() }),
 ]);
