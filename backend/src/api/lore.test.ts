@@ -315,6 +315,54 @@ describe("GET /sessions/loregm/:id/draft 检视未 commit 的 Draft", () => {
   });
 });
 
+// ── POST /sessions/loregm/:id/draft/validate —— 活跃期 Draft 校验(RT-FE11 §二)。
+// 复用 core validateDraft(=validatePack 同一套规则),返 {issues:[{level,path,msg}]},
+// path 用 Draft 分域路径(非文件路径)。无 body、只读、幂等。
+describe("POST /sessions/loregm/:id/draft/validate 活跃期 Draft 校验", () => {
+  // 脚本化构建 agent:写 manifest + lore,但**不写 prologue**(留一个缺 prologue error 供断言分级)。
+  class FakeBuilder implements Agent {
+    constructor(private init: AgentInit) {}
+    async *runTurn(): AsyncIterable<TurnEvent> {
+      const reg = (this.init.mcpServer as unknown as { _registeredTools: Record<string, { handler: (a: unknown) => Promise<unknown> }> })._registeredTools;
+      await reg["dicelore_build_set_manifest"].handler({ name: "草稿团本", id: "caogao" });
+      await reg["dicelore_build_write_lore"].handler({ name: "背景", content: "一段世界观文本。" });
+      yield { type: "turn_end" };
+    }
+  }
+
+  it("会话不存在 → 404 NO_SESSION", async () => {
+    const catalog = openCatalog(":memory:");
+    const lore = createLoreApp({ catalog, agentFactory: (init) => new FakeBuilder(init) });
+    const res = await lore.request("/sessions/loregm/never-started/draft/validate", { method: "POST" });
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as { error: { code: string } };
+    expect(body.error.code).toBe("NO_SESSION");
+    catalog.close();
+  });
+
+  it("驱动构建 GM 后 POST validate 返分级 issues(path 分域、含缺 prologue error)", async () => {
+    const catalog = openCatalog(":memory:");
+    const lore = createLoreApp({ catalog, agentFactory: (init) => new FakeBuilder(init) });
+    const id = await createLoreSession(lore, "草稿团本");
+    const send = await lore.request(`/sessions/loregm/${id}/messages`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ text: "写点设定" }),
+    });
+    expect(send.status).toBe(202);
+
+    const res = await lore.request(`/sessions/loregm/${id}/draft/validate`, { method: "POST" });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { issues: { level: string; path: string; msg: string }[] };
+    expect(Array.isArray(body.issues)).toBe(true);
+    // FakeBuilder 只写 manifest+lore、无 prologue → 缺 prologue error(复用 validatePack Rule 0c)。
+    const prologueErr = body.issues.find((i) => i.path === "prologue");
+    expect(prologueErr?.level).toBe("error");
+    // path 是 Draft 分域路径,不含文件分隔符。
+    expect(body.issues.every((i) => !i.path.includes("/"))).toBe(true);
+    catalog.close();
+  });
+});
+
 // ── 会话工作区 ensureWorkspace（build-agent-workspace §1）──────────────────────
 // workspace 每 session 持久:<sessionsDir>/sessions/lore/<id>/workspace/,只建 materials/,
 // 不拷任何 skill、不产 .claude(skill 经 plugin 从数据根按引用加载)。ensureWorkspace 幂等。

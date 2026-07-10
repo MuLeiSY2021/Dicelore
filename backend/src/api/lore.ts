@@ -12,7 +12,7 @@ import { randomUUID } from "node:crypto";
 import { mkdirSync, createWriteStream, unlinkSync, existsSync } from "node:fs";
 import { basename, join } from "node:path";
 import { Readable } from "node:stream";
-import { list, commit, tag, checkout, validatePack, createBuildMcpServer, invokeBuildTool, Draft, type BuildCtx, type CatalogDB, type PackFile } from "@dicelore/backend";
+import { list, commit, tag, checkout, validatePack, validateDraft, createBuildMcpServer, invokeBuildTool, Draft, type BuildCtx, type CatalogDB, type PackFile } from "@dicelore/backend";
 import { LoreSession, Rewind, SessionTranscript, sessionDir, type LoreSessionDeps, type AgentFactory, type PluginRef, type RollbackHook } from "@dicelore/harness";
 import { getLogger } from "@dicelore/logs";
 import type { SessionInfo, SessionSummary } from "@dicelore/shared";
@@ -262,6 +262,17 @@ export function createLoreApp(deps: LoreDeps): Hono {
     const entry = getLoreEntry(c.req.param("id"));
     if (!entry) return c.json({ error: { code: "NO_SESSION", message: "loregm 会话不存在(尚未建会话)" } }, 404);
     return c.json({ files: entry.draft.toPackFiles(), snapshot: entry.draft.snapshot() });
+  });
+
+  // 活跃期 Draft 校验(RT-FE11 §二)：POST /sessions/loregm/:id/draft/validate。
+  // 制作页"校验报告"在未提交的 Draft 期即时反馈——复用 core validateDraft(=validatePack 同一套规则),
+  // 返 { issues: [{level,path,msg}] },path 用 **Draft 分域路径**(world.lore.x/manifest.meta…,非文件路径,
+  // 对应 Draft 未物化态)。与 /catalog/validate(已提交包=文件路径)对称但 path 形态不同是期望的。
+  // 无 body、只读、幂等(不改 Draft)。会话不存在 → 404(与 GET /draft 一致)。
+  app.post("/sessions/loregm/:id/draft/validate", (c) => {
+    const entry = getLoreEntry(c.req.param("id"));
+    if (!entry) return c.json({ error: { code: "NO_SESSION", message: "loregm 会话不存在(尚未建会话)" } }, 404);
+    return c.json({ issues: validateDraft(entry.draft) });
   });
 
   // 释放构建会话:从 loreReg 删 {session, draft}(每个 Draft 持完整 in-memory 包内容,

@@ -114,6 +114,7 @@ export { watcherList, type WatcherRow } from "./store/narrative/watcher.js";
 export { foreshadowList, type Foreshadow } from "./store/narrative/foreshadow.js";
 export { stateSet } from "./store/sheet/state.js";
 export { parseFront, type ParsedFront } from "./build/pack/validate.js";
+export { validateDraft, type DraftValidateIssue } from "./build/pack/validate.js";
 
 // ===== core 侧 mcp 工具面（handlers/stdlib）经裸 @dicelore/backend 直接消费的引擎符号 =====
 // mcp/handlers 与 mcp/stdlib 紧贴 store/resolve/toolgen 引擎；store 一族迁出后这些 import 全改裸 barrel。

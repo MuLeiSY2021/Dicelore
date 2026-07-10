@@ -8,11 +8,17 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import type { PackFile } from "../../catalog/catalog.js";
+import type { Draft } from "../draft.js";
 import { compileTool, type ToolDecl } from "../../toolgen/compile.js";
 
 // ── 公开类型 ────────────────────────────────────────────────────────────────
 export interface ValidateIssue { level: "error" | "warn"; file: string; msg: string; hint?: string }
 export interface ValidateReport { ok: boolean; issues: ValidateIssue[] }
+
+// Draft 期校验 issue（RT-FE11）：与 ValidateIssue 同构，但 `path` 是 **Draft 分域路径**
+// （如 world.lore.张三 / rule.核心规则 / manifest.meta），非文件路径——Draft 未物化成文件树，
+// 分域路径对作者更直观。`/catalog/validate`（已提交包=文件树）仍用文件路径，两端形态不同是期望的（对应不同态）。
+export interface DraftValidateIssue { level: "error" | "warn"; path: string; msg: string; hint?: string }
 
 // ── 允许的顶层路径段 ──────────────────────────────────────────────────────
 // canonical 闸门见 catalog/import.ts importPack：state/ 与 manifest.md 是 import 真正消费的开局/元信息段。
@@ -448,6 +454,44 @@ export function validatePack(files: PackFile[]): ValidateReport {
   }
 
   return { ok: !issues.some((i) => i.level === "error"), issues };
+}
+
+// ── Draft 期校验入口（RT-FE11 §二）────────────────────────────────────────
+// 复用 validatePack 规则集（单源、不另造校验器）：把活跃期 Draft 序列化成包文件喂给同一套 Rule，
+// 再把返回的**文件路径**回映成 **Draft 分域路径**（作者视角），返 [{level,path,msg}]。
+// 只读、无副作用、幂等（Draft 未变时多次调返同结果）——本函数不改 Draft。
+export function validateDraft(draft: Draft): DraftValidateIssue[] {
+  const report = validatePack(draft.toPackFiles());
+  return report.issues.map((i) => {
+    const out: DraftValidateIssue = { level: i.level, path: fileToDomainPath(i.file), msg: i.msg };
+    if (i.hint) out.hint = i.hint;
+    return out;
+  });
+}
+
+// 包文件路径 → Draft 分域路径。toPackFiles 的物化路径（lore/x.md、manifest.md、fronts/x.md…）
+// 回映成作者面分域路径（world.lore.x、manifest.meta、front.x…）。未知形态原样透出兜底。
+function fileToDomainPath(file: string): string {
+  if (file === "(pack)") return "(draft)";
+  if (file === "manifest.md" || file === "manifest.yaml") return "manifest.meta";
+  if (file === "prologue.md") return "prologue";
+  const slash = file.indexOf("/");
+  if (slash === -1) return file;
+  const top = file.slice(0, slash);
+  const rest = file.slice(slash + 1).replace(/\.(md|csv|json)$/, "");
+  switch (top) {
+    case "lore":        return `world.lore.${rest}`;
+    case "rules":       return `rule.${rest}`;
+    case "pools":       return `pool.${rest}`;
+    case "state":
+    case "sheets":      return `sheet.${rest}`;
+    case "fronts":      return `front.${rest}`;
+    case "plotlines":   return `plotline.${rest}`;
+    case "foreshadows": return `foreshadow.${rest}`;
+    case "anchors":     return `anchor.${rest}`;
+    case "tools":       return `tool.${rest}`;
+    default:            return `${top}.${rest}`;
+  }
 }
 
 // ── helpers ────────────────────────────────────────────────────────────────
