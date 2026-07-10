@@ -12,6 +12,8 @@ import { openDb, initSchema } from "../store/db.js";
 import { stateSet, stateGet } from "../store/sheet/state.js";
 import { plotlineUpsert } from "../store/narrative/plotline.js";
 import { foreshadowUpsert } from "../store/narrative/foreshadow.js";
+import { logAppend } from "../store/event/record.js";
+import { historyList } from "../store/event/history.js";
 import { compileWriteTool } from "./writeTool.js";
 
 describe("compileWriteTool", () => {
@@ -102,5 +104,35 @@ describe("compileWriteTool", () => {
         sql: "DELETE FROM state WHERE entity=:e",
       })
     ).toThrow();
+  });
+
+  test("写工具:mark_moment 经 markMoment 正典原语标 is_moment", () => {
+    const db = openDb(":memory:");
+    initSchema(db);
+    const seq = logAppend(db, { content: "关键抉择", kind: "narrate" });
+    const t = compileWriteTool({
+      name: "mark_moment",
+      params: { seq: "int" },
+      sql: "UPDATE log SET is_moment = 1 WHERE seq = :seq",
+    });
+    t.handler(db, { seq });
+    const row = db.prepare("SELECT is_moment FROM log WHERE seq=?").get(seq) as { is_moment: number };
+    expect(row.is_moment).toBe(1);
+  });
+
+  test("写工具:history_compact 经 historyCompact 正典原语写摘要", () => {
+    const db = openDb(":memory:");
+    initSchema(db);
+    logAppend(db, { content: "一", kind: "narrate" });
+    const last = logAppend(db, { content: "二", kind: "narrate" });
+    const t = compileWriteTool({
+      name: "history_compact",
+      params: { seq_from: "int", seq_to: "int", summary: "string" },
+      sql: "INSERT INTO history (seq_from, seq_to, summary) VALUES (:seq_from, :seq_to, :summary)",
+    });
+    t.handler(db, { seq_from: 1, seq_to: 2, summary: "第一幕梗概" });
+    const list = historyList(db);
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({ seq_from: 1, seq_to: 2, summary: "第一幕梗概", created_seq: last });
   });
 });

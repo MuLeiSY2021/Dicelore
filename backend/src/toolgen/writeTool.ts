@@ -14,6 +14,8 @@ import type { StateKind } from "../store/sheet/state.js";
 import { frontSetStatus, frontUpsert } from "../store/narrative/front.js";
 import { plotlineSetStatus, plotlineUpsert } from "../store/narrative/plotline.js";
 import { foreshadowSetStatus, foreshadowUpsert } from "../store/narrative/foreshadow.js";
+import { markMoment } from "../store/event/moment.js";
+import { historyCompact } from "../store/event/history.js";
 import { matchWrite, type WritePlan } from "./writeMatch.js";
 
 export interface WriteToolDecl {
@@ -72,6 +74,10 @@ function executePlan(
       return executeSetStatus(db, plan, args, toolName);
     case "insert":
       return executeInsert(db, plan, args, toolName);
+    case "markMoment":
+      return executeMarkMoment(db, plan, args, toolName);
+    case "historyCompact":
+      return executeHistoryCompact(db, plan, args, toolName);
   }
 }
 
@@ -150,8 +156,31 @@ function executeInsert(
   }
 }
 
-// ── 工具函数 ──────────────────────────────────────────────────────────────────
+// ── 记忆工具执行（A′ §6）─────────────────────────────────────────────────────
 
+function executeMarkMoment(
+  db: DB,
+  plan: import("./writeMatch.js").MarkMomentPlan,
+  args: Record<string, unknown>,
+  toolName: string,
+): number {
+  const seq = Number(getArg(args, plan.seqParam, toolName));
+  return markMoment(db, seq);
+}
+
+function executeHistoryCompact(
+  db: DB,
+  plan: import("./writeMatch.js").HistoryCompactPlan,
+  args: Record<string, unknown>,
+  toolName: string,
+): number {
+  const seq_from = Number(getArg(args, plan.seqFromParam, toolName));
+  const seq_to = Number(getArg(args, plan.seqToParam, toolName));
+  const summary = String(getArg(args, plan.summaryParam, toolName));
+  return historyCompact(db, { seq_from, seq_to, summary });
+}
+
+// ── 工具函数 ──────────────────────────────────────────────────────────────────
 /**
  * 将 expr 中的 :param 占位替换为 args 中的实际值（字符串化）。
  * 例: ":price" + {price:30} → "30"

@@ -32,7 +32,27 @@ export interface InsertPlan {
   valParams: string[];
 }
 
-export type WritePlan = MutatePlan | SetStatusPlan | InsertPlan;
+// 记忆工具写原语（A′ §6）——标关键时刻：UPDATE log SET is_moment = 1 WHERE seq = :param
+export interface MarkMomentPlan {
+  kind: "markMoment";
+  seqParam: string;
+}
+
+// 记忆工具写原语（A′ §6）——压缩历史：INSERT INTO history (seq_from, seq_to, summary) VALUES (...)
+// created_seq 不入声明（由 historyCompact 原语按当前 log 最大 seq 计算）。
+export interface HistoryCompactPlan {
+  kind: "historyCompact";
+  seqFromParam: string;
+  seqToParam: string;
+  summaryParam: string;
+}
+
+export type WritePlan =
+  | MutatePlan
+  | SetStatusPlan
+  | InsertPlan
+  | MarkMomentPlan
+  | HistoryCompactPlan;
 
 const NARRATIVE_TABLES = /^(front|plotline|foreshadow)$/i;
 
@@ -80,11 +100,22 @@ const SUBQUERY_RE = /\(\s*SELECT\b/i;
 const SET_STATUS_RE =
   /^UPDATE\s+(\w+)\s+SET\s+status\s*=\s*:(\w+)\s+WHERE\s+id\s*=\s*:(\w+)\s*;?\s*$/i;
 
+// 记忆工具（A′ §6）：mark_moment 专用形状 —— UPDATE log SET is_moment = 1 WHERE seq = :param
+// is_moment 固定赋 1（GM 只标不清）；WHERE 只认 seq=:param。映射到 markMoment 正典原语。
+const MARK_MOMENT_RE =
+  /^UPDATE\s+log\s+SET\s+is_moment\s*=\s*1\s+WHERE\s+seq\s*=\s*:(\w+)\s*;?\s*$/i;
+
 function matchUpdate(sql: string): WritePlan {
   // 拒绝复杂形状
   if (JOIN_RE.test(sql)) throw new DiceloreError("BAD_INPUT", "matchWrite: UPDATE 含 JOIN，不可映射");
   if (OR_RE.test(sql)) throw new DiceloreError("BAD_INPUT", "matchWrite: UPDATE 含 OR，不可映射");
   if (SUBQUERY_RE.test(sql)) throw new DiceloreError("BAD_INPUT", "matchWrite: UPDATE 含子查询，不可映射");
+
+  // 记忆工具 mark_moment（比 mutate 更专，优先）
+  const mm = MARK_MOMENT_RE.exec(sql);
+  if (mm) {
+    return { kind: "markMoment", seqParam: mm[1] };
+  }
 
   // 先尝试 setStatus（更严格，优先）
   const ssm = SET_STATUS_RE.exec(sql);
@@ -187,7 +218,7 @@ function matchMutate(sql: string): MutatePlan {
 const INSERT_RE =
   /^INSERT\s+INTO\s+(\w+)\s*\(([^)]+)\)\s+VALUES\s*\(([^)]+)\)\s*;?\s*$/i;
 
-function matchInsert(sql: string): InsertPlan {
+function matchInsert(sql: string): InsertPlan | HistoryCompactPlan {
   // 拒绝子查询
   if (SUBQUERY_RE.test(sql)) throw new DiceloreError("BAD_INPUT", "matchWrite: INSERT 含子查询，不可映射");
 
@@ -197,10 +228,6 @@ function matchInsert(sql: string): InsertPlan {
   }
 
   const table = m[1];
-  if (!NARRATIVE_TABLES.test(table)) {
-    throw new DiceloreError("BAD_INPUT", `matchWrite: INSERT 只允许叙事表 front|plotline|foreshadow，收到 "${table}"`);
-  }
-
   const cols = m[2].split(",").map((c) => c.trim());
   const valRaw = m[3].split(",").map((v) => v.trim());
 
@@ -218,7 +245,36 @@ function matchInsert(sql: string): InsertPlan {
     throw new DiceloreError("BAD_INPUT", "matchWrite: INSERT 列数与参数数不符");
   }
 
+  // 记忆工具 history_compact（A′ §6）：INSERT INTO history (seq_from, seq_to, summary) VALUES (:...)
+  // created_seq 不入声明——由 historyCompact 原语计算，故列集严格限定这三列。
+  if (/^history$/i.test(table)) {
+    return matchHistoryCompact(cols, valParams);
+  }
+
+  if (!NARRATIVE_TABLES.test(table)) {
+    throw new DiceloreError("BAD_INPUT", `matchWrite: INSERT 只允许叙事表 front|plotline|foreshadow 或记忆表 history，收到 "${table}"`);
+  }
+
   return { kind: "insert", table: table.toLowerCase(), cols, valParams };
+}
+
+// history_compact 严格列集：{seq_from, seq_to, summary}，每列对应一个 :param。
+function matchHistoryCompact(cols: string[], valParams: string[]): HistoryCompactPlan {
+  const colToParam = new Map<string, string>();
+  for (let i = 0; i < cols.length; i++) colToParam.set(cols[i], valParams[i]);
+  const required = ["seq_from", "seq_to", "summary"];
+  if (cols.length !== required.length || !required.every((c) => colToParam.has(c))) {
+    throw new DiceloreError(
+      "BAD_INPUT",
+      `matchWrite: history INSERT 列须恰为 (seq_from, seq_to, summary)，收到 (${cols.join(", ")})`,
+    );
+  }
+  return {
+    kind: "historyCompact",
+    seqFromParam: colToParam.get("seq_from")!,
+    seqToParam: colToParam.get("seq_to")!,
+    summaryParam: colToParam.get("summary")!,
+  };
 }
 
 // ── 工具函数 ──────────────────────────────────────────────────────────────────
