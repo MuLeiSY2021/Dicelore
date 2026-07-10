@@ -153,3 +153,16 @@
 - **adapter 留下游**：玩家选择捕获（聊天/转轮/投票）；语义自查轻推（无独立裁判 subagent）。来源：04 TODO adapter。**2026-06-25 体检实证（PROD-008）**：与 [backlog-core 主题S · S2](backlog-core.md) port 契约同源——S2 port 契约落地后本项范围会被吸收/收窄。
 - **出图 subagent 编排** ⟶ **里程碑四**：默认一个出图 subagent，GM 自然语言驱动它生成图片、回传前端对话框展示。MCP 工具本体见 [backlog-core 未来池](backlog-core.md)、前端展示见 [backlog-前端 未来池](backlog-前端.md)。来源：用户 2026-06-29。
 - **多 agent 扮演单个 NPC 与玩家对话（接口）** 🤔 **完全存疑·未裁决**：用户设想「后端开接口，让 agent 扮演 NPC 表里的某人——特殊提示词注入 + 从 NPC 表拉取所扮演 NPC、与玩家对话」（多 agent 底层=多提示词，非多 agent 路由）。**用户自己倾向不做**——觉得「main agent 操控 subagent 临时扮演、说完即弃」就够（即上面"超开放富 UI"里大臣聊天的实现路），不必为 NPC 常驻专开接口/路由。关联既有定论「多智能体编排 v1 不实现」（[backlog-core TB-4](backlog-core.md) / 见设计页决策节）+ NPC 一等抽象已落（A1）。**现在不决**，等"超开放富 UI"（[backlog-前端](backlog-前端.md)）设计时一并想。来源：用户 2026-06-29。
+
+---
+
+## Wave2 交付 fast-follow caveat（2026-07-10 acceptance-loop-0706 后端波·对抗测试发现·非阻断）
+
+> 均为已交付节点的边界/健壮性 caveat（不违裁决验收口径，故对应节点判 pass 合入），随相关面下次触及时收口。
+
+| # | 类型 | 问题 | 来源 | 下一步 |
+|---|------|------|------|--------|
+| W2-recall-escape | fix | `recall(query)` 未经 `escapeLike` 转义，LIKE 元字符 `%`/`_` 被当通配符过匹配（`recall('%')` 召回全部日志）。`store/fts.ts` 已有 `escapeLike` 可复用 | aprime-memory-tools 对抗测试 | recall SQL 复用 escapeLike |
+| W2-spoiler-limit0 | fix | `GET /presentation?includeHidden=true&limit=0` 因 `Number('0')\|\|undefined===undefined` 短路丢弃 LIMIT、返整张隐藏 sheet（无剧透泄漏，仅关闭档可达） | spoiler-backend 对抗测试 | 改 `Number.isFinite` 判而非 falsy 短路 |
+| W2-open-head-case | fix | `/sessions/dicegm` version 豁免仅小写 `head`，大写 `HEAD`（git 惯例）仍透传 checkout→空→500；伪版本(不存在 commitId/tag)同样 500 | fix-open-head-ref 对抗测试 | head 豁免大小写不敏感 + 端点层把 checkout 空/校验失败转 4xx unknown_version |
+| W2-validatedraft-manifest | fix | `validateDraft` 复用 `validatePack` 但 `Draft.toPackFiles` 产 `manifest.md`（非 `manifest.yaml`），validatePack Rule 1-4 只认 manifest.yaml → Draft 期 validate 对 manifest 级问题(缺 id/name)全盲、要到 commit 才暴露 | loregm-validate 对抗测试 | validateDraft 额外校 manifest.md 的 id/name，或统一 manifest 文件名 |
