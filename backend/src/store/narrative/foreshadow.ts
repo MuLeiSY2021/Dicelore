@@ -13,9 +13,12 @@ export interface Foreshadow {
   id: string;
   content: string;
   status: string;
+  /** 可见性,与 status 正交:0 默认隐 / 1 已 show / 2 强制隐暗值。planted 剧透默认隐,GM show 才示玩家。 */
+  visible: number;
 }
 
 export function foreshadowUpsert(db: DB, f: { id: string; content: string; status?: string }): void {
+  // visible 不入 upsert:INSERT 走列默认 0、CONFLICT 更新不碰 visible(由 narrativeShow 独立管理)。
   db.prepare(
     `INSERT INTO foreshadow(id, content, status) VALUES(?,?,COALESCE(?,'planted'))
      ON CONFLICT(id) DO UPDATE SET content=excluded.content, status=excluded.status`
@@ -23,11 +26,11 @@ export function foreshadowUpsert(db: DB, f: { id: string; content: string; statu
 }
 
 export function foreshadowGet(db: DB, id: string): Foreshadow | undefined {
-  return db.prepare(`SELECT id, content, status FROM foreshadow WHERE id = ?`).get(id) as Foreshadow | undefined;
+  return db.prepare(`SELECT id, content, status, visible FROM foreshadow WHERE id = ?`).get(id) as Foreshadow | undefined;
 }
 
 export function foreshadowList(db: DB): Foreshadow[] {
-  return db.prepare(`SELECT id, content, status FROM foreshadow ORDER BY id`).all() as Foreshadow[];
+  return db.prepare(`SELECT id, content, status, visible FROM foreshadow ORDER BY id`).all() as Foreshadow[];
 }
 
 export function foreshadowSetStatus(db: DB, id: string, status: string): void {

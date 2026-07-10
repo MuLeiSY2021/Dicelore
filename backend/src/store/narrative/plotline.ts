@@ -14,9 +14,12 @@ export interface Plotline {
   title: string;
   summary: string | null;
   status: string;
+  /** 可见性,与 status 正交:0 默认隐 / 1 已 show / 2 强制隐暗值。GM show 才示玩家。 */
+  visible: number;
 }
 
 export function plotlineUpsert(db: DB, p: { id: string; title: string; summary?: string; status?: string }): void {
+  // visible 不入 upsert:INSERT 走列默认 0、CONFLICT 更新不碰 visible(由 narrativeShow 独立管理)。
   db.prepare(
     `INSERT INTO plotline(id, title, summary, status) VALUES(?,?,?,COALESCE(?,'open'))
      ON CONFLICT(id) DO UPDATE SET title=excluded.title, summary=excluded.summary, status=excluded.status`
@@ -24,11 +27,11 @@ export function plotlineUpsert(db: DB, p: { id: string; title: string; summary?:
 }
 
 export function plotlineGet(db: DB, id: string): Plotline | undefined {
-  return db.prepare(`SELECT id, title, summary, status FROM plotline WHERE id = ?`).get(id) as Plotline | undefined;
+  return db.prepare(`SELECT id, title, summary, status, visible FROM plotline WHERE id = ?`).get(id) as Plotline | undefined;
 }
 
 export function plotlineList(db: DB): Plotline[] {
-  return db.prepare(`SELECT id, title, summary, status FROM plotline ORDER BY id`).all() as Plotline[];
+  return db.prepare(`SELECT id, title, summary, status, visible FROM plotline ORDER BY id`).all() as Plotline[];
 }
 
 export function plotlineSetStatus(db: DB, id: string, status: string): void {

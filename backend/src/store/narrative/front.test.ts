@@ -16,10 +16,10 @@ let db: DB;
 beforeEach(() => { db = openDb(":memory:"); initSchema(db); });
 
 describe("front store", () => {
-  test("upsert 后 get（默认 status=active）", () => {
+  test("upsert 后 get（默认 status=active，visible=0）", () => {
     frontUpsert(db, { id: "魔道入侵", name: "魔道入侵", stakes: "护山大阵能否建成", clock_ref: "世界.入侵进度" });
     expect(frontGet(db, "魔道入侵")).toMatchObject({
-      id: "魔道入侵", name: "魔道入侵", stakes: "护山大阵能否建成", clock_ref: "世界.入侵进度", status: "active",
+      id: "魔道入侵", name: "魔道入侵", stakes: "护山大阵能否建成", clock_ref: "世界.入侵进度", status: "active", visible: 0,
     });
   });
   test("setStatus 改 spent；list 返回全部", () => {

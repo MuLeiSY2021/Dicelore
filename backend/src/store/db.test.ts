@@ -34,6 +34,33 @@ describe("schema", () => {
     }
   });
 
+  test("A′ §1:叙事三表(front/plotline/foreshadow)含 visible 列(默认 0,NOT NULL)", () => {
+    const db = openDb(":memory:");
+    initSchema(db);
+    for (const t of ["front", "plotline", "foreshadow"]) {
+      const cols = db.prepare(`PRAGMA table_info(${t})`).all() as { name: string; dflt_value: string | null; notnull: number }[];
+      const vis = cols.find((c) => c.name === "visible");
+      expect(vis, `${t}.visible 列应存在`).toBeDefined();
+      expect(vis!.notnull).toBe(1);
+      expect(vis!.dflt_value).toBe("0");
+    }
+  });
+
+  test("A′ §1 迁移:既有(无 visible 列的)叙事表被 initSchema 幂等补列(旧行取默认 0)", () => {
+    const db = openDb(":memory:");
+    // 模拟迁移前建的旧库:手建不含 visible 的 front 表 + 一行旧数据。
+    db.exec(`CREATE TABLE front (
+      id TEXT PRIMARY KEY, name TEXT NOT NULL, stakes TEXT,
+      clock_ref TEXT, status TEXT NOT NULL DEFAULT 'active'
+    )`);
+    db.prepare("INSERT INTO front (id, name) VALUES ('f0', '旧线')").run();
+    initSchema(db); // 迁移应补列且不丢旧行
+    const cols = (db.prepare("PRAGMA table_info(front)").all() as { name: string }[]).map((c) => c.name);
+    expect(cols).toContain("visible");
+    const old = db.prepare("SELECT visible v FROM front WHERE id='f0'").get() as { v: number };
+    expect(old.v).toBe(0); // 旧行该列取默认 0
+  });
+
   test("TR3:snapshot 表含 transcript_anchor 列", () => {
     const db = openDb(":memory:");
     initSchema(db);

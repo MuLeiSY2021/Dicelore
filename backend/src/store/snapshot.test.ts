@@ -126,6 +126,24 @@ describe("snapshot 原语：checkpoint / restore（默认三域 sheet/world/watc
     const names = defaultParticipants().map((p) => p.name).sort();
     expect(names).toEqual(["foreshadow", "front", "plotline", "pool", "sheet", "watcher", "world"].sort());
   });
+
+  it("A′ §1：叙事三表 visible 列随快照 capture/restore 往返（整表 dump 自动含）", () => {
+    const db = freshDb();
+    db.prepare("INSERT INTO foreshadow (id, content, visible) VALUES ('fs1', '井中影', 1)").run();
+    db.prepare("INSERT INTO plotline (id, title, visible) VALUES ('p1', '护山', 1)").run();
+    db.prepare("INSERT INTO front (id, name, visible) VALUES ('f1', '魔道', 0)").run();
+    const snapId = checkpoint(db, { turnSeq: 1 });
+
+    // 回合中把 visible 全改掉
+    db.prepare("UPDATE foreshadow SET visible=0").run();
+    db.prepare("UPDATE plotline SET visible=2").run();
+    db.prepare("UPDATE front SET visible=1").run();
+
+    restore(db, snapId);
+    expect((db.prepare("SELECT visible v FROM foreshadow WHERE id='fs1'").get() as { v: number }).v).toBe(1);
+    expect((db.prepare("SELECT visible v FROM plotline WHERE id='p1'").get() as { v: number }).v).toBe(1);
+    expect((db.prepare("SELECT visible v FROM front WHERE id='f1'").get() as { v: number }).v).toBe(0);
+  });
 });
 
 describe("snapshot 表 + 查询", () => {

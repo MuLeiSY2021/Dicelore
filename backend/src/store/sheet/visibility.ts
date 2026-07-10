@@ -34,6 +34,37 @@ export function worldShow(db: DB, table: "lore" | "pool", rowid: number): number
   return auditNote(db, `揭示:${table}#${rowid}`);
 }
 
+// ===== 叙事三表可见性(A′ §1；show/reveal_once 扩到 front/plotline/foreshadow) =====
+// 叙事表是行级对象,show 粒度=整行【C1】。table 为字面量联合(非用户自由输入)→ 插值安全。
+// 各表「人读内容列」:front=name / plotline=title / foreshadow=content(reveal 冻结此列)。
+export type NarrativeTable = "front" | "plotline" | "foreshadow";
+const NARRATIVE_CONTENT_COL: Record<NarrativeTable, string> = {
+  front: "name",
+  plotline: "title",
+  foreshadow: "content",
+};
+
+// 整行置 visible=1(暗值 visible=2 焊死,不揭);行不存在抛 ENTITY_NOT_FOUND。返回 audit event seq。
+export function narrativeShow(db: DB, table: NarrativeTable, id: string): number {
+  const exists = db.prepare(`SELECT 1 FROM ${table} WHERE id=?`).get(id);
+  if (!exists) throw new DiceloreError("ENTITY_NOT_FOUND", `narrativeShow: ${table} 行不存在 ${id}`);
+  db.prepare(`UPDATE ${table} SET visible=1 WHERE id=? AND visible!=2`).run(id);
+  return auditNote(db, `揭示:${table}#${id}`);
+}
+
+// reveal_once:append 一条 kind=reveal 的可见 event,内容=该叙事行此刻冻结副本;不碰目标自身 visible(底层仍隐)。
+export function narrativeRevealOnce(db: DB, table: NarrativeTable, id: string): number {
+  const col = NARRATIVE_CONTENT_COL[table];
+  const row = db.prepare(`SELECT ${col} AS content FROM ${table} WHERE id=?`).get(id) as { content: string } | undefined;
+  if (!row) throw new DiceloreError("ENTITY_NOT_FOUND", `narrativeRevealOnce: ${table} 行不存在 ${id}`);
+  return logAppend(db, {
+    kind: "reveal",
+    visible: 1,
+    content: row.content,
+    data_json: { kind: table, id, content: row.content },
+  });
+}
+
 // RevealTarget 定义下沉 @dicelore/interface(SessionBackend 方法面引用)；re-export 保持公共面。
 import type { RevealTarget } from "@dicelore/interface";
 export type { RevealTarget };
