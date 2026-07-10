@@ -24,7 +24,7 @@ describe("getPresentation", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const got = await getPresentation("demo");
-    expect(fetchMock).toHaveBeenCalledWith("/sessions/demo/presentation");
+    expect(fetchMock).toHaveBeenCalledWith("/sessions/dicegm/demo/presentation");
     expect(got).toEqual(snap);
   });
 
@@ -41,7 +41,7 @@ describe("listSessions", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const got = await listSessions();
-    expect(fetchMock).toHaveBeenCalledWith("/sessions");
+    expect(fetchMock).toHaveBeenCalledWith("/sessions/dicegm");
     expect(got).toEqual(sessions);
   });
 
@@ -56,7 +56,7 @@ describe("postMessage / postRoll", () => {
     const f = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ turnId: "t" }) });
     vi.stubGlobal("fetch", f);
     const got = await postMessage("s1", "我推门");
-    expect(f).toHaveBeenCalledWith("/sessions/s1/messages", expect.objectContaining({ method: "POST" }));
+    expect(f).toHaveBeenCalledWith("/sessions/dicegm/s1/messages", expect.objectContaining({ method: "POST" }));
     expect(JSON.parse(f.mock.calls[0][1].body)).toEqual({ text: "我推门" });
     expect(got).toEqual({ turnId: "t" });
   });
@@ -65,7 +65,7 @@ describe("postMessage / postRoll", () => {
     const f = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ turnId: "t" }) });
     vi.stubGlobal("fetch", f);
     await postRoll("s1", 12);
-    expect(f).toHaveBeenCalledWith("/sessions/s1/roll", expect.objectContaining({ method: "POST" }));
+    expect(f).toHaveBeenCalledWith("/sessions/dicegm/s1/roll", expect.objectContaining({ method: "POST" }));
     expect(JSON.parse(f.mock.calls[0][1].body)).toEqual({ eventId: 12 });
   });
 });
@@ -94,7 +94,7 @@ describe("主线② postChoice", () => {
     const f = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ turnId: "t-c" }) });
     vi.stubGlobal("fetch", f);
     const got = await postChoice("s1", 3, 1);
-    expect(f).toHaveBeenCalledWith("/sessions/s1/choices", expect.objectContaining({ method: "POST" }));
+    expect(f).toHaveBeenCalledWith("/sessions/dicegm/s1/choices", expect.objectContaining({ method: "POST" }));
     expect(JSON.parse(f.mock.calls[0][1].body)).toEqual({ eventId: 3, optionIndex: 1 });
     expect(got).toEqual({ turnId: "t-c" });
   });
@@ -114,7 +114,7 @@ describe("startGame kickoff（端点与回退，不断言响应体形状）", ()
     vi.stubGlobal("fetch", f);
     await startGame("s1");
     expect(f).toHaveBeenCalledTimes(1);
-    expect(f).toHaveBeenCalledWith("/sessions/s1/start", expect.objectContaining({ method: "POST" }));
+    expect(f).toHaveBeenCalledWith("/sessions/dicegm/s1/start", expect.objectContaining({ method: "POST" }));
   });
 
   it("/start 未上线(404) → 回退 POST /messages 喂开场 cue", async () => {
@@ -124,8 +124,8 @@ describe("startGame kickoff（端点与回退，不断言响应体形状）", ()
     vi.stubGlobal("fetch", f);
     await startGame("s1");
     expect(f).toHaveBeenCalledTimes(2);
-    expect(f.mock.calls[0][0]).toBe("/sessions/s1/start");
-    expect(f.mock.calls[1][0]).toBe("/sessions/s1/messages"); // 回退路径
+    expect(f.mock.calls[0][0]).toBe("/sessions/dicegm/s1/start");
+    expect(f.mock.calls[1][0]).toBe("/sessions/dicegm/s1/messages"); // 回退路径
   });
 
   it("/start 其它错误(500) → 抛错(不回退)", async () => {
@@ -139,7 +139,7 @@ describe("postRewind（SNAP-1 读档）", () => {
     const f = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ snapshotId: 7 }) });
     vi.stubGlobal("fetch", f);
     const got = await postRewind("demo");
-    expect(f).toHaveBeenCalledWith("/sessions/demo/rewind", expect.objectContaining({ method: "POST" }));
+    expect(f).toHaveBeenCalledWith("/sessions/dicegm/demo/rewind", expect.objectContaining({ method: "POST" }));
     expect(got).toEqual({ snapshotId: 7 });
   });
 

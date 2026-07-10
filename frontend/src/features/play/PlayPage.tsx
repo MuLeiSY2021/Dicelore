@@ -168,7 +168,7 @@ export default function PlayPage() {
     { key: "today", label: t("play.date.today") }, { key: "week", label: t("play.date.week") }, { key: "earlier", label: t("play.date.earlier") },
   ];
   const curRow = sessions.find((s) => s.sessionId === sid);
-  const sessTitle = (s: SessionSummary) => (s.adventureName ? `${s.adventureName} · ` : "") + s.title;
+  const sessTitle = (s: SessionSummary) => (s.packName && s.packName !== s.title ? `${s.packName} · ` : "") + s.title;
   const curTitle = curRow ? sessTitle(curRow) : sid;
 
   // 呈现台分类
@@ -238,7 +238,7 @@ export default function PlayPage() {
             <select aria-label={t("play.bar.session")} value={sid} onChange={(e) => navigate(`/play/${e.target.value}`)}>
               {sessions.length === 0 && <option value={sid}>{t("play.bar.nosession")}</option>}
               {buckets.map((b) => {
-                const items = sessions.filter((s) => dateBucket(s.updatedAt) === b.key);
+                const items = sessions.filter((s) => dateBucket(s.lastActionAt) === b.key);
                 return items.length === 0 ? null : (
                   <optgroup key={b.key} label={b.label}>
                     {items.map((s) => <option key={s.sessionId} value={s.sessionId}>{sessTitle(s)} · {t(`status.${s.status}`)}</option>)}

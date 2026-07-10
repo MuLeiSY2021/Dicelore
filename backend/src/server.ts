@@ -113,12 +113,15 @@ export function startServer(portOverride?: number): void {
   app.use("*", createRateLimit());
   app.route("/", createLiveApp({
     agentFactory, plugin: dicePlugin, openSession, catalog, baseline, debug, sessionsDir: root,
-    listSessions: () => listSessionSummaries(join(root, "sessions", "dice")),
+    listSessions: () => listSessionSummaries(join(root, "sessions", "dice"), "dicegm"),
     deleteSession: (id) => { try { rmSync(harnessSessionDir(root, "dice", id), { recursive: true, force: true }); } catch (e) { getLogger().error({ err: e, id }, "删 session 文件夹失败"); } },
   }));
-  app.route("/", createLoreApp({ catalog, agentFactory, buildPrompt: process.env.DICELORE_BUILD_PROMPT, plugin: lorePlugin, sessionsDir: root }));
+  app.route("/", createLoreApp({
+    catalog, agentFactory, buildPrompt: process.env.DICELORE_BUILD_PROMPT, plugin: lorePlugin, sessionsDir: root,
+    listSessions: () => listSessionSummaries(join(root, "sessions", "lore"), "loregm"),
+  }));
   app.route("/", createDiagnosticsApp({ port, fakeGm: fake }));
-  // CO 可视化:GET /sessions/:id/usage 只读投影,复用本局 db 端口。
+  // CO 可视化:GET /sessions/dicegm/:id/usage 只读投影,复用本局 db 端口。
   app.route("/", createUsageApp({ openSession }));
   // SEC2 key 托管:全局 keys.db 落 $ROOT(非 per-session;api_key 表随 initSchema),主密钥经 env 延迟读、缺则端点 503。
   const keysDb = openDb(join(root, "keys.db"));

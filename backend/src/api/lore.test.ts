@@ -25,6 +25,16 @@ const PACK = [
   { path: "state/开局.csv", content: "entity,kind,attr,value,visible\n韩立,player,HP,12,1\n" },
 ];
 
+// session-surface-flatten：loregm 会话须先经 POST /sessions/loregm 显式建(C2 移除懒建);
+// 建一个 loregm 会话、返回服务端生成的 sessionId。
+async function createLoreSession(app: ReturnType<typeof createLoreApp>, name?: string): Promise<string> {
+  const res = await app.request("/sessions/loregm", {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify(name === undefined ? {} : { name }),
+  });
+  return ((await res.json()) as { sessionId: string }).sessionId;
+}
+
 describe("后端 e2e: 建团本 → 列 → 开局 import → 呈现", () => {
   it("catalog commit → list → /sessions/:id/open → presentation 含导入态", async () => {
     const catalog = openCatalog(":memory:");
@@ -50,14 +60,15 @@ describe("后端 e2e: 建团本 → 列 → 开局 import → 呈现", () => {
       return d;
     };
     const live = createLiveApp({ catalog, openSession, agentFactory: () => new FakeDiceGm([{ type: "narration", text: "门开了" }, { type: "turn_end" }]) });
-    const openRes = await live.request("/sessions/s1/open", {
+    const openRes = await live.request("/sessions/dicegm", {
       method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ adventureId, ref: commitId }),
+      body: JSON.stringify({ teamId: adventureId, version: commitId }),
     });
     expect(openRes.status).toBe(201);
+    const { sessionId } = (await openRes.json()) as { sessionId: string };
 
     // 4. 首屏快照含导入的 state cell
-    const snap = (await (await live.request("/sessions/s1/presentation")).json()) as { sheets: { entity: string; cells: { attr: string; value: string }[] }[] };
+    const snap = (await (await live.request(`/sessions/dicegm/${sessionId}/presentation`)).json()) as { sheets: { entity: string; cells: { attr: string; value: string }[] }[] };
     const hp = snap.sheets.find((g) => g.entity === "韩立")?.cells.find((c) => c.attr === "HP");
     expect(hp?.value).toBe("12");
 
@@ -155,10 +166,11 @@ describe("createLoreApp: plugin 传入", () => {
       plugin: fakePlugin,
     });
 
-    const res = await lore.request("/lore-sessions/s-skill-test/messages", {
+    const id = await createLoreSession(lore, "测试团本");
+    const res = await lore.request(`/sessions/loregm/${id}/messages`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ text: "写点设定", name: "测试团本" }),
+      body: JSON.stringify({ text: "写点设定" }),
     });
     expect(res.status).toBe(202);
     expect(capturedInits.length).toBeGreaterThan(0);
@@ -178,10 +190,11 @@ describe("createLoreApp: plugin 传入", () => {
       // plugin 省略
     });
 
-    const res = await lore.request("/lore-sessions/s-no-skill/messages", {
+    const id = await createLoreSession(lore, "无技能团本");
+    const res = await lore.request(`/sessions/loregm/${id}/messages`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ text: "写点设定", name: "无技能团本" }),
+      body: JSON.stringify({ text: "写点设定" }),
     });
     expect(res.status).toBe(202);
     expect(capturedPlugins[0]).toBeUndefined();
@@ -189,10 +202,10 @@ describe("createLoreApp: plugin 传入", () => {
   });
 });
 
-// §1 BE-lore-error-shape: POST /lore-sessions/:id/messages 返回体带 error?。
+// §1 BE-lore-error-shape: POST /sessions/loregm/:id/messages 返回体带 error?。
 // 构建 GM 中途 error 属领域级(turn 已跑完、turnId 有效)→ HTTP 保持 202,靠 body.error 标失败(不改 5xx)。
 // 成功轮 body 不含 error。
-describe("POST /lore-sessions/:id/messages error 透传(body error,HTTP 保持 202)", () => {
+describe("POST /sessions/loregm/:id/messages error 透传(body error,HTTP 保持 202)", () => {
   it("agent 产 error 事件时 body 含 error、HTTP 仍 202", async () => {
     const catalog = openCatalog(":memory:");
     const lore = createLoreApp({
@@ -203,9 +216,10 @@ describe("POST /lore-sessions/:id/messages error 透传(body error,HTTP 保持 2
       ]),
     });
 
-    const res = await lore.request("/lore-sessions/e1/messages", {
+    const id = await createLoreSession(lore, "出错团本");
+    const res = await lore.request(`/sessions/loregm/${id}/messages`, {
       method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ text: "写点设定", name: "出错团本" }),
+      body: JSON.stringify({ text: "写点设定" }),
     });
     expect(res.status).toBe(202); // 领域级 error、传输层仍成功
     const body = (await res.json()) as { turnId: string; error?: { message: string; code?: string } };
@@ -221,9 +235,10 @@ describe("POST /lore-sessions/:id/messages error 透传(body error,HTTP 保持 2
       agentFactory: () => new FakeDiceGm([{ type: "narration", text: "写好了" }, { type: "turn_end" }]),
     });
 
-    const res = await lore.request("/lore-sessions/ok1/messages", {
+    const id = await createLoreSession(lore, "成功团本");
+    const res = await lore.request(`/sessions/loregm/${id}/messages`, {
       method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ text: "写点设定", name: "成功团本" }),
+      body: JSON.stringify({ text: "写点设定" }),
     });
     expect(res.status).toBe(202);
     const body = (await res.json()) as { turnId: string; error?: unknown };
@@ -231,13 +246,26 @@ describe("POST /lore-sessions/:id/messages error 透传(body error,HTTP 保持 2
     expect(body.error).toBeUndefined();
     catalog.close();
   });
+
+  it("未显式建会话直接 POST messages → 404 NO_SESSION(C2 懒建已移除)", async () => {
+    const catalog = openCatalog(":memory:");
+    const lore = createLoreApp({ catalog, agentFactory: () => new FakeDiceGm([{ type: "turn_end" }]) });
+    const res = await lore.request("/sessions/loregm/never-created/messages", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ text: "写点设定" }),
+    });
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as { error: { code: string } };
+    expect(body.error.code).toBe("NO_SESSION");
+    catalog.close();
+  });
 });
 
-// GET /lore-sessions/:id/draft —— additive 检视端点:看未 commit 的 Draft 当前态。
+// GET /sessions/loregm/:id/draft —— additive 检视端点:看未 commit 的 Draft 当前态。
 // 由来:RT-5 后 lore 是 REST only,POST messages 只回 {turnId} 不回传 GM 散文;构建 GM 改的是 in-memory
 // Draft,commit 前 catalog 查不到。此端点暴露 LoreSession.draft 的只读视图(toPackFiles + snapshot),
 // 供作者(eval build-mcp / 前端构建台)判断构建 GM 这一轮干了什么。
-describe("GET /lore-sessions/:id/draft 检视未 commit 的 Draft", () => {
+describe("GET /sessions/loregm/:id/draft 检视未 commit 的 Draft", () => {
   // 脚本化构建 agent:经 mcpServer 上注册的真 dicelore_build_* 工具改 Draft(不烧 LLM)。
   class FakeBuilder implements Agent {
     constructor(private init: AgentInit) {}
@@ -252,7 +280,7 @@ describe("GET /lore-sessions/:id/draft 检视未 commit 的 Draft", () => {
   it("会话不存在 → 404 NO_SESSION", async () => {
     const catalog = openCatalog(":memory:");
     const lore = createLoreApp({ catalog, agentFactory: (init) => new FakeBuilder(init) });
-    const res = await lore.request("/lore-sessions/never-started/draft");
+    const res = await lore.request("/sessions/loregm/never-started/draft");
     expect(res.status).toBe(404);
     const body = (await res.json()) as { error: { code: string } };
     expect(body.error.code).toBe("NO_SESSION");
@@ -263,13 +291,14 @@ describe("GET /lore-sessions/:id/draft 检视未 commit 的 Draft", () => {
     const catalog = openCatalog(":memory:");
     const lore = createLoreApp({ catalog, agentFactory: (init) => new FakeBuilder(init) });
 
-    const send = await lore.request("/lore-sessions/d1/messages", {
+    const id = await createLoreSession(lore, "草稿团本");
+    const send = await lore.request(`/sessions/loregm/${id}/messages`, {
       method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ text: "写点设定", name: "草稿团本" }),
+      body: JSON.stringify({ text: "写点设定" }),
     });
     expect(send.status).toBe(202);
 
-    const draftRes = await lore.request("/lore-sessions/d1/draft");
+    const draftRes = await lore.request(`/sessions/loregm/${id}/draft`);
     expect(draftRes.status).toBe(200);
     const draft = (await draftRes.json()) as {
       files: { path: string; content: string }[];
@@ -317,8 +346,8 @@ describe("ensureWorkspace（会话工作区，纯 fs）", () => {
   });
 });
 
-// ── POST /lore-sessions/:id/materials（流式上传，build-agent-workspace §3）──────
-describe("POST /lore-sessions/:id/materials 流式素材上传", () => {
+// ── POST /sessions/loregm/:id/materials（流式上传，build-agent-workspace §3）──────
+describe("POST /sessions/loregm/:id/materials 流式素材上传", () => {
   function loreApp(root: string) {
     const catalog = openCatalog(":memory:");
     const app = createLoreApp({ catalog, agentFactory: () => new FakeDiceGm([]), sessionsDir: root });
@@ -330,7 +359,7 @@ describe("POST /lore-sessions/:id/materials 流式素材上传", () => {
     const { app, catalog } = loreApp(root);
     try {
       const body = "北境蛮族与边境长城的百年恩怨。".repeat(10);
-      const res = await app.request("/lore-sessions/m1/materials?filename=兽人冒险.md", {
+      const res = await app.request("/sessions/loregm/m1/materials?filename=兽人冒险.md", {
         method: "POST",
         headers: { "content-type": "application/octet-stream" },
         body,
@@ -351,10 +380,10 @@ describe("POST /lore-sessions/:id/materials 流式素材上传", () => {
     const root = mkdtempSync(join(tmpdir(), "dl-mat-"));
     const { app, catalog } = loreApp(root);
     try {
-      await app.request("/lore-sessions/m2/materials?filename=a.txt", {
+      await app.request("/sessions/loregm/m2/materials?filename=a.txt", {
         method: "POST", headers: { "content-type": "application/octet-stream" }, body: "第一版内容",
       });
-      const res = await app.request("/lore-sessions/m2/materials?filename=a.txt", {
+      const res = await app.request("/sessions/loregm/m2/materials?filename=a.txt", {
         method: "POST", headers: { "content-type": "application/octet-stream" }, body: "第二版",
       });
       expect(res.status).toBe(200);
@@ -370,7 +399,7 @@ describe("POST /lore-sessions/:id/materials 流式素材上传", () => {
     const root = mkdtempSync(join(tmpdir(), "dl-mat-"));
     const { app, catalog } = loreApp(root);
     try {
-      const res = await app.request("/lore-sessions/m3/materials", {
+      const res = await app.request("/sessions/loregm/m3/materials", {
         method: "POST",
         headers: { "content-type": "application/octet-stream", "x-material-filename": "via-header.txt" },
         body: "内容",
@@ -388,7 +417,7 @@ describe("POST /lore-sessions/:id/materials 流式素材上传", () => {
     const root = mkdtempSync(join(tmpdir(), "dl-mat-"));
     const { app, catalog } = loreApp(root);
     try {
-      const res = await app.request("/lore-sessions/m4/materials?filename=" + encodeURIComponent("../evil.txt"), {
+      const res = await app.request("/sessions/loregm/m4/materials?filename=" + encodeURIComponent("../evil.txt"), {
         method: "POST", headers: { "content-type": "application/octet-stream" }, body: "x",
       });
       expect(res.status).toBe(400);
@@ -406,7 +435,7 @@ describe("POST /lore-sessions/:id/materials 流式素材上传", () => {
     const root = mkdtempSync(join(tmpdir(), "dl-mat-"));
     const { app, catalog } = loreApp(root);
     try {
-      const res = await app.request("/lore-sessions/m5/materials", {
+      const res = await app.request("/sessions/loregm/m5/materials", {
         method: "POST", headers: { "content-type": "application/octet-stream" }, body: "x",
       });
       expect(res.status).toBe(400);
@@ -435,7 +464,7 @@ describe("POST /lore-sessions/:id/materials 流式素材上传", () => {
           pushed += 1;
         },
       });
-      const res = await app.request("/lore-sessions/m6/materials?filename=big.bin", {
+      const res = await app.request("/sessions/loregm/m6/materials?filename=big.bin", {
         method: "POST",
         headers: { "content-type": "application/octet-stream" },
         body: stream,
@@ -459,7 +488,7 @@ describe("POST /lore-sessions/:id/materials 流式素材上传", () => {
     const catalog = openCatalog(":memory:");
     const app = createLoreApp({ catalog, agentFactory: () => new FakeDiceGm([]) });
     try {
-      const res = await app.request("/lore-sessions/m7/materials?filename=a.txt", {
+      const res = await app.request("/sessions/loregm/m7/materials?filename=a.txt", {
         method: "POST", headers: { "content-type": "application/octet-stream" }, body: "x",
       });
       expect(res.status).toBe(500);
@@ -492,16 +521,17 @@ describe("lore-draft 回退钩子 + loregm transcript 落盘", () => {
     const catalog = openCatalog(":memory:");
     const lore = createLoreApp({ catalog, agentFactory: (init) => new TranscriptFakeGm(init), sessionsDir: root });
     try {
-      const res = await lore.request("/lore-sessions/jl1/messages", {
+      const id = await createLoreSession(lore, "凡人");
+      const res = await lore.request(`/sessions/loregm/${id}/messages`, {
         method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ text: "把第一章设定写进去", name: "凡人" }),
+        body: JSON.stringify({ text: "把第一章设定写进去" }),
       });
       expect(res.status).toBe(202);
       const body = (await res.json()) as { turnId: string; error?: unknown };
       expect(body.turnId).toBeTruthy();
       expect(body.error).toBeUndefined();
 
-      const jsonlPath = join(sessionDir(root, "lore", "jl1"), "jl1_session.jsonl");
+      const jsonlPath = join(sessionDir(root, "lore", id), `${id}_session.jsonl`);
       expect(existsSync(jsonlPath)).toBe(true);
       const raw = readFileSync(jsonlPath, "utf8").trim();
       expect(raw.length).toBeGreaterThan(0);
@@ -520,11 +550,12 @@ describe("lore-draft 回退钩子 + loregm transcript 落盘", () => {
     const catalog = openCatalog(":memory:");
     const lore = createLoreApp({ catalog, agentFactory: (init) => new TranscriptFakeGm(init), sessionsDir: root });
     try {
-      await lore.request("/lore-sessions/rw1/messages", {
+      const id = await createLoreSession(lore, "凡人");
+      await lore.request(`/sessions/loregm/${id}/messages`, {
         method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ text: "写点设定", name: "凡人" }),
+        body: JSON.stringify({ text: "写点设定" }),
       });
-      expect(getLoreEntry("rw1")?.rewind).toBeTruthy();
+      expect(getLoreEntry(id)?.rewind).toBeTruthy();
     } finally {
       catalog.close();
       rmSync(root, { recursive: true, force: true });
@@ -535,11 +566,12 @@ describe("lore-draft 回退钩子 + loregm transcript 落盘", () => {
     const catalog = openCatalog(":memory:");
     const lore = createLoreApp({ catalog, agentFactory: () => new FakeDiceGm([{ type: "turn_end" }]) });
     try {
-      await lore.request("/lore-sessions/rw2/messages", {
+      const id = await createLoreSession(lore, "凡人");
+      await lore.request(`/sessions/loregm/${id}/messages`, {
         method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ text: "写点设定", name: "凡人" }),
+        body: JSON.stringify({ text: "写点设定" }),
       });
-      expect(getLoreEntry("rw2")?.rewind).toBeUndefined();
+      expect(getLoreEntry(id)?.rewind).toBeUndefined();
     } finally {
       catalog.close();
     }
@@ -572,14 +604,15 @@ describe("lore-draft 回退钩子 + loregm transcript 落盘", () => {
     const lore = createLoreApp({ catalog, agentFactory: (init) => new TranscriptFakeGm(init), sessionsDir: root });
     const warnSpy = vi.spyOn(getLogger(), "warn").mockImplementation(() => getLogger());
     try {
-      await lore.request("/lore-sessions/re1/messages", {
+      const id = await createLoreSession(lore, "凡人");
+      await lore.request(`/sessions/loregm/${id}/messages`, {
         method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ text: "第一轮", name: "凡人" }),
+        body: JSON.stringify({ text: "第一轮" }),
       });
-      const entry = getLoreEntry("re1");
+      const entry = getLoreEntry(id);
       expect(entry?.rewind).toBeTruthy();
       // 从落盘 jsonl 取一个真 uuid(turn 行)。
-      const jsonlPath = join(sessionDir(root, "lore", "re1"), "re1_session.jsonl");
+      const jsonlPath = join(sessionDir(root, "lore", id), `${id}_session.jsonl`);
       const lines = readFileSync(jsonlPath, "utf8").trim().split("\n").map((l) => JSON.parse(l) as { uuid: string; _?: string });
       const target = lines.find((l) => l._ === "turn")!;
       warnSpy.mockClear();
@@ -594,3 +627,84 @@ describe("lore-draft 回退钩子 + loregm transcript 落盘", () => {
   });
 });
 
+
+// ── session-surface-flatten 验收：loregm 会话面对称拉平 /sessions/loregm/* ──────────
+describe("session-surface-flatten：loregm 会话面 /sessions/loregm/*", () => {
+  it("POST /sessions/loregm {name?} → 201 {sessionId, kind:'loregm'}", async () => {
+    const catalog = openCatalog(":memory:");
+    const lore = createLoreApp({ catalog, agentFactory: () => new FakeDiceGm([{ type: "turn_end" }]) });
+    const res = await lore.request("/sessions/loregm", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "黑风寨" }),
+    });
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { sessionId: string; kind: string };
+    expect(body.kind).toBe("loregm");
+    expect(body.sessionId).toBeTruthy();
+    catalog.close();
+  });
+
+  it("POST /sessions/loregm 无 body 亦 201（name 可省）", async () => {
+    const catalog = openCatalog(":memory:");
+    const lore = createLoreApp({ catalog, agentFactory: () => new FakeDiceGm([{ type: "turn_end" }]) });
+    const res = await lore.request("/sessions/loregm", { method: "POST" });
+    expect(res.status).toBe(201);
+    catalog.close();
+  });
+
+  it("GET /sessions/loregm → 200 {sessions:[...]}（对称 dicegm 列表）", async () => {
+    const catalog = openCatalog(":memory:");
+    const lore = createLoreApp({
+      catalog,
+      agentFactory: () => new FakeDiceGm([{ type: "turn_end" }]),
+      listSessions: () => [{ sessionId: "l1", kind: "loregm", title: "l1", status: "active", packName: "凡人" }],
+    });
+    const res = await lore.request("/sessions/loregm");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { sessions: { sessionId: string; kind: string }[] };
+    expect(body.sessions[0].sessionId).toBe("l1");
+    expect(body.sessions[0].kind).toBe("loregm");
+    catalog.close();
+  });
+
+  it("GET /sessions/loregm 无 listSessions 注入 → 200 空列表", async () => {
+    const catalog = openCatalog(":memory:");
+    const lore = createLoreApp({ catalog, agentFactory: () => new FakeDiceGm([{ type: "turn_end" }]) });
+    const res = await lore.request("/sessions/loregm");
+    expect(res.status).toBe(200);
+    expect((await res.json()).sessions).toEqual([]);
+    catalog.close();
+  });
+
+  it("GET /sessions/loregm/:id → 200 元信息 {sessionId, kind, status, ended, title}（建后 active）", async () => {
+    const catalog = openCatalog(":memory:");
+    const lore = createLoreApp({ catalog, agentFactory: () => new FakeDiceGm([{ type: "turn_end" }]) });
+    const id = await createLoreSession(lore, "凡人");
+    const res = await lore.request(`/sessions/loregm/${id}`);
+    expect(res.status).toBe(200);
+    const info = (await res.json()) as { sessionId: string; kind: string; status: string; ended: boolean; title: string };
+    expect(info).toMatchObject({ sessionId: id, kind: "loregm", status: "active", ended: false, title: id });
+    catalog.close();
+  });
+
+  it("GET /sessions/loregm/:id 未建 → 200 status=archived（对称 dicegm 恒 200）", async () => {
+    const catalog = openCatalog(":memory:");
+    const lore = createLoreApp({ catalog, agentFactory: () => new FakeDiceGm([{ type: "turn_end" }]) });
+    const res = await lore.request("/sessions/loregm/not-loaded");
+    expect(res.status).toBe(200);
+    const info = (await res.json()) as { kind: string; status: string };
+    expect(info.kind).toBe("loregm");
+    expect(info.status).toBe("archived");
+    catalog.close();
+  });
+
+  it("旧路径 /lore-sessions/* → 404（破坏性改名生效·C1，不留别名）", async () => {
+    const catalog = openCatalog(":memory:");
+    const lore = createLoreApp({ catalog, agentFactory: () => new FakeDiceGm([{ type: "turn_end" }]) });
+    // 旧列表/会话路径均已删除、无 307 过渡别名。
+    expect((await lore.request("/lore-sessions")).status).toBe(404);
+    expect((await lore.request("/lore-sessions/x/messages", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" })).status).toBe(404);
+    expect((await lore.request("/lore-sessions/x/draft")).status).toBe(404);
+    catalog.close();
+  });
+});

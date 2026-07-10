@@ -10,7 +10,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { BookMarked, Play, Pencil, Hammer, Sparkles } from "lucide-react";
-import { listCatalog, openPlaySession, commitPack, type AdventureSummary } from "@/features/catalog/api.js";
+import { listCatalog, createPlaySession, commitPack, type AdventureSummary } from "@/features/catalog/api.js";
 import { useT } from "@/shared/i18n/index.js";
 
 // 团本名 → URL/文件名安全 slug(保留中文，去空格/分隔符)。会话 id 前缀团本名。
@@ -39,10 +39,8 @@ export default function CatalogPage() {
   async function start(p: AdventureSummary) {
     setBusy(p.id); setError(null);
     try {
-      const ref = p.head ?? "head";
-      // 每次点击 = 新开一局：sid 前缀团本 slug + 唯一后缀(同团本可并存多局，由 Play 会话栏切换/删除)。
-      const sid = `${slug(p.name)}-${Math.random().toString(36).slice(2, 8)}`;
-      await openPlaySession(sid, p.id, ref);
+      // 每次点击 = 新开一局：服务端生成 sessionId、import 团本(version 省略=最新版 head)。
+      const sid = await createPlaySession(p.id, p.head ?? undefined);
       navigate(`/play/${encodeURIComponent(sid)}`);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e)); setBusy(null);

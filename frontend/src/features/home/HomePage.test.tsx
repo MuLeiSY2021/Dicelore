@@ -25,8 +25,8 @@ function mount() {
 }
 
 const sessions: SessionSummary[] = [
-  { sessionId: "demo", title: "黄昏旅店", status: "active" },
-  { sessionId: "old", title: "旧档", status: "archived" },
+  { sessionId: "demo", kind: "dicegm", title: "黄昏旅店", status: "active", packName: "黄昏旅店" },
+  { sessionId: "old", kind: "dicegm", title: "旧档", status: "archived", packName: "旧档" },
 ];
 
 it("挂载时拉取会话列表并渲染 session title", async () => {

@@ -12,7 +12,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Play, Dices, Hammer, MessagesSquare, Settings, Swords, Clock, Flag } from "lucide-react";
 import type { SessionSummary } from "@dicelore/shared";
 import { listSessions } from "@/features/play/api.js";
-import { commitPack, openPlaySession } from "@/features/catalog/api.js";
+import { commitPack, createPlaySession } from "@/features/catalog/api.js";
 import { useT } from "@/shared/i18n/index.js";
 
 // 示例团本(快速验证「建团本→开局玩」闭环;无需 LLM)。
@@ -48,8 +48,7 @@ export default function HomePage() {
     setError(null);
     try {
       const { adventureId, commitId } = await commitPack("示例·黑风寨", "sample", SAMPLE_PACK);
-      const sid = `s-${commitId.slice(0, 8)}`;
-      await openPlaySession(sid, adventureId, commitId);
+      const sid = await createPlaySession(adventureId, commitId);
       navigate(`/play/${sid}`);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e));
@@ -98,7 +97,7 @@ export default function HomePage() {
         <div className="resume" aria-label="继续上次">
           <div className="meta">
             <div className="scen">{last.title}</div>
-            <div className="where">{statusLabel(last.status)}{last.updatedAt ? ` · ${new Date(last.updatedAt).toLocaleString()}` : ""}</div>
+            <div className="where">{statusLabel(last.status)}{last.lastActionAt ? ` · ${new Date(last.lastActionAt).toLocaleString()}` : ""}</div>
           </div>
           <Link className="cont" to={`/play/${encodeURIComponent(last.sessionId)}`}><Play className="lucide" />{t("home.continue")}</Link>
         </div>
@@ -126,7 +125,7 @@ export default function HomePage() {
                 <Icon className="lucide" />
                 <span className="rs">{s.title}</span>
                 <span className={"tag" + (s.status === "active" ? " live" : "")}>{statusLabel(s.status)}</span>
-                {s.updatedAt && <span className="rt">{new Date(s.updatedAt).toLocaleDateString()}</span>}
+                {s.lastActionAt && <span className="rt">{new Date(s.lastActionAt).toLocaleDateString()}</span>}
               </Link>
             );
           })

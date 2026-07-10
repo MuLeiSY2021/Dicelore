@@ -31,7 +31,7 @@ describe("POST /sessions/:id/choices(正式路径)", () => {
     const agentFactory = (): Agent => ({ async *runTurn(input) { captured = input.text; yield { type: "turn_end" }; } });
     const app = createLiveApp({ agentFactory, openSession: () => db });
 
-    const res = await app.request(`/sessions/${id}/choices`, {
+    const res = await app.request(`/sessions/dicegm/${id}/choices`, {
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ eventId, optionIndex: 1 }),
     });
@@ -48,7 +48,7 @@ describe("POST /sessions/:id/choices(正式路径)", () => {
     removeHost(id);
     const db: DB = openDb(":memory:"); initSchema(db);
     const app = createLiveApp({ agentFactory: () => new FakeDiceGm([{ type: "turn_end" }]), openSession: () => db });
-    const res = await app.request(`/sessions/${id}/choices`, {
+    const res = await app.request(`/sessions/dicegm/${id}/choices`, {
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ eventId: 999, optionIndex: 0 }),
     });

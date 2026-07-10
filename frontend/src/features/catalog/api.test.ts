@@ -9,7 +9,7 @@
 
 import { describe, it, expect, vi, afterEach } from "vitest";
 import {
-  listCatalog, commitPack, openPlaySession, getCatalogFiles, validateCatalog, tagPack,
+  listCatalog, commitPack, createPlaySession, getCatalogFiles, validateCatalog, tagPack,
 } from "./api.js";
 
 afterEach(() => { vi.restoreAllMocks(); });
@@ -53,18 +53,26 @@ describe("commitPack", () => {
   });
 });
 
-describe("openPlaySession", () => {
-  it("命中 /sessions/:id/open(POST，body 带 adventureId/ref)", async () => {
-    const f = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+describe("createPlaySession", () => {
+  it("命中 /sessions/dicegm(POST，body 带 teamId/version) 并返回服务端生成的 sessionId", async () => {
+    const f = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ sessionId: "s-new", kind: "dicegm" }) });
     vi.stubGlobal("fetch", f);
-    await openPlaySession("s1", "a1", "head");
-    expect(f).toHaveBeenCalledWith("/sessions/s1/open", expect.objectContaining({ method: "POST" }));
-    expect(JSON.parse(f.mock.calls[0][1].body)).toEqual({ adventureId: "a1", ref: "head" });
+    const sid = await createPlaySession("a1", "head");
+    expect(f).toHaveBeenCalledWith("/sessions/dicegm", expect.objectContaining({ method: "POST" }));
+    expect(JSON.parse(f.mock.calls[0][1].body)).toEqual({ teamId: "a1", version: "head" });
+    expect(sid).toBe("s-new");
+  });
+
+  it("version 省略时 body 只带 teamId", async () => {
+    const f = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ sessionId: "s2", kind: "dicegm" }) });
+    vi.stubGlobal("fetch", f);
+    await createPlaySession("a1");
+    expect(JSON.parse(f.mock.calls[0][1].body)).toEqual({ teamId: "a1" });
   });
 
   it("4xx 带 code(no_catalog) → 译出 code", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 400, json: async () => ({ code: "no_catalog" }) }));
-    await expect(openPlaySession("s1", "a1", "head")).rejects.toThrow("no_catalog");
+    await expect(createPlaySession("a1", "head")).rejects.toThrow("no_catalog");
   });
 });
 

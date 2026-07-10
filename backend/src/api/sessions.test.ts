@@ -36,62 +36,71 @@ describe("listSessionSummaries", () => {
   afterEach(() => { rmSync(dir, { recursive: true, force: true }); });
 
   it("目录不可读 → 返回空数组", () => {
-    expect(listSessionSummaries("/nonexistent_path_xyz")).toEqual([]);
+    expect(listSessionSummaries("/nonexistent_path_xyz", "dicegm")).toEqual([]);
   });
 
   it("空目录 → 返回空数组", () => {
-    expect(listSessionSummaries(dir)).toEqual([]);
+    expect(listSessionSummaries(dir, "dicegm")).toEqual([]);
   });
 
-  it("无 adventure_name 时 title=sessionId, adventureName 为 undefined", () => {
+  it("无 adventure_name 时 title=sessionId, packName 以 sessionId 兜底(C3 不可空), kind 透传", () => {
     makeSessionDb(dir, "sess-abc", {});
-    const result = listSessionSummaries(dir);
+    const result = listSessionSummaries(dir, "dicegm");
     expect(result).toHaveLength(1);
     expect(result[0].sessionId).toBe("sess-abc");
     expect(result[0].title).toBe("sess-abc");
-    expect(result[0].adventureName).toBeUndefined();
+    expect(result[0].kind).toBe("dicegm");
+    // packName 不可空:无 adventure_name → 兜底 sessionId。
+    expect(result[0].packName).toBe("sess-abc");
   });
 
-  it("有 adventure_name 时 adventureName 填入且 title 仍为 sessionId(非 adventureName)", () => {
+  it("有 adventure_name 时 packName 填入且 title 仍为 sessionId(非 packName)", () => {
     makeSessionDb(dir, "sess-001", { adventure_name: "魔道传说" });
-    const result = listSessionSummaries(dir);
+    const result = listSessionSummaries(dir, "dicegm");
     expect(result).toHaveLength(1);
     expect(result[0].sessionId).toBe("sess-001");
-    // adventureName 应为团本包名
-    expect(result[0].adventureName).toBe("魔道传说");
-    // title 应为 sessionId，而非 adventureName（前端格式: adventureName + " · " + title）
+    // packName 应为团本包名
+    expect(result[0].packName).toBe("魔道传说");
+    // title 应为 sessionId，而非 packName（前端格式: packName + " · " + title）
     expect(result[0].title).toBe("sess-001");
   });
 
-  it("多会话：adventureName 各自正确填入", () => {
+  it("多会话：packName 各自正确填入(无名者兜底 sessionId)", () => {
     makeSessionDb(dir, "sess-a", { adventure_name: "凡人修仙" });
     makeSessionDb(dir, "sess-b", { adventure_name: "凡人修仙" });
     makeSessionDb(dir, "sess-c", {});
-    const result = listSessionSummaries(dir);
+    const result = listSessionSummaries(dir, "dicegm");
     expect(result).toHaveLength(3);
     const byId = Object.fromEntries(result.map((r) => [r.sessionId, r]));
-    expect(byId["sess-a"].adventureName).toBe("凡人修仙");
-    expect(byId["sess-b"].adventureName).toBe("凡人修仙");
-    expect(byId["sess-c"].adventureName).toBeUndefined();
+    expect(byId["sess-a"].packName).toBe("凡人修仙");
+    expect(byId["sess-b"].packName).toBe("凡人修仙");
+    expect(byId["sess-c"].packName).toBe("sess-c"); // 无名兜底
   });
 
   it("非目录条目(散落文件)被忽略——只枚举 session 子目录", () => {
     writeFileSync(join(dir, "stray.db"), ""); // 散落文件,非 session 子目录
     makeSessionDb(dir, "sess-real", {});
-    const result = listSessionSummaries(dir);
+    const result = listSessionSummaries(dir, "dicegm");
     expect(result).toHaveLength(1);
     expect(result[0].sessionId).toBe("sess-real");
   });
 
+  it("loregm kind 透传", () => {
+    makeSessionDb(dir, "lore-x", { adventure_name: "构建中团本" });
+    const result = listSessionSummaries(dir, "loregm");
+    expect(result[0].kind).toBe("loregm");
+    expect(result[0].packName).toBe("构建中团本");
+  });
+
   it("started=1 时 started 字段为 true", () => {
     makeSessionDb(dir, "sess-started", { started: "1" });
-    const result = listSessionSummaries(dir);
+    const result = listSessionSummaries(dir, "dicegm");
     expect(result[0].started).toBe(true);
   });
 
   it("started=0 时 started 字段为 false", () => {
     makeSessionDb(dir, "sess-notstarted", { started: "0" });
-    const result = listSessionSummaries(dir);
+    const result = listSessionSummaries(dir, "dicegm");
     expect(result[0].started).toBe(false);
   });
 });

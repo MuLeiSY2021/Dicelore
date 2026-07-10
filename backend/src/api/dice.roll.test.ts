@@ -26,7 +26,7 @@ describe("POST /sessions/:id/roll(RT-3 重启恢复)", () => {
     });
     const app = createLiveApp({ agentFactory: () => new FakeDiceGm([{ type: "turn_end" }]), openSession: () => db });
 
-    const res = await app.request(`/sessions/${id}/roll`, {
+    const res = await app.request(`/sessions/dicegm/${id}/roll`, {
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ eventId }),
     });
@@ -43,7 +43,7 @@ describe("POST /sessions/:id/roll(RT-3 重启恢复)", () => {
     removeHost(id);
     const db: DB = openDb(":memory:"); initSchema(db);
     const app = createLiveApp({ agentFactory: () => new FakeDiceGm([{ type: "turn_end" }]), openSession: () => db });
-    const res = await app.request(`/sessions/${id}/roll`, {
+    const res = await app.request(`/sessions/dicegm/${id}/roll`, {
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ eventId: 999 }),
     });

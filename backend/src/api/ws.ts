@@ -27,16 +27,16 @@ export interface WsUpgradeDeps {
   sessionsDir?: string; // GM raw 日志根目录:透传 DiceSession→DiceGm(否则 WS 路径 sessionLogger 退化全局,GM 日志刷屏全局 debug.log)
 }
 
-// dice 会话 WS 升级(/sessions/:id/ws)挂到 http server——从原 startServer 内联块抽出,行为不变。
+// dice 会话 WS 升级(/sessions/dicegm/:id/ws)挂到 http server——从原 startServer 内联块抽出,行为不变。
 export function attachWsUpgrade(server: unknown, deps: WsUpgradeDeps): void {
   const wss = new WebSocketServer({ noServer: true });
   (server as { on(ev: string, cb: (req: IncomingMessage, socket: Duplex, head: Buffer) => void): void }).on(
     "upgrade",
     (req, socket, head) => {
-      const m = /^\/sessions\/([^/]+)\/ws(?:\?(.*))?$/.exec(req.url ?? "");
+      const m = /^\/sessions\/dicegm\/([^/]+)\/ws(?:\?(.*))?$/.exec(req.url ?? "");
       if (!m) {
         // 非 dice 会话 WS 路径(其它升级请求/探测)→ 拒绝升级。warn:非预期路径打到此处。
-        getLogger().warn({ url: req.url }, "WS 升级路径不匹配 /sessions/:id/ws,拒绝升级");
+        getLogger().warn({ url: req.url }, "WS 升级路径不匹配 /sessions/dicegm/:id/ws,拒绝升级");
         socket.destroy();
         return;
       }

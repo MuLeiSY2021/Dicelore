@@ -8,10 +8,11 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import { Hono } from "hono";
+import { randomUUID } from "node:crypto";
 import type { DB } from "@dicelore/interface";
 import type { SessionInfo, SessionSummary } from "@dicelore/shared";
-import { MessageRequestSchema, ChoiceRequestSchema, RollRequestSchema } from "@dicelore/shared";
-import { loreSearch, ruleSearch, logSince, metaGet, openSessionBackend, openDb, initSchema } from "@dicelore/backend";
+import { MessageRequestSchema, ChoiceRequestSchema, RollRequestSchema, CreateSessionRequestSchema } from "@dicelore/shared";
+import { loreSearch, ruleSearch, logSince, metaGet, openSessionBackend, openDb, initSchema, list } from "@dicelore/backend";
 import { getLogger } from "@dicelore/logs";
 import { buildSnapshot } from "./presentation.js";
 import { getOrCreateHost, removeHost, TurnInProgressError, type AgentFactory, type PluginRef } from "@dicelore/harness";
@@ -22,7 +23,8 @@ type CatalogDB = DB;
 // 测试兜底:无注入 openSession 时建内存库(原 DiceSession 自开库逻辑上移至组合根)。
 function memoryDb(): DB { const d = openDb(":memory:"); initSchema(d); return d; }
 
-// 实时引擎面：动作进(POST messages/choices/roll) + 首屏快照，经 registry/DiceSession。
+// 实时引擎面(dicegm)：动作进(POST messages/choices/roll) + 首屏快照，经 registry/DiceSession。
+// HTTP 表皮拉平(session-surface-flatten)：全部挂 /sessions/dicegm/*，与 loregm 对称。
 export interface LiveDeps {
   agentFactory: AgentFactory;
   plugin?: PluginRef; // dice skill plugin(gm-core+flows,boot 期物化到 $/dice)
@@ -45,21 +47,30 @@ export function createLiveApp(deps: LiveDeps): Hono {
     return { db, backend: openSessionBackend(db), agentFactory: deps.agentFactory, plugin: deps.plugin, model: deps.model, baseline: deps.baseline, debug: deps.debug, sessionsDir: deps.sessionsDir };
   };
 
-  // 开新局:选一个团本版本 import → 物化运行库(信任闸门)。body {adventureId, ref}。
-  app.post("/sessions/:id/open", async (c) => {
-    const id = c.req.param("id");
-    const body = (await c.req.json()) as { adventureId: string; ref: string };
+  // 显式建会话(session-surface-flatten §三)：POST /sessions/dicegm {teamId, version?} → 201 {sessionId,kind}。
+  // 取代旧 POST /sessions/:id/open 懒建(C2 完全移除)：服务端生成 sessionId、选团本版本 import → 物化运行库(信任闸门)。
+  // version 省略 = 默认最新版：core checkout 不认 "head",此处先从 catalog head 解析 commitId。
+  app.post("/sessions/dicegm", async (c) => {
+    const body = CreateSessionRequestSchema.parse(await c.req.json());
     if (!deps.catalog) {
-      getLogger().warn({ sessionId: id }, "open:无 catalog 注入,返回 400 no_catalog");
+      getLogger().warn("建 dicegm 会话:无 catalog 注入,返回 400 no_catalog");
       return c.json({ code: "no_catalog" }, 400);
     }
-    getOrCreateHost(id, { ...hostDeps(id), importFrom: { catalog: deps.catalog, adventureId: body.adventureId, ref: body.ref } });
-    getLogger().info({ sessionId: id, adventureId: body.adventureId, ref: body.ref }, "open:开新局,import 团本");
-    return c.json({ sessionId: id, imported: true }, 201);
+    if (!body.teamId) {
+      return c.json({ code: "bad_request", message: "teamId 必填" }, 400);
+    }
+    const ref = body.version ?? list(deps.catalog).find((a) => a.id === body.teamId)?.head ?? undefined;
+    if (!ref) {
+      return c.json({ code: "unknown_team", message: "团本不存在或无已发布版本" }, 400);
+    }
+    const id = randomUUID();
+    getOrCreateHost(id, { ...hostDeps(id), importFrom: { catalog: deps.catalog, adventureId: body.teamId, ref } });
+    getLogger().info({ sessionId: id, teamId: body.teamId, ref }, "建 dicegm 会话:import 团本");
+    return c.json({ sessionId: id, kind: "dicegm" }, 201);
   });
 
   // kickoff:「开始游戏」→ 开场回合(prologue 驱动、幂等),WS 流式开场叙事。
-  app.post("/sessions/:id/start", async (c) => {
+  app.post("/sessions/dicegm/:id/start", async (c) => {
     const id = c.req.param("id");
     const host = getOrCreateHost(id, hostDeps(id));
     try {
@@ -75,10 +86,10 @@ export function createLiveApp(deps: LiveDeps): Hono {
     }
   });
 
-  app.get("/sessions", (c) => c.json({ sessions: deps.listSessions?.() ?? [] }));
+  app.get("/sessions/dicegm", (c) => c.json({ sessions: deps.listSessions?.() ?? [] }));
 
   // 删会话:注销内存 host + 删 .db 文件。
-  app.delete("/sessions/:id", (c) => {
+  app.delete("/sessions/dicegm/:id", (c) => {
     const id = c.req.param("id");
     removeHost(id);
     deps.deleteSession?.(id);
@@ -86,7 +97,7 @@ export function createLiveApp(deps: LiveDeps): Hono {
     return c.json({ ok: true });
   });
 
-  app.get("/sessions/:id/presentation", (c) => {
+  app.get("/sessions/dicegm/:id/presentation", (c) => {
     const id = c.req.param("id");
     const host = getOrCreateHost(id, hostDeps(id));
     return c.json(buildSnapshot(host.db, id));
@@ -94,7 +105,7 @@ export function createLiveApp(deps: LiveDeps): Hono {
 
   // B2：叙述/事件历史回填(重连补 narrate)。?since=<seq> 取该 seq 之后的事件；
   // ?visibleOnly=true(默认)只回可见事件。返回 { events:[{seq,kind,text,data}] }(接口页 §2)。
-  app.get("/sessions/:id/events", (c) => {
+  app.get("/sessions/dicegm/:id/events", (c) => {
     const id = c.req.param("id");
     const since = Number(c.req.query("since") ?? "0") || 0;
     const visibleOnly = c.req.query("visibleOnly") !== "false";
@@ -111,7 +122,7 @@ export function createLiveApp(deps: LiveDeps): Hono {
 
   // 跑团页左活动轨自查源浏览(world/rule/log)。q 为空=列全量(读投影)；q 非空=FTS 检索。
   // 返回 { source, entries:[{name,tag,snippet,canPin}] }。rule 只查不钉(canPin=false)。
-  app.get("/sessions/:id/browse", (c) => {
+  app.get("/sessions/dicegm/:id/browse", (c) => {
     const id = c.req.param("id");
     const source = c.req.query("source") ?? "world";
     const q = (c.req.query("q") ?? "").trim();
@@ -138,14 +149,16 @@ export function createLiveApp(deps: LiveDeps): Hono {
 
   // 会话元信息(接口页 §2)。ended 读 session_meta「ended」(由 MCP game_end 工具落)——
   // 与 WS game_end 信号同源(DiceSession 亦读同 key),避免 REST 与 WS 终局态矛盾(RT-4)。
-  app.get("/sessions/:id", (c) => {
+  // 对称形状(session-surface-flatten §五)：{sessionId, kind, status, ended, title}。
+  app.get("/sessions/dicegm/:id", (c) => {
     const id = c.req.param("id");
     const db = getOrCreateHost(id, hostDeps(id)).db;
-    const info: SessionInfo = { sessionId: id, ended: metaGet(db, "ended") !== undefined, title: id };
+    const ended = metaGet(db, "ended") !== undefined;
+    const info: SessionInfo = { sessionId: id, kind: "dicegm", status: ended ? "ended" : "active", ended, title: id };
     return c.json(info);
   });
 
-  app.post("/sessions/:id/messages", async (c) => {
+  app.post("/sessions/dicegm/:id/messages", async (c) => {
     const id = c.req.param("id");
     const body = MessageRequestSchema.parse(await c.req.json());
     const host = getOrCreateHost(id, hostDeps(id));
@@ -161,7 +174,7 @@ export function createLiveApp(deps: LiveDeps): Hono {
       throw e;
     }
   });
-  app.post("/sessions/:id/choices", async (c) => {
+  app.post("/sessions/dicegm/:id/choices", async (c) => {
     const id = c.req.param("id");
     const body = ChoiceRequestSchema.parse(await c.req.json());
     const host = getOrCreateHost(id, hostDeps(id));
@@ -178,7 +191,7 @@ export function createLiveApp(deps: LiveDeps): Hono {
       return c.json({ code: "no_pending_choice" }, 409);
     }
   });
-  app.post("/sessions/:id/roll", async (c) => {
+  app.post("/sessions/dicegm/:id/roll", async (c) => {
     const id = c.req.param("id");
     const body = RollRequestSchema.parse(await c.req.json());
     // RT-3：用 getOrCreateHost（而非 getHost）——进程重启后内存 registry 为空，
@@ -202,7 +215,7 @@ export function createLiveApp(deps: LiveDeps): Hono {
   //                 成功 202 {uuid}；uuid 不在 transcript 树内 → 404 unknown_anchor；该锚点无 db 快照 → 409 no_snapshot_for_anchor。
   //   · 不带 toUuid → 现有 host.rewind()(撤上一轮·最近快照)，向后兼容：202 {snapshotId} / 无快照 409 no_snapshot。
   // 有回合在跑 → 409 turn_in_progress。
-  app.post("/sessions/:id/rewind", async (c) => {
+  app.post("/sessions/dicegm/:id/rewind", async (c) => {
     const id = c.req.param("id");
     const host = getOrCreateHost(id, hostDeps(id));
     // body 可空/非法：容错解析，缺 toUuid 即走旧路径（既有客户端发 {} 或空 body 均兼容）。

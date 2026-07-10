@@ -41,7 +41,7 @@ describe("orchestrator 只读 REST", () => {
 
   it("GET /sessions/:id/presentation 返回 §1 快照", async () => {
     const app = createLiveApp({ agentFactory: fakeFactory, openSession: memSessionFactory(), listSessions: () => [] });
-    const res = await app.request("/sessions/s1/presentation");
+    const res = await app.request("/sessions/dicegm/s1/presentation");
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.protocol).toBe("dicelore.client/1");
@@ -51,15 +51,15 @@ describe("orchestrator 只读 REST", () => {
 
   it("GET /sessions/:id 返回会话元信息", async () => {
     const app = createLiveApp({ agentFactory: fakeFactory, openSession: memSessionFactory(), listSessions: () => [] });
-    const res = await app.request("/sessions/s1");
+    const res = await app.request("/sessions/dicegm/s1");
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body).toMatchObject({ sessionId: "s1", ended: false });
+    expect(body).toMatchObject({ sessionId: "s1", kind: "dicegm", ended: false });
   });
 
   it("GET /sessions/:id 终局会话(meta ended 已落)→ ended:true(RT-4,与 WS game_end 同源)", async () => {
     const app = createLiveApp({ agentFactory: fakeFactory, openSession: endedSessionFactory(), listSessions: () => [] });
-    const res = await app.request("/sessions/dead");
+    const res = await app.request("/sessions/dicegm/dead");
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toMatchObject({ sessionId: "dead", ended: true });
@@ -69,9 +69,9 @@ describe("orchestrator 只读 REST", () => {
     const app = createLiveApp({
       agentFactory: fakeFactory,
       openSession: memSessionFactory(),
-      listSessions: () => [{ sessionId: "demo", title: "demo", status: "active" }],
+      listSessions: () => [{ sessionId: "demo", kind: "dicegm", title: "demo", status: "active", packName: "demo" }],
     });
-    const res = await app.request("/sessions");
+    const res = await app.request("/sessions/dicegm");
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.sessions[0].sessionId).toBe("demo");
@@ -87,10 +87,10 @@ describe("listSessionSummaries", () => {
       writeFileSync(join(dir, "beta", "session.db"), "");
       writeFileSync(join(dir, "alpha", "session.db"), "");
       writeFileSync(join(dir, "notes.txt"), ""); // 散落文件,非 session 子目录,忽略
-      const got = listSessionSummaries(dir);
+      const got = listSessionSummaries(dir, "dicegm");
       expect(got).toEqual([
-        { sessionId: "alpha", title: "alpha", status: "active", updatedAt: expect.any(Number) },
-        { sessionId: "beta", title: "beta", status: "active", updatedAt: expect.any(Number) },
+        { sessionId: "alpha", kind: "dicegm", title: "alpha", status: "active", packName: "alpha", lastActionAt: expect.any(Number) },
+        { sessionId: "beta", kind: "dicegm", title: "beta", status: "active", packName: "beta", lastActionAt: expect.any(Number) },
       ]);
     } finally {
       rmSync(dir, { recursive: true, force: true });
@@ -98,6 +98,6 @@ describe("listSessionSummaries", () => {
   });
 
   it("目录不存在返回 []", () => {
-    expect(listSessionSummaries(join(tmpdir(), "dicelore-nope-does-not-exist"))).toEqual([]);
+    expect(listSessionSummaries(join(tmpdir(), "dicelore-nope-does-not-exist"), "dicegm")).toEqual([]);
   });
 });
