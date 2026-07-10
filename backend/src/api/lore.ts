@@ -12,11 +12,11 @@ import { randomUUID } from "node:crypto";
 import { mkdirSync, createWriteStream, unlinkSync, existsSync } from "node:fs";
 import { basename, join } from "node:path";
 import { Readable } from "node:stream";
-import { list, commit, tag, checkout, validatePack, createBuildMcpServer, invokeBuildTool, Draft, type BuildCtx, type CatalogDB, type PackFile } from "@dicelore/backend";
-import { LoreSession, Rewind, SessionTranscript, sessionDir, type LoreSessionDeps, type AgentFactory, type PluginRef, type RollbackHook } from "@dicelore/harness";
+import { list, commit, tag, checkout, validatePack, createBuildMcpServer, invokeBuildTool, Draft, type BuildCtx, type BuildHooks, type CatalogDB, type PackFile } from "@dicelore/backend";
+import { LoreSession, Rewind, SessionTranscript, WsHub, sessionDir, type LoreSessionDeps, type AgentFactory, type PluginRef, type RollbackHook } from "@dicelore/harness";
 import { getLogger } from "@dicelore/logs";
-import type { SessionInfo, SessionSummary } from "@dicelore/shared";
-import { CreateSessionRequestSchema } from "@dicelore/shared";
+import type { SessionInfo, SessionSummary, LoreStreamMessage } from "@dicelore/shared";
+import { CLIENT_PROTOCOL, CreateSessionRequestSchema } from "@dicelore/shared";
 
 export interface LoreDeps {
   catalog: CatalogDB;
@@ -51,7 +51,9 @@ function sanitizeFilename(raw: string | undefined | null): string | null {
 // mcpServer 注入 LoreSession(loregm 保持 backend-free);draft 只读端点经此处的 Draft 读(LoreSession 不持 Draft)。
 // rewind = 该 lore 会话的 transcript 回退编排(接线时才建,见 ensureLoreEntry);注册了 lore-draft 领域态钩子。
 // 用裸 Map(非 InMemorySessionRegistry:其约束 S extends Session,而此处存的是 session+draft 复合条目)。
-const loreReg = new Map<string, { session: LoreSession; draft: Draft; rewind?: Rewind }>();
+// hub = 本会话的 loregm WsHub(loregm-ws 裁决 §二)：构建 hook(toolcall/draft_delta) + LoreSession(turn_started/ended)
+// 都广播到它；ws.ts 的 GET /sessions/loregm/:id/ws 升级把连接 add 进它。
+const loreReg = new Map<string, { session: LoreSession; draft: Draft; rewind?: Rewind; hub: WsHub<LoreStreamMessage> }>();
 
 // lore-draft 领域态回退钩子(v1 占位)。TR2 的 transcript 层回退(移 HEAD)对 lore 真生效,
 // 但 lore Draft(in-memory 包内容)的「按轮快照/还原」尚未实现——本钩子 rollbackTo 仅 warn 记账 + no-op,
@@ -72,22 +74,29 @@ export function createLoreDraftHook(sessionId: string): RollbackHook {
 // 建/取 loregm 会话条目(Draft + 构建 MCP server + 可选 transcript 回退编排)。
 // session-surface-flatten C2：懒建完全移除——本 helper 由显式 POST /sessions/loregm 调用建会话;
 // /messages 等子资源不再懒建、只 loreReg.get(已建则用,未建则 404)。幂等:已存在直接返回。
-function ensureLoreEntry(id: string, name: string | undefined, deps: LoreDeps): { session: LoreSession; draft: Draft; rewind?: Rewind } {
+function ensureLoreEntry(id: string, name: string | undefined, deps: LoreDeps): { session: LoreSession; draft: Draft; rewind?: Rewind; hub: WsHub<LoreStreamMessage> } {
   const existing = loreReg.get(id);
   if (existing) return existing;
   // 组合根建 Draft + 构建 MCP server(BUILD_TOOLS over Draft+Catalog),注入 LoreSession。
   const draft = new Draft();
   const ctx: BuildCtx = { catalog: deps.catalog, draft, name: name && name.length > 0 ? name : "未命名团本" };
-  const mcpServer = createBuildMcpServer(ctx);
+  // 本会话的 loregm WS hub(loregm-ws 裁决 §二)。构建 hook 把每次工具调用广播成 toolcall/draft_delta。
+  const hub = new WsHub<LoreStreamMessage>();
+  const hooks: BuildHooks = {
+    onToolcall: (e) => hub.broadcast(id, { protocol: CLIENT_PROTOCOL, type: "toolcall", tool: e.tool, args: e.args, result: e.result, ok: e.ok }),
+    onBuilderWrite: (e) => hub.broadcast(id, { protocol: CLIENT_PROTOCOL, type: "draft_delta", seq: e.seq, changes: e.changes }),
+  };
+  const mcpServer = createBuildMcpServer(ctx, hooks);
   // fake 假构建驱动(FAKE_GM=1)写 Draft 的通道:与真构建 GM 经 MCP 调 dicelore_build_* 工具同源,
-  // 复用 invokeBuildTool(同一 ctx)——FakeLoreGm 经 AgentInit.buildInvoke 调它让 Draft 非空。真 DiceGm 忽略。
-  const buildInvoke = (toolName: string, args: unknown) => invokeBuildTool(ctx, toolName, args);
+  // 复用 invokeBuildTool(同一 ctx + hooks，fake 路径也发 toolcall/draft_delta)——FakeLoreGm 经 AgentInit.buildInvoke 调它让 Draft 非空。真 DiceGm 忽略。
+  const buildInvoke = (toolName: string, args: unknown) => invokeBuildTool(ctx, toolName, args, hooks);
   // workspace:sessionsDir 已接线时确保 workspace 就位并透传给 agentFactory(cwd);
   // 未接线(如纯 catalog 单测)则 workspace 恒 undefined(agent 用 SDK 默认 cwd)。
   const workspace = deps.sessionsDir ? ensureWorkspace(deps.sessionsDir, id) : undefined;
   // dataDir 透传:接 deps.sessionsDir 现有来源;适配器据此落 transcript
   // 到 <dataDir>/sessions/lore/<id>/<id>_session.jsonl(DD2 布局,经 harness sessionDir 纯函数)。
-  const dep: LoreSessionDeps = { mcpServer, agentFactory: deps.agentFactory, buildPrompt: deps.buildPrompt, plugin: deps.plugin, workspace, dataDir: deps.sessionsDir, buildInvoke };
+  // hub + currentSeq(=draft.seq) 注入 LoreSession，让其入口/出口发 turn_started/turn_ended（中途 error 发 error）。
+  const dep: LoreSessionDeps = { mcpServer, agentFactory: deps.agentFactory, buildPrompt: deps.buildPrompt, plugin: deps.plugin, workspace, dataDir: deps.sessionsDir, buildInvoke, hub, currentSeq: () => draft.seq };
   // lore-draft 回退钩子注册在位:数据根接线时,为本会话建 transcript 回退编排(Rewind)并注册占位钩子。
   // transcript 状态持久在 <dataDir>/sessions/lore/<id>/{_session.jsonl,HEAD}(适配器每回合从 HEAD 文件恢复),
   // 故此处的 SessionTranscript 实例与驱动侧同源(同一文件),回退端点接线属 follow-up。未接线则不建(纯 catalog 单测)。
@@ -97,7 +106,7 @@ function ensureLoreEntry(id: string, name: string | undefined, deps: LoreDeps): 
     rewind = new Rewind(transcript);
     rewind.register(createLoreDraftHook(id));
   }
-  const entry = { session: new LoreSession(id, dep), draft, rewind };
+  const entry = { session: new LoreSession(id, dep), draft, rewind, hub };
   loreReg.set(id, entry);
   return entry;
 }
@@ -275,4 +284,4 @@ export function createLoreApp(deps: LoreDeps): Hono {
   return app;
 }
 
-export function getLoreEntry(id: string): { session: LoreSession; draft: Draft; rewind?: Rewind } | undefined { return loreReg.get(id); }
+export function getLoreEntry(id: string): { session: LoreSession; draft: Draft; rewind?: Rewind; hub: WsHub<LoreStreamMessage> } | undefined { return loreReg.get(id); }

@@ -13,6 +13,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { openCatalog, history, resolveId, commit, createBuildMcpServer, Draft } from "@dicelore/backend";
 import { LoreSession } from "./LoreSession.js";
+import { WsHub } from "../runtime/wsHub.js";
+import type { LoreStreamMessage } from "@dicelore/shared";
 import type { Agent, AgentInit, PluginRef, TurnEvent, TurnInput } from "../runtime/agent.js";
 import { FakeDiceGm } from "../dicegm/FakeDiceGm.js";
 import { SessionTranscript, sessionDir } from "../runtime/transcript.js";
@@ -32,7 +34,8 @@ describe("LoreSession", () => {
     expect(host.kind).toBe("lore");
     expect((host as unknown as { gate?: unknown }).gate).toBeUndefined();
     expect((host as unknown as { db?: unknown }).db).toBeUndefined();
-    // v1 REST only:无 WS 设施(hub/attachWs/detachWs 死代码已删)。
+    // LoreSession 不自持 WS 设施（hub 由组合根经 deps 注入、attachWs/detachWs 不在会话上——
+    // WS 连接的挂载由组合根 api/lore + ws.ts 直接操作 hub，见 loregm-ws 裁决 §二）。
     expect((host as unknown as { hub?: unknown }).hub).toBeUndefined();
     expect((host as unknown as { attachWs?: unknown }).attachWs).toBeUndefined();
     // Draft 不再由 LoreSession 持有(组合根持有);loregm 保持 backend-free。
@@ -188,6 +191,62 @@ describe("LoreSession", () => {
     const r = commit(catalog, { name: "魔道", files: draft.toPackFiles(), message: "init", createdAt: "2026-01-01" });
     expect(r.adventureId).toBe(resolveId("魔道"));
     expect(history(catalog, r.adventureId).length).toBe(1);
+    catalog.close();
+  });
+
+  // loregm WS(裁决 §二)：注入 hub → handleMessage 入口发 turn_started、出口发 turn_ended（seq 取 currentSeq）。
+  it("注入 hub 时 handleMessage 入口/出口广播 turn_started/turn_ended（seq 取 currentSeq）", async () => {
+    const catalog = openCatalog(":memory:");
+    const draft = new Draft();
+    const mcpServer = createBuildMcpServer({ catalog, draft, name: "凡人" });
+    const hub = new WsHub<LoreStreamMessage>();
+    const sent: LoreStreamMessage[] = [];
+    hub.add("w1", { send: (d: string) => sent.push(JSON.parse(d) as LoreStreamMessage), readyState: 1 });
+    let seq = 0;
+    const host = new LoreSession("w1", {
+      mcpServer,
+      hub,
+      currentSeq: () => seq,
+      agentFactory: () => new FakeDiceGm(() => { seq = 42; return [{ type: "narration", text: "写好了" }, { type: "turn_end" }]; }),
+    });
+    const r = await host.handleMessage("写点设定");
+    expect(sent[0]).toMatchObject({ type: "turn_started", turnId: r.turnId });
+    const ended = sent.find((m) => m.type === "turn_ended");
+    expect(ended).toMatchObject({ type: "turn_ended", turnId: r.turnId, seq: 42 });
+    // 成功轮不发 error。
+    expect(sent.some((m) => m.type === "error")).toBe(false);
+    catalog.close();
+  });
+
+  it("注入 hub 时 agent 中途 error → 广播 error，且 turn_ended 仍发", async () => {
+    const catalog = openCatalog(":memory:");
+    const draft = new Draft();
+    const mcpServer = createBuildMcpServer({ catalog, draft, name: "凡人" });
+    const hub = new WsHub<LoreStreamMessage>();
+    const sent: LoreStreamMessage[] = [];
+    hub.add("w2", { send: (d: string) => sent.push(JSON.parse(d) as LoreStreamMessage), readyState: 1 });
+    const host = new LoreSession("w2", {
+      mcpServer,
+      hub,
+      agentFactory: () => new FakeDiceGm([{ type: "error", message: "GM 挂了", code: "boom" }]),
+    });
+    await host.handleMessage("写点设定");
+    const errMsg = sent.find((m) => m.type === "error");
+    expect(errMsg).toMatchObject({ type: "error", code: "boom", message: "GM 挂了" });
+    expect(sent.some((m) => m.type === "turn_ended")).toBe(true); // error 也发 turn_ended
+    catalog.close();
+  });
+
+  it("未注入 hub 时不广播、REST 语义不变（退化单测）", async () => {
+    const catalog = openCatalog(":memory:");
+    const draft = new Draft();
+    const mcpServer = createBuildMcpServer({ catalog, draft, name: "凡人" });
+    const host = new LoreSession("w3", {
+      mcpServer,
+      agentFactory: () => new FakeDiceGm([{ type: "turn_end" }]),
+    });
+    const r = await host.handleMessage("写点设定"); // 不炸
+    expect(r.turnId).toMatch(/^w3-l\d+$/);
     catalog.close();
   });
 });

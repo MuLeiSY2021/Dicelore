@@ -13,7 +13,9 @@ export interface WsLike { send(data: string): void; readyState: number }
 const OPEN = 1;
 
 // 每 session 一组 WS 连接 + JSON 广播。不串台、跳过非 OPEN。
-export class WsHub {
+// 泛型 M 为广播的消息类型：默认 StreamMessage（dicegm 域）；loregm 域用 WsHub<LoreStreamMessage>——
+// 两 kind 共用同一 WS 骨架、消息枚举不同（loregm-ws 裁决 §二 C1/C5）。
+export class WsHub<M = StreamMessage> {
   private bySession = new Map<string, Set<WsLike>>();
   add(sessionId: string, ws: WsLike): void {
     let set = this.bySession.get(sessionId);
@@ -23,7 +25,7 @@ export class WsHub {
   remove(sessionId: string, ws: WsLike): void {
     this.bySession.get(sessionId)?.delete(ws);
   }
-  broadcast(sessionId: string, msg: StreamMessage): void {
+  broadcast(sessionId: string, msg: M): void {
     const data = JSON.stringify(msg);
     for (const ws of this.bySession.get(sessionId) ?? []) {
       if (ws.readyState === OPEN) ws.send(data);

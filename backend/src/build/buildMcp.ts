@@ -28,6 +28,32 @@ export interface BuildEnvelope {
   isError?: boolean;
 }
 
+// loregm WS 侧的构建 hook（loregm-ws 裁决 §二 C3/C4，类 dicegm 缝A onCanonWrite）：
+//  · onToolcall     —— build GM 每调一次构建工具都发（含读/校验/commit；ok=!isError）→ WS toolcall
+//  · onBuilderWrite —— 仅「写 Draft」的工具成功后发（read/validate/commit/tag 不产 delta）→ WS draft_delta
+// 组合根(api/lore) 注入实现，把事件广播到该会话的 loregm WsHub。省略=不发（纯 catalog 单测/stdio 路径）。
+export interface BuildToolcallEvent { tool: string; args: unknown; result?: unknown; ok: boolean }
+export interface BuildWriteEvent { seq: number; changes: { section: string }[] }
+export interface BuildHooks {
+  onToolcall?(evt: BuildToolcallEvent): void;
+  onBuilderWrite?(evt: BuildWriteEvent): void;
+}
+
+// 「写 Draft」工具 → 受影响的分域（对齐 GET …/draft snapshot 分域键）。
+// 不在表中的工具（validate/read/commit/tag）不产 draft_delta（只读或落 Catalog、不改 Draft 内容）。
+const DRAFT_SECTION: Record<string, string> = {
+  set_manifest: "manifest",
+  set_prologue: "prologue",
+  write_lore: "world",
+  write_rule: "rules",
+  add_pool: "pools",
+  set_state: "sheets",
+  add_front: "fronts",
+  add_plotline: "plotlines",
+  add_foreshadow: "foreshadows",
+  add_anchor: "anchors",
+};
+
 function ok(out: unknown): BuildEnvelope {
   return { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out };
 }
@@ -80,7 +106,21 @@ export const BUILD_SCHEMAS = {
 } as const;
 
 // 调一个构建工具(无 dicelore_build_ 前缀):校验入参 → 改 draft / commit。可测核心。
-export function invokeBuildTool(ctx: BuildCtx, name: string, args: unknown): BuildEnvelope {
+// hooks 可选：给了则在工具跑完后发 toolcall（总发）+ draft_delta（写 Draft 的工具成功时发）。
+// 真构建 GM 经 createBuildMcpServer 的 registerTool 走此处、fake 假驱动经 buildInvoke 也走此处——单一缝。
+export function invokeBuildTool(ctx: BuildCtx, name: string, args: unknown, hooks?: BuildHooks): BuildEnvelope {
+  const envelope = runBuildTool(ctx, name, args);
+  if (hooks) {
+    hooks.onToolcall?.({ tool: name, args, result: envelope.structuredContent, ok: !envelope.isError });
+    const section = DRAFT_SECTION[name];
+    if (!envelope.isError && section) {
+      hooks.onBuilderWrite?.({ seq: ctx.draft.seq, changes: [{ section }] });
+    }
+  }
+  return envelope;
+}
+
+function runBuildTool(ctx: BuildCtx, name: string, args: unknown): BuildEnvelope {
   const schema = (BUILD_SCHEMAS as Record<string, z.ZodTypeAny>)[name];
   if (!schema) return err("UNKNOWN_TOOL", `未知构建工具: ${name}`);
   const parsed = schema.safeParse(args);
@@ -161,14 +201,15 @@ const TOOL_META: Record<string, { description: string; annotations?: { readOnlyH
 
 // 构建版 MCP server:注册 dicelore_build_* 工具,挂在 LoreSession 的 in-process MCP。
 // 与运行时 TOOLS 编译期不交叉(物理隔离不变量:lore 会话只见构建工具)。
-export function createBuildMcpServer(ctx: BuildCtx): McpServer {
+// hooks 可选：组合根(api/lore) 注入，让每次工具调用广播 loregm WS（toolcall/draft_delta）。
+export function createBuildMcpServer(ctx: BuildCtx, hooks?: BuildHooks): McpServer {
   const server = new McpServer({ name: "dicelore-build", version: "0.0.0" });
   for (const [name, schema] of Object.entries(BUILD_SCHEMAS)) {
     const meta = TOOL_META[name] ?? { description: `团本构建:${name}` };
     server.registerTool(
       `dicelore_build_${name}`,
       { description: meta.description, inputSchema: (schema as z.ZodObject<z.ZodRawShape>).shape, annotations: meta.annotations },
-      (args: unknown) => invokeBuildTool(ctx, name, args) as never,
+      (args: unknown) => invokeBuildTool(ctx, name, args, hooks) as never,
     );
   }
   return server;

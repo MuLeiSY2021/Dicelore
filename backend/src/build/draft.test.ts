@@ -75,4 +75,20 @@ describe("Draft.setPrologue", () => {
     const draft = new Draft();
     expect(draft.snapshot().prologue).toBeUndefined();
   });
+
+  // 修订号（loregm WS draft_delta.seq / turn_ended.seq 来源）：每次写操作 +1，不进包。
+  it("seq 每次写操作递增，只读方法不动 seq", () => {
+    const draft = new Draft();
+    expect(draft.seq).toBe(0);
+    draft.setManifest({ name: "凡人", id: "f" });
+    expect(draft.seq).toBe(1);
+    draft.writeLore("黄枫谷", "正道");
+    draft.writeRule("修炼", "练气");
+    draft.addPool("灵根", [{ 名称: "天灵根" }]);
+    draft.setState([{ entity: "韩立", attr: "资质", value: "五灵根" }]);
+    expect(draft.seq).toBe(5);
+    // 只读方法不改 seq。
+    draft.snapshot(); draft.toPackFiles();
+    expect(draft.seq).toBe(5);
+  });
 });

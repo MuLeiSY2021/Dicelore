@@ -14,7 +14,7 @@ import { join } from "node:path";
 import { openCatalog, openSession as openCoreSession, openDb, initSchema } from "@dicelore/backend";
 import { initGlobalLogger, getLogger } from "@dicelore/logs";
 import { createLiveApp } from "./api/dice.js";
-import { createLoreApp } from "./api/lore.js";
+import { createLoreApp, getLoreEntry } from "./api/lore.js";
 import { createDiagnosticsApp } from "./api/diagnostics.js";
 import { createUsageApp } from "./api/usage.js";
 import { createKeysApp } from "./api/keys.js";
@@ -144,7 +144,8 @@ export function startServer(portOverride?: number): void {
   app.route("/", createKeysApp({ db: keysDb, master: () => process.env.DICELORE_KEY_MASTER ?? "" }));
 
   const server = serve({ fetch: app.fetch, port });
-  attachWsUpgrade(server, { openSession, agentFactory, plugin: dicePlugin, baseline, debug, sessionsDir: root });
+  // 单一 upgrade 监听按路径路由 dicegm / loregm WS：loregm 侧用 getLoreEntry(id)?.hub 取本会话的构建 WsHub。
+  attachWsUpgrade(server, { openSession, agentFactory, plugin: dicePlugin, baseline, debug, sessionsDir: root, resolveLoreHub: (id) => getLoreEntry(id)?.hub });
   // 启动 banner 走 logger(已 initGlobalLogger → 分级文件),不再裸 console.log 重复一行(O2)。
   getLogger().info({ port, fakeGm: fake, debug, root, catalog: catalogPath }, `orchestrator live :${port}`);
 }
