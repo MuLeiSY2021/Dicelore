@@ -12,7 +12,7 @@ import { randomUUID } from "node:crypto";
 import type { DB } from "@dicelore/interface";
 import type { SessionInfo, SessionSummary } from "@dicelore/shared";
 import { MessageRequestSchema, ChoiceRequestSchema, RollRequestSchema, CreateSessionRequestSchema, SessionConfigUpdateSchema, CreateBranchRequestSchema } from "@dicelore/shared";
-import { loreSearch, ruleSearch, logSince, metaGet, openSessionBackend, openDb, initSchema, list, MAIN_BRANCH, branchDbKey, currentBranch, listBranches, checkoutBranch, createBranch } from "@dicelore/backend";
+import { loreSearch, ruleSearch, logSince, metaGet, openSessionBackend, openDb, initSchema, list, MAIN_BRANCH, branchDbKey, currentBranch, listBranches, checkoutBranch, createBranch, PackValidationError } from "@dicelore/backend";
 import { getLogger } from "@dicelore/logs";
 import { buildSnapshot } from "./presentation.js";
 import { getOrCreateHost, removeHost, TurnInProgressError, type AgentFactory, type PluginRef } from "@dicelore/harness";
@@ -79,7 +79,24 @@ export function createLiveApp(deps: LiveDeps): Hono {
       return c.json({ code: "unknown_team", message: "团本不存在或无已发布版本" }, 400);
     }
     const id = randomUUID();
-    getOrCreateHost(id, { ...hostDeps(id), importFrom: { catalog: deps.catalog, adventureId: body.teamId, ref } });
+    // 信任闸门(importPack)在 DiceSession 构造期同步重验团本包;拒包 throw PackValidationError。
+    // RT-open-500:捕获→映射 400 {code:"invalid_pack",issues:[…]},把结构化校验失败原因回客户端,
+    // 而非 uncaught → 500。host 未入注册表(create 回调 throw 前 map.set 未执行),无需清理。
+    try {
+      getOrCreateHost(id, { ...hostDeps(id), importFrom: { catalog: deps.catalog, adventureId: body.teamId, ref } });
+    } catch (e) {
+      if (e instanceof PackValidationError || (e != null && typeof e === "object" && (e as { code?: unknown }).code === "invalid_pack")) {
+        const issues = (e as PackValidationError).issues ?? [];
+        getLogger().warn({ sessionId: id, teamId: body.teamId, issues }, "建 dicegm 会话:团本包信任闸门拒包,返回 400 invalid_pack");
+        return c.json({ code: "invalid_pack", issues }, 400);
+      }
+      // RT-open-500 补齐:畸形包能过 validatePack 表头校验、却在 importPack 物化期抛(如 state.visible/pools.weight
+      // 填非数值→Number()=NaN→better-sqlite3 绑 NULL→NOT NULL 约束 SqliteError)。物化期异常同属「客户端所选包不可用」
+      // =客户端错误,一并映射 400 invalid_pack(而非 uncaught→500);issues 带物化错误信息。host 未入注册表无需清理。
+      const msg = e instanceof Error ? e.message : String(e);
+      getLogger().warn({ sessionId: id, teamId: body.teamId, err: e }, "建 dicegm 会话:团本包物化期错误,映射 400 invalid_pack(非 500)");
+      return c.json({ code: "invalid_pack", issues: [{ path: "pack", msg }] }, 400);
+    }
     getLogger().info({ sessionId: id, teamId: body.teamId, ref }, "建 dicegm 会话:import 团本");
     return c.json({ sessionId: id, kind: "dicegm" }, 201);
   });

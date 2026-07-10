@@ -85,12 +85,34 @@ function parseCsv(text: string): Record<string, string>[] {
 
 const META_COLS = new Set(["weight", "source", "visible"]);
 
+/**
+ * 信任闸门拒包的**结构化**错误（RT-open-500）：importPack 校验不通过时抛此类，
+ * 携带 validatePack 的完整 `issues`（含 level/file/msg/hint），供 API 层映射成
+ * 4xx `{code:"invalid_pack", issues:[…]}` 结构化响应——而非 uncaught → 500。
+ * `code` 字段做跨模块边界（harness 透传 backend.importPack）的稳健判别锚点，
+ * 兼容 instanceof 因双份打包失效的情形。
+ */
+export class PackValidationError extends Error {
+  readonly code = "invalid_pack" as const;
+  readonly issues: ValidateIssue[];
+  constructor(issues: ValidateIssue[]) {
+    super(
+      `团本包校验失败(信任闸门): ${issues
+        .filter((i) => i.level === "error")
+        .map((i) => `${i.file}: ${i.msg}`)
+        .join("; ")}`,
+    );
+    this.name = "PackValidationError";
+    this.issues = issues;
+  }
+}
+
 // 物化:checkout 某版本 → 校验(throw on error) → 按域写入运行库。caller 提供已 initSchema 的 runDB。
 export function importPack(catalogDB: CatalogDB, runDB: DB, adventureId: string, ref: string): ImportResult {
   const files = checkout(catalogDB, adventureId, ref);
   const v = validatePackFull(files);
   if (!v.ok) {
-    throw new Error(`团本包校验失败(信任闸门): ${v.issues.filter((i) => i.level === "error").map((i) => `${i.file}: ${i.msg}`).join("; ")}`);
+    throw new PackValidationError(v.issues);
   }
   const res: ImportResult = { lore: 0, rules: 0, pools: 0, stateCells: 0, fronts: 0, plotlines: 0, foreshadows: 0, anchors: 0, toolDefs: [] };
   const stateStmt = runDB.prepare(
