@@ -66,8 +66,58 @@ else
   echo "  ✓ WS 连接 GET /:id/ws 升级成功（$resp）"; PASS=$((PASS+1))
 fi
 
-# —— 暗骰/明骰正路径 + WS 12 类逐条：需 fake-GM 教练档挂起 pendingRoll/choice ——
-block "roll_staged/hidden_roll(含 result/band) + game_end WS 逐条验" \
-  "fake-GM 教练档 CanonScript 未接 HTTP/env，无法经 HTTP 触发挂起 pendingRoll/pendingChoice；staged-roll 正路径与 hidden_roll 全量下发(断言 result/band 存在)需该缺件"
+# ═══ fake 教练档关键字驱动的正路径主线（DICELORE_FAKE_GM=1·defaultCoachCanon）═══
+# 关键字触发五主线，HTTP 可观测：明骰/选择/终局/暗骰。参照 backend/src/server.fakeGm.test.ts。
+
+# —— 选择主线：「选择」→ presentation.choices 现两选项 → POST /choices →202 收尾 ——
+CSID="$(new_dicegm)"
+req -X POST "$BASE/sessions/dicegm/$CSID/messages" -H 'content-type: application/json' -d '{"text":"我该如何选择"}' >/dev/null
+resp=$(req "$BASE/sessions/dicegm/$CSID/presentation")
+check "选择主线 presentation.choices 现≥2 选项+eventId" "$resp" \
+  --expect-status=200 --has choices.eventId --nonempty=choices.options
+CEID="$(jget "$resp" choices.eventId)"
+resp=$(req -X POST "$BASE/sessions/dicegm/$CSID/choices" -H 'content-type: application/json' -d "{\"eventId\":$CEID,\"optionIndex\":1}")
+check "选择主线 POST /:id/choices{eventId,optionIndex} →202{turnId}（走正式选择捕获）" "$resp" --expect-status=202 --has turnId
+
+# —— 明骰主线：「掷骰」挂 rollGate → POST /roll 解 gate、回合收尾、verdict 落库(visible=1) ——
+# message 阻塞在 gate 上、eventId 走 WS roll_staged 帧 → 由 roll-flow.mjs 编排（见该文件）。
+RSID="$(new_dicegm)"
+RF="$(timeout 40 node "$DIR/roll-flow.mjs" "$BASE" "$RSID" roll 2>&1 || true)"
+if printf '%s' "$RF" | grep -q 'ROLL=202' && printf '%s' "$RF" | grep -q 'MSG=202'; then
+  echo "  ✓ 明骰主线 POST messages 挂 rollGate → POST /roll →202 解 gate → messages 回合收尾（$RF）"; PASS=$((PASS+1))
+else
+  printf '  ✗ 明骰主线 roll gate 编排 — %s\n' "$RF"; FAIL=$((FAIL+1))
+fi
+resp=$(req "$BASE/sessions/dicegm/$RSID/events?since=0")
+check "明骰主线 掷骰落 verdict(可见·visible=1) GET /:id/events" "$resp" \
+  --expect-status=200 --eq=events.0.kind=verdict --eq=events.0.visible=1
+
+# —— 暗骰主线：「暗骰」→ GM 立即掷、verdict visible=0（对玩家隐·不入 visible 面/mechanics）——
+# 纯 WS hidden_roll 帧（携完整 result/band）在 fake 路径不必发（fakeGm.test 只验 DB visible=0）；
+# 此处以 REST 可观测口径验防剧透行为：events 全量含 visible=0、visibleOnly 截流、presentation 不投影。
+HSID="$(new_dicegm)"
+resp=$(req -X POST "$BASE/sessions/dicegm/$HSID/messages" -H 'content-type: application/json' -d '{"text":"我要暗骰查探"}')
+check "暗骰主线 POST messages「暗骰」→202" "$resp" --expect-status=202 --has turnId
+resp=$(req "$BASE/sessions/dicegm/$HSID/events?since=0")
+check "暗骰主线 verdict 落库 visible=0（全量面含）GET /:id/events" "$resp" \
+  --expect-status=200 --eq=events.0.kind=verdict --eq=events.0.visible=0
+resp=$(req "$BASE/sessions/dicegm/$HSID/events?since=0&visibleOnly=true")
+check "暗骰主线 visibleOnly=true 截掉暗骰 verdict（events 空）" "$resp" --expect-status=200 --absent=events.0
+resp=$(req "$BASE/sessions/dicegm/$HSID/presentation")
+check "暗骰主线 presentation.mechanics 不投影暗骰 verdict（对玩家隐）" "$resp" --expect-status=200 --absent=mechanics.0
+
+# —— 终局主线：「结束」→ game_end MCP → 转复盘态（GET meta status=debrief·ended=true）——
+ESID="$(new_dicegm)"
+req -X POST "$BASE/sessions/dicegm/$ESID/messages" -H 'content-type: application/json' -d '{"text":"我想结束游戏"}' >/dev/null
+resp=$(req "$BASE/sessions/dicegm/$ESID")
+check "终局主线 GET /:id →status:debrief·ended:true（game_end 后转复盘态不归档）" "$resp" \
+  --expect-status=200 --eq=ended=true --eq=status=debrief
+
+# —— hidden_roll 纯 WS 帧断言（携完整 {eventId,label,result,dc?,band?}）——
+# fake 教练档暗骰走引擎立即掷、不发 roll_staged/hidden_roll 帧（stream.ts §28 注：暗骰不走 pendingRoll）；
+# hidden_roll 帧的全量下发(断言 result/band 存在·防剧透交前端 spoiler 档) 属真 GM/前端渲染路径，
+# 移交 playwright b4 覆盖（协调者接受此项留 blocked）。REST 可观测的暗骰防剧透行为已在上方转 PASS。
+block "hidden_roll 纯 WS 帧断言（含 result/band）" \
+  "fake 教练档暗骰走引擎立即掷、不发 hidden_roll 帧；WS 帧全量下发断言移交 playwright b4（暗骰防剧透 REST 口径已转 PASS）"
 
 echo "  → A2: pass=$PASS fail=$FAIL blocked=$BLOCKED"

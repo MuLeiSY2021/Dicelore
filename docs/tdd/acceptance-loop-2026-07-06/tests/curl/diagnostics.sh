@@ -45,19 +45,15 @@ check "key 存 缺参 POST /keys →400" "$resp" --expect-status=400
 resp=$(req -X DELETE "$BASE/keys/no-such-key-id")
 check "key 删 不存在 DELETE /keys/:id →404" "$resp" --expect-status=404
 
-# —— key 存正路（201 KeyMeta）+ 级联删（204）——
-# eval 后端的 DICELORE_KEY_MASTER 已配但非 32 字节（malformed）→ storeKey 抛「主密钥无效」→ 500，
-# 无法走 201 正路（受测环境主密钥无效·不重启后端不可修）。
+# —— key 存正路（201 KeyMeta·不回明文）+ 级联删（204）——
 KID="$(uid)"
 resp=$(req -X POST "$BASE/keys" -H 'content-type: application/json' -d "{\"label\":\"eval-$KID\",\"provider\":\"openai\",\"secret\":\"sk-eval\"}")
-code="$(printf '%s' "$resp" | tail -n1)"
-if [ "$code" = "201" ]; then
-  check "key 存 POST /keys{label,provider,secret} →201{keyId}(不回明文)" "$resp" --expect-status=201 --has keyId --absent=secret
-  KUUID="$(jget "$(req "$BASE/keys")" keys.0.keyId)"
-  resp=$(req -X DELETE "$BASE/keys/$KUUID")
-  check "key 删 DELETE /keys/:id →204" "$resp" --expect-status=204
-else
-  block "key 存正路 201{keyId} + 级联删 204" "eval 后端 DICELORE_KEY_MASTER 已配但非 32 字节(malformed)→storeKey 抛「主密钥无效」→ $code；不重启后端不可修(测试基建缺件)"
-fi
+check "key 存 POST /keys{label,provider,secret} →201{keyId,label,provider,createdAt}(不回明文)" "$resp" \
+  --expect-status=201 --has keyId --eq=provider=openai --has createdAt --absent=secret
+KUUID="$(jget "$resp" keyId)"
+resp=$(req "$BASE/keys/$KUUID")
+check "key 取单条 GET /keys/:id →200 KeyMeta" "$resp" --expect-status=200 --eq=keyId="$KUUID"
+resp=$(req -X DELETE "$BASE/keys/$KUUID")
+check "key 删 DELETE /keys/:id →204" "$resp" --expect-status=204
 
 echo "  → §6: pass=$PASS fail=$FAIL blocked=$BLOCKED"
