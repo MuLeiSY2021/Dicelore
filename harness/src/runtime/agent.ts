@@ -29,6 +29,9 @@ export type TurnEvent =
   | { type: "narration"; text: string } // 一段散文(Phase 1 = narrate 工具调用粒度)
   | { type: "usage"; usage: TurnUsage; model?: string } // 本回合 token 用量(agent 上抛,会话经端口落库)
   | { type: "sdk_session"; id: string } // SDK 流出的 session_id(system init 携带)——上抛供会话存库,后续回合 resume 续接 LLM 历史
+  // 上下文压缩进行态(裁决 usage-and-context §四):agent 订阅 SDK 流检出 compacting 状态→上抛,
+  // streamTurn 广播 WS context_compacting(start/done)。带外信号、不进 canon/快照。
+  | { type: "context_compacting"; phase: "start" | "done"; result?: "success" | "failed"; error?: string }
   | { type: "turn_end" } // GM 本回合自然结束
   | { type: "error"; message: string; code?: string }; // 驱动/SDK 错误(code 可区分:gm_timeout 等;省略→streamTurn 默认 gm_error)
 

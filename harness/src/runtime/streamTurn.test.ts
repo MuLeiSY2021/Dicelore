@@ -32,4 +32,36 @@ describe("streamDriverTurn", () => {
     const r = await streamDriverTurn({ driver, hub, sessionId: "s2", turnId: "t" }, { text: "x" });
     expect(r.errored).toBe(true);
   });
+
+  // 裁决 usage-and-context §四：agent 上抛 context_compacting → streamTurn 广播 WS。
+  it("context_compacting start/done 事件 → 广播对应 WS 消息", async () => {
+    const hub = new WsHub();
+    const sent: { type: string; phase?: string; result?: string; error?: string }[] = [];
+    hub.add("s3", { send: (d: string) => sent.push(JSON.parse(d)), readyState: 1 } as never);
+    const driver = new FakeDiceGm(() => [
+      { type: "context_compacting", phase: "start" },
+      { type: "context_compacting", phase: "done", result: "success" },
+      { type: "turn_end" },
+    ]);
+    await streamDriverTurn({ driver, hub, sessionId: "s3", turnId: "s3-t1" }, { text: "hi" });
+    const cc = sent.filter((m) => m.type === "context_compacting");
+    expect(cc).toEqual([
+      { protocol: expect.anything(), type: "context_compacting", phase: "start" },
+      { protocol: expect.anything(), type: "context_compacting", phase: "done", result: "success" },
+    ]);
+  });
+
+  it("context_compacting done failed → 广播携带 result:failed + error", async () => {
+    const hub = new WsHub();
+    const sent: { type: string; phase?: string; result?: string; error?: string }[] = [];
+    hub.add("s4", { send: (d: string) => sent.push(JSON.parse(d)), readyState: 1 } as never);
+    const driver = new FakeDiceGm(() => [
+      { type: "context_compacting", phase: "start" },
+      { type: "context_compacting", phase: "done", result: "failed", error: "boom" },
+      { type: "turn_end" },
+    ]);
+    await streamDriverTurn({ driver, hub, sessionId: "s4", turnId: "s4-t1" }, { text: "hi" });
+    const done = sent.find((m) => m.type === "context_compacting" && m.phase === "done");
+    expect(done).toMatchObject({ phase: "done", result: "failed", error: "boom" });
+  });
 });

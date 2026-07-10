@@ -9,6 +9,7 @@
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { PluginRef } from "../runtime/agent.js";
+import { contextWindowFor } from "@dicelore/shared";
 
 // ── SDK query() 的 options 纯装配(TB-2) ────────────────────────────────────
 // 把「构建 query() 的 options」从 DiceGm.runTurn 里抽出来，使其成为一个**不调 query()、
@@ -41,6 +42,9 @@ export interface GmQueryOptions {
   settingSources: ("project" | "user" | "local")[];
   cwd?: string;
   resume?: string; // SDK session 续接(裁决 gm-session-continuity):非空→SDK 加载该 session 历史;省略→开新 session
+  // SDK flag settings 层（sdk.d.ts Options.settings，最高优先级、与 settingSources:[] 正交）——
+  // 裁决 usage-and-context C1：显式注入 auto-compact 开关，让上下文接近窗口上限时 SDK 自动 summarize 旧回合。
+  settings: { autoCompactEnabled: boolean; autoCompactWindow: number };
   plugins?: { type: "local"; path: string }[];
   skills?: string[] | "all";
   // 核心 dicelore(in-process sdk) 恒在;客制 out-of-canon MCP(stdio) 按 key=实例名并列注入。
@@ -76,6 +80,9 @@ export function buildQueryOptions(args: BuildQueryOptionsArgs): GmQueryOptions {
   const base: GmQueryOptions = {
     model,
     settingSources: [], // 不读盘上 settings;plugins 正交加载
+    // C1(裁决 usage-and-context)：经 flag settings 层显式开 auto-compact；autoCompactWindow 与 foot 占用%
+    // 同口径（CONTEXT_WINDOW[model]）。显式 true 不依赖 SDK 默认；运行时开关 v1 不暴露前端。
+    settings: { autoCompactEnabled: true, autoCompactWindow: contextWindowFor(model) },
     ...(workspace ? { cwd: workspace } : {}),
     ...(resume ? { resume } : {}), // 首回合无 resume → 省略(SDK 开新 session);后续注入 sdk_session_id 续接历史
     ...(plugin ? { plugins: [{ type: "local", path: plugin.pluginDir }] } : {}),

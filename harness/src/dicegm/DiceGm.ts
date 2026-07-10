@@ -31,6 +31,27 @@ export function parseUsage(usage: unknown): ParsedUsage {
   };
 }
 
+// 上下文压缩信号解析（裁决 usage-and-context §四）：把一条 SDK 消息映射成压缩进行态信号（纯函数，offline 可单测）。
+//   · SDKStatusMessage（type:'system', subtype:'status'）：status==='compacting' → start；
+//     compact_result==='success'|'failed' → done（failed 携带 compact_error）。
+//   · SDKCompactBoundaryMessage（subtype:'compact_boundary'）→ done success（压缩边界=完成）。
+// 非压缩相关消息 → null。start/done 去重（避免 status + boundary 双发）由调用点用回合内标志处理。
+export type CompactingSignal =
+  | { phase: "start" }
+  | { phase: "done"; result: "success" | "failed"; error?: string };
+export function parseCompacting(msg: unknown): CompactingSignal | null {
+  const m = (msg ?? {}) as { type?: string; subtype?: string; status?: string; compact_result?: string; compact_error?: string };
+  if (m.type !== "system") return null;
+  if (m.subtype === "status") {
+    if (m.status === "compacting") return { phase: "start" };
+    if (m.compact_result === "success") return { phase: "done", result: "success" };
+    if (m.compact_result === "failed") return { phase: "done", result: "failed", error: m.compact_error };
+    return null;
+  }
+  if (m.subtype === "compact_boundary") return { phase: "done", result: "success" };
+  return null;
+}
+
 // 真 GM 驱动：@anthropic-ai/claude-agent-sdk query()，in-process 挂 dicelore MCP。
 // 鉴权沿用 env ANTHROPIC_BASE_URL/ANTHROPIC_AUTH_TOKEN(SDK 原生读)。不进单测(烧 LLM)。
 // CC SDK 适配器 = Agent 适配缝(AgentInit→Agent)的首个实现。
@@ -135,6 +156,7 @@ export class DiceGm implements Agent {
       }) as unknown as Parameters<typeof query>[0]["options"];
 
       let msgIdx = 0;
+      let compacting = false; // 回合内压缩去重:start 后才允许 done,且 status/boundary 只发一次 done
       for await (const msg of query({ prompt: input.text, options })) {
         msgIdx += 1;
         this.logMsg(msgIdx, msg);
@@ -144,6 +166,19 @@ export class DiceGm implements Agent {
         const sys = msg as { type?: string; subtype?: string; session_id?: string };
         if (sys.type === "system" && sys.subtype === "init" && typeof sys.session_id === "string" && sys.session_id) {
           yield { type: "sdk_session", id: sys.session_id };
+        }
+        // 上下文压缩进行态(裁决 usage-and-context §四):订阅 SDK 流,检出 SDKStatusMessage compacting /
+        // compact_result / SDKCompactBoundaryMessage → 上抛 context_compacting,streamTurn 广播 WS。
+        // 回合内标志去重:仅 start 后允许一次 done(status 完成信号与 compact_boundary 边界二者取先到)。
+        const sig = parseCompacting(msg);
+        if (sig) {
+          if (sig.phase === "start" && !compacting) {
+            compacting = true;
+            yield { type: "context_compacting", phase: "start" };
+          } else if (sig.phase === "done" && compacting) {
+            compacting = false;
+            yield { type: "context_compacting", phase: "done", result: sig.result, error: sig.error };
+          }
         }
         // A1：assistant text(流③ GM 思考/口白)不当 narration —— 叙事单源走 narrate MCP event
         // → onCanonWrite → mapCanonWrite → narration_commit(接口页 §5.1/§10.1 A1)。
