@@ -19,6 +19,11 @@ import { DiceloreError } from "@dicelore/errors";
 import type { RollResult } from "@dicelore/interface";
 export type { RollResult };
 
+// 命中档「真实后果文本」：RT-FE5 起 = plan(真相层·驱动机械);向后兼容旧单一 consequence。
+function bandTruth(band: { plan?: string; consequence?: string }): string {
+  return band.plan ?? band.consequence ?? "";
+}
+
 // 点击时掷:读规格 → 复用 resolveOutcome/resolveContest 掷 → 写 kind=verdict → 槽 committed → 返回。
 // 幂等:已 committed 据 verdict event 重建(宕机恢复/重投不重掷)。
 export function commitPendingRoll(db: DB, eventId: number, rng?: Rng): RollResult {
@@ -29,12 +34,13 @@ export function commitPendingRoll(db: DB, eventId: number, rng?: Rng): RollResul
   const spec = pr.spec as any;
   if (pr.shape === "outcome") {
     const r = resolveOutcome(spec.die, spec.bands, rng);
+    // data_json 存整档(含 plan+narration)——命中档 plan 是机械驱动源(RT-FE5 FE5-3)。
     const verdictSeq = logAppend(db, {
       kind: "verdict", visible: 1, content: spec.context,
       data_json: { context: spec.context, die: r.die, roll: r.roll, band: r.band, gated: true },
     });
     markRollCommitted(db, eventId, verdictSeq);
-    return { eventId, shape: "outcome", verdictSeq, roll: r.roll, die: r.die, band: { label: r.band.label, consequence: r.band.consequence ?? "" } };
+    return { eventId, shape: "outcome", verdictSeq, roll: r.roll, die: r.die, band: { label: r.band.label, consequence: bandTruth(r.band) } };
   } else {
     const r = resolveContest(db, spec.a, spec.b, rng);
     const rolls = (s: typeof r.a) => s.ledger.terms.flatMap((t) => t.rolls ?? []);
@@ -55,7 +61,7 @@ function rebuild(db: DB, eventId: number, shape: "outcome" | "contest", verdictS
   if (!ev || !ev.data_json) throw new DiceloreError("ENTITY_NOT_FOUND", `commitPendingRoll: verdict#${verdictSeq} 缺失`);
   const d = JSON.parse(ev.data_json);
   if (shape === "outcome") {
-    return { eventId, shape: "outcome", verdictSeq, roll: d.roll, die: d.die, band: { label: d.band.label, consequence: d.band.consequence ?? "" } };
+    return { eventId, shape: "outcome", verdictSeq, roll: d.roll, die: d.die, band: { label: d.band.label, consequence: bandTruth(d.band) } };
   }
   const rolls = (s: any) => (s.ledger?.terms ?? []).flatMap((t: any) => t.rolls ?? []);
   return {

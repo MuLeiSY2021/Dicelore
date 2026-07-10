@@ -19,8 +19,9 @@ function toPendingRoll(row: PendingRollRow): PendingRoll {
     return {
       eventId: row.eventId, shape: "outcome", label: s.context,
       yourSide: { name: "你", exprDisplay: s.die ?? "" },
-      bands: (s.bands as { label?: string; min: number; max: number }[] | undefined ?? [])
-        .map((b) => ({ label: b.label ?? "", min: b.min, max: b.max })),
+      // RT-FE5：bands 全量下发 plan+narration(不剥字段);显隐纯交前端 spoiler 档渲染。
+      bands: (s.bands as { label?: string; min: number; max: number; plan?: string; narration?: string }[] | undefined ?? [])
+        .map((b) => ({ label: b.label ?? "", min: b.min, max: b.max, plan: b.plan ?? "", narration: b.narration ?? "" })),
     };
   }
   const a = s.a as { name?: string; expr?: string } | undefined;

@@ -22,11 +22,14 @@ export const resolveChoiceOut = z.object({
   reminders: z.array(z.string()).optional(),
 });
 
+// RT-FE5：每档强制 plan(真实后果计划·驱动机械·骰前锁定·可含暗值) + narration(玩家可见叙述·可留白)。
+// 两字段必填——缺任一 → 校验失败(声明后果在先铁律)。原单一 consequence 就此作废(plan 继承其真相层职责)。
 const band = z.object({
   label: z.string(),
   min: z.number(),
   max: z.number(),
-  consequence: z.string(),
+  plan: z.string(),
+  narration: z.string(),
 });
 export const resolveOutcomeIn = z
   .object({ context: z.string(), die: z.string(), bands: z.array(band).min(1) })

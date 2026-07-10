@@ -34,19 +34,21 @@ describe("resolver handlers", () => {
     expect(logSince(db, 0)).toHaveLength(0); // 不落 event
   });
 
-  it("resolve_outcome_hidden:掷骰命中档位 + 落 kind=verdict event", () => {
+  it("resolve_outcome_hidden:掷骰命中档位 + 落 kind=verdict event;出参 band.consequence=命中档 plan", () => {
     const db = freshDb();
     const out = byName(db, "resolve_outcome_hidden").handler(db, {
       context: "撬锁",
       die: "1d100",
       bands: [
-        { label: "失败", min: 1, max: 50, consequence: "触发警报" },
-        { label: "成功", min: 51, max: 100, consequence: "无声打开" },
+        { label: "失败", min: 1, max: 50, plan: "触发警报、守卫涌来", narration: "锁纹丝不动" },
+        { label: "成功", min: 51, max: 100, plan: "无声打开、内室尽览", narration: "咔哒一声轻响" },
       ],
     });
     expect(out.roll).toBeGreaterThanOrEqual(1);
     expect(out.roll).toBeLessThanOrEqual(100);
     expect(["失败", "成功"]).toContain(out.band.label);
+    // 出参 consequence 携带命中档 plan(真相层),而非 narration。
+    expect(out.band.consequence).toBe(out.band.label === "失败" ? "触发警报、守卫涌来" : "无声打开、内室尽览");
     expect(typeof out.event_id).toBe("number");
     const verdicts = logSince(db, 0).filter((e) => e.kind === "verdict");
     expect(verdicts).toHaveLength(1);
@@ -71,6 +73,26 @@ describe("resolver handlers", () => {
     const db = freshDb();
     expect(() => byName(db, "resolve_choice").inputSchema.parse({ prompt: "p", options: opts, extra: 1 })).toThrow();
   });
+
+  it("RT-FE5：resolve_outcome_hidden 入参 band 缺 plan/narration → 校验失败", () => {
+    const db = freshDb();
+    const schema = byName(db, "resolve_outcome_hidden").inputSchema;
+    // 缺 plan
+    expect(() => schema.parse({ context: "c", die: "1d20", bands: [{ label: "a", min: 1, max: 20, narration: "n" }] })).toThrow();
+    // 缺 narration
+    expect(() => schema.parse({ context: "c", die: "1d20", bands: [{ label: "a", min: 1, max: 20, plan: "p" }] })).toThrow();
+    // 旧单一 consequence(无 plan/narration) → strict 拒 + 缺必填
+    expect(() => schema.parse({ context: "c", die: "1d20", bands: [{ label: "a", min: 1, max: 20, consequence: "x" }] })).toThrow();
+    // 两字段齐 → 通过
+    expect(() => schema.parse({ context: "c", die: "1d20", bands: [{ label: "a", min: 1, max: 20, plan: "p", narration: "n" }] })).not.toThrow();
+  });
+
+  it("RT-FE5：明骰 resolve_outcome_open 入参 band 同样强制 plan/narration", () => {
+    const db = freshDb();
+    const schema = byName(db, "resolve_outcome_open").inputSchema;
+    expect(() => schema.parse({ context: "c", die: "1d20", bands: [{ label: "a", min: 1, max: 20 }] })).toThrow();
+    expect(() => schema.parse({ context: "c", die: "1d20", bands: [{ label: "a", min: 1, max: 20, plan: "p", narration: "n" }] })).not.toThrow();
+  });
 });
 
 describe("明骰 *_open", () => {
@@ -79,7 +101,10 @@ describe("明骰 *_open", () => {
     setRollGate(undefined);
     const out = await byName(db, "resolve_outcome_open").handler(db, {
       context: "打听", die: "1d20",
-      bands: [{ label: "碰壁", min: 1, max: 10, consequence: "坏" }, { label: "顺", min: 11, max: 20, consequence: "好" }],
+      bands: [
+        { label: "碰壁", min: 1, max: 10, plan: "线索断绝、对方起疑", narration: "对方摇头" },
+        { label: "顺", min: 11, max: 20, plan: "拿到关键地址", narration: "对方压低声音" },
+      ],
     });
     expect(out.awaiting).toBe("player_roll");
     expect(typeof out.roll).toBe("number");
@@ -102,7 +127,7 @@ describe("明骰 *_open", () => {
     let gatedId: number | undefined;
     setRollGate(async (eventId) => { gatedId = eventId; });
     const out = await byName(db, "resolve_outcome_open").handler(db, {
-      context: "x", die: "1d20", bands: [{ label: "a", min: 1, max: 20, consequence: "c" }],
+      context: "x", die: "1d20", bands: [{ label: "a", min: 1, max: 20, plan: "p", narration: "n" }],
     });
     expect(gatedId).toBeGreaterThan(0); // gate 被以 eventId 调用过
     expect(out.awaiting).toBe("player_roll");
