@@ -161,4 +161,43 @@ describe("buildQueryOptions（SDK 装配 offline 回归 / TB-2）", () => {
       expect("resume" in opts).toBe(false);
     });
   });
+
+  describe("客制 MCP 运行时注入（custom-mcp-install）", () => {
+    const base = () => ({ model: "glm-5.2", mcpServer: makeMcp(), openingPrompt: "p", abortController: new AbortController() });
+
+    it("无 customMcpServers → 只挂核心 dicelore，allowedTools 不含客制命名空间", () => {
+      const opts = buildQueryOptions({ ...base() });
+      expect(Object.keys(opts.mcpServers)).toEqual(["dicelore"]);
+      expect(opts.allowedTools).toEqual(["mcp__dicelore", "Read"]);
+    });
+
+    it("有 customMcpServers → 与核心 dicelore 并列挂 + allowedTools 放行 mcp__<name>", () => {
+      const opts = buildQueryOptions({
+        ...base(),
+        customMcpServers: {
+          bocha: { type: "stdio", command: "npx", args: ["-y", "@bocha/mcp-search@1.2.0"], env: { BOCHA_API_KEY: "k" } },
+          "local-py": { type: "stdio", command: "uvx", args: ["some-py-mcp@0.4.0"] },
+        },
+      });
+      // 核心恒在
+      expect(opts.mcpServers.dicelore.type).toBe("sdk");
+      // 客制 stdio 并列
+      expect(opts.mcpServers.bocha).toEqual({ type: "stdio", command: "npx", args: ["-y", "@bocha/mcp-search@1.2.0"], env: { BOCHA_API_KEY: "k" } });
+      expect(opts.mcpServers["local-py"].type).toBe("stdio");
+      // 工具表合并：allowedTools 放行客制工具命名空间
+      expect(opts.allowedTools).toContain("mcp__bocha");
+      expect(opts.allowedTools).toContain("mcp__local-py");
+      expect(opts.allowedTools).toContain("mcp__dicelore");
+    });
+
+    it("lore(workspace) + 客制 MCP：文件工具与客制命名空间共存", () => {
+      const opts = buildQueryOptions({
+        ...base(),
+        workspace: "/data/lore/ws",
+        customMcpServers: { bocha: { type: "stdio", command: "npx", args: ["-y", "p"] } },
+      });
+      expect(opts.allowedTools).toContain("Bash");
+      expect(opts.allowedTools).toContain("mcp__bocha");
+    });
+  });
 });

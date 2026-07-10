@@ -130,6 +130,7 @@ export class DiceGm implements Agent {
         plugin: this.init.plugin,
         workspace: this.init.workspace,
         resume: this.init.resume, // SDK session 续接(裁决 gm-session-continuity):首回合 undefined→省略;后续注入 sdk_session_id
+        customMcpServers: this.init.customMcpServers, // 客制 MCP(裁决 custom-mcp-install):组合根注入,与核心 dicelore 并列挂
         abortController: controller,
       }) as unknown as Parameters<typeof query>[0]["options"];
 

@@ -202,12 +202,12 @@ describe("POST /diagnostics/mcp-test — SSRF 拦截", () => {
     expect(((await res.json()) as { message: string }).message).toMatch(/缺少/);
   });
 
-  it("stdio transport 不走 SSRF（本地命令路径探测）", async () => {
-    const res = await post({ transport: "stdio", endpoint: "/definitely/not/a/real/cmd" });
-    expect(res.status).toBe(200);
-    const j = (await res.json()) as { ok: boolean; message: string };
-    expect(j.ok).toBe(false); // 路径不存在
-    expect(j.message).toMatch(/命令路径/);
+  it("stdio transport 不走 SSRF（本地命令真拉起探测；坏命令→502）", async () => {
+    // stdio 是本地命令而非 URL，不经 SSRF 白名单；改为真按 stdio 拉起 + 握手(custom-mcp-install)。
+    // 不存在的命令 → spawn 失败 → ok:false + 502（非 SSRF 400）。
+    const res = await post({ transport: "stdio", command: "/definitely/not/a/real/cmd", args: [] });
+    expect(res.status).toBe(502);
+    expect(((await res.json()) as { ok: boolean }).ok).toBe(false);
   });
 
   it("正常外部 https endpoint（解析到公网）放行 → 真发请求（mock fetch）", async () => {

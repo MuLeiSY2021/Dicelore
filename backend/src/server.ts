@@ -18,10 +18,11 @@ import { createLoreApp } from "./api/lore.js";
 import { createDiagnosticsApp } from "./api/diagnostics.js";
 import { createUsageApp } from "./api/usage.js";
 import { createKeysApp } from "./api/keys.js";
+import { createMcpApp } from "./api/mcp.js";
 import { createRateLimit } from "./api/rateLimit.js";
 import { attachWsUpgrade } from "./api/ws.js";
 import { listSessionSummaries } from "./api/sessions.js";
-import { resolveDataDir, applyConfigEnv } from "./config.js";
+import { resolveDataDir, applyConfigEnv, resolveCustomMcpServers } from "./config.js";
 import { ensureDicePlugin, ensureLorePlugin, DiceGm, FakeDiceGm, FakeLoreGm, defaultCoachCanon, sessionDir as harnessSessionDir, type AgentFactory, type PluginRef } from "@dicelore/harness";
 
 // 数据根初始化时铺的示例配置(带注释;不落真 config.toml,避免误用示例值)。
@@ -115,7 +116,12 @@ export function startServer(portOverride?: number): void {
   const debug = process.env.DICELORE_DEBUG === "1"; // eval/裸 CC 明骰降级:DICELORE_DEBUG=1 时 DiceSession 不注入 rollGate,core 立即掷(否则 await 永不来的 POST /roll 卡死)
   // Agent 适配缝:据 AgentInit 产 agent。真=CC SDK 适配器(DiceGm),fake=按 init.kind 派发的
   // 教练档(dice)/假构建驱动(lore),见 makeFakeAgentFactory。
-  const agentFactory: AgentFactory = fake ? makeFakeAgentFactory() : (init) => new DiceGm(init);
+  // 客制 MCP(裁决 custom-mcp-install):真 DiceGm 每起一个会话都从 config.toml **重读** enabled&&installed
+  // 的 stdio 配置(装/开关无需重启后端,下次起会话即生效),与核心 dicelore 并列挂;GM/loregm 运行时
+  // 按 stdio 拉起、命中 npx 缓存。fake 教练档不烧 LLM、不接 MCP,故只包真工厂。
+  const agentFactory: AgentFactory = fake
+    ? makeFakeAgentFactory()
+    : (init) => new DiceGm({ ...init, customMcpServers: resolveCustomMcpServers(root) });
   // dice/lore skill plugin:boot 期幂等 + 版本感知物化母本到数据根 $ROOT/{dice,lore}(非每回合复制),
   // 返回运行期 PluginRef(pluginDir + skills:"all");母本定位/物化失败 → ensure*Plugin 内 fail loud 返 null。
   // baseline(DICELORE_BASELINE=1)时 dice plugin 传 undefined(skill 全关,分离「教条有无」);
@@ -136,6 +142,9 @@ export function startServer(portOverride?: number): void {
     listSessions: () => listSessionSummaries(join(root, "sessions", "lore"), "loregm"),
   }));
   app.route("/", createDiagnosticsApp({ port, fakeGm: fake }));
+  // 客制 MCP 安装两按钮(裁决 custom-mcp-install):marketplace add / install(npx -y 预拉) / 列/开关/删,
+  // 读写 $ROOT/config.toml 的 [marketplaces.*]/[mcpServers.*]。
+  app.route("/", createMcpApp({ root }));
   // CO 可视化:GET /sessions/dicegm/:id/usage 只读投影,复用本局 db 端口。
   app.route("/", createUsageApp({ openSession }));
   // SEC2 key 托管:全局 keys.db 落 $ROOT(非 per-session;api_key 表随 initSchema),主密钥经 env 延迟读、缺则端点 503。

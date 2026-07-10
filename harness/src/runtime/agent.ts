@@ -58,6 +58,9 @@ export interface AgentInit {
   sessionId?: string; // GM raw 日志用:标识会话(日志文件名)
   sessionsDir?: string; // GM raw 日志用:sessions 根目录(日志落 <dir>/dicelore/sessions/<id>.gm.log)
   kind?: "dice" | "lore"; // transcript/日志目录归属(sessionDir(sessionsDir, kind, sessionId));缺省 dice
+  // 客制 MCP(裁决 custom-mcp-install):组合根按 config.toml 解析出 enabled&&installed 的 stdio 配置表
+  // (key=实例名);真 DiceGm 经 buildQueryOptions 与核心 dicelore 并列挂进 query.mcpServers。空=只挂核心。
+  customMcpServers?: Record<string, { type: "stdio"; command: string; args: string[]; env?: Record<string, string> }>;
   // ── fake-GM 驱动缝(真 agent 忽略；仅 FAKE_GM 教练档/假构建驱动消费)──
   backend?: SessionBackend; // dice fake 教练档写 canon(roll/choice/gameEnd)所需的会话存储端口(DiceSession.buildInit 注入)
   buildInvoke?: BuildInvoke; // lore fake 假构建驱动写 Draft 的通道(api/lore 组合根注入)
