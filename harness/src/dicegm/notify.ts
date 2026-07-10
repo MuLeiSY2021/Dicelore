@@ -28,7 +28,8 @@ export function mapCanonWrite(evt: CanonWriteEvent): StreamMessage | null {
       // kind=event 下三个工具语义不同，按 toolName 细分：
       // - narrate → narration_commit(流③叙事单源)；
       // - resolve_*_open(明骰) → roll_committed；
-      // - 其余(event_append/暗骰 verdict) → presentation_delta(机械回显)。
+      // - resolve_*_hidden(暗骰) → hidden_roll(带完整结果,前端 spoiler 档渲染)；
+      // - 其余(event_append) → presentation_delta(机械回显)。
       if (evt.toolName === "narrate") {
         const content = (evt.output as { content?: unknown } | null)?.content;
         return {
@@ -54,6 +55,30 @@ export function mapCanonWrite(evt: CanonWriteEvent): StreamMessage | null {
           rolls: [...(o.a?.rolls ?? []), ...(o.b?.rolls ?? [])],
           total: o.a?.total ?? 0, dc: o.b?.total,
           outcome: o.winner === "a" ? "success" : o.winner === "b" ? "fail" : "tie",
+        };
+      }
+      // 暗骰(RT-FE6)：resolve_*_hidden verdict(visible=0) → hidden_roll 通知(带完整结果)。
+      // 不塌成 presentation_delta——那会把暗骰机械回显进玩家可见流,泄露暗判定。
+      if (evt.toolName === "resolve_outcome_hidden") {
+        const o = evt.output as {
+          roll: number; band?: { label?: string; consequence?: string }; event_id: number; context?: string;
+        };
+        return {
+          protocol: CLIENT_PROTOCOL, type: "hidden_roll",
+          eventId: o.event_id, label: o.context ?? "", result: o.roll,
+          band: { label: o.band?.label ?? "", consequence: o.band?.consequence ?? "" },
+        };
+      }
+      if (evt.toolName === "resolve_contest_hidden") {
+        const o = evt.output as {
+          a?: { total?: number }; b?: { total?: number };
+          winner: "a" | "b" | "tie"; event_id: number; context?: string;
+        };
+        return {
+          protocol: CLIENT_PROTOCOL, type: "hidden_roll",
+          eventId: o.event_id, label: o.context ?? "",
+          result: o.a?.total ?? 0, dc: o.b?.total,
+          band: { label: o.winner === "a" ? "success" : o.winner === "b" ? "fail" : "tie", consequence: "" },
         };
       }
       // event_append / 暗骰 verdict：发机械回显增量(带可得文本)。

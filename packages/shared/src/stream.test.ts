@@ -37,8 +37,32 @@ describe("StreamMessageSchema", () => {
     expect(committed.type).toBe("roll_committed");
   });
 
-  it("turn_ended 无 usage 仍通过（向后兼容）", () => {
-    const m = StreamMessageSchema.parse({
+  it("hidden_roll 可判别（带完整结果 result/band，dc 可选）", () => {
+    // outcome 型暗骰:result=roll、band=命中档、无 dc。
+    const outcome = StreamMessageSchema.parse({
+      protocol: CLIENT_PROTOCOL, type: "hidden_roll",
+      eventId: 21, label: "GM 暗中检定 NPC 的谎言", result: 73,
+      band: { label: "成功", consequence: "识破" },
+    });
+    expect(outcome.type).toBe("hidden_roll");
+    if (outcome.type === "hidden_roll") {
+      expect(outcome.eventId).toBe(21);
+      expect(outcome.label).toBe("GM 暗中检定 NPC 的谎言");
+      expect(outcome.result).toBe(73);
+      expect(outcome.band?.label).toBe("成功");
+      expect(outcome.dc).toBeUndefined();
+    }
+    // contest 型暗骰:result=a.total、dc=b.total。
+    const contest = StreamMessageSchema.parse({
+      protocol: CLIENT_PROTOCOL, type: "hidden_roll",
+      eventId: 22, label: "暗中对抗", result: 18, dc: 15,
+      band: { label: "success", consequence: "" },
+    });
+    expect(contest.type).toBe("hidden_roll");
+    if (contest.type === "hidden_roll") expect(contest.dc).toBe(15);
+  });
+
+  it("turn_ended 无 usage 仍通过（向后兼容）", () => {    const m = StreamMessageSchema.parse({
       protocol: CLIENT_PROTOCOL, type: "turn_ended", turnId: "t1", seq: 3,
     });
     expect(m.type).toBe("turn_ended");

@@ -50,6 +50,9 @@ describe("resolver handlers", () => {
     expect(typeof out.event_id).toBe("number");
     const verdicts = logSince(db, 0).filter((e) => e.kind === "verdict");
     expect(verdicts).toHaveLength(1);
+    // 暗骰:结果 event 对玩家隐(visible=0);出参回显 context 供 notify 映射 hidden_roll.label。
+    expect(verdicts[0].visible).toBe(0);
+    expect(out.context).toBe("撬锁");
   });
 
   it("resolve_contest_hidden:取真值比大小 + 落 verdict;winner 正确", () => {
@@ -64,7 +67,11 @@ describe("resolver handlers", () => {
     expect(out.a.total).toBe(18);
     expect(out.b.total).toBe(10);
     expect(typeof out.event_id).toBe("number");
-    expect(logSince(db, 0).filter((e) => e.kind === "verdict")).toHaveLength(1);
+    const verdicts = logSince(db, 0).filter((e) => e.kind === "verdict");
+    expect(verdicts).toHaveLength(1);
+    // 暗骰:结果 event 对玩家隐(visible=0);出参回显 context。
+    expect(verdicts[0].visible).toBe(0);
+    expect(out.context).toBe("掰手腕");
   });
 
   it("in schema .strict():多余字段报错", () => {

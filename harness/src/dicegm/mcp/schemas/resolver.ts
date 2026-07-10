@@ -36,6 +36,7 @@ export const resolveOutcomeOut = z.object({
   die: z.string(),
   band: z.object({ label: z.string(), consequence: z.string() }),
   event_id: z.number(),
+  context: z.string().optional(), // 暗骰:回显裁决描述,供 notify 映射 hidden_roll.label(明骰 *_open 不含)
   reminders: z.array(z.string()).optional(),
 });
 
@@ -49,6 +50,7 @@ export const resolveContestOut = z.object({
   b: contestSideOut,
   winner: z.enum(["a", "b", "tie"]),
   event_id: z.number(),
+  context: z.string().optional(), // 暗骰:回显裁决描述,供 notify 映射 hidden_roll.label(明骰 *_open 不含)
   reminders: z.array(z.string()).optional(),
 });
 

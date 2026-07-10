@@ -25,6 +25,14 @@ export const StreamMessageSchema = z.discriminatedUnion("type", [
     eventId: z.number(), rolls: z.array(z.number()), total: z.number(),
     dc: z.number().optional(), outcome: z.string(),
   }),
+  // 暗骰(RT-FE6)：GM 主动掷、结果对玩家隐(event visible=0),不走 pendingRoll、不发 roll_staged/committed。
+  // 通知带完整结果(result/dc/band),前端按 spoiler 档决定渲染多少(严格档只显 label、关闭档显全)。
+  z.object({
+    ...base, type: z.literal("hidden_roll"),
+    eventId: z.number(), label: z.string(), result: z.number(),
+    dc: z.number().optional(),
+    band: z.object({ label: z.string(), consequence: z.string() }).optional(),
+  }),
   z.object({
     ...base, type: z.literal("turn_ended"), turnId: z.string(), seq: z.number(),
     usage: z.object({

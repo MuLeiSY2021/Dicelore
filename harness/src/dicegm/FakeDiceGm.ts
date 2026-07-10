@@ -138,7 +138,7 @@ export class FakeDiceGm implements Agent {
           }
           case "hiddenRoll": {
             // 暗骰：引擎就地掷 + 落 kind=verdict event(复刻 core resolve_outcome_hidden 的 outcomeHandler)。
-            // 不经 gate、不挂起——玩家侧只见结果(mechanics 里的 verdict),不参与掷。
+            // 不经 gate、不挂起——结果 event visible=0(对玩家隐,未披露暗值)。玩家不参与掷。
             const die = a.die ?? "1d100";
             const bands = a.bands ?? [
               { label: "失败", min: 1, max: 50, consequence: "事与愿违" },
@@ -149,7 +149,7 @@ export class FakeDiceGm implements Agent {
               kind: "verdict",
               content: a.context,
               data_json: { context: a.context, die: r.die, roll: r.roll, band: r.band },
-              visible: 1,
+              visible: 0,
             });
             break;
           }
