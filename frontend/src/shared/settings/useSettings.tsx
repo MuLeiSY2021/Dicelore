@@ -7,13 +7,15 @@
 // Software Foundation, either version 3 of the License, or (at your option)
 // any later version. See <https://www.gnu.org/licenses/>.
 
-// 客户端配置持久化(localStorage)：模型连接 / 自定义 MCP 注册 / 服务覆盖 / 启动行为。
+// 客户端配置持久化(localStorage)：模型连接 / 服务覆盖 / 启动行为。
 // 与服务器真值(GET /diagnostics)互补——这里存「用户可改的偏好与覆盖」，服务器真值只读展示。
+//
+// 客制 MCP(marketplace 源 + 安装的 out-of-canon MCP)不再走 localStorage——
+// 已迁到后端 config.toml 持久化(裁决 custom-mcp-install)，前端经 /mcp/* 端点读写(见 features/config/mcpApi)。
 
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
 
 export type StartupBehavior = "home" | "last";
-export type McpTransport = "sse" | "stdio";
 
 export interface ModelSettings {
   gm: string;        // GM 模型 id，如 claude-opus-4-8
@@ -21,17 +23,8 @@ export interface ModelSettings {
   baseUrl: string;   // ANTHROPIC_BASE_URL 覆盖(空=走服务器 env)
   key: string;       // API key 覆盖(空=走服务器 env)
 }
-export interface McpServerEntry {
-  id: string;
-  name: string;
-  transport: McpTransport;
-  endpoint: string;  // 远程 URL 或本地命令路径
-  enabled: boolean;
-  authorized: boolean;
-}
 export interface Settings {
   model: ModelSettings;
-  mcpServers: McpServerEntry[];
   notifyUrl: string; // 服务与网络 notify 覆盖(空=走服务器 env)
   startup: StartupBehavior;
 }
@@ -51,7 +44,6 @@ export const AGENTS: { id: string; label: string }[] = [
 
 const DEFAULTS: Settings = {
   model: { gm: "claude-opus-4-8", agent: "harness", baseUrl: "", key: "" },
-  mcpServers: [],
   notifyUrl: "",
   startup: "home",
 };
@@ -65,7 +57,6 @@ function loadSettings(): Settings {
       const parsed = JSON.parse(raw) as Partial<Settings>;
       return {
         model: { ...DEFAULTS.model, ...parsed.model },
-        mcpServers: Array.isArray(parsed.mcpServers) ? parsed.mcpServers : [],
         notifyUrl: parsed.notifyUrl ?? "",
         startup: parsed.startup === "last" ? "last" : "home",
       };
@@ -79,16 +70,8 @@ interface SettingsCtx {
   setModel: (patch: Partial<ModelSettings>) => void;
   setNotifyUrl: (v: string) => void;
   setStartup: (v: StartupBehavior) => void;
-  addMcp: (e: Omit<McpServerEntry, "id">) => void;
-  updateMcp: (id: string, patch: Partial<McpServerEntry>) => void;
-  removeMcp: (id: string) => void;
 }
 const Ctx = createContext<SettingsCtx | null>(null);
-
-// crypto.randomUUID 不可用时退化(测试 jsdom 有 crypto)。
-function newId(): string {
-  try { return crypto.randomUUID(); } catch { return "mcp-" + Math.abs(Date.now() ^ (performance.now() | 0)).toString(36); }
-}
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<Settings>(loadSettings);
@@ -100,12 +83,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const setModel = useCallback((patch: Partial<ModelSettings>) => persist({ ...settings, model: { ...settings.model, ...patch } }), [settings, persist]);
   const setNotifyUrl = useCallback((v: string) => persist({ ...settings, notifyUrl: v }), [settings, persist]);
   const setStartup = useCallback((v: StartupBehavior) => persist({ ...settings, startup: v }), [settings, persist]);
-  const addMcp = useCallback((e: Omit<McpServerEntry, "id">) => persist({ ...settings, mcpServers: [...settings.mcpServers, { ...e, id: newId() }] }), [settings, persist]);
-  const updateMcp = useCallback((id: string, patch: Partial<McpServerEntry>) => persist({ ...settings, mcpServers: settings.mcpServers.map((m) => (m.id === id ? { ...m, ...patch } : m)) }), [settings, persist]);
-  const removeMcp = useCallback((id: string) => persist({ ...settings, mcpServers: settings.mcpServers.filter((m) => m.id !== id) }), [settings, persist]);
 
   return (
-    <Ctx.Provider value={{ settings, setModel, setNotifyUrl, setStartup, addMcp, updateMcp, removeMcp }}>
+    <Ctx.Provider value={{ settings, setModel, setNotifyUrl, setStartup }}>
       {children}
     </Ctx.Provider>
   );
@@ -116,5 +96,5 @@ export function useSettings(): SettingsCtx {
   if (v) return v;
   // 无 provider 回退(隔离组件测试)：只读默认值，setter noop。
   const noop = () => { /* noop */ };
-  return { settings: DEFAULTS, setModel: noop, setNotifyUrl: noop, setStartup: noop, addMcp: noop, updateMcp: noop, removeMcp: noop };
+  return { settings: DEFAULTS, setModel: noop, setNotifyUrl: noop, setStartup: noop };
 }
