@@ -11,7 +11,7 @@ import { readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { openDb, metaGet } from "@dicelore/backend";
 import { getLogger } from "@dicelore/logs";
-import type { SessionSummary, SessionKind } from "@dicelore/shared";
+import type { SessionSummary, SessionKind, SessionStatus } from "@dicelore/shared";
 
 // 枚举 dir 下的 session 子目录(每子目录 = 一个自包含 session 文件夹),开其 session.db 读 session_meta → 摘要。
 // 统一形状(session-surface-flatten §6)：kind 由调用方按目录传入(dicegm/loregm);title = sessionId(=子目录名);
@@ -36,11 +36,13 @@ export function listSessionSummaries(dir: string, kind: SessionKind): SessionSum
       let packName: string | undefined;
       let started: boolean | undefined;
       let lastActionAt: number | undefined;
+      let ended = false;
       try {
         const db = openDb(path);
         const name = metaGet(db, "adventure_name");
         if (name) packName = name;
         started = metaGet(db, "started") === "1";
+        ended = metaGet(db, "ended") !== undefined; // debrief-and-branch §一：game_end 后转战后复盘
         db.close();
       } catch (e) {
         getLogger().warn({ err: e, path }, "读 session_meta 失败,裸 id 兜底");
@@ -49,6 +51,8 @@ export function listSessionSummaries(dir: string, kind: SessionKind): SessionSum
         getLogger().warn({ err: e, path }, "stat session.db mtime 失败");
       }
       // packName 不可空(C3)：无团本名则以 sessionId 兜底,保证字段恒有值。
-      return { sessionId, kind, title, status: "active" as const, packName: packName ?? sessionId, started, lastActionAt };
+      // status：ended(game_end 已调)→ debrief(战后复盘态)；否则 active。
+      const status: SessionStatus = ended ? "debrief" : "active";
+      return { sessionId, kind, title, status, packName: packName ?? sessionId, started, lastActionAt };
     });
 }

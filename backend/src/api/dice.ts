@@ -11,8 +11,8 @@ import { Hono } from "hono";
 import { randomUUID } from "node:crypto";
 import type { DB } from "@dicelore/interface";
 import type { SessionInfo, SessionSummary } from "@dicelore/shared";
-import { MessageRequestSchema, ChoiceRequestSchema, RollRequestSchema, CreateSessionRequestSchema } from "@dicelore/shared";
-import { loreSearch, ruleSearch, logSince, metaGet, openSessionBackend, openDb, initSchema, list } from "@dicelore/backend";
+import { MessageRequestSchema, ChoiceRequestSchema, RollRequestSchema, CreateSessionRequestSchema, CreateBranchRequestSchema } from "@dicelore/shared";
+import { loreSearch, ruleSearch, logSince, metaGet, openSessionBackend, openDb, initSchema, list, MAIN_BRANCH, branchDbKey, currentBranch, listBranches, checkoutBranch, createBranch } from "@dicelore/backend";
 import { getLogger } from "@dicelore/logs";
 import { buildSnapshot } from "./presentation.js";
 import { getOrCreateHost, removeHost, TurnInProgressError, type AgentFactory, type PluginRef } from "@dicelore/harness";
@@ -42,8 +42,20 @@ export function createLiveApp(deps: LiveDeps): Hono {
   const app = new Hono();
   // 组合根:解析本局 db(注入的 openSession,省略则内存库 for 测试)→ openSessionBackend(db) 建存储端口实例 →
   // 把 {db, backend} 注入 harness 的 DiceSession(harness 不自开库/不自建 backend,守 storage-port ADR §4)。
+  //
+  // 分支感知(debrief-and-branch §二)：host 绑定的是「当前分支」的 db，而非恒等于 sessionId 的库。
+  // 当前分支存 main 分支 db 的 session_meta；main 分支 db 键=sessionId(向后兼容既有 session.db)。
+  // checkout/新建分支后主动 removeHost(id)，令下次请求经此重建 host、绑定新的当前分支库。
+  const openBranch = (sessionId: string, branchId: string): DB =>
+    deps.openSession ? deps.openSession(branchDbKey(sessionId, branchId)) : memoryDb();
+  const resolveDb = (id: string): DB => {
+    if (!deps.openSession) return memoryDb();
+    const mainDb = deps.openSession(id);
+    const cur = currentBranch(mainDb);
+    return cur === MAIN_BRANCH ? mainDb : deps.openSession(branchDbKey(id, cur));
+  };
   const hostDeps = (id: string) => {
-    const db = deps.openSession?.(id) ?? memoryDb();
+    const db = resolveDb(id);
     return { db, backend: openSessionBackend(db), agentFactory: deps.agentFactory, plugin: deps.plugin, model: deps.model, baseline: deps.baseline, debug: deps.debug, sessionsDir: deps.sessionsDir };
   };
 
@@ -150,11 +162,12 @@ export function createLiveApp(deps: LiveDeps): Hono {
   // 会话元信息(接口页 §2)。ended 读 session_meta「ended」(由 MCP game_end 工具落)——
   // 与 WS game_end 信号同源(DiceSession 亦读同 key),避免 REST 与 WS 终局态矛盾(RT-4)。
   // 对称形状(session-surface-flatten §五)：{sessionId, kind, status, ended, title}。
+  // debrief-and-branch §一：game_end 后不直接归档而转「战后复盘」态 → status="debrief"（ended 仍为 true）。
   app.get("/sessions/dicegm/:id", (c) => {
     const id = c.req.param("id");
     const db = getOrCreateHost(id, hostDeps(id)).db;
     const ended = metaGet(db, "ended") !== undefined;
-    const info: SessionInfo = { sessionId: id, kind: "dicegm", status: ended ? "ended" : "active", ended, title: id };
+    const info: SessionInfo = { sessionId: id, kind: "dicegm", status: ended ? "debrief" : "active", ended, title: id };
     return c.json(info);
   });
 
@@ -209,23 +222,67 @@ export function createLiveApp(deps: LiveDeps): Hono {
     return c.json({ ok: true }, 202);
   });
 
+  // ── 会话分支（debrief-and-branch §二）───────────────────────────────────
+  // 分支需持久化会话库（openSession 注入）；纯内存测试无库则 400 no_session_store。
+  // 新建分支 = 复制当前分支 db（截断到 fromSeq）→ 新分支自动成当前分支（C7）；removeHost 令下次请求重绑。
+  app.post("/sessions/dicegm/:id/branches", async (c) => {
+    const id = c.req.param("id");
+    if (!deps.openSession) return c.json({ code: "no_session_store" }, 400);
+    let body: { fromSeq?: number; name?: string } = {};
+    try { body = CreateBranchRequestSchema.parse(await c.req.json()); } catch { /* 空/非法 body → 默认到当前 seq */ }
+    const res = createBranch(deps.openSession(id), openBranch, id, body);
+    removeHost(id);
+    getLogger().info({ sessionId: id, branchId: res.branchId, fromSeq: res.fromSeq }, "新建会话分支(复制当前分支→自动成当前分支)");
+    return c.json(res, 201);
+  });
+
+  // 列分支：{currentBranchId, branches:[{branchId,name,createdAt,seq,isCurrent}]}。无库 → 只 main 空态。
+  app.get("/sessions/dicegm/:id/branches", (c) => {
+    const id = c.req.param("id");
+    if (!deps.openSession) return c.json({ currentBranchId: MAIN_BRANCH, branches: [] });
+    return c.json(listBranches(deps.openSession(id), openBranch, id));
+  });
+
+  // 切换当前分支 + 返回该分支 presentation 快照。未知分支 → 404 unknown_branch。
+  app.post("/sessions/dicegm/:id/branches/:branchId/checkout", (c) => {
+    const id = c.req.param("id");
+    const branchId = c.req.param("branchId");
+    if (!deps.openSession) return c.json({ code: "no_session_store" }, 400);
+    if (!checkoutBranch(deps.openSession(id), branchId)) {
+      getLogger().warn({ sessionId: id, branchId }, "checkout:未知分支,返回 404 unknown_branch");
+      return c.json({ code: "unknown_branch" }, 404);
+    }
+    removeHost(id);
+    const host = getOrCreateHost(id, hostDeps(id)); // 现绑定切换后的当前分支库
+    getLogger().info({ sessionId: id, branchId }, "checkout:切换当前分支+重算快照");
+    return c.json({ branchId, presentation: buildSnapshot(host.db, id) });
+  });
+
   // SNAP-1 读档（ADR-0017 v1：自动恢复最近快照，非手动回滚按钮/branch/续命——那些 v2）。
   // TR3 additive：可选 body {toUuid?}。
+  //   · 带 toSeq → host.rewindToSeq(toSeq)：在当前分支截断到该 seq(其后事件丢弃、领域态复位到最近快照)；202 {seq}。
   //   · 带 toUuid → host.rewindTo(toUuid)：按 transcript 节点 uuid 回退(领域态经 dice-db RollbackHook + 移 HEAD)；
   //                 成功 202 {uuid}；uuid 不在 transcript 树内 → 404 unknown_anchor；该锚点无 db 快照 → 409 no_snapshot_for_anchor。
-  //   · 不带 toUuid → 现有 host.rewind()(撤上一轮·最近快照)，向后兼容：202 {snapshotId} / 无快照 409 no_snapshot。
+  //   · 皆不带 → 现有 host.rewind()(撤上一轮·最近快照)，向后兼容：202 {snapshotId} / 无快照 409 no_snapshot。
   // 有回合在跑 → 409 turn_in_progress。
   app.post("/sessions/dicegm/:id/rewind", async (c) => {
     const id = c.req.param("id");
     const host = getOrCreateHost(id, hostDeps(id));
-    // body 可空/非法：容错解析，缺 toUuid 即走旧路径（既有客户端发 {} 或空 body 均兼容）。
+    // body 可空/非法：容错解析，缺 toSeq/toUuid 即走旧路径（既有客户端发 {} 或空 body 均兼容）。
     let toUuid: string | undefined;
+    let toSeq: number | undefined;
     try {
-      const body = (await c.req.json()) as { toUuid?: unknown } | null;
+      const body = (await c.req.json()) as { toUuid?: unknown; toSeq?: unknown } | null;
       if (body && typeof body.toUuid === "string" && body.toUuid.length > 0) toUuid = body.toUuid;
+      if (body && typeof body.toSeq === "number" && Number.isFinite(body.toSeq)) toSeq = body.toSeq;
     } catch { /* 空/非法 body → 走旧路径 */ }
 
     try {
+      if (toSeq !== undefined) {
+        // debrief-and-branch §二.4：rewind 覆盖「当前分支」——截断当前分支 jsonl 到 toSeq，不新增/改其它分支。
+        await host.rewindToSeq(toSeq);
+        return c.json({ seq: toSeq }, 202);
+      }
       if (toUuid) {
         const r = await host.rewindTo(toUuid);
         return c.json({ uuid: r.uuid }, 202);

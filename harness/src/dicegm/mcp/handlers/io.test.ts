@@ -94,10 +94,23 @@ describe("io handlers", () => {
     const out = byName(db, "game_end").handler(db, { reason: "队伍全灭", outcome: "团灭结局" });
     expect(out.ended).toBe(true);
     expect(typeof out.event_id).toBe("number");
+    expect(out.status).toBe("debrief"); // debrief-and-branch §一.2：转战后复盘态
     const meta = JSON.parse(metaGet(db, "ended")!);
     expect(meta.reason).toBe("队伍全灭");
     expect(meta.seq).toBe(out.event_id);
     expect(logSince(db, 0).filter((e) => e.kind === "note")).toHaveLength(1);
+  });
+
+  it("game_end 幂等:已在复盘态重复调 → 返回既有 event_id、不再落 note、不报错", () => {
+    const db = freshDb();
+    const first = byName(db, "game_end").handler(db, { reason: "胜利", outcome: "圆满" });
+    const again = byName(db, "game_end").handler(db, { reason: "又调一次", outcome: "x" });
+    expect(again.ended).toBe(true);
+    expect(again.status).toBe("debrief");
+    expect(again.event_id).toBe(first.event_id); // 同一 event_id
+    // note 仍只有 1 条（未重复落）；ended 元的 reason 保持首次值。
+    expect(logSince(db, 0).filter((e) => e.kind === "note")).toHaveLength(1);
+    expect(JSON.parse(metaGet(db, "ended")!).reason).toBe("胜利");
   });
 
   it("下沉校验:形状违例抛 DiceloreError(原 schema refine)", () => {

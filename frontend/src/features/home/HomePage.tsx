@@ -24,7 +24,7 @@ const SAMPLE_PACK = [
 ];
 
 const STATUS_ICON: Record<SessionSummary["status"], ComponentType<{ className?: string }>> = {
-  active: Swords, archived: Clock, ended: Flag,
+  active: Swords, archived: Clock, ended: Flag, debrief: Flag,
 };
 
 function greetingKey(): string {

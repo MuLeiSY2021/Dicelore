@@ -32,4 +32,5 @@ export const narrateIn = z.object({ text: z.string(), tags: z.array(z.string()).
 export const narrateOut = z.object({ event_id: z.number() });
 
 export const gameEndIn = z.object({ reason: z.string(), outcome: z.string().optional() }).strict();
-export const gameEndOut = z.object({ ended: z.literal(true), event_id: z.number() });
+// debrief-and-branch §一.2：game_end 后会话转「战后复盘」态(不归档) → 出参加 status:"debrief" 标识。
+export const gameEndOut = z.object({ ended: z.literal(true), event_id: z.number(), status: z.literal("debrief") });
