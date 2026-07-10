@@ -349,7 +349,9 @@ export default function PlayPage() {
               <span className="dock-fold" role="button" tabIndex={0} data-testid="play-dock-fold" title="折叠 dock" onClick={() => setDockCollapsed((v) => !v)}><PanelRightClose className="lucide" /></span>
             </div>
             {dock.cards.map((c) => (
-              <DockCard key={c.id} card={c} sheets={snapshot?.sheets ?? []} onArchive={dock.archive} onEditSource={dock.updateDiy} />
+              <DockCard key={c.id} card={c} sheets={snapshot?.sheets ?? []}
+                plotlines={snapshot?.plotlines} foreshadows={snapshot?.foreshadows} lore={snapshot?.lore}
+                onArchive={dock.archive} onEditSource={dock.updateDiy} />
             ))}
             <div className="dcard dc-add" role="button" tabIndex={0} data-testid="play-dock-add" onClick={() => dock.addDiy()}>
               <div className="dc-head"><Sparkles className="lucide" /><span className="ttl">+ 新建 DIY 卡</span></div>
