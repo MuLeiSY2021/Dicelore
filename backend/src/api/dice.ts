@@ -49,7 +49,8 @@ export function createLiveApp(deps: LiveDeps): Hono {
 
   // 显式建会话(session-surface-flatten §三)：POST /sessions/dicegm {teamId, version?} → 201 {sessionId,kind}。
   // 取代旧 POST /sessions/:id/open 懒建(C2 完全移除)：服务端生成 sessionId、选团本版本 import → 物化运行库(信任闸门)。
-  // version 省略 = 默认最新版：core checkout 不认 "head",此处先从 catalog head 解析 commitId。
+  // version 省略或显式传 "head"(wiki 缺省/客户端自然值) = 默认最新版：core checkout 不认 "head" 字符串,
+  // 此处先从 catalog head 解析 commitId(同 BE-checkout-head 端点层解析,不动 core 语义,RT-open-head-ref)。
   app.post("/sessions/dicegm", async (c) => {
     const body = CreateSessionRequestSchema.parse(await c.req.json());
     if (!deps.catalog) {
@@ -59,7 +60,9 @@ export function createLiveApp(deps: LiveDeps): Hono {
     if (!body.teamId) {
       return c.json({ code: "bad_request", message: "teamId 必填" }, 400);
     }
-    const ref = body.version ?? list(deps.catalog).find((a) => a.id === body.teamId)?.head ?? undefined;
+    // "head" 与省略同义,都解析为 catalog head commitId;仅真实 tag label / commitId 直接透传给 checkout。
+    const explicitVersion = body.version && body.version !== "head" ? body.version : undefined;
+    const ref = explicitVersion ?? list(deps.catalog).find((a) => a.id === body.teamId)?.head ?? undefined;
     if (!ref) {
       return c.json({ code: "unknown_team", message: "团本不存在或无已发布版本" }, 400);
     }
