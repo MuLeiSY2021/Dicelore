@@ -10,25 +10,8 @@
 import { z } from "zod";
 
 // ===== sheet =====
-const cellOut = z.object({ attr: z.string(), value: z.string(), visible: z.number() });
-
-export const sheetGetIn = z.object({ entity: z.string(), attr: z.string() }).strict();
-export const sheetGetOut = z.object({ value: z.string().nullable(), visible: z.number() });
-
-export const sheetListIn = z
-  .object({
-    entity: z.string(),
-    prefix: z.string().optional(),
-    limit: z.number().int().min(1).max(200).default(100),
-    offset: z.number().int().min(0).default(0),
-  })
-  .strict();
-export const sheetListOut = z.object({
-  cells: z.array(cellOut),
-  has_more: z.boolean(),
-  next_offset: z.number().optional(),
-  truncated: z.boolean(),
-});
+// A′ §4：裸 sheet_get/sheet_list 已删（类型化读替代，见 backend/src/stdlib），其 in/out schema 一并移除。
+// 仅保留即兴兜底写 sheet_update 的 schema。
 
 const mutation = z.object({
   attr: z.string(),

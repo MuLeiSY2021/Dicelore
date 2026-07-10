@@ -32,12 +32,12 @@ describe("createMcpServer onCanonWrite 接缝", () => {
     expect(events[0].seq).toBeGreaterThan(0);
   });
 
-  it("非规范态写工具(sheet_get 只读)不触发 onCanonWrite", async () => {
+  it("非规范态写工具(world_search 只读)不触发 onCanonWrite", async () => {
     const db = openDb(":memory:");
     initSchema(db);
     const events: CanonWriteEvent[] = [];
     const invoke = makeToolInvoker(openSessionBackend(db), db, { onCanonWrite: (e: CanonWriteEvent) => events.push(e) });
-    await invoke("sheet_get", { entity: "张三" });
+    await invoke("world_search", { query: "张三" });
     expect(events.length).toBe(0);
   });
 });

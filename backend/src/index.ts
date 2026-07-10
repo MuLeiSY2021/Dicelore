@@ -139,6 +139,8 @@ export type { SessionBackend, Store, Resolver, Meta } from "@dicelore/interface"
 // 工具面（mcp server）经 harness 装配它们；core barrel 经裸 @dicelore/backend 转出 narration 部分。
 export { narrationStdlibTools, narrationToolDecls } from "./stdlib/narration.js";
 export { npcStdlibTools, npcToolDecls } from "./stdlib/npc.js";
+export { playerStdlibTools, playerToolDecls } from "./stdlib/player.js";
+export { worldStdlibTools, worldToolDecls } from "./stdlib/world.js";
 
 // ===== HTTP/WS 边 + 后端进程入口（api/server，阶段 5b 自 orchestrator 迁入）=====
 // 组合根:openSession→openDb→openSessionBackend 注入 harness 会话(harness 不自开库)。

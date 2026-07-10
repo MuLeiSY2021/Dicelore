@@ -66,6 +66,19 @@ describe("NPC 一等抽象标准库声明（A1）", () => {
     const worldRows = db.prepare("SELECT entity FROM world WHERE entity='村长'").all();
     expect(worldRows).toHaveLength(0); // 不漏进 world 视图
   });
+
+  test("npc_list 类型化读：返回 kind=npc 的行（A′ §4 替裸 sheet_list）", () => {
+    const tools = npcStdlibTools();
+    tools.find((t) => t.name === "npc_register")!.handler(db, { npc: "铁匠", bio: "城东老铁匠" });
+    tools.find((t) => t.name === "npc_update_hp")!.handler(db, { npc: "铁匠", delta: 12 });
+    const list = tools.find((t) => t.name === "npc_list")!;
+    const rows = (list.handler(db, {}) as { result: { entity: string; attr: string; value: string; visible: number; kind: string }[] }).result;
+    expect(rows.length).toBeGreaterThanOrEqual(2);
+    // 每行 kind 恒 'npc'（投影常量列自证归属）
+    expect(rows.every((r) => r.kind === "npc")).toBe(true);
+    expect(rows).toContainEqual(expect.objectContaining({ entity: "铁匠", attr: "简介", value: "城东老铁匠", kind: "npc" }));
+    expect(rows).toContainEqual(expect.objectContaining({ entity: "铁匠", attr: "HP", value: "12", kind: "npc" }));
+  });
 });
 
 describe("dogfooding：NPC 声明工具经 MCP server 端到端", () => {

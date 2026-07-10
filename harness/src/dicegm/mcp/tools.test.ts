@@ -16,14 +16,14 @@ const db = (() => { const d = openDb(":memory:"); initSchema(d); return d; })();
 const TOOLS = makeTools(openSessionBackend(db));
 
 describe("TOOLS 注册表", () => {
-  it("囊括全部 21 个工具,名字唯一", () => {
+  it("囊括全部 19 个工具,名字唯一", () => {
     const names = TOOLS.map((t) => t.name);
-    expect(names).toHaveLength(21);
-    expect(new Set(names).size).toBe(21);
+    expect(names).toHaveLength(19);
+    expect(new Set(names).size).toBe(19);
     for (const n of [
       "resolve_choice", "resolve_outcome_hidden", "resolve_contest_hidden",
       "resolve_outcome_open", "resolve_contest_open",
-      "sheet_get", "sheet_list", "sheet_update",
+      "sheet_update",
       "event_append", "event_recall", "watcher_set", "watcher_list",
       "world_search", "world_sample", "world_register", "rule_search",
       "sheet_show", "world_show", "reveal_once", "narrate", "game_end",

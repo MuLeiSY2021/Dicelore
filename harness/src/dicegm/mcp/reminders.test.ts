@@ -31,6 +31,6 @@ describe("remindersFor", () => {
   it("resolve_contest_hidden / narrate / 未知工具 → []", () => {
     expect(remindersFor("resolve_contest_hidden", {}, {})).toEqual([]);
     expect(remindersFor("narrate", {}, {})).toEqual([]);
-    expect(remindersFor("sheet_get", {}, {})).toEqual([]);
+    expect(remindersFor("sheet_show", {}, {})).toEqual([]);
   });
 });
