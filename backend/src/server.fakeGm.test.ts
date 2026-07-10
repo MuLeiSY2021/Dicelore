@@ -43,9 +43,9 @@ afterEach(() => { for (const id of usedIds) removeHost(id); usedIds.clear(); });
 describe("FAKE_GM 工厂经 HTTP 打通 dice 五主线", () => {
   it("暗骰:POST messages「暗骰」→ 引擎立即掷,presentation.mechanics 现 verdict", async () => {
     const { app, dbOf } = liveApp(); const id = "fk-hidden"; usedIds.add(id);
-    const res = await post(app, `/sessions/${id}/messages`, { text: "我要暗骰查探" });
+    const res = await post(app, `/sessions/dicegm/${id}/messages`, { text: "我要暗骰查探" });
     expect(res.status).toBe(202);
-    const snap = await (await app.request(`/sessions/${id}/presentation`)).json();
+    const snap = await (await app.request(`/sessions/dicegm/${id}/presentation`)).json();
     const verdicts = snap.mechanics.filter((m: { kind: string }) => m.kind === "verdict");
     expect(verdicts.length).toBeGreaterThan(0);
     // 未挂起明骰(暗骰不占 pending_roll)。
@@ -55,26 +55,26 @@ describe("FAKE_GM 工厂经 HTTP 打通 dice 五主线", () => {
 
   it("选择:POST messages「选择」→ presentation.choices 现两选项", async () => {
     const { app } = liveApp(); const id = "fk-choice"; usedIds.add(id);
-    await post(app, `/sessions/${id}/messages`, { text: "我该如何选择" });
-    const snap = await (await app.request(`/sessions/${id}/presentation`)).json();
+    await post(app, `/sessions/dicegm/${id}/messages`, { text: "我该如何选择" });
+    const snap = await (await app.request(`/sessions/dicegm/${id}/presentation`)).json();
     expect(snap.choices).toBeTruthy();
     expect(snap.choices.options.length).toBeGreaterThanOrEqual(2);
     // 闭环:POST /choices 选第 2 项 → 下一回合(默认叙事)正常收尾。
-    const cr = await post(app, `/sessions/${id}/choices`, { eventId: snap.choices.eventId, optionIndex: 1 });
+    const cr = await post(app, `/sessions/dicegm/${id}/choices`, { eventId: snap.choices.eventId, optionIndex: 1 });
     expect(cr.status).toBe(202);
   });
 
   it("终局:POST messages「结束」→ GET /sessions/:id ended:true", async () => {
     const { app } = liveApp(); const id = "fk-end"; usedIds.add(id);
-    await post(app, `/sessions/${id}/messages`, { text: "我想结束游戏" });
-    const info = await (await app.request(`/sessions/${id}`)).json();
+    await post(app, `/sessions/dicegm/${id}/messages`, { text: "我想结束游戏" });
+    const info = await (await app.request(`/sessions/dicegm/${id}`)).json();
     expect(info.ended).toBe(true);
   });
 
   it("掷骰(明骰):POST messages「掷骰」挂起待掷 → POST /roll 落 verdict、回合收尾", async () => {
     const { app, dbOf } = liveApp(); const id = "fk-roll"; usedIds.add(id);
     // 明骰经 rollGate 挂起 → 不能先 await messages(会等 POST /roll)。先并发发起、轮询到 awaiting pending_roll。
-    const msgP = post(app, `/sessions/${id}/messages`, { text: "我要掷骰翻墙" });
+    const msgP = post(app, `/sessions/dicegm/${id}/messages`, { text: "我要掷骰翻墙" });
     let eventId: number | undefined;
     for (let i = 0; i < 50 && eventId === undefined; i++) {
       await new Promise((r) => setTimeout(r, 5));
@@ -82,7 +82,7 @@ describe("FAKE_GM 工厂经 HTTP 打通 dice 五主线", () => {
       eventId = row?.event_id;
     }
     expect(eventId).toBeTruthy();
-    const rr = await post(app, `/sessions/${id}/roll`, { eventId });
+    const rr = await post(app, `/sessions/dicegm/${id}/roll`, { eventId });
     expect(rr.status).toBe(202);
     expect((await msgP).status).toBe(202); // 掷骰解开 gate → 回合收尾
     const pr = dbOf(id).prepare("SELECT status, verdict_seq FROM pending_roll WHERE event_id=?").get(eventId) as { status: string; verdict_seq: number | null };
@@ -92,9 +92,9 @@ describe("FAKE_GM 工厂经 HTTP 打通 dice 五主线", () => {
 
   it("纯叙事:POST messages 无关键字 → 202 收尾,不产 mechanics/choices(叙事经 WS narration_commit,不落 REST 快照)", async () => {
     const { app } = liveApp(); const id = "fk-narr"; usedIds.add(id);
-    const res = await post(app, `/sessions/${id}/messages`, { text: "我环顾四周" });
+    const res = await post(app, `/sessions/dicegm/${id}/messages`, { text: "我环顾四周" });
     expect(res.status).toBe(202);
-    const snap = await (await app.request(`/sessions/${id}/presentation`)).json();
+    const snap = await (await app.request(`/sessions/dicegm/${id}/presentation`)).json();
     // 纯叙事回合不产裁决/选择(fake 教练档 narration 是 WS-only 流事件,五主线 WS 验证见 FakeDiceGm.test.ts)。
     expect(snap.mechanics).toEqual([]);
     expect(snap.choices).toBeNull();
@@ -102,16 +102,23 @@ describe("FAKE_GM 工厂经 HTTP 打通 dice 五主线", () => {
 });
 
 describe("FAKE_GM 工厂经 HTTP 让 lore Draft 非空", () => {
-  it("POST /lore-sessions/:id/messages → GET /draft 有内容(假构建驱动写 Draft)", async () => {
+  it("POST /sessions/loregm 显式建 → /messages → GET /draft 有内容(假构建驱动写 Draft)", async () => {
     const catalog = openCatalog(":memory:");
     const app = createLoreApp({ catalog, agentFactory: makeFakeAgentFactory() });
-    const id = "fk-lore";
-    const res = await app.request(`/lore-sessions/${id}/messages`, {
+    // 拉平后 C2:先显式建会话(name 在此传,不再在 messages)→ 服务端生成 UUID。
+    const created = await app.request(`/sessions/loregm`, {
       method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ text: "造一个江湖团本", name: "假构建团本" }),
+      body: JSON.stringify({ name: "假构建团本" }),
+    });
+    expect(created.status).toBe(201);
+    const { sessionId, kind } = await created.json();
+    expect(kind).toBe("loregm");
+    const res = await app.request(`/sessions/loregm/${sessionId}/messages`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ text: "造一个江湖团本" }),
     });
     expect(res.status).toBe(202);
-    const draftRes = await app.request(`/lore-sessions/${id}/draft`);
+    const draftRes = await app.request(`/sessions/loregm/${sessionId}/draft`);
     expect(draftRes.status).toBe(200);
     const body = await draftRes.json();
     expect(body.files.length).toBeGreaterThan(0);
