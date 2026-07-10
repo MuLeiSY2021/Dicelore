@@ -34,6 +34,17 @@ const VIEW_DEFS: ReadonlyArray<readonly [name: string, sql: string]> = [
      UNION ALL
      SELECT 'watcher', CAST(id AS TEXT), condition, status FROM watcher WHERE armed=1`,
   ],
+  // §7(A′) presentation 玩家可见叙事投影(防剧透·裁决 §7 C7/C8)。front 不投影(GM 工具)。
+  // plotline：active+closed 下发(玩家已知主线走向)；foreshadow：recalled 且 visible=1；lore：visible=1。
+  [
+    "plotline_visible",
+    "SELECT id, title, summary, status FROM plotline WHERE status IN ('active','closed')",
+  ],
+  [
+    "foreshadow_visible",
+    "SELECT id, content, status FROM foreshadow WHERE status='recalled' AND visible=1",
+  ],
+  ["lore_visible", "SELECT name, content, category FROM lore WHERE visible=1"],
 ];
 
 /** 投影全部命名视图。幂等：先 DROP VIEW IF EXISTS 再 defineView（defineView 本身不幂等）。 */

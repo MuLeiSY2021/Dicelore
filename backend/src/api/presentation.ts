@@ -9,7 +9,33 @@
 
 import type { DB } from "@dicelore/interface";
 import { buildPresentationModel } from "@dicelore/backend";
-import { CLIENT_PROTOCOL, type PresentationSnapshot, type SheetGroup } from "@dicelore/shared";
+import {
+  CLIENT_PROTOCOL,
+  type PresentationChanges,
+  type PresentationSnapshot,
+  type SheetGroup,
+  type PlotlineView,
+  type ForeshadowView,
+  type LoreView,
+} from "@dicelore/shared";
+
+// §7(A′) 玩家可见叙事投影：走 store/views.ts 的命名视图(防剧透过滤已在视图内做)。
+// front 不下发(GM 工具)、plotline active+closed、foreshadow recalled 且 visible=1、lore visible=1。
+function visiblePlotlines(db: DB): PlotlineView[] {
+  return db
+    .prepare("SELECT id, title, summary, status FROM plotline_visible ORDER BY id")
+    .all() as PlotlineView[];
+}
+function visibleForeshadows(db: DB): ForeshadowView[] {
+  return db
+    .prepare("SELECT id, content, status FROM foreshadow_visible ORDER BY id")
+    .all() as ForeshadowView[];
+}
+function visibleLore(db: DB): LoreView[] {
+  return db
+    .prepare("SELECT name, content, category FROM lore_visible ORDER BY name")
+    .all() as LoreView[];
+}
 
 // core PresentationModel → 接口页 §1 线上快照。core 纯函数已按 visible 过滤(全为 visible=1)。
 export function buildSnapshot(db: DB, sessionId: string): PresentationSnapshot {
@@ -42,7 +68,25 @@ export function buildSnapshot(db: DB, sessionId: string): PresentationSnapshot {
     choices,
     narrativeCursor: narrativeCursor(db),
     pendingRoll: null, // Phase 1：首屏不投影待掷(实时 roll_staged 经 WS;重启恢复见 recovery.ts)
+    // §7(A′) 叙事层(RT-FE4)：dock-card dc-meta select 单源从快照取,不另起端点。
+    plotlines: visiblePlotlines(db),
+    foreshadows: visibleForeshadows(db),
+    lore: visibleLore(db),
   };
+}
+
+// §7(A′) WS 呈现增量的叙事部分：把当前玩家可见叙事投影成 op=upsert 的局部增量。
+// 缝 A 的 presentation_delta 只作信号(web 收到后 GET /presentation 全量对账)——故按可见集全量投 upsert，
+// 让重连/局部刷新都能拿到 recalled 伏笔等叙事条目。空集则不产出对应字段(保持 changes 精简)。
+export function buildNarrativeChanges(db: DB): PresentationChanges {
+  const changes: PresentationChanges = {};
+  const pl = visiblePlotlines(db);
+  const fs = visibleForeshadows(db);
+  const lo = visibleLore(db);
+  if (pl.length) changes.plotlines = pl.map((p) => ({ ...p, op: "upsert" as const }));
+  if (fs.length) changes.foreshadows = fs.map((f) => ({ ...f, op: "upsert" as const }));
+  if (lo.length) changes.lore = lo.map((l) => ({ ...l, op: "upsert" as const }));
+  return changes;
 }
 
 function maxSeq(db: DB): number {
