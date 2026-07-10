@@ -8,8 +8,13 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { SessionBackend } from "@dicelore/interface";
 
 export interface TurnInput { text: string; turnId?: string }
+
+// fake lore 构建驱动写 Draft 的通道(结构化返回,不耦合 backend 的 Draft/Envelope 类型)。
+// 组合根(api/lore)注入 = (name,args) => invokeBuildTool(ctx,name,args);真 DiceGm/FakeDiceGm 忽略。
+export type BuildInvoke = (name: string, args: unknown) => { isError?: boolean };
 
 // 一回合 token 用量(SDK result.usage 解析后的四类计数)。agent 适配器只上抛,
 // 不碰存储;落库由会话经注入的 SessionBackend.recordUsage 做(storage-port:agent 存储无关)。
@@ -53,6 +58,9 @@ export interface AgentInit {
   sessionId?: string; // GM raw 日志用:标识会话(日志文件名)
   sessionsDir?: string; // GM raw 日志用:sessions 根目录(日志落 <dir>/dicelore/sessions/<id>.gm.log)
   kind?: "dice" | "lore"; // transcript/日志目录归属(sessionDir(sessionsDir, kind, sessionId));缺省 dice
+  // ── fake-GM 驱动缝(真 agent 忽略；仅 FAKE_GM 教练档/假构建驱动消费)──
+  backend?: SessionBackend; // dice fake 教练档写 canon(roll/choice/gameEnd)所需的会话存储端口(DiceSession.buildInit 注入)
+  buildInvoke?: BuildInvoke; // lore fake 假构建驱动写 Draft 的通道(api/lore 组合根注入)
 }
 
 export type AgentFactory = (init: AgentInit) => Agent;

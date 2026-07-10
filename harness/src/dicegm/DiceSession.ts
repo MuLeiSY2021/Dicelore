@@ -126,7 +126,7 @@ export class DiceSession implements Session {
   //   后续回合(meta 有值)→ resume=<sdk_session_id> → SDK 按此 id 加载该 session 完整 LLM 历史续接。
   // 重开一团(新 DiceSession/新库)不带旧 id → 开新 session(C3);跨 DiceGm 实例 resume 靠 SDK 自持久化 transcript。
   private buildInit(): AgentInit {
-    return { mcpServer: this.mcpServer, openingPrompt: this.openingPrompt, plugin: this.deps.baseline ? undefined : this.deps.plugin, model: this.deps.model, resume: this.backend.metaGet("sdk_session_id"), sessionId: this.sessionId, sessionsDir: this.deps.sessionsDir };
+    return { mcpServer: this.mcpServer, openingPrompt: this.openingPrompt, plugin: this.deps.baseline ? undefined : this.deps.plugin, model: this.deps.model, resume: this.backend.metaGet("sdk_session_id"), sessionId: this.sessionId, sessionsDir: this.deps.sessionsDir, backend: this.backend };
   }
 
   // gm-session-continuity:DiceGm 从 SDK system init 取 session_id 上抛(sdk_session 事件)→ 这里存库,
