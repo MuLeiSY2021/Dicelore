@@ -8,7 +8,7 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { AgentFactory, PluginRef, BuildInvoke } from "../runtime/agent.js";
+import type { AgentFactory, PluginRef, BuildInvoke, TurnUsage } from "../runtime/agent.js";
 import type { Session, TurnResult } from "../runtime/session.js";
 
 let loreTurnCounter = 0;
@@ -56,11 +56,23 @@ export class LoreSession implements Session {
       buildInvoke: this.deps.buildInvoke, // fake 假构建驱动写 Draft 的通道透传(真 DiceGm 忽略)
     });
     // REST 语义:跑完整轮构建反馈(narration/turn_end/error)即收尾,不向任何 WS 广播。
+    // usage-stream §3:捕获 ev.type==="usage" 累加本轮四类 token(lore 现未处理 usage 事件,本需求补此累加),
+    // 随响应内联回前端(v1 不落库、不进 SQLite);无 usage 事件则不带。
     let error: TurnResult["error"];
+    let usage: TurnUsage | undefined;
     for await (const ev of driver.runTurn({ text, turnId })) {
       if (ev.type === "error") { error = { message: ev.message, code: ev.code }; break; }
+      if (ev.type === "usage") {
+        usage ??= { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheCreationTokens: 0 };
+        usage.inputTokens += ev.usage.inputTokens;
+        usage.outputTokens += ev.usage.outputTokens;
+        usage.cacheReadTokens += ev.usage.cacheReadTokens;
+        usage.cacheCreationTokens += ev.usage.cacheCreationTokens;
+        continue;
+      }
       if (ev.type === "turn_end") break;
     }
-    return error ? { turnId, error } : { turnId };
+    if (error) return { turnId, error };
+    return usage ? { turnId, usage } : { turnId };
   }
 }

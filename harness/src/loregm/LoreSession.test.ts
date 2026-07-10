@@ -179,6 +179,38 @@ describe("LoreSession", () => {
     }
   });
 
+  // usage-stream §3:driver 产 usage 事件 → handleMessage 累加本轮四类 token、返回含 usage(v1 不落库)。
+  it("driver 产 usage 事件时 handleMessage 返回含 usage(四类 token 之和)", async () => {
+    const catalog = openCatalog(":memory:");
+    const draft = new Draft();
+    const mcpServer = createBuildMcpServer({ catalog, draft, name: "凡人" });
+    const host = new LoreSession("bu1", {
+      mcpServer,
+      agentFactory: () => new FakeDiceGm([
+        { type: "usage", usage: { inputTokens: 8, outputTokens: 2, cacheReadTokens: 1, cacheCreationTokens: 0 } },
+        { type: "usage", usage: { inputTokens: 2, outputTokens: 3, cacheReadTokens: 0, cacheCreationTokens: 5 } },
+        { type: "turn_end" },
+      ]),
+    });
+    const r = await host.handleMessage("写点设定");
+    expect(r.usage).toEqual({ inputTokens: 10, outputTokens: 5, cacheReadTokens: 1, cacheCreationTokens: 5 });
+    expect(r.error).toBeUndefined();
+    catalog.close();
+  });
+
+  it("无 usage 事件时 handleMessage 返回不含 usage", async () => {
+    const catalog = openCatalog(":memory:");
+    const draft = new Draft();
+    const mcpServer = createBuildMcpServer({ catalog, draft, name: "凡人" });
+    const host = new LoreSession("bu2", {
+      mcpServer,
+      agentFactory: () => new FakeDiceGm([{ type: "narration", text: "写好了" }, { type: "turn_end" }]),
+    });
+    const r = await host.handleMessage("写点设定");
+    expect(r.usage).toBeUndefined();
+    catalog.close();
+  });
+
   it("draft 经构建工具累积可 commit 到 catalog(Draft 由组合根持有)", () => {
     const catalog = openCatalog(":memory:");
     // 组合根持 Draft(LoreSession 不再持);此处直接驱动 Draft 模拟 agent 调构建工具后的态。

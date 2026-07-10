@@ -111,4 +111,48 @@ describe("runTurn", () => {
     expect((db.prepare("SELECT value FROM state WHERE entity='你' AND attr='HP'").get() as { value: string }).value).toBe("6");
     expect(msgs.at(-1)?.type).toBe("turn_ended");
   });
+
+  // usage-stream §2：回合内 usage 事件本地累计 → 搭进 turn_ended.usage。
+  it("回合内多次 usage 事件 → turn_ended.usage = 各次四类 token 之和", async () => {
+    const db = openDb(":memory:"); initSchema(db);
+    const { hub, msgs } = capture();
+    await runTurn({
+      db,
+      driver: new FakeDiceGm([
+        { type: "usage", usage: { inputTokens: 10, outputTokens: 5, cacheReadTokens: 2, cacheCreationTokens: 1 } },
+        { type: "usage", usage: { inputTokens: 3, outputTokens: 7, cacheReadTokens: 0, cacheCreationTokens: 4 } },
+        { type: "turn_end" },
+      ]),
+      hub, sessionId: "s1", turnId: "t1", runTurnEnd: () => ({}),
+    }, { text: "x" });
+    const ended = msgs.find((m) => m.type === "turn_ended");
+    expect(ended.usage).toEqual({ inputTokens: 13, outputTokens: 12, cacheReadTokens: 2, cacheCreationTokens: 5 });
+  });
+
+  it("无 usage 事件 → turn_ended 不含 usage 字段", async () => {
+    const db = openDb(":memory:"); initSchema(db);
+    const { hub, msgs } = capture();
+    await runTurn({ db, driver: new FakeDiceGm([{ type: "turn_end" }]),
+      hub, sessionId: "s1", turnId: "t1", runTurnEnd: () => ({}) }, { text: "x" });
+    const ended = msgs.find((m) => m.type === "turn_ended");
+    expect(ended).toBeDefined();
+    expect("usage" in ended).toBe(false);
+  });
+
+  // 包裹 onUsage 后原落库回调(DiceSession.onUsage→recordUsage)行为不变:每次 usage 事件仍原样透传。
+  it("onUsage 落库回调仍逐次收到原始 usage(落库行为不变)", async () => {
+    const db = openDb(":memory:"); initSchema(db);
+    const { hub } = capture();
+    const seen: { u: unknown; m?: string }[] = [];
+    await runTurn({
+      db,
+      driver: new FakeDiceGm([
+        { type: "usage", usage: { inputTokens: 1, outputTokens: 2, cacheReadTokens: 3, cacheCreationTokens: 4 }, model: "m1" },
+        { type: "turn_end" },
+      ]),
+      hub, sessionId: "s1", turnId: "t1", runTurnEnd: () => ({}),
+      onUsage: (u, m) => seen.push({ u, m }),
+    }, { text: "x" });
+    expect(seen).toEqual([{ u: { inputTokens: 1, outputTokens: 2, cacheReadTokens: 3, cacheCreationTokens: 4 }, m: "m1" }]);
+  });
 });
