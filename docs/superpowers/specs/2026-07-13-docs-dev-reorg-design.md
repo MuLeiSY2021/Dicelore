@@ -76,7 +76,7 @@ docs/
 
 ### 6.2 顶层文档
 
-`/CLAUDE.md`、`README.md`、`README.zh-CN.md`、`CONTRIBUTING.md`、`SECURITY.md` —— 这几个文件同时出现在姊妹 spec(wiki 路径)和本 spec(dev 路径)的清单里,**实现时对同一文件的两类改动要合并成一次编辑**,不要分两轮改。
+`/CLAUDE.md`、`README.md`、`README.zh-CN.md`、`CONTRIBUTING.md`、`SECURITY.md`、`.github/ISSUE_TEMPLATE/feature_request.yml`、`.github/PULL_REQUEST_TEMPLATE.md` —— 前 5 个同时出现在姊妹 spec(wiki 路径)和本 spec(dev 路径)的清单里,**实现时对同一文件的两类改动要合并成一次编辑**,不要分两轮改。
 
 ### 6.3 生产代码注释(纯文本提及,非完整路径,风险最低)
 
