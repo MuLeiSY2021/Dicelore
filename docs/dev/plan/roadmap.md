@@ -1,0 +1,208 @@
+# 路线图
+
+> **本页职责**：未来工作的有序清单——「先还哪个、再还哪个」。**AI 维护，可随时重排**（区别于人工维护、记宏大目标/愿景的 [里程碑.md](里程碑.md)）。
+> **怎么读（2026-06-29 重构：改用里程碑作组织主轴）**：本页按 [里程碑.md](里程碑.md) 的里程碑分节（一 地基 → 二 客户端 → 三 发版 → 四 长期演进），**里程碑顺序＝优先级主轴**；每个里程碑下的工作按**生命周期四态**分组，每项链回三池（[前端](backlog-前端.md) / [后端](backlog-后端.md) / [core](backlog-core.md)）。同一里程碑内按依赖链排（前置闸先做）。
+>
+> **四态（每完成一步往上游态挪：未裁决 → 未完成 → 待测试 → 已归档）**：
+> - **未裁决**：想法尚未落定。**判据（铁律）**：没链接 [裁决记录](裁决记录/) 里一份**经用户批准**的裁决文件 → 一律算未裁决。裁决文件 = 该需求详尽到「没有任何不确定项、仅剩代码实现」的设计 + 顶部用户批准勾（见 [裁决记录 README](裁决记录/README.md)）。
+> - **未完成**：**已裁决**（已挂链接到经用户批准的裁决文件）、尚未开发。
+> - **待测试**：已开发完、尚未端到端确认（eval 多轮 / 浏览器 e2e / 真 LLM 一局）。
+> - **已归档**：测试确认完成（✅）；设计结论已沉淀进 wiki、对应裁决文件已删。（「裁决 v1 不做/留 v2」类 → §推迟池。）
+>
+> **「已裁决」标记必须挂裁决文件链接**——无链接的「已裁决」是历史欠账，需补裁决文件或降回未裁决。
+> **历史重排依据（2026-06-25 全量体检）**：44 条去重 findings（10 P0/12 P1/14 P2/6 P3）已落三池；8 个未决问题已裁决（见 §决策追溯），落进对应设计页决策节（含 2026-06-26 PO 复核定稿）。早期"头号债链路跑通＝唯一最高优先级、链路跑通前冻结新 feat"的收敛逻辑现归入**里程碑一**（地基深化＝头号债链路）。
+
+---
+
+## 里程碑一 · 地基（核心声明式可扩展 + 团本构建）
+
+> 对应 [里程碑一](里程碑.md)。地基深化＝**头号债链路跑通**：让「新团本＝新声明＋新 flow、框架 core 零改动」端到端成立（叙事脚手架升一等抽象 + 声明式工具生成 + dogfooding 契约兑现）；外加团本构建组件5/6。
+> **冻结令（仍生效）**：头号债链路跑通前冻结一切新 feat（横切基建/随规模恶化类除外，见里程碑二可观测性）。
+> **验收口径**：存在一个 dogfooding 团本，仅靠「声明 + flow」跑通完整一局（含 front/plotline/foreshadow/tension_board 的读），框架 core 零改动。跑不通则地基未竟。
+
+**未裁决**（已备待批准裁决文件；勾批准前不进交付波）
+- （空——本里程碑无待批准项）
+
+**待测试**（已开发、待真 LLM 端到端确认）
+- feat：**团本构建链路 eval + 会话对话记录(transcript)抽进 runtime + rewind + 改名**（loregm 落 `$ROOT/sessions/lore/<id>/<id>_session.jsonl` 对话记录=回退入点+eval 原料；transcript 铸 UUID 权威 + append-only 树/HEAD 真回退；rewind IoC 注册器 hook 领域 rollback；db snapshot 锚 transcript_anchor；build-eval skill；install.sh/run.sh + eval-backend-setup 前置；`dicelore-eval`→`play-eval`）→ [Skills-eval D2](../04-子系统设计/Skills-eval.md) + [后端双路径架构 D4](../04-子系统设计/后端双路径架构.md)。**✅ 已归档（2026-07-06）**：DD1–DD4/TR1–TR7 全交付合入 main（离线测试 585+213+99 绿）、设计沉 wiki、**两手动门过**（install/run 起真后端 ✓；build-eval dogfood ✓——loregm 落 jsonl 对话记录、造出 manifest+prologue+world+rules、[report](../../../reports/2026-07-06-build-总之来抽卡吧.md)）、裁决文件已删。follow-up [RT-7/RT-8/RT-10](backlog-后端.md)。
+- feat：**skill 加载按引用统一**（dice+lore 改用 SDK 原生 `plugins`+`skills` 按引用加载，退役 `stageSkills`/`cpSync` 暂存 + 废弃的 `allowedTools:['Skill']` + 退役两侧内联教条兜底改 fail-loud + lore 新增 `dicelore-build-core` 开场白 skill）→ [backlog-后端 · H-skill-loading](backlog-后端.md)。裁决：[裁决记录/skill-loading-by-reference](裁决记录/skill-loading-by-reference.md)（暂留，§0 手动门可能触发设计微调）。代码已交付并合入 main（全离线测试绿），设计已沉 [后端双路径架构 §8/D3](../04-子系统设计/后端双路径架构.md)；**待**：§0 live smoke 待 `RUN_LIVE` + system_init follow-up（[BE-diceGm-systeminit-event](backlog-后端.md)）。
+- feat：**构建 agent 源摄入重设计**（会话工作区 + agentic 文件构建，退役 BM25 检索）→ [backlog-后端 · H-build-workspace](backlog-后端.md)。裁决：[裁决记录/build-agent-workspace](裁决记录/build-agent-workspace.md)（暂留，dogfood 手动门可能触发设计微调）。代码已交付并合入 main（全离线测试绿），设计已沉 [团本构建工具链 §3/D2](../04-子系统设计/团本构建工具链.md)；**待**：端到端 dogfood（烧 LLM）手动门待验证。
+- feat：**F3 lore eval 真构建 GM 一局**（真 LLM）→ [backlog-core 主题F · F3](backlog-core.md)。offline harness 已建（见「已归档」）；**待**：用真 LLM 驱动真构建 GM 完整建一局团本，验证「作者↔构建 GM」交互质量 + import 映射正确性。CC 驱动对称路径见 [backlog-core · N20-lore-eval-MCP](backlog-core.md)。仿 dogfooding 真 LLM 一局同周期。
+- feat：**dogfooding 团本端到端跑通**（契约兑现验收门）→ 验收 [主题A′ ③](backlog-core.md) + DT-9。框架标准库侧已达成（叙事八工具全声明、经 server 端到端落库 + 承重墙不破 + 框架 core 零改动，dogfooding 集成测试证）；**仍欠真 LLM 完整一局**——喂给 eval harness（真 GM 调声明叙事工具跑一局），与里程碑二 F2 收尾同周期。
+
+**已归档**（测试确认完成）
+- fix：**`/open {ref:"head"}` → 500**（RT-open-head-ref）+ **无效包 /open → 4xx 结构化 error**（RT-open-500）→ [backlog-后端](backlog-后端.md)。**✅ 已归档（2026-07-10 acceptance-loop 批·全离线+curl 绿·无手动门）**：端点层解析 head→commitId（caveat 仅小写 head）；importPack 物化期错误（畸形 visible→NaN）一并映射 400 invalid_pack。设计沉 [团本构建工具链 D3](../04-子系统设计/团本构建工具链.md)。
+- feat：**团本构建 组件5/6 余下**（构建 MCP + Skill 侧健壮性收尾：lore error 经 body 回 / LoreSession.test 补投递+error 覆盖 / checkout ref=head 端点解析）→ [backlog-后端 · BE-lore-error-shape / BE-lore-test-gap / BE-checkout-head](backlog-后端.md)。✅（本轮，全离线测试绿、无手动门）：设计已沉 [团本构建工具链 D3](../04-子系统设计/团本构建工具链.md)，裁决文件已删。组件5/6 核心此前已 ✅（构建 MCP/Skill/import/toolgen），此为构建侧收尾。
+- feat：**F3 lore 侧 eval harness（offline）** → [backlog-core 主题F · F3](backlog-core.md)。✅（2026-06-26）：`backend/src/eval/loreScenario.ts`+`backend/src/eval/loreAssertions.ts`+`harness/eval-loregm/loreRun.ts`+`harness/eval-loregm/loreScenarios/frontier-saga.json`+`harness/eval-loregm/loreGrader.md`——确定性 mock 作者 `buildCalls`→`runBuildTool`→commit→`importPack`→`gradeLoreRun` 判运行库（零 LLM，7 测）。真构建 GM 真 LLM 一局见「待测试」。
+- feat：**团本侧自定义 `tools:` 段 import 装载**（toolgen 接线的独立后续）→ [backlog-core 主题A′ ③](backlog-core.md)。✅（2026-06-26）：pack `tools/*.json`（`ToolDecl[]`）→ validate Rule 8 守 DT-9（复用 toolgen `compileTool` 校验，拒 DROP/ATTACH/多语句/非叙事表 INSERT/子查询/同名/非 json）→ `importPack` 回传 `toolDefs` → `DiceSession` 经 `createMcpServer` extraTools 装载（首次 import）。core 501 测。
+- feat：**视图层投影落地**（6 命名视图，step②/③ 前置闸）→ [backlog-core 主题A′ ①](backlog-core.md)。✅（2026-06-25）：`store/views.ts` `initViews` 投影 6 视图、接进 `initSchema`；`tension_board` UNION 四表统一列契约。core 405 测 + tsc 绿。
+- feat：**业务 MCP 工具暴露**（front/plotline/foreshadow/tension_board 声明式，守 DT-9）→ [backlog-core 主题A′ ②](backlog-core.md)。✅（2026-06-25）：`mcp/stdlib/narration.ts` 八叙事工具全声明、零硬编码 handler。
+- feat：**toolgen 接线**（进 `createMcpServer` / step③）→ [backlog-core 主题A′ ③](backlog-core.md)。✅（2026-06-25）：`toolgenToToolDef` + `createMcpServer(db,deps,extraTools?)` 接缝（DT-9 守约现有 19 工具零改动）+ dogfooding 集成测试。
+- feat：**NPC 一等抽象**（A1）→ [backlog-core 主题A · A1](backlog-core.md)。✅（2026-06-26）：`mcp/stdlib/npc.ts` 声明 4 个 npc 写工具全走声明式范式、零 handler 守 DT-9；引擎/store 补可选 `kind` 参（向后兼容）属框架能力生长。+17 测，core 467 绿。
+- feat：**构建工具补全**（plotline/foreshadow/anchor 构建工具）→ [backlog-后端 · H-build-tools](backlog-后端.md)。✅（2026-06-26 wave4）：三构建工具已落 main（buildMcp 注册 + draft 容器 + validate Rule 5c 列校验 + catalog/import.ts 物化齐备）；补 `buildMcpExtra.test.ts` 18 例回归网，验证「构建期写→draft→CSV→import 物化」全链路通。
+- feat/fix：**lore 路径 WS 流式死代码清理**（BE-003 P0）→ [backlog-后端 · RT-5](backlog-后端.md)。✅（2026-06-26 wave4）：`LoreSession` 删 `hub`/`attachWs`/`detachWs`，`handleMessage` 改 REST 语义（跑 driver turn 到 turn_end/error 即收尾返回 turnId、不广播）。**lore 构建 v1 REST only、走轮询/等待（无 WS）**，WS 流式推 v2。
+
+---
+
+## 里程碑二 · 自建全栈客户端（联调 + 页面 + GM 质量 + 可观测性）
+
+> 对应 [里程碑二](里程碑.md)。脚手架已搭起，联调 / 页面细化 / GM 质量验证 / 可观测性未竟。
+
+### GM 质量 eval 闭环（对照真实案例）
+
+**待测试**（已开发、待真实案例对照确认）
+- feat：**F2 收局 + 真实案例对照定性 eval** → [backlog-core 主题F · F2 / F2-floor](backlog-core.md)。harness 已建、F2 `closureFloor` 弱地板已实现；**待**：多轮跑测收局 + **对照 `docs/research` 真实案例的定性 eval 报告**（真实安价案例兽人/抽卡/恶龙团 → 喂进团本构建库、和 lore GM 对话建出团本 → 人工认可 → Claude skill+MCP 拿团本跑 eval → 落盘 eval 报告）。**废 doctrine-vs-baseline A/B 对照**、**量化以目前认知不可行→定性报告**（见 [主题F 2026-06-29 决策注记](backlog-core.md)，待写进对应设计页决策节）。
+
+**已归档**（测试确认完成）
+- feat：真 GM 接 gm-core skill（`DiceGm` skillStage 真接、去 `openingPrompt` stopgap）+ `RUN_LIVE` 验证 → [backlog-后端 · G-后端-gmcore](backlog-后端.md)。✅（2026-06-24）。
+- feat：搭真 eval harness（CC 经 play-mcp 连真后端当玩家+评估者，见设计页决策节）→ [backlog-core 主题F · F1](backlog-core.md)。✅。
+- feat：**F1/F2 机械地板**（2026-06-25 体检 P0）→ [backlog-core · F1-floor / F2-floor](backlog-core.md)。✅（2026-06-26）：F1 `rollFloor`（计数 + narrate 抢跑时序双地板）+ `scenario.expects.minVerdicts` + `grade.ts` 接线；F2 `closureFloor` 恒 advisory 弱地板。零 LLM offline 可判。
+- fix：**eval harness 自测覆盖** → [backlog-core · F-harness-test](backlog-core.md)。✅（2026-06-26）：`backend/src/eval/harness.test.ts`（15 用例）覆盖 offline `runTool` 的 roll/choose/browse 等价 + 错误 + 枚举。⚠️ 漂移已记：真 harness 在 `harness/eval-dicegm/{run,grade,batch,tool}.ts`，`choose/roll/browse` 属独立 dicelore-play MCP 包。
+
+### 可观测性 + 成本（横切基建·趁早，不破坏地基冻结令）
+
+> 修复成本随代码增长指数上升，越晚抽 logger / 补采集越痛——独立于头号债链路，可与里程碑一并行。
+
+**未完成**（已裁决、未开发）
+- （空——CO 可观测性三需求已交付归档，见下「已归档」；usage-api 聚合端点保留总览用）
+
+**已归档**（测试确认完成）
+- feat：**token / 金钱消耗可视化**（per-turn 随 session 流走、内联每一轮）→ [backlog-前端 · CO-前端-可视化](backlog-前端.md)。**✅ 已归档（2026-07-10 acceptance-loop 批·offline+playwright 绿·无手动门）**：三需求全交付——`usage-stream`（turn_ended 加可选 usage + lore handleMessage 返 {turnId,usage}）+ `co-play`（跑团页每轮内联·useSession 按回合分组 + pricing.ts）+ `co-build`（构建页每轮内联·复用 pricing.ts）。设计沉 [后端双路径架构 D5](../04-子系统设计/后端双路径架构.md) + [玩家客户端-视觉 §9.2](../04-子系统设计/玩家客户端-视觉.md)，裁决文件已删。**caveat**：turn-usage/context-hint 真值需真 GM token（playwright 放宽），归 backlog-前端。
+- feat：**token 用量采集**（Agent SDK 回传处采 token、按 turn/session/agent 归因落库）→ [backlog-后端 · CO-后端-采集](backlog-后端.md)。✅（2026-06-26 wave5 · n15）：`backend/src/store/usage.ts`（`recordUsage`/`usageByTurn`/`usageByAgent`/`usageBySession`）+ `usage_log` 表进 initSchema + `DiceSession.onUsage`→端口落库（带外旁路、失败不阻断回合）+ `parseUsage` 纯函数。归因 per-turn + per-agent 双采。**前端可视化仍欠**（见「未完成」CO-前端，需补后端查询端点）。
+- feat：**core 运行时日志接入**（O2）→ [backlog-core O2](backlog-core.md)。✅ 基本达成（2026-06-26）：`mcp/main.ts` 启动错误走 `getLogger().error` + `initGlobalLogger`（分级文件、不污染 stdio）；`server.ts` 删重复裸 console.log。
+- feat：**同构 logger（O1）/ 前端日志（O-前端）** → [backlog-core O1](backlog-core.md) / [backlog-前端 O-前端](backlog-前端.md)。✅ **降级裁决：现状已满足**——引擎侧已有 `packages/logs`（pino node-only）且后端已接入、前端 `frontend/` **0 处裸 console**，「同构 shared/logger」前提不成立、O-前端 moot。
+
+### 联调 / 页面 / 客户端打磨
+
+**已归档 / 待测试**（acceptance-loop-2026-07-06 批·2026-07-10 全量交付合入 main·17 裁决 + 4 fix）
+
+> 本批 = 推进 acceptance-loop 第 1 轮抓出的 RT-* 全量。后端契约层（W1+W2）全离线单测 + curl track(71/0/1) 绿；前端 IA 重构（W3+W4）playwright(66/0) + 组件单测绿——**前端浏览器 e2e 门已被绿 playwright 覆盖**。交付运行记录见 [docs/delivery/2026-07-10-路线图-推进/](../../../delivery/2026-07-10-路线图-推进/)。
+
+**已归档**（离线+curl+playwright 已覆盖·设计已沉 wiki·裁决文件已删）：
+- feat：**会话面拉平 `/sessions/{kind}`**（RT-ns/RT1/RT6/RT7·session-surface-flatten）→ 沉 [接口 D3](../04-子系统设计/玩家客户端-接口.md)。
+- feat：**A′ 叙事层收口**（RT-FE4·a-prime §1 visible 列 / §4 类型化 state 工具删裸 sheet_get/list / §5 relation / §6 记忆 / §7 presentation 接视图）→ 沉 [内层 §4.6/§4.8](../04-子系统设计/内层能力库.md) + [MCP工具面](../04-子系统设计/MCP工具面.md) + [接口 D8](../04-子系统设计/玩家客户端-接口.md)。含 narrate-hook-extension（谓词扩展·已在本轮前落 main·设计已沉 [内层 §3.1/§4.2/§4.6](../04-子系统设计/内层能力库.md)）。
+- feat：**明骰 band plan+narration + 暗骰 hidden 参/WS + loregm 域 WS**（RT-FE5/FE6/FE12·rollband §一 + hidden-roll-and-loregm-ws）→ 沉 [接口 D9](../04-子系统设计/玩家客户端-接口.md) + [MCP工具面](../04-子系统设计/MCP工具面.md)。
+- feat：**loregm Draft 期校验端点**（RT-FE11·rollband §二）→ 沉 [接口 D7](../04-子系统设计/玩家客户端-接口.md) + [团本构建工具链 D4](../04-子系统设计/团本构建工具链.md)。
+- feat：**防剧透 spoiler 档 + visible/spoiler 两层正交**（RT-FE9/FE10·spoiler-tiering-and-dock-diy·取消 visible=0 硬底线·stream 全量下发）→ 沉 [接口 D8](../04-子系统设计/玩家客户端-接口.md)。
+- feat：**dock-card 模板渲染器 canonical 语法**（RT-FE2/FE10·dock-card-template·预设 vs DIY / dial·bar / localStorage 归档）→ 沉 [视觉 §9.2](../04-子系统设计/玩家客户端-视觉.md) + [团本构建工具链 D4](../04-子系统设计/团本构建工具链.md)。
+- feat：**统一 session config 端点（model 切换 + spoilerTier）**（RT-FE18·model-switch + spoiler 合流）→ 沉 [接口 D4](../04-子系统设计/玩家客户端-接口.md)。
+- feat：**战后复盘态 + 会话分支模型**（RT-FE7/FE8·debrief-and-branch）→ 沉 [接口 D5](../04-子系统设计/玩家客户端-接口.md) + [术语表](../术语表.md)。
+- feat：**前端 IA 大重构 + feature 渲染**（RT-FE1/FE3/FE20·frontend-ia-rebuild·去顶栏+底部 app-bay+play 桌面沙盘+build 三栏·**浏览器 e2e 门由 playwright 66/0 覆盖**）→ 沉 [视觉 §9.2](../04-子系统设计/玩家客户端-视觉.md)。
+- feat：**fake-GM 教练档接 HTTP/env**（RT-fake-gm-wiring）+ **eval run.sh PORT fix**（fix-eval-runsh-port）→ 挡 Tier 0 curl + FE-e2e 前置，已实机 curl 验四主线+lore。
+
+**待测试**（4 手动门·FAKE 教练档/离线测覆盖不到·需真 LLM/dogfood/真网络·**裁决文件保留**）：
+- feat：**GM session 续接（一团一 SDK session·resume）**（gm-session-continuity）→ [裁决](裁决记录/gm-session-continuity.md)。**待**：真起两回合 SDK session 验 resume 续接行为（offline 只验装配·RUN_LIVE）。沉 [接口 D6](../04-子系统设计/玩家客户端-接口.md)。
+- feat：**用量+上下文管理**（usage-and-context·扩 GET/usage + auto-compact + context_compacting WS）→ [裁决](裁决记录/usage-and-context.md)。**待**：auto-compact 真回落 / 压缩提示需真长会话 dogfood。沉 [接口 D6](../04-子系统设计/玩家客户端-接口.md)。
+- feat：**dicegm skill 随机驱动叙事蒸馏**（dicegm-skill-corpus-distill·RD-1/2/3 已交付 SKILL.md + references/randomness-narrative.md + docs/research 模式总结）→ [裁决](裁决记录/dicegm-skill-corpus-distill.md)。**待**：RD-4 eval（skill-creator eval-loop 真 LLM 跑 GM 测骰/选项比例变化）。
+- feat：**客制 MCP 安装（marketplace + npx -y）**（custom-mcp-install·配置 UI 已 playwright 覆盖）→ [裁决](裁决记录/custom-mcp-install.md)。**待**：npx 真拉 + 真 stdio MCP 安装（真网络/子进程）。沉 [接口 D10](../04-子系统设计/玩家客户端-接口.md)。
+
+**未完成**（已裁决、未开发）
+- feat：**前后端联调 + 规则/session/团本页面细致设计 + 配置页**（里程碑二 ⬜）→ 详见 [里程碑二](里程碑.md)。脚手架已搭，联调与细化设计未竟。
+- fix/feat：**组件7 前端 fast-follow**（可即修项随相关后端能力到位带）→ [backlog-前端 主题 · 组件7 前端](backlog-前端.md)。
+- feat：**（后端完善后）让 Claude Code 反向操控后端打磨教条**（构建一套与后端通信的 MCP + Skill，在真实团本/真实引擎里迭代 gm-core）→ 里程碑二 ⬜。
+
+**待测试**（已开发、待端到端跑通确认）
+- feat：**玩家主线浏览器 e2e**（FE-e2e-browser）→ [backlog-前端 · FE-e2e-browser](backlog-前端.md)。**基本达成（2026-07-10 acceptance-loop 批）**：前端 IA 重构波 playwright 66/0 绿（chromium 已装 + FAKE_GM 教练档接线 by fix-fake-gm-wiring）——浏览器 e2e 门已跑通、覆盖 play/build 主要主线。**残留放宽项**（需真 GM token / vite 代理 WS 不稳）归 [backlog-前端 · Wave3/4 前端交付 caveat](backlog-前端.md)。
+
+**已归档**（测试确认完成）
+- feat：**会话级并发互斥**（BE-002 P1）→ [backlog-后端 · RT-2](backlog-后端.md)。✅（2026-06-25）：`DiceSession` `inflight` + `runExclusive` 串行化三入口、抛 `TurnInProgressError`、API 409 `turn_in_progress`。+4 测。
+- feat：**e2e 玩家主线扩展（单测层）**（CROSS-E2E P1）→ [backlog-前端 · FE-e2e](backlog-前端.md)。✅（2026-06-26）：`FakeDiceGm` 教练档触发 roll/choice/game_end，单测覆盖五主线（frontend 64 / backend 92 测）。
+- feat：**并发/超时/重启/注入四类边界测试**（CROSS-BOUNDARY-TEST P1）→ [backlog-core · TB-1](backlog-core.md)。✅（2026-06-26 wave3）：`dice/boundary.test.ts`（15 用例）四类全覆盖。
+- feat：**live 测试 mock SDK 化**（CROSS-LIVE-TEST P1）→ [backlog-core · TB-2](backlog-core.md)。✅（2026-06-26 wave4）：抽 `dice/gmAssembly.ts` 纯函数 `buildQueryOptions`，`DiceGm.runTurn` 调它行为零变化；`gmAssembly.test.ts` 9 例 offline 装配断言。真 LLM `live.test` 仍 skip（发版前手动跑）。
+- fix：**前端散点 fix 全清**（FE-err-swallow / FE-ws-race / FE-start-contract / FE-testModel-ok / FE-md-xss / FE-dead-code / FE-drag-residue）→ [backlog-前端](backlog-前端.md)。✅：md-xss（铁律注释 +3 防回归测）/ dead-code / testModel-ok（res.ok +4 测）2026-06-26 达成；FE-start-contract（缝B start 统一为后端 `{turnId}`）wave3 达成。
+- fix：**rollGate 重启死锁**（CROSS-GATE P2）→ [backlog-后端 · RT-3](backlog-后端.md)。✅（2026-06-26）：`resolveRoll` 无 waiter 查库 `commitPendingRoll`（幂等）+广播 `roll_committed`；roll 端点 `getHost`→`getOrCreateHost`。
+
+---
+
+## 里程碑三 · 第一次发版
+
+> 对应 [里程碑三](里程碑.md)。**里程碑三本身就是发版——它就是天然的闸**（安全/多租户/承重等硬化归里程碑四，发版前要做完的那部分见里程碑四）。**尚未开始。**
+
+**待测试**（已开发、待手动门确认）
+- feat：**安装数据目录布局规范**（单一数据根 `DICELORE_DATA_DIR` + on-disk `$ROOT/{config.toml,catalog.db,keys.db,sessions/<kind>/<id>,logs}` + config.toml `[env]` + 程序↔数据分处）→ [backlog-后端 REL-datadir](backlog-后端.md)、设计沉 [玩家客户端 D5](../04-子系统设计/玩家客户端.md)。**✅ 已归档（2026-07-06）**：DD1–DD4 全交付（离线测试绿）、**手动门过**（真跑 `install.sh` + `run.sh -f` 起真后端就绪、`/diagnostics` 报真 `$ROOT` ✓）、裁决文件已删。是「可安装可用验证」前置、已就绪。
+
+**未完成**（已裁决、未开发）
+- 可安装可用验证 / 贡献·issue 文档 / 多平台宣发 / Markdown 美化（均 ⬜，详见 [里程碑三](里程碑.md)）。
+
+**已归档**（测试确认完成）
+- docs：**README「CLI 一键开玩」文档对齐**（USER-001 P0）→ [backlog-前端 · FE-CLI-doc](backlog-前端.md)。✅（2026-06-26 wave4）：README 玩家入口改为发版架构口径（见设计页决策节）（v1 玩家入口=多端整合包/自托管 docker-compose+浏览器；CLI 退回开发/会话管理；安卓/Win 优先 v1 发版）。属发版前文档-实现一致性。
+
+---
+
+## 里程碑四 · 长期演进（硬化 + 超开放表现）
+
+> 对应 [里程碑四](里程碑.md)。发版后转入的长期硬化与能力生长；其中安全/多租户/承重那部分**发版前要做完**（里程碑三发版前必决/必做），其余随设计周期带。
+
+### 游戏生命周期完整性
+
+**未完成**（已裁决、未开发）
+- feat：**终局判据 + 机制**（E1/E2）→ [backlog-core 主题 · 裁决/披露/终局](backlog-core.md)。**已裁决（定稿，见设计页决策节）**：GM 自调 game_end + 软判据 + 玩家主动结束权 + 终局后进复盘模式。E1 教条措辞待 eval 多轮数据校准。
+- feat：**终局后玩家流程**（USER-002 / FE-end-lock）→ [backlog-前端 · FE-end-lock](backlog-前端.md)。**已裁决（定稿，见设计页决策节）**：删「结束游戏」按钮、终局后进复盘模式、保留「重开新局」、不做回滚/回溯（回溯续命 v2 依赖快照）。
+
+**已归档**（测试确认完成）
+- feat：**快照/回滚 v1**（SNAP-1）→ [backlog-core · SNAP-1](backlog-core.md)。**已裁决（v1 降预期，见设计页决策节）**：v1 自动持久化（存档/读档），手动回滚/branch/续命留 v2。✅（2026-06-26）：core `store/snapshot.ts` + `SnapshotParticipant` IoC；orch `turnEnd` 自动 checkpoint + `rewind()` + `POST /sessions/:id/rewind`；web 读档按钮 + i18n。三包绿。
+- fix：**GET /sessions/:id ended 硬编码**（BE-007-fix P1）→ [backlog-后端 · RT-4](backlog-后端.md)。✅（2026-06-26）：`ended` 改读 `metaGet(db,"ended")`，与 WS game_end 同源。
+
+### 后端性能与稳定性
+
+**未完成**（已裁决、未开发）
+- feat：**GM 超时兜底「脱困不恢复」修复**（CROSS-TIMEOUT P1）→ [backlog-后端 · RT-1](backlog-后端.md)。**短期 ✅（2026-06-26 · n16）**：`turnLoop.ts` AbortController 超时机械 + error 通道（前端显示走现有 error 渲染）。**中期（本轮 wave5 在做）**：回合级事务——记 `turn_start_seq`、超时/error 时 `DELETE FROM log WHERE seq > turn_start_seq` + 回滚 state 变更（core 回合级回滚原语，与 SNAP-1 同根）。**长期 v2**：与快照接线合并（turnEnd checkpoint→超时 restore 到本回合起点）。
+
+**未裁决**（想法未落地）
+- feat：**enrich 收口**（CROSS-ENRICH P2）→ [backlog-后端 · RT-6](backlog-后端.md)。卡在 **port 契约（[S2](backlog-core.md)）未定型**——port 契约定稿时一并收口。
+
+### 安全 / 多租户 / 承重绑定（发版前必做的那部分）
+
+**未裁决**（想法未落地，待拍板后链落地结果文件）
+- feat：**承重绑定决策 + 承重层 port 契约**（S1+S2）→ [backlog-core 主题S · S1+S2](backlog-core.md)。**待裁**：定解绑触发条件 + 把 hook/skill/subagent 承重层抽成 port（v1 单 Claude Code adapter、多 agent sdk 列未来）。不翻 agent 选型决策、是快照对冲延伸（见设计页决策节）。体检实证（ARCH-004 P0）：DiceGm 直接耦合 SDK query()。**拍板后把决策写进对应设计页「决策与权衡」节、移入「未完成」。**
+- feat：**多租户模型 + SQLite 单文件隔离**（MT1 + SEC3）→ [backlog-后端 MT1](backlog-后端.md) / [SEC3](backlog-后端.md)。**待裁**：租户模型 + 资源隔离策略未定。体检实证（CROSS-AUTH P0）：Hono app 零中间件、sessionId 即权限、DELETE 零鉴权。
+
+**未完成**（已裁决、未开发）
+- feat：**威胁建模**（玩家输入→GM 的 prompt injection 面逐条评估结构防护）→ [backlog-后端 SEC1](backlog-后端.md)。体检实证（CROSS-INJECT P1）：玩家自由文本直接作 prompt。
+- feat：**模型 key 托管 + 基础限流 + SSRF 白名单**（SEC2）→ [backlog-后端 SEC2](backlog-后端.md)。**已裁决（定稿，见设计页决策节）**：统一后端托管（整合包存本地后端、自托管存远程后端），前端只存引用；SSRF 白名单修（model-test/mcp-test baseUrl 限 https+host 白名单）。
+
+### 超开放表现层 + 出图（来源：用户 2026-06-29）
+
+**未裁决 / 未来**（详见三池未来池）
+- feat：**超开放团本富 UI**（团本注入 HTML 到 play 页、UI 点选代替打字，崇祯模拟器式；不改品类）→ [backlog-前端 未来池](backlog-前端.md)（推翻原"限定 widget 集"）+ [backlog-core 未来池](backlog-core.md)（团本携带 UI 数据层）。注：注入 HTML 有 XSS 面，需净化/沙箱。
+- feat：**GM 出图**（出图 MCP + 默认出图 subagent + 前端对话框展示）→ [backlog-core](backlog-core.md) / [backlog-后端](backlog-后端.md) / [backlog-前端](backlog-前端.md) 未来池。
+- feat：🤔 **多 agent 扮演单 NPC 接口**——**完全存疑、用户倾向不做**（main agent 调 subagent 临时扮演即可，不为 NPC 常驻专开接口）→ [backlog-后端 未来池](backlog-后端.md)。等"超开放富 UI"设计时一并想。
+- feat：**裁决/披露增强 B7（带修正∧分级检定）/ C1（分级线索披露）** → [backlog-core 主题 · 裁决/披露/终局](backlog-core.md)。
+- feat：`mapCanonWrite` 前端解析 `changes` 增量（A2 优化面）→ [backlog-后端 · G-后端-mapkind](backlog-后端.md)。
+- feat：**长对话前端护栏**（CROSS-LONG-CONTEXT P3）→ [backlog-前端 · FE-long-ctx](backlog-前端.md)。narration 上限/虚拟列表 + Markdown memo + 输入 maxLength + 「建议开新局」轻推。
+
+---
+
+## 决策追溯（2026-06-25 全量体检 8 项未决问题 + 2026-06-29 eval 方法论）
+
+> **本节是「未裁决→已裁决」的决策追溯记录**（落地结果权威在各对应设计页「决策与权衡」节，本节仅指引）。各项实施已分入上面对应里程碑的四态。
+
+1. **快照/回滚 v1 开放范围** → 里程碑四 SNAP-1。**裁决：v1 降预期**（自动持久化，手动回滚/branch/续命留 v2）。落进对应设计页决策节。
+2. **终局机制「何时敲/由谁敲」** → 里程碑四 E1/E2 + FE-end-lock。**裁决（定稿，见设计页决策节）**（删结束按钮、终局后进复盘模式、回溯续命 v2）。
+3. **D 流畅派 v1 是否实现** → §推迟池。**裁决：v1 不实现**（标理论锚点）。落 [backlog-core TB-4](backlog-core.md)。
+4. **README「CLI 一键开玩」** → 里程碑三 FE-CLI-doc。**裁决（定稿，见设计页决策节）**（不补 CLI play、多端整合包发版架构、安卓/Win 优先）。
+5. **lore 路径 WS 流式 v1** → 里程碑一 RT-5。**裁决：v1 删死代码标 REST only，WS 推 v2**。
+6. **eval 场景覆盖度扩展顺序** → 里程碑一 F3。**裁决：先补 lore 侧 eval**，终局场景随 E2 落地后补。
+7. **自定义 MCP 配置 v1 是否接入运行时** → §推迟池。~~裁决：v1 不接入留 v2~~ **已推翻（2026-07-10·custom-mcp-install）：v1 接入运行时**（marketplace + npx -y 预拉 + config.toml + stdio 拉起）。落 [玩家客户端-接口 D10](../04-子系统设计/玩家客户端-接口.md)。
+8. **API key 存储方案** → 里程碑四 SEC2。**裁决：统一后端托管**（见发版架构设计页决策节配套）。
+9. **eval 对照系（2026-06-29）** → 里程碑二 GM 质量 eval 闭环。**裁决：对照 `docs/research` 真实案例、废 doctrine-vs-baseline A/B、量化目前不可行→定性报告**。待写进/修订对应设计页决策节；详见 [backlog-core 主题F 决策注记](backlog-core.md)。
+
+---
+
+## 推迟池（不进当前批 / 裁决 v1 不做）
+
+- **裁决 v1 不做、留 v2**（已拍板的「不做」终态，非欠账）：
+  - ~~**自定义 MCP 配置接入运行时**（FE-012）~~ **已推翻（2026-07-10·custom-mcp-install）**：v1 改为**接入运行时**——两按钮（marketplace add + 安装）+ 后端 npx -y 预拉 + config.toml 落配置，运行时按 stdio 拉起客制 MCP。见里程碑二「待测试」custom-mcp-install（真拉/stdio 手动门）+ [玩家客户端-接口 D10](../04-子系统设计/玩家客户端-接口.md)。原「仅本地、不参与运行时」定调作废。
+  - **D 流畅派 v1**（CROSS-D）→ [backlog-core · TB-4](backlog-core.md)。多智能体编排 + 流畅派透明化均 v2（见 [backlog-前端 未来池「前端过程透明化」](backlog-前端.md)）。
+- **各池 🔮 未来池**：[backlog-前端 未来池](backlog-前端.md) / [backlog-后端 未来池](backlog-后端.md) / [backlog-core 未来池](backlog-core.md)。
+- **维护类**（[backlog-core M1 · wiki 整理](backlog-core.md)）由 ``roadmap-delivery-workflow`（wiki 结构整理变体）` 持续处理，不占批次。
+
+---
+
+## 已达成批（整批归档，供回溯）
+
+- **原 wiring 收尾批（2026-06-24 达成）**：narration 来源 / game_end 补发 / POST /choices 去绕路 / seq 语义 / GET /events 重连 / packName 补填 / show 审计 event_id 回 AI（[backlog-后端](backlog-后端.md) G-后端-* ✅、[backlog-core V1](backlog-core.md) ✅）。单测 引擎/backend 395 / backend 75 / frontend 44 + 三包 tsc + FAKE_GM HTTP 三层绿。
+
+---
+
+> [里程碑.md](里程碑.md) 人工维护（宏大目标/愿景，AI 仅在人干预下追加 ⬜、不标 ✅）；**本页 AI 维护**（按里程碑组织、四态可重排）。

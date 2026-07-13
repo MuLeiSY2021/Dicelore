@@ -1,0 +1,170 @@
+# backlog · 后端层
+
+> **本页职责**：`backend/` 层的 **issue 池**——HTTP·WS 接口 / 会话生命周期 / 进程编排。按**主题**聚类、按 **fix/feat** 标注，广度无序（先还哪个见 [路线图](路线图.md)）。
+> **单源（勿重复）**：拍了方案 → 把决策写进对应设计页「决策与权衡」节，条目改标『→ 链对应设计页决策节』关闭；已达成 → 进 [里程碑](里程碑.md)。
+
+## 状态图例
+- ✅**确认** — 客观/架构事实（已实测）。
+- ⚠️**待真harness** — 行为/措辞类，当前结论不可信（见 [backlog-core 主题F](backlog-core.md)）。
+- 💡**设计待定** — 需开设计周期 / 把决策写进对应设计页「决策与权衡」节。
+- 🔧**可即修** — 便宜改动，随手可清。
+- 🚧**在途** — 实现线进行中。
+- 🔮**未来池** — 明确推迟。
+
+## 字段约定
+每条带：`类型(fix|feat)` · `来源` · `是否随规模恶化(✓/✓✓/✓✓✓/✗)` · `所属主题` · `下一步/依赖`。
+
+---
+
+## 主题 · 组件7 后端（Play 会话生命周期）🚧
+
+> 权威设计：[玩家客户端.md](../04-子系统设计/玩家客户端.md) / [-接口.md](../04-子系统设计/玩家客户端-接口.md) / [-视觉.md](../04-子系统设计/玩家客户端-视觉.md) · 见对应设计页决策节。
+>
+> **历史注记（已闭）**：主题G「三件待补」中后端相关已落地——① 实现层接口契约文档（接口页 §2/§3+4 加实现状态列、§5 双形态、§0 立「两条缝」，2026-06-22）；② 联调方案 + 用例（接口页 [§9](../04-子系统设计/玩家客户端-接口.md) 起服务自检 + happy-path U1–U4 + gap 清单）；副产已闭——U4 选项闭环（`postChoice`+解禁+乐观锁）、新增 `/diagnostics`·`/browse`·`/catalog/{files,validate}`。**G-debt 病根已诊断（2026-06-22）**：不是实现跑偏，而是缝 A 设计决策把 MCP↔后端定为 in-process 后，下游接口页/设计页 §6 没跟着改（推导链断一节，亦属 [backlog-core M1](backlog-core.md)）；用户「两条缝」定调——需解耦的是**缝 B 后端↔web**（可远程/多租户）、非**缝 A MCP↔后端**（同机进程内回调）。
+
+| # | 类型 | 问题 | 来源 | 恶化 | 下一步/依赖 |
+|---|------|------|------|:--:|--------|
+| ~~G-后端-缺端点~~ | feat | **Play 会话生命周期端点** `POST /sessions/:id/start`(kickoff) · `DELETE /sessions/:id` · `GET /sessions`（填 `started`） | 接口页 §9.3/§9.4 | ✓ | ✅ **已落地**（`api/dice.ts` 三端点全实现，`544dac5`/`247832e`；agent 适配层 spec 亦落，[玩家客户端 §9.2](../04-子系统设计/玩家客户端.md)） |
+| ~~G-后端-seq~~ | fix | **`narration_commit.seq` 语义债** | 接口页 §9.4 | — | ✅ 已修（2026-06-24 wiring 批）：`turnLoop` `turn_ended.seq` 取 `MAX(log.seq)`、`narration_commit.seq` 用 `evt.seq`，与 `narrativeCursor` 同口径；重连去重可靠 |
+| ~~G-后端-重连~~ | fix | **`GET /events` 重连补叙述**（WS 断线重连后补回历史叙述） | 接口页 §9.4 | — | ✅ 已修（2026-06-24）：新增 `GET /sessions/:id/events?since=` + `recovery.replayNarration`（WS `?since=` 推齐），重连补回 narrate 历史 |
+| G-后端-Phase2 | feat | **实时引擎面 Phase 2**：多人明骰「谁来点这一掷」per-instance gate 硬化 · **组件3/4 hook 接入 Agent SDK**（Phase 1 暂用 `turnLoop.runTurnEnd` 物化 choice） | 设计/接口页 | — | 随实时引擎面排期 |
+| G-后端-version | feat | **About 真实版本号需 health 暴露**（前端 About 页等后端 `/health` 暴露版本号） | 接口页 §9 fast-follow | ✗ | health 端点加版本字段（前端项见 [backlog-前端](backlog-前端.md)） |
+| G-后端-toolcall | feat | **构建助手「显示调了哪些工具」需 lore-sessions 回 tool-call 痕迹** | 接口页 §9 fast-follow | ✗ | lore-session 回传 tool-call 痕迹（前端展示项见 [backlog-前端](backlog-前端.md)） |
+| G-后端-gmcore | feat | **真 GM 接 gm-core skill（去 stopgap）**：现 `dice/openingPrompt.ts` 内联教条全文是 stopgap（`16969d4`，解 GM 裸奔/OOC），正式 skill staged 接入 `DiceGm` 待 `RUN_LIVE` 实测。与 [主题F harness](backlog-core.md) **是一条线**——harness 要真 GM、真 GM 要教条 | 设计页决策节后果 + 2026-06-24 核对 | — | ✅ `DiceGm` skillStage 真接 gm-core + RUN_LIVE 验证通过（见设计页决策节）；openingPrompt 内联教条 stopgap 保留作兜底，去 stopgap 留后续 |
+| G-后端-narration | fix | **narration 来源取错（违背三流分工，见设计页决策节）**：`DiceGm` 把 assistant text（`stripReasoning` 后）当 narration yield → `narration_commit.text` = GM 正文/思考，而非 **narrate MCP 工具调用**的 event content。core 架构明确 narration 该从 narrate event 来（[`playerView`](../../../../backend/src/present/playerView.ts) 流①=narrate+reveal event、[`assertions`](../../../../backend/src/eval/assertions.ts) `narrateLeak`=正文复述 narrate 即 bug）、assistant text 是流③只回 AI。后果：GM 思考/元叙述泄漏给玩家（RUN_LIVE 实测 orc-hunt 开场 seq1/seq2 英文思考泄漏："The table's set, let me check the world state..."），narrate 工具散文只进 `presentation_delta`（机械态）没进 narration stream；`stripReasoning` 只是掩盖此 bug 的补丁（见 [findings B7](../../../harness/eval-dicegm/findings.md)） | RUN_LIVE 2026-06-24 + 用户质疑 | — | ✅ 已修（2026-06-24）：`DiceGm` 不再 yield assistant text（删 `stripReasoning` 调用）；`mapCanonWrite` 对 `kind=event·narrate` 发 `narration_commit`（text 由 `DiceSession.enrich` 从 log 行按 seq 取出注入）；`streamDriverTurn` 的 narration 分支**保留**（`LoreSession` 构建反馈仍依赖，dice 路径不再走它）。narrate-leak 根治；`RUN_LIVE` 复跑 orc-hunt 待实证（单测 `narrateLeak` 已覆盖） |
+| G-后端-game_end | fix | **`game_end` 消息后端从不发**：`mapCanonWrite` 无 `game_end` 分支，core `game_end` 工具触发被塌成 `presentation_delta`；前端 `useSession` 已 `setGameEnd` 但永不触发，终局画面缺失。core 侧已正确 `onCanonWrite(kind=game_end)`，断在后端不识别此 kind | [接口页 §10.1 B3](../04-子系统设计/玩家客户端-接口.md) 核验 2026-06-24 | ✗ | ✅ 已修（2026-06-24）：`mapCanonWrite` 加 `kind=game_end` 分支发 `type:"game_end"`（reason/outcome 由 `DiceSession.enrich` 从 `session_meta.ended` 注入）；前端 `setGameEnd` 可触发 |
+| G-后端-choices | fix | **`POST /choices` 后端仍绕路**：前端已正式 `postChoice`(REST `{eventId,optionIndex}`+乐观锁)，后端仍伪装文本 `[choice {eventId}#{optionIndex}]` 喂 `handleMessage`，未走 §5「记录所选 + 下一回合 user turn」正式路径；HTTP 通、业务半通（接口页注①已纠旧） | [接口页 §10.1 B1](../04-子系统设计/玩家客户端-接口.md) 核验 2026-06-24 | ✗ | ✅ 已修（2026-06-24）：`POST /choices` 走 `DiceSession.handleChoice` 正式路径——读 choice event→落 `player_choice` note→所选 option 作下一回合 `TurnInput`；去 `[choice …]` 文本绕路；无待选项返 409 |
+| G-后端-mapkind | feat | **`mapCanonWrite` 粒度粗**：非明骰一律塌 `presentation_delta`，`reveal`/`watcherFired`/`choice_staged`/`game_end` 信号丢失（`shared` `PresentationChanges` 的 reveal/watcherFired 字段闲置），靠前端全量对账兜底正确性；与 G-后端-game_end 同根 | [接口页 §10.1 A2](../04-子系统设计/玩家客户端-接口.md) / §5.1 核验 | ✓ | 🟡 映射侧已修（2026-06-24）：`mapCanonWrite` 已按 kind 显式分发（narrate/game_end/reveal/mutation/visibility/choice_staged 各自映射，不再统一塌 `presentation_delta`）；**剩**前端解析 `changes` 增量（注⑦，现仍全量对账）留第四批优化 |
+| G-后端-packName | fix | **`SessionSummary.packName` 后端未填**：`shared` schema 有 `packName?`，前端 `PlayPage` 用 `s.packName` 做团本名前缀分组，后端 `sessions.ts` 只填 `title`(从 `tuanben_name`)，`packName` 恒空 → 团本名分组失效 | [接口页 §10.1 B5](../04-子系统设计/玩家客户端-接口.md) / §9.4 核验 | ✗ | ✅ 已修（2026-06-24）：`sessions.ts` `packName`←`tuanben_name`、`title`←`sessionId`（sessionId 为友好 slug/短 hash，渲染 `packName · title`）；团本名分组生效 |
+| BE-stripReasoning-wire | fix | **`stripReasoning` 死代码——已删码、待消解 wiki 引用**（P3，2026-06-26 wave4 浮现 → 2026-06-30 113-review 更新）：`harness/runtime/reasoning.ts` `stripReasoning`（剥 `<think>/<thinking>/<reasoning>`）**实际未接入 `DiceGm`**——DiceGm 只消费 `result`、assistant text 不当 narration（narration 已改从 narrate event 来，见 G-后端-narration），故无生效点。**2026-06-30 113-agent review Wave1 已删 `harness/runtime/reasoning.ts` + 其 .test**（`ls` 确认文件不存在；唯一引用曾是自测、无生产 import）。**剩余欠账＝wiki 侧仍描述该函数为生效机制**（`04-子系统设计/后端双路径架构.md` L29/L94/L114 + 归档决策 README §⑧），归 [backlog-core M1-e](backlog-core.md) wiki reconcile | 2026-06-26 wave4 + 2026-06-30 113-review | ✗ | 🟡 **删码已达成（Wave1）**；剩 wiki 引用消解——见 [backlog-core M1-e](backlog-core.md)（改写设计页 §9/§⑧/目录注解为「已废弃/未接入」）。若 P6 多模型仍需该能力，在真接入点（provider 适配层）重接 + 补集成测试，而非让纯函数+单测悬空冒充已实现 |
+| RT-FE5 | feat | **明骰内联 stream 各档 narrate 无数据源**：`RollBandSchema` 现仅 `{label,min,max}`（`packages/shared/src/presentation.ts:42`），core band spec 实带 `consequence` 文本（`harness/src/dicegm/mcp/schemas/resolver.ts:26-29`）但投影 `rollGate.ts:22-23` 丢了 → `play-roll-bands` 各档叙事无数据。A/B 未定：补 `RollBand.narration` 字段 vs 走 narration stream 末段 | acceptance-loop 0706 RT-FE5 | ✗ | ✅ 已交付（2026-07-10·rollband §一 A′：band 加 `plan`+`narration` 双必填字段，全量下发·spoiler 档渲染）→ 沉 [接口 D9](../04-子系统设计/玩家客户端-接口.md) |
+| RT-FE6 | feat | **暗骰无 WS 类型/标记**：`PendingRoll.shape` 仅 `outcome\|contest`（`presentation.ts:45`）、WS 10 类（`shared/stream.ts:16-31`）无暗骰变体；暗骰 verdict 被塌进通用 `presentation_delta`（`harness/src/dicegm/notify.ts:30-31,59-60`）无区分标记 → `play-hidden-roll`「只说判定不显结果/DC」无承载。建模承重未定：新 shape 值 vs 新 WS 类型 vs PendingRoll 加 hidden 标记 | acceptance-loop 0706 RT-FE6 | ✓（契约一旦发版难改） | ✅ 已交付（2026-07-10·hidden-roll §一：resolve 加 `hidden` 参立即掷 + WS `hidden_roll` 带完整结果·不走 pendingRoll）→ 沉 [接口 D9](../04-子系统设计/玩家客户端-接口.md) |
+
+---
+
+## 主题 · 团本构建（组件5/6）🚧
+
+> 设计已定稿（[团本与manifest.md](../04-子系统设计/团本与manifest.md) / [团本构建工具链.md](../04-子系统设计/团本构建工具链.md)，见对应设计页决策节）。
+>
+> **历史注记（已闭）**：**H1（团本构建走缓存 DB、非系统文件，见设计页决策节）**已落地——Catalog 团本包库（`backend/src/catalog/`）DB-only 集中录，构建层 `Draft`→`commitDraft`→Catalog；文件只在上传/导出边界；设计单源 → [04 后端双路径架构](../04-子系统设计/后端双路径架构.md)。**H2（同设计页决策节）**：跨地基资产已在 P5 重新派生（构建层 Draft + 构建 MCP `dicelore_build_*` + 构建 skill `dicelore-build-pack` + `LoreSession`，文件式→Catalog DB）；旧 `event-log` worktree 那批旧 spec/plans 可清。
+
+| # | 类型 | 问题 | 来源 | 恶化 | 下一步/依赖 |
+|---|------|------|------|:--:|--------|
+| ~~H-import~~ | feat | **团本构建 import**（包→四域 + 叙事域物化） | 里程碑一在建 | ✓ | ✅ **已落地**——`catalog/import.ts` `importPack` 实现完整：lore/rule/pool/state 四域 + front/plotline/foreshadow/anchor 叙事四域 + manifest + prologue 全物化，带信任闸门（`59d8972`/`9661615`/`c819353`）。eval 手搓种子（`eval/seeds/*.ts`）是 eval 用途，非 import 缺失。 |
+| H-build-tools | feat | **构建工具补全 + toolgen 接线**：`dicelore_build_*` 已覆 ingest/search/validate/read/add_front + `Draft.addFront`；仍缺 plotline/foreshadow/anchor 构建工具 + toolgen 接进构建期声明 | 见对应设计页决策节 | ✓ | ✅ 达成（2026-06-26 wave4）：**实证发现**三构建工具 `dicelore_build_add_plotline/add_foreshadow/add_anchor` 已落 main（buildMcp 注册 + draft 容器 + validate Rule 5c 列校验 + catalog/import.ts 物化齐备）；本线补 `buildMcpExtra.test.ts` 18 例回归网，验证「构建期写→draft→CSV→import 物化」全链路通。front md 正典已定（见设计页决策节）。 |
+| H-lore-skill | feat | **构建 skill 未接进 LoreSession**：`server.ts` `createLoreApp` **没传 skills**，`dicelore-build-pack` 没被 staged，默认部署构建 agent 拿不到教条、只靠 `DICELORE_BUILD_PROMPT` env 注入 | 2026-06-24 核对 | ✗ | ✅ 已修（2026-06-24）：`server.ts` 经 `buildPackSkill()` 解析 `dicelore-build-pack` → `loreSkills` 传入 `createLoreApp`，对齐跑团侧 skillStage；`DICELORE_BUILD_PROMPT` env 保留作 openingPrompt 兜底（与 gm-core 内联兜底对称） |
+| H-skill-loading | feat | **skill 加载按引用统一（dice+lore），退役 `cpSync` 暂存**：现 `DiceGm.runTurn` 每回合 `stageSkills`（`skillStage.ts` `cpSync` 整拷 skill 到 tmpdir/.claude/skills）+ 设 `cwd=staged` 让 `settingSources:["project"]` 扫到 + `allowedTools` 含 **已废弃**（SDK `0.3.185` sdk.d.ts:1285）的 `'Skill'` + `finally` `cleanupSkills`。三病：每回合复制、cwd 被 skill 发现绑架（挡 [H-build-workspace] 的 cwd=workspace）、用废弃 API。SDK 原生 `plugins:[{type:'local',path}]`（:1683）+ `skills:string[]\|'all'`（:1845）可从固定源目录按引用加载、与 cwd 解耦、零拷贝。改为：各角色线根（`harness/src/dicegm`、`harness/src/loregm`）补 `.claude-plugin/plugin.json` 打成 local plugin（skill 现成在 `skills/` 下、不挪目录）；`buildQueryOptions` `staged`→`plugin`+`workspace`；删 `skillStage.ts`；`SkillRef`→`PluginRef`。dice 4 个 flow skill 借 `skills:'all'` 一并可用（现 stage 只拷 gm-core 够不到） | 用户 2026-07-01（审 H-build-workspace 时提出「同一套加载、别复制同步」，查证 SDK 后拍「两侧一起迁」） | ✓（每回合复制随并发/团本数恶化 + 废弃 API 早晚断） | ✅→**待测试** **代码已交付（本轮）**：按引用加载落地（`skillPlugin.ts` 幂等版本感知物化 `$/{dice,lore}/skills` + `buildQueryOptions` 装 `plugins`+`skills:'all'`+`settingSources:[]`、退役 `stageSkills`/`cpSync`/`cleanupSkills` + 去 `allowedTools:['Skill']`、退役两侧内联教条兜底改 fail-loud、lore 新增 `dicelore-build-core`）；设计已沉 [后端双路径架构 §8/D3](../04-子系统设计/后端双路径架构.md)。**待测试**：§0 live smoke 待 `RUN_LIVE` 手动验证 + system_init 可观测 follow-up（[BE-diceGm-systeminit-event](#主题--可观测性--日志分级统一-)）；裁决文件暂留。 |
+| H-build-workspace | feat | **构建 agent 源摄入重设计：会话工作区 + agentic 文件构建，退役 BM25 检索**：现构建 agent（`harness/dicegm` SDK query，cwd=staged skill 临时目录，`allowedTools` 仅 `mcp__dicelore/Skill/Read`）**够不到源材料**——唯一入口是作者把原文当 `ingest({text})` 参数手喂，大源（兽人冒险 26 万字）经 LLM 中继又慢又贵；BM25 检索库（`backend/src/build/retrieval/*` jieba+chunk）是「agent 无文件系统」的产物，切块割裂、对 CC 架构相比 Grep/Read 无语义优势。改为：每 lore session 分配**持久工作区**（`<sessionsDir>/lore/sessions/<id>/workspace/`，源材料经新 REST 上传落此）+ agent 补 `Bash/Grep/Glob/Write/Edit`（cwd=工作区）+ **退役 `ingest`/`search`**（删 `build/retrieval/`）+ 重写 `dicelore-build-pack` skill 打法（`ingest→search` 换成 bash 清洗分块 + 文件导航提炼）+ build-mcp 加 `put_material` 上传工具。也是里程碑二 GM 质量 eval 闭环「喂真实案例建团本」的使能前置 | 用户 2026-07-01（brainstorm 定型） | ✓✓（手喂随源规模/团本数爆炸） | ✅→**待测试** **代码已交付（本轮）**：会话工作区（`ensureWorkspace`）+ 流式素材上传 `POST /lore-sessions/:id/materials` + build-mcp `put_material` + 退役 BM25 检索（删 `backend/src/build/retrieval/`、去 `ingest`/`search`）+ `dicelore-build-pack` skill 重写为 agentic 文件打法；设计已沉 [团本构建工具链 §3/D2](../04-子系统设计/团本构建工具链.md)。**待测试**：端到端 dogfood（烧 LLM，`put_material` 传源→驱动构建 agent bash 清洗提炼建团本→commit）手动门待验证；裁决文件暂留。Bash 安全欠账见 [SEC4](#主题--安全--多租户-)。 |
+| BE-checkout-head | fix | **`GET /catalog/:id/files?ref=` 默认 `ref="head"` 不被 core `checkout` 认**（P3，[N20-lore-eval-MCP](backlog-core.md) 浮现）：端点默认 `ref ?? "head"`，但 core `checkout` 只认 tag label 或 commitId、**不认 "head" 关键字**，故默认查 head 返回 `[]`（实际要从 list 取 head commitId 传入）。预先存在的端点行为 | 2026-06-26 N20 浮现 | ✗ | 🔧 ✅ **已达成（本轮，全离线测试绿）**：`api/lore.ts` 端点层在 `ref` 省略或 `="head"` 时先从 catalog list 取该 adventure 的 head commitId 再调 `checkout`（core `checkout` 契约不变）；端点测验 `ref=head` 返 head commit 文件（非 `[]`）。设计沉 [团本构建工具链 D3](../04-子系统设计/团本构建工具链.md)。 |
+| BE-lore-error-shape | fix | **`LoreSession.handleMessage` 吞 error，REST 调用方拿到与成功无异的 202**（2026-06-30 113-review 延后，跨 LoreSession↔lore.ts 协同）：`handleMessage` 的 `for await (ev of driver.runTurn)` 对 `turn_end` 与 `error` 一视同仁 `break`、然后无条件 `return { turnId }`——error 被静默丢弃；`lore.ts:74-75` 据此无条件返回 HTTP 202。构建 agent 中途 error（LLM 失败/工具异常，含 `FakeDiceGm` error 档）时，调用方（eval build-mcp / 前端构建台）收到的仍是 202+turnId、与正常 turn_end 不可区分，只能事后 GET `/lore-sessions/:id/draft` 猜。**需 LoreSession 接口与 lore.ts 端点协同改返回 shape 才能给正确 HTTP 状态**，故 Wave1 跨区延后 | `harness/src/loregm/LoreSession.ts:45` + `backend/src/api/lore.ts:74-75` | 2026-06-30 113-agent review（跨 harness/backend 协同） | ✓（构建失败静默，作者无感知） | ✅ **已达成（本轮，全离线测试绿）**：`LoreSession.handleMessage` 循环捕获 `ev.type==="error"`、返回 `{ turnId, error? }` 不吞；`runtime/session.ts` 新增 `TurnResult` 共享契约（dice 侧不产 error、向后兼容）；`api/lore.ts` messages body 带 `error?`、**HTTP 保持 202**（领域级 error 靠 body 标失败）；build-mcp `doSendToBuilder` 透传 error。设计沉 [团本构建工具链 D3](../04-子系统设计/团本构建工具链.md)。 |
+| BE-lore-test-gap | fix | **`LoreSession.test.ts` 缺教条/skill 投递 + error 收尾覆盖**（2026-06-30 113-review 延后）：现 2 例只验字段隔离 + `FakeDiceGm` narration→turn_end 跑通 + Draft 直驱可 commit；但 LoreSession 把 `buildPrompt`（deps→env→""）与 `skills` 传入 `agentFactory` 这条**关键投递路径无断言**（测试的 `agentFactory () => new FakeDiceGm()` 直接忽略 init、从不检查收到的 openingPrompt/skills），空 prompt 退化不会被任何测试捕获；error 档收尾也无用例 | `harness/src/loregm/LoreSession.test.ts:37` | 2026-06-30 113-agent review | ✓ | ✅ **已达成（本轮，全离线测试绿）**：`LoreSession.test.ts` 加投递断言（`agentFactory` 捕获 init、断言 `buildPrompt`→openingPrompt / `plugin` 透传）+ `FakeDiceGm` error 档收尾用例（断言返回 `{ turnId, error }`，配 BE-lore-error-shape 验 error 不被吞）。 |
+| RT-open-head-ref | fix | **`/sessions/:id/open {ref:"head"}` → 500**（同胞 [BE-checkout-head](#主题--团本构建组件56-) 仅修 lore files 端点、open 端点漏修）：`api/dice.ts:49-59` /open 传 `body.ref` 原样 → `importPack`（`catalog/import.ts:89-94`）→ core `checkout`（`catalog/catalog.ts:64-68`）把 `"head"` 当 commitId 查返 `[]` → 信任闸门 throw → 500；而 `api/lore.ts:87-96` 已解析 head→commitId。方案同 BE-checkout-head（端点层解析 head），可逆小修 | acceptance-loop 0706 RT-open-head-ref | ✗ | ✅ 已交付（2026-07-10·fix-open-head-ref：端点层解析 head→commitId）→ 沉 [团本构建工具链 D3](../04-子系统设计/团本构建工具链.md)。**caveat 见 W2-open-head-case**（仅小写 head） |
+| RT-FE11 | feat | **loregm 缺 Draft 期校验端点**：接口页 §9.4 仅规约 `POST /catalog/validate`（整包、吃自带 `files`，`api/lore.ts:100-103`）；活跃构建会话 Draft 只有只读 `GET /lore-sessions/:id/draft`（`lore.ts:216`），无「拿当前 Draft 直接校验返 error/warn」端点。`validatePack`（`build/pack/validate.ts:227`）是吃 `PackFile[]` 的纯函数可复用。待定：返形状用实测 `{ok,issues:[{level,file,msg,hint?}]}` vs 接口页写的 `[{level,path,msg}]`（文档漂移顺带修） | acceptance-loop 0706 RT-FE11 | ✗ | ✅ 已交付（2026-07-10·rollband §二：`POST /sessions/loregm/{id}/draft/validate` + core `validateDraft`·path 用 Draft 分域路径）→ 沉 [接口 D7](../04-子系统设计/玩家客户端-接口.md)。**caveat 见 W2-validatedraft-manifest** |
+| RT-FE12 | feat | **loregm 域 WS 事件未规约**（同胞 [G-后端-toolcall](#主题--组件7-后端play-会话生命周期) 补 WS 维度）：WS 10 类（`shared/stream.ts:16-31`）全 dicegm；`api/ws.ts:31-42` 只挂 `/sessions/:id/ws` 拒绝其它路径；制作页构建助手 REST-only（`features/build/api.ts:15`、`BuildPage.tsx:86-92`）无事件流 → toolcalls/Draft 变更前端拿不到、靠手刷。承重未定：loregm 开 WS vs SSE vs 轮询 + 事件类型 | acceptance-loop 0706 RT-FE12 | ✓（实时性需求随构建交互复杂度上升） | ✅ 已交付（2026-07-10·hidden-roll §二：复用 dicegm WS 骨架 `GET /sessions/loregm/{id}/ws`·拆 LoreStreamMessage 五类 turn_started/ended/toolcall/draft_delta/error·validate_result 推后 v2）→ 沉 [接口 D9](../04-子系统设计/玩家客户端-接口.md) + [团本构建工具链 D4](../04-子系统设计/团本构建工具链.md) |
+
+---
+
+## 主题 · 可观测性 · 日志分级统一 💡🔧
+
+> **跨层主题**：病根与统一方案在 [backlog-core 主题O · O1](backlog-core.md)；本页挂后端侧症状条目。
+>
+> **2026-06-25 复核·O1 描述显著漂移**：① core **已有成熟 logger**（`packages/logs/src/`：pino 分级文件 + `getLogger`/`initGlobalLogger`/`createFileLogger`，全仓 17+ 处用），**非「需抽同构 shared/logger」**——`packages/shared` 是 schema 层（rest/ws 契约），不该塞 logger；O1 原「抽 shared/logger 三层共用」是误判，实际是「`packages/logs` 已有、后端复用它、前端另需 browser sink」。② 后端 `DiceGm.ts` 已用 sessionLogger（per-session 分级文件 + usage 落 raw log），关键路径（GM 回合/usage）**已覆盖 ~80%**，非「全程零日志」。真缺口收窄为：HTTP 路由/WS 连接/会话启停/编排异常的**补点覆盖**（低优先），+ **前端零日志框架**（真缺口）。
+
+| # | 类型 | 问题 | 来源 | 恶化 | 下一步/依赖 |
+|---|------|------|------|:--:|--------|
+| BE-diceGm-systeminit-event | feat | **`DiceGm.runTurn` 不把 SDK system/init 暴露为可观测事件**：现回合头日志记 `plugin`/`settingSources`/`allowedTools`，但 SDK 返回的 system init 消息（实际加载的 skills 清单 / tools）未落成 `TurnEvent`，`skill-loading §0` live smoke 只能观察副作用、**无法真断言** skills 清单含 `dicelore-gm-core` + `Skill` 可调。补一条把 SDK system/init 暴露为 `TurnEvent` 的可观测事件（如 `{type:'system_init',skills,tools}`）+ logMsg 放开 init 行 skills/plugins 字段，使 §0 smoke 能真断言 | skill-loading §0 交付浮现 2026-07-02 | ✗ | 🔧 待裁：承重事件模型改动（`TurnEvent` union 是前后端消费核心契约），需评估对 mapCanonWrite / 前端消费的影响后再动。是 [H-skill-loading](#主题--团本构建组件56-) §0 完整断言的前置 |
+| O-后端 | feat | **后端运行时日志补点覆盖**（2026-06-25 复核降级）：`DiceGm` sessionLogger 已覆盖 GM 回合/usage（~80%）；剩 HTTP 路由/WS 连接/会话启停/编排异常**未走 logger**（部分裸 console 或无日志）。补这些点的 `error/warn/info/debug` 分级覆盖 | 用户 + 2026-06-25 复核 | ✓ | 复用 `packages/logs` `getLogger`/`createFileLogger`（**无需新建 shared/logger**）；分级约定与引擎侧对齐。降为 P2（关键路径已覆盖）。**2026-06-26 部分收尾**：`server.ts` 删重复裸 `console.log`（已有 `getLogger().info` 覆盖）；HTTP 路由/WS 连接/会话启停/编排异常的系统化补点仍欠，保留为后续 |
+
+---
+
+## 主题 · 成本可观测性（token / 金钱计量）💡
+
+> **跨层主题**：LLM 调用发生在 `backend/`（Agent SDK 驱动 `DiceGm` / `LoreSession`），但**全程零 token 采集**——`packages/shared` 无 usage schema、backend 不回传/落库 token 用量、无查询接口、前端无可视化。后果：每 turn / 每会话烧多少 token 无感知、按 MCP 工具或 agent 归因无数据、金钱消耗不可估、[SEC2](#) 计费/限流缺数据前置。与 [主题O](#主题--可观测性--日志分级统一) 同属可观测性但**不同物**——O 是日志流、本主题是**结构化指标 + 归因 + 前端可视化**，单列。
+>
+> **概念待澄清（💡 设计待定）**：「每个 mcp/skill 消耗多少 token」归因维度需先定——**skill 是 staged 教条（gm-core / dicelore-build-pack）非每次调用单位**、**MCP 工具执行本身不烧 token**，token 烧在 LLM 调用。可归因维度实为：per turn / per session / per agent（DiceGm vs 构建 GM）/ per 回合内工具调用链（粗粒度）。归因模型 + 定价换算（每 token 单价按模型）需把决策写进对应设计页「决策与权衡」节。
+>
+> **2026-06-25 全量体检实证**：**CROSS-TOKEN-RAW（P3）**——原描述"零采集"过强。实际 `DiceGm.ts` L61/87 已读 usage 字段并 `sessionLogger.info({ ..., usage: m.usage })` 落到 raw session log（`_session.jsonl` + `*.log`）；即"raw log 里有 usage、但未结构化采集落库、无归因、无查询接口"。DiceGm 的 raw 日志可观测性是项目最扎实的部分（自包含文件夹：`session.db` + `_session.jsonl` + `*.log`）。CO-后端-采集 落地时若不知 raw log 已有 usage，可能重复采。见 [体检汇总 P3-1](../../../audits/2026-06-25-全量体检/06-汇总-合并.md)。
+>
+> **路由**：采集（后端）进 [路线图第三批](路线图.md) 可观测性延伸（横切基建、越早越便宜，同 O 理由，不破坏冻结令）；前端可视化进第四批增强（依赖采集 + 归因决策，见设计页决策节）。是 [SEC2](#) 计费/限流的数据前置。
+
+| # | 类型 | 问题 | 来源 | 恶化 | 下一步/依赖 |
+|---|------|------|------|:--:|--------|
+| CO-后端-采集 | feat | **token 用量结构化采集缺失**：raw session log 已记 usage（`DiceGm.ts:87` 落 `sessionLogger.info`），但**未结构化采集落库**、不按 turn/session/agent 归因、`shared` 无 usage schema、无查询接口 | 用户 2026-06-25 + 2026-06-25 全量体检（CROSS-TOKEN-RAW 修正描述） | ✓ | 💡 先把归因维度决策写进对应设计页「决策与权衡」节（per turn / per agent / per 工具调用链；skill 非调用单位需澄清）→ 从 raw log 抽 usage → 结构化 schema → 归因落库（与 [O1](backlog-core.md) logger 同期接、共用 sessionId/turnId 上下文）；eval 报告加 raw 日志路径指回（`reports/` 模板加 `raw_log: <session_dir>` 字段）；是 [SEC2](#) 计费/限流的数据前置 |
+| CO-后端-接口 | feat | **token 用量查询接口缺失**：无 `GET /sessions/:id/usage`（per-turn / per-session / 按维度聚合）供前端消费 | 用户 2026-06-25 | ✗ | 依赖 CO-后端-采集落地；接口形态随归因决策定（见设计页决策节） |
+
+---
+
+## 主题 · 回合级事务 / 并发 / 恢复（体检新增）💡🔧
+
+> **2026-06-25 全量体检实证**（[findings](../../../audits/2026-06-25-全量体检/findings.yaml)）：后端运行时健壮性被体检多条命中，属"脱困不恢复 + 路径不对称"系统性 gap（见 [体检汇总 §共性病根 6](../../../audits/2026-06-25-全量体检/06-汇总-合并.md)）。**随规模恶化**（eval 多会话/并发/远程部署场景放大），挂第三批横切基建同期或第二批 dogfooding 顺手带。
+
+| # | 类型 | 问题 | 来源 | 恶化 | 下一步/依赖 |
+|---|------|------|------|:--:|--------|
+| RT-1 | feat | **GM 超时兜底是"脱困不恢复"**（CROSS-TIMEOUT，P1）：`DiceGm.ts` L123-125 3min 超时触发 `controller.abort()`，catch 里 yield error 后回合结束；但超时时 GM 可能已调若干工具（sheet_update/narrate 已落 DB）、半条叙述已流给前端——abort 只停了 SDK query，**已落库的规范态变更不回滚、已发的 narration_commit 不撤回**；`turnLoop.ts` L33 收到 errored=true 直接 return 不跑 turnEnd（不物化 choice、不 L3 审计、不 checkpoint）——回合停在"GM 跑了一半被杀"的中间态；PlayPage L343 generating 期间无取消按钮、无进度提示、无"已等 X 秒" | 2026-06-25 全量体检 | ✓✓（随 eval 多会话/远程部署越痛） | 🔧 ① 短期：超时 error 必须显示给玩家（修 [backlog-前端 CROSS-ERR](backlog-前端.md) catch 吞没），并给"重试/跳过"选项；generating 态加"已等 Xs"计时器 + 超阈值显式"GM 似乎卡住了"按钮；② 中期：回合级事务——DiceGm runTurn 开始前记 `turn_start_seq = MAX(seq)`，超时/error 时 `DELETE FROM log WHERE seq > turn_start_seq` + 回滚 state 变更（需 core 提供回合级回滚原语，与 [backlog-core SNAP-1](backlog-core.md) 同根）；③ **长期 restore 方案 v2，依赖快照接线**（[SNAP-1](backlog-core.md) v1 降预期只做自动持久化、手动回滚 v2）——turnEnd 调 `checkpoint()`，超时后 restore 到本回合起点；④ eval 场景超时回合标记"无效"不计入 assertions；⑤ timeoutMs 默认值按玩家场景调小（eval 可 env 覆盖到 3min，玩家默认 60-90s） |
+| RT-2 | feat | **同一会话并发 handleMessage 无互斥**（BE-002，P1） | 2026-06-25 全量体检 | ✓✓ | ✅ **已做（2026-06-25）**：`DiceSession` 加 `private inflight` 标记 + `runExclusive()` 串行化 `handleMessage`/`handleChoice`/`start`——并发触发抛 `TurnInProgressError`（拒绝、不双开回合，防 GM 上下文+DB 竞态），`finally` 释放（回合内 errored 也不卡死后续）；`api/dice.ts` 三入口 catch 映射 **409 `turn_in_progress`**（非静默排队，前端显式处理）。+4 并发互斥单测。**采「拒绝」非「排队」**：单人场景并发多为双击/重发/WS重连+REST 的重复触发，拒绝比排队更合语义（不产生多余回合）。WS 重连 restage/replay 走只读路径、不经此锁。 |
+| RT-3 | fix | **rollGate 内存态重启死锁**（CROSS-GATE，P2）：`rollGate.ts` L37 `private waiters = new Map` 内存态，后端进程重启 waiters 全丢；`recovery.ts` L17 restagePendingRolls 会重弹 roll_staged（DB 有 pending_roll row status=awaiting），但 resolveRoll 找新空 waiters Map 返回 false → POST /roll 返回 409 no_pending_roll——玩家看到掷骰按钮但点击报"无待掷"；`dice.ts` L168-173 handleRoll fallback 路径未实现"waiters 空时重新驱动 GM"；与 [backlog-前端 CROSS-ERR](backlog-前端.md) 错误吞没叠加，roll 的 `.catch(()=>{})` 吞掉 409 玩家完全静默失败 | 2026-06-25 全量体检 | ✓（eval/联调高频重启场景放大） | ✅ 已达成（2026-06-26）：根因＝重启后 in-flight turn 续体丢失、`waiters` 内存态空、但 `pending_roll` 仍 awaiting → 点掷骰旧码返回 409 `no_pending_roll` 卡死。修：`rollGate.ts` `resolveRoll` 无 waiter 时查库，有 pending_roll 即 `commitPendingRoll`（幂等）+广播 `roll_committed`；`api/dice.ts` roll 端点 `getHost`→`getOrCreateHost`。+复现+幂等测试。 |
+| RT-4 | fix | **GET /sessions/:id 的 ended 硬编码不读 meta**（BE-007-fix，P1）：`dice.ts` L142-146 GET /sessions/:id 返回 `ended: false` 硬编码——不读 `session_meta.ended`，与 mapCanonWrite 已发的 game_end WS 消息矛盾。WS 通道告诉前端"终局了"，REST 通道说"没终局"——前端状态机无法正确切换终局画面（即便 WS game_end 消息触发了 setGameEnd，下次刷新 GET /sessions 又拉回 false） | 2026-06-25 全量体检 | ✗ | ✅ 已达成（2026-06-26）：`api/dice.ts` 两个 GET /sessions/:id 端点（`createApp` + `createLiveApp`）的 `ended` 从硬编码 false 改为读 `metaGet(db,"ended") !== undefined`——与 WS game_end 信号同源，修 REST/WS 终局态矛盾。+`server.test.ts` 单测 |
+| RT-5 | feat | **lore 路径零 WS 流接入**（BE-003，P0）：`LoreSession.ts` L33 持有 `WsHub`、L50 `streamDriverTurn` 会广播 turn_started/narration_commit/turn_ended；但 `api/lore.ts` 全文只有 REST 端点无 WS 升级路由；`ws.ts` L34 正则 `^\/sessions\/([^/]+)\/ws` 只匹配 dice 路径不匹配 lore 路径 `/lore-sessions/:id/ws`；`LoreSession.attachWs/detachWs`（L40-41）存在但无任何调用方——死代码。场景 C 团本构建：作者点"生成团本"后前端只能转圈等待，不知构建 agent 在干什么——构建过程完全黑盒；构建失败/超时前端拿到 202 后永远等不到 turn_ended | 2026-06-25 全量体检 | ✓（随构建能力扩展越痛） | ✅ 达成（2026-06-26 wave4）：选 v1 删死代码方案——`LoreSession` 删 `hub`/`attachWs`/`detachWs`（+`WsHub`/`streamDriverTurn`/`CLIENT_PROTOCOL` import），`handleMessage` 改 REST 语义（跑 driver turn 到 turn_end/error 即收尾返回 turnId、不广播）；grep 确认 lore API 无 WS 端点、`Session` 接口不要求这些方法、`streamDriverTurn`（dice 侧）不受影响。**lore 构建 v1 REST only、走轮询/等待（无 WS）**；WS 流式推 v2（v2 补端点时重建 attach/detach）。设计单源已标进 [04 后端双路径架构](../04-子系统设计/后端双路径架构.md)。 |
+| RT-6 | feat | **enrich 补全逻辑散落 DiceSession**（CROSS-ENRICH，P2）：`DiceSession.ts` L75-86 `enrich(evt)` 在 onCanonWrite 前补全——narrate 的 content 从 log 行按 evt.seq 取、game_end 的 reason+outcome 从 session_meta.ended 取；core 工具出参（CanonWriteEvent.output）不含展示所需内容（narrate 出参 `{event_id}`、game_end 出参 `{ended:true, event_id}` 均无 content/reason/outcome）；`mapCanonWrite` 名义是纯映射器实际依赖 enrich 先跑。缝 A 出参契约不自包含——消费方须反查 store；enrich 散落 DiceSession 换 host 要重写 | 2026-06-25 全量体检 | ✗ | 🔧 非阻塞，发版前 port 契约定型时一并收口（关联 [backlog-core 主题S · S2](backlog-core.md)）：① 优先方案：core 工具出参自包含展示信息（narrate 出参带 content、game_end 出参带 reason+outcome）免 enrich；② 或 enrich 逻辑收进 core `createMcpServer`（onCanonWrite 回调前补全），mapCanonWrite 保持纯映射、DiceSession 不再 enrich；③ 或显式标注"enrich 是 adapter 层职责"在 port 契约里明确归属 |
+| RT-7 | fix | **dice transcript 缺 `turn_end` 标记行 → rewindLast 对 dice 落空**（2026-07-02 transcript-datadir-buildeval 交付 TR3 冒泡）：`DiceGm.runTurn` 在 `yield {type:'turn_end'}` **之后**才调 `transcript.turnEnd()`，但 `streamTurn` 收到 turn_end 事件即 break → generator `.return()` 跳过 yield 之后代码 → `transcript.turnEnd()` **不可达**，dice transcript 里没有 `_:'turn_end'` 行。TR3 的 db 锚已改用 `transcript.head()`（末条 msg uuid，稳定树节点）绕开，`rewindTo(uuid)` 与 db 快照回退**正常**；但 `Rewind.rewindLast()`（回退到"上一回合末"）靠找 `_:'turn_end'` 行，会**落空**。**2026-07-06 dogfood 修正：此洞两侧都有**——lore 也用同一 `DiceGm` 适配器，其 `transcript.turnEnd()` 同样在 yield 后不可达，lore transcript 末行实测是 `msg` 非 `turn_end`（先前误记「lore 正常」）。 | 2026-07-02 交付 TR3（2026-07-06 dogfood 修正范围） | ✓（前端按回合末回退 UI 上线时才痛） | 🔧 把 `turn_end` 落 transcript 行的责任**上移到 `DiceSession`/`LoreSession`**（两侧都持 transcript 视图、在 turn_end 事件后仍执行），而非依赖适配器里 `.return()` 后不可达的代码。修完 `rewindLast` 两侧生效。非阻塞：核心 `rewindTo` 已可用。 |
+| RT-8 | feat | **lore Draft 按轮快照/回退未实现（lore-draft hook v1 no-op）**（2026-07-02 交付 TR4）：lore 会话已注册 `lore-draft` RollbackHook，但其 `rollbackTo` 仅 `getLogger().warn` + no-op——lore 的 in-memory `Draft`（组合根 `loreReg` 持有）**无 per-turn 快照**，`rewindTo` 能移 transcript HEAD 但还原不了 Draft 领域态。transcript 层回退对 lore 真生效（moveHead 领域无关），仅 Draft 领域态还原缺 | 2026-07-02 交付 TR4 | ✓（构建会话回退能力上线时才需要） | 💡 给 lore Draft 加按轮快照（回合末 capture Draft 结构化态）+ `rollbackTo` restore；可仿 dice 的 SnapshotParticipant/checkpoint 思路或 Draft 自身的轻量序列化。非阻塞 build-eval（eval 只读 jsonl 对话记录、不需 Draft 回退）。 |
+| RT-10 | fix | **turn 不设墙钟超时（仅连接级超时+SDK 默认重试）**（用户 2026-07-06 裁决；起因 build-eval dogfood：180s turn 超时对 218KB 大源太紧、误杀正常长 turn）。**✅ 已做（2026-07-06 本 session）**：删 DiceGm 的 `DICELORE_GM_TIMEOUT_MS`/AbortController setTimeout——turn 无限跑；唯一时间界=与模型连接（SDK 底层 Anthropic client per-request 600s 超时 + 连接错误 api_retry，**用 SDK 默认 maxRetries=2**，用户已明确放弃"设成 10"）。controller 保留作未来玩家主动取消入口、不再按时长 abort；catch 去 gm_timeout 分支、原样报错。harness 213 测绿、typecheck 绿。 | 2026-07-06 用户裁决 | ✓✓ | **剩余 follow-up（前端死码清理，非阻塞）**：DiceGm 不再 emit `gm_timeout`，前端 RT-1 的 `gm_timeout`→「重试/跳过」UX（PlayPage/useSession/i18n + 相关测试）成**永不触发的死码**——需重设计「turn 无超时下前端呈现（长 turn 进度 / 连接失败后 / 玩家主动取消复用 controller）」并清理。属承重+跨前后端，单独设计闭环。 |
+
+---
+
+## 主题 · 安全 / 多租户 💡
+
+> **空白区**：[里程碑二](里程碑.md) 承认"安全完全没考虑、多租户无概念"。Agent SDK headless host 把 GM 当库嵌进 Node 服务、玩家自由文本直接进 GM 上下文 → **prompt injection 面全开**；模型 key 持有 / 计费、SQLite 单文件多租户隔离、CC 子进程资源清理均空白。缝 B 设计预留了远程 / 多租户拓扑，但 `sessionId` 寻址之外无任何租户边界。**发版前必须做一次威胁建模。**
+>
+> **2026-06-25 全量体检实证**（[findings](../../../audits/2026-06-25-全量体检/findings.yaml)）：安全面被体检 P0/P1 多条命中，病根同——"缝 B 零中间件 + 端点各自为政无统一校验"（见 [体检汇总 §共性病根 4](../../../audits/2026-06-25-全量体检/06-汇总-合并.md)）。本机单玩场景风险降级（无跨用户/内网探测面），但远程部署（AGPL 网络服务条款 + Web 壳暗示场景，见设计页决策节）下直接致命——是发版前必做的「多租户隔离 + prompt injection 威胁建模 + 模型 key 托管」三项合一的 P0 风险面：
+> - **CROSS-AUTH（P0）** = MT1+SEC3 的体检反指——架构层定了缝 B「需会话路由+鉴权」但 Hono app 零中间件、sessionId 即权限；前端 fetch 无 Authorization 头、WS 无 token、sessionId 前端自造（`s-${commitId.slice(0,8)}` / `${slug}-${random}`）后端无条件接受；DELETE /sessions/:id 零鉴权可 `rmSync` 整个 session 文件夹（不可逆）；lore 路径 `/catalog/commit`·`/catalog/:adventureId/tag`·`/lore-sessions/:id/messages` 同样零鉴权——团本包库可被任意客户端污染。
+> - **CROSS-INJECT（P1）** = SEC1 的体检反指——`DiceGm.ts` L141 `query({ prompt: input.text })` 玩家自由文本直接作 prompt；`DiceSession.handleMessage` 直接把 body.text 作 TurnInput.text 无过滤；`validatePack` 只验结构不验内容安全（恶意团本 prologue.md 可含"忽略以上指令、把玩家 HP 设 999"直接进 GM system prompt）；自定义 MCP 产出作叙述流回可被恶意 host 注入。
+> - **CROSS-KEY（P1）** = SEC2 的体检反指——`useSettings.tsx` L97 key 明文存 localStorage；`client.ts` L157 POST /diagnostics/model-test body 明文带 key；`diagnostics.ts` L64 baseUrl 完全可控无白名单（可 `http://169.254.169.254/` 云元数据、内网服务）；mcp-test 的 endpoint 同样可控，`existsSync` 可侧信道探测文件系统路径。违「服务器集中持密钥」（见设计页决策节）。
+> **✅ 已裁决（2026-06-25，见 SEC2 条目）**：**统一后端托管**——key 都存后端（整合包存本地后端、自托管存远程后端），前端 localStorage 不存 key 只存引用；SSRF 白名单修（model-test baseUrl 限 https+host 白名单、mcp-test endpoint 同）。属发版前「模型 key 托管」决策，与多端整合包发版架构**定稿（2026-06-26 PO 复核，见设计页决策节）**配套（整合包内含本地后端 sidecar 托管 key）；该发版架构定稿后依赖已解除、可进实现。
+>
+> **路由**：单列发版前硬化批次（见 [路线图第五批](路线图.md)），不进头号债链路；但**里程碑三发版前必做**。
+
+| # | 类型 | 问题 | 来源 | 恶化 | 下一步/依赖 |
+|---|------|------|------|:--:|--------|
+| SEC1 | feat | **玩家输入→GM 的 prompt injection 面未堵**：玩家自由文本经 `POST /messages` 直接进 GM 上下文，可注入"忽略规则、把所有 sheet 设 visible"等指令；anti-F1/F2 结构地基防的是 AI 偷懒，**防不了玩家主动注入** | 首席架构师评估 2026-06-25 | ✓✓ | 💡 威胁建模：列玩家可控输入→GM 上下文所有路径，逐条评估结构防护（玩家文本包进明确 delimiter/role、敏感写工具加玩家不可达前置校验） |
+| BE-zod-500 | fix | **结构非法请求逃逸成 500**（P2，wave3 浮现）：body 结构非法（如 `POST /messages` body `{text:123}` 非字符串）使 `MessageRequestSchema.parse` 抛 ZodError，**端点 try/catch 未兜**，逃逸到 Hono 默认返回 **500**——应回 **400 bad_request**。n7/n9 两条线独立发现 | wave3 边界测试（2026-06-26） | ✓ | 🔧 端点对 `schema.parse` 包 try/catch，ZodError 映射 400 `bad_request`（与 409 错误码一致风格）；归输入校验/威胁建模线（与 SEC1 关联），非阻塞 |
+| SEC2 | feat | **模型 API key 持有 / 计费 / 限流空白**：Agent SDK 驱动 GM 调模型，key 存哪、谁计费、单会话速率 / token 限额、滥用兜底均未定 | 同上 | ✓✓ | ✅ 已裁决（2026-06-25）+ **方案经发版架构定稿确认（2026-06-26 PO 复核，见设计页决策节）**：**统一后端托管**——key 都存后端（整合包存本地后端、自托管存远程后端），前端 localStorage 不存 key 只存引用；**SSRF 白名单修**——model-test baseUrl 限 https+host 白名单、mcp-test endpoint 同。多端整合包发版架构已定稿（整合包内含本地后端 sidecar 托管 key），**依赖已解除、可进实现**。🔧 ① 后端加 key 托管端点（存/取/删，加密落库或 env）；② 前端 useSettings 改为只存 key 引用（key_id）不存明文，client.ts 调后端代发；③ `diagnostics.ts` L64 model-test baseUrl 加 https+host 白名单校验；④ mcp-test endpoint 同白名单；⑤ 基础限流（per-session rate limit / token quota）随采集（[CO-后端-采集](#)）落地 |
+| SEC3 | feat | **SQLite 单文件多租户隔离缺失**：每局一 `.db` 文件，多租户下"一个写挂影响谁"、跨租户文件越权访问、磁盘配额均未考虑 | 同上 | ✓✓ | 💡 依赖 MT1 多租户方案 |
+| MT1 | feat | **多租户概念缺失**：里程碑二"多租户概念还没有"；缝 B 仅 `sessionId` 寻址、无租户边界、无会话归属（`teamId?` 已埋点未用） | 里程碑二 + 评估 | ✓✓ | 💡 定租户模型 + 会话归属 + 资源隔离策略；与 SEC3 同根 |
+| SEC4 | feat | **构建 agent Bash 沙箱缺失**：[H-build-workspace](#主题--团本构建组件56-) 给构建 agent 开裸 `Bash`（cwd=工作区但可 `cd /` 满机器跑、继承后端进程权限）。本地单用户 eval 够用（H-build-workspace 明确接受此欠账），但远程/多租户部署前必须沙箱化 | 2026-07-01（H-build-workspace 裁决配套） | ✓✓ | 💡 **发版/多租户前必做**：PreToolUse hook 拦逃逸命令 / 容器隔离 / 受限 shell 三选一，把构建 agent Bash 关进工作区。与 [MT1](#)/[SEC3](#) 同「多租户前必决」桶 |
+
+---
+
+## 主题 · 发版形态 / 安装数据目录布局 💡
+
+> 里程碑三「可安装可用验证」的前置。发版**分发形态**已裁决（[玩家客户端 D1/D4](../04-子系统设计/玩家客户端.md)：双分发壳 Tauri 个人 / Web 企业 + 多端整合包 + 自托管 docker-compose，安卓/Win 优先；key 统一后端托管 SEC2）。**本主题补的是尚未落定的一层：程序与运行态数据的分处约定 + 数据目录 on-disk 形态**——即「装完 / 玩久了目录长什么样」。核心原则：代码（壳/镜像/源码，不可变、整体替换）与数据（累积、长期留）分处两地。
+
+| # | 类型 | 问题 | 来源 | 恶化 | 下一步/依赖 |
+|---|------|------|------|:--:|--------|
+| REL-datadir | feat | **数据目录布局规范**：单一数据根 `DICELORE_DATA_DIR`（`--data-dir` flag > env > OS app-data 默认，废 `DICELORE_SESSIONS_DIR`/`DICELORE_CATALOG`）+ on-disk 布局 `$ROOT/{config.toml, catalog.db, keys.db, sessions/<kind>/<id>, logs/}` + config.toml 结构化 `[env]` 节赋环境变量 + 程序↔数据分处。三发版形态各自数据根（Tauri app-data / server `--data-dir` / dev `.dicelore-eval`）。牵动组合根 `server.ts` 路径解析 + 会话路径单源 `sessionDir`。 | 用户 2026-07-02（分发模型追问，立为正式设计） | ✓✓（团本/会话/日志随使用无限长，无统一根则备份/迁移/重装易丢档、越用越乱） | ✅ **已归档（2026-07-02 交付 DD1–DD4 + 2026-07-06 手动门过：真跑 `install.sh`+`run.sh -f` 起真后端就绪、`/diagnostics` 报真 `$ROOT`）**：设计沉 [玩家客户端 D5](../04-子系统设计/玩家客户端.md)，裁决文件已删。是「可安装可用验证」前置、已就绪。 |
+
+---
+
+
+
+- **明骰/多人**：（多人论坛形态已弃 2026-06-25，此项保留仅作历史记录）多人「谁来点这一掷」；Web 多人鉴权/会话路由。来源：用户。
+- **团本构建台未来**：实时双向同步。来源：04 TODO 组件5/6。
+- **团本 tag 平台（托管 workshop/registry）**：给不会用 git 的作者一个托管发布/下载团本的平台（带前端）。**独立子系统**，与 [后端双路径架构](../04-子系统设计/后端双路径架构.md)（见设计页决策节）分开；架构只把 **export-to-git / import-from-git 能力做进存储边界**，tag 平台将来**复用**这个能力，不在本轮架构内做。来源：用户 2026-06-22。
+- **adapter 留下游**：玩家选择捕获（聊天/转轮/投票）；语义自查轻推（无独立裁判 subagent）。来源：04 TODO adapter。**2026-06-25 体检实证（PROD-008）**：与 [backlog-core 主题S · S2](backlog-core.md) port 契约同源——S2 port 契约落地后本项范围会被吸收/收窄。
+- **出图 subagent 编排** ⟶ **里程碑四**：默认一个出图 subagent，GM 自然语言驱动它生成图片、回传前端对话框展示。MCP 工具本体见 [backlog-core 未来池](backlog-core.md)、前端展示见 [backlog-前端 未来池](backlog-前端.md)。来源：用户 2026-06-29。
+- **多 agent 扮演单个 NPC 与玩家对话（接口）** 🤔 **完全存疑·未裁决**：用户设想「后端开接口，让 agent 扮演 NPC 表里的某人——特殊提示词注入 + 从 NPC 表拉取所扮演 NPC、与玩家对话」（多 agent 底层=多提示词，非多 agent 路由）。**用户自己倾向不做**——觉得「main agent 操控 subagent 临时扮演、说完即弃」就够（即上面"超开放富 UI"里大臣聊天的实现路），不必为 NPC 常驻专开接口/路由。关联既有定论「多智能体编排 v1 不实现」（[backlog-core TB-4](backlog-core.md) / 见设计页决策节）+ NPC 一等抽象已落（A1）。**现在不决**，等"超开放富 UI"（[backlog-前端](backlog-前端.md)）设计时一并想。来源：用户 2026-06-29。
+
+---
+
+## Wave2 交付 fast-follow caveat（2026-07-10 acceptance-loop-0706 后端波·对抗测试发现·非阻断）
+
+> 均为已交付节点的边界/健壮性 caveat（不违裁决验收口径，故对应节点判 pass 合入），随相关面下次触及时收口。
+
+| # | 类型 | 问题 | 来源 | 下一步 |
+|---|------|------|------|--------|
+| W2-recall-escape | fix | `recall(query)` 未经 `escapeLike` 转义，LIKE 元字符 `%`/`_` 被当通配符过匹配（`recall('%')` 召回全部日志）。`store/fts.ts` 已有 `escapeLike` 可复用 | aprime-memory-tools 对抗测试 | recall SQL 复用 escapeLike |
+| W2-spoiler-limit0 | fix | `GET /presentation?includeHidden=true&limit=0` 因 `Number('0')\|\|undefined===undefined` 短路丢弃 LIMIT、返整张隐藏 sheet（无剧透泄漏，仅关闭档可达） | spoiler-backend 对抗测试 | 改 `Number.isFinite` 判而非 falsy 短路 |
+| W2-open-head-case | fix | `/sessions/dicegm` version 豁免仅小写 `head`，大写 `HEAD`（git 惯例）仍透传 checkout→空→500；伪版本(不存在 commitId/tag)同样 500 | fix-open-head-ref 对抗测试 | head 豁免大小写不敏感 + 端点层把 checkout 空/校验失败转 4xx unknown_version |
+| W2-validatedraft-manifest | fix | `validateDraft` 复用 `validatePack` 但 `Draft.toPackFiles` 产 `manifest.md`（非 `manifest.yaml`），validatePack Rule 1-4 只认 manifest.yaml → Draft 期 validate 对 manifest 级问题(缺 id/name)全盲、要到 commit 才暴露 | loregm-validate 对抗测试 | validateDraft 额外校 manifest.md 的 id/name，或统一 manifest 文件名 |
+| W2-keys-master-503 | fix | keys 托管坏 master（解密失败/master key 损坏）时端点返 **500**，应返 **503**（服务暂不可用·可重试语义）——属 [SEC2](#) key 托管域 | curl track（71/0/1 的 1 skip） | keys 坏 master 映射 503（区分 5xx：500=代码 bug / 503=依赖不可用） |
+| W2-loregm-lastaction | fix | loregm SessionSummary 的 `lastaction`/`lastReply` 后端未回填（恒空）→ 制作页 bay session popover 该列显空（前端 [FE-w34-build-lastaction](backlog-前端.md) 同根）。session-surface-flatten §六 定义了字段但 loregm 侧未填 | curl/playwright track | loregm handleMessage 后回填 lastaction（最新动作）/lastReply（最新回复）到 meta |
