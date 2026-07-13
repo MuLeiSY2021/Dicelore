@@ -13,7 +13,7 @@
 .logo-wm .dot { color: var(--vermillion); }
 
 /* ── 全局底部 app-bay 导航(仿 mac 聚焦出现) ──
-   忠实还原 docs/tdd/acceptance-loop-2026-07-06/frontend/{play,build}.html 的 .bay 结构。 */
+   忠实还原 docs/dev/tdd/acceptance-loop-2026-07-06/frontend/{play,build}.html 的 .bay 结构。 */
 .bay-wrap { position: fixed; left: 0; right: 0; bottom: 0; height: 18px; z-index: 39; }
 .bay { position: fixed; left: 50%; bottom: 10px; transform: translateX(-50%) translateY(10px); display: flex; align-items: center; gap: 7px; padding: 7px 12px; background: var(--surface); border: 1px solid var(--line2); border-radius: 13px; box-shadow: 0 12px 36px #000b; opacity: 0; pointer-events: none; transition: opacity .18s ease, transform .18s ease; z-index: 40; }
 .bay-wrap:hover ~ .bay, .bay:hover, .bay.show { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0); }

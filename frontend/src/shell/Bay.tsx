@@ -14,7 +14,7 @@ import { useI18n } from "@/shared/i18n/index.js";
 import { useHealth } from "@/shell/useHealth.js";
 
 // 全局底部 app-bay（仿 mac 聚焦出现）：nav-tabs 五块导航 + collapse/expand + nav-status 运行态。
-// 期望态权威来源：docs/tdd/acceptance-loop-2026-07-06/frontend/{play,build}.html 的 .bay 结构。
+// 期望态权威来源：docs/dev/tdd/acceptance-loop-2026-07-06/frontend/{play,build}.html 的 .bay 结构。
 // 跨页行为：跑团页默认收起(body.bay-nav-collapsed)、其他页展开；主题/语言已收进配置页。
 // 页面专属 bay 按钮（play 的 session/chara/… · build 的 session/usage）由各页经 children 注入（属 W4）。
 

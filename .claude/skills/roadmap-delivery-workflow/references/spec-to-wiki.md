@@ -10,7 +10,7 @@
    - **概念 / 架构** → `docs/wiki/02-领域模型/` · `03-架构/`。
    - **达成的大节点** → 提示用户记入 `docs/dev/plan/milestones.md`（人工维护，AI 不自行改）。
 2. **沉淀**：按单向推导（下游只引上游）、单源（一事一处权威）写进 wiki；别在多处复制。
-3. **关账**：对应 backlog 条目标 `→ADR-00xx` 或删；删对应 `docs/todo/`。
+3. **关账**：对应 backlog 条目标 `→ADR-00xx` 或删；删对应 `docs/dev/todo/`。
 4. **清草稿（铁律）**：**必须先确认知识已沉淀进 wiki（步骤 2）才能删** superpowers spec/plan——沉淀在前、删除在后。
 5. **收尾：提交 + 合并 main（不 push）**：落盘即闭环——开分支提交（`docs(wiki): ...` scoped 前缀）、切 main `git merge --ff-only <分支>`、删分支。**不问用户、不 push**；git 命令一律 `--no-pager`。
 

@@ -1,5 +1,5 @@
 /* Copyright (C) 2026 MuLeiSY2021 — AGPL-3.0-or-later. See <https://www.gnu.org/licenses/>. */
-/* 团本目录页(B3) 专属样式。忠实移植原型 docs/tdd/acceptance-loop-2026-07-06/frontend/catalog.html
+/* 团本目录页(B3) 专属样式。忠实移植原型 docs/dev/tdd/acceptance-loop-2026-07-06/frontend/catalog.html
    的 <style>(.tbar/.grid/.pack/.metatags/.empty/.vlist/.vopt) + 其依赖的共享片段
    (.btn/.modal/.imp-*/.skeleton/toast，取自原型 styles.css)。全部作用域到 .catalog 根，
    避免与 shell.css / build.css 的全局同名类相互污染。tokens 取自 tokens.css。 */
