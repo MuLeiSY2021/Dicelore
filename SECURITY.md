@@ -37,4 +37,4 @@ Dicelore 把玩家自由文本喂给 LLM 驱动的 GM，并允许配置外部模
 - **密钥托管**：模型 API key 的存储与代发。
 - **多租户隔离**：远程部署下的会话 / 资源隔离。
 
-这些面的设计与进展见 [`docs/wiki/设计/05-现状与计划/backlog-后端.md`](docs/wiki/设计/05-现状与计划/backlog-后端.md) 的安全主题。
+这些面的设计与进展见 [`docs/dev/plan/backlog-backend.md`](docs/dev/plan/backlog-backend.md) 的安全主题。

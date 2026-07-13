@@ -59,7 +59,7 @@ Dicelore is dedicated to serving players who want to play text-adventure games a
 
 There are two player entry points planned for v1 — pick whichever fits you:
 
-- **Multi-platform bundle** (Android / Windows first; macOS, Linux, and iOS to follow): a single download containing the client UI plus a local backend sidecar. Just fill in your **API key + base URL** and play — no command line, no separate server to run. *(In development — see [Milestones](docs/wiki/设计/05-现状与计划/里程碑.md) for progress.)*
+- **Multi-platform bundle** (Android / Windows first; macOS, Linux, and iOS to follow): a single download containing the client UI plus a local backend sidecar. Just fill in your **API key + base URL** and play — no command line, no separate server to run. *(In development — see [Milestones](docs/dev/plan/milestones.md) for progress.)*
 - **Self-hosted backend + browser**: run the `backend` yourself via docker-compose (good for remote / multi-tenant hosting), then play through the web client in your browser. Fill in your **API key + base URL** the same way. *(Step-by-step in the [Player Guide](docs/wiki/指南/玩家指南.md).)*
 
 The framework enforces dice rolls and option-giving, maintains character sheets and story state, and the AI narrates from the result — no soft landings.
