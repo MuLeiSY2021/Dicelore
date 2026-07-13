@@ -39,7 +39,7 @@ sessionTotal  = Σ 各轮 (inputTokens + outputTokens + cacheRead + cacheCreatio
 ```
 
 - 数据源：已落库的 `recordUsage`（无需新采集）+ `model windowSize` 表。
-- `perTurn` 对接 [`co-play`](co-play.md) 裁决（per-turn 内联·RT-FE16 前端欠账）。
+- `perTurn` 对接 co-play（per-turn 内联·RT-FE16 前端欠账·已交付·沉 [玩家客户端-视觉 §9.2](../../04-子系统设计/玩家客户端-视觉.md)）。
 
 ## 三、RT-FE14 foot 上下文占用%
 
@@ -91,7 +91,7 @@ export const CONTEXT_WINDOW: Record<string, number> = {
 
 ---
 
-## 七、RT-FE19：用量详情浮窗的 mcp / memory 分项（并入自 [rollband-narration-and-loregm-api](rollband-narration-and-loregm-api.md) §三）
+## 七、RT-FE19：用量详情浮窗的 mcp / memory 分项（原并入自 rollband-narration-and-loregm-api §三·该裁决已交付删除，本节为权威落点）
 
 > 来源：RT-FE19（`play-bay-popover-usage` 已画作期望态：按 MCP 工具消耗分项 + 记忆占用分项）。rollband §三 已拍死设计、本节为权威落点（rollband §三 仅留指针）。
 

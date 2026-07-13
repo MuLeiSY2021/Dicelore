@@ -51,7 +51,7 @@
 | FE-md-xss | fix | **Markdown XSS 当前安全须防回归**（FE-006，P2）：`Markdown.tsx` L15-31 inline() 手写正则不转义 HTML；但实测 React JSX 子节点默认转义机制保护了所有渲染路径——`<strong>{m[1]}</strong>` 中 m[1] 是字符串 React 转义；grep 全仓无 dangerouslySetInnerHTML/innerHTML/eval——XSS 面实际不存在。**初判可疑、实测安全**——记录以免后续误改 Markdown.tsx 引入 dangerouslySetInnerHTML | 2026-06-25 全量体检 | ✗ | ✅ 已达成（2026-06-26）：`play/Markdown.tsx` 加安全铁律注释（禁 dangerouslySetInnerHTML / 原始 HTML 注入），补 3 个 XSS 防回归单测（`<script>` / `<img onerror>` / 转义） |
 | FE-dead-code | fix | **死代码 RollCard/PresentationStage**（FE-009，P3）：`RollCard.tsx`/`PresentationStage.tsx` 全组件定义了独立掷骰卡/呈现台渲染，但 PlayPage 实际用内联的 .ranges/.mech div 与 .stage/.grid + Panel 组件；grep RollCard/PresentationStage 在 src/ 内除自身定义与测试外无其他引用——死代码；RollCard 的 d100 vs PlayPage 的 d10 不一致（死代码里的 bug 会误导维护者） | 2026-06-25 全量体检 | ✗ | ✅ 已达成（2026-06-26）：删死代码 `play/RollCard.tsx` + `play/PresentationStage.tsx`（及各自 `.test`/`.css`）——grep 验证全仓零外部引用后删 |
 | FE-drag-residue | fix | **PlayPage 拖拽 localStorage 切会话残留**（FE-011，P3） | 2026-06-25 全量体检 | ✗ | ✅ **已做（2026-06-25）**：① `sid` 变更重置 hidden/mini/pins/entries/logEntries/q/chosen UI 内存态（与 FE-ws-race 同源）；② `removeSession` 清该 sid 的 `dicelore.stage.order.${id}` localStorage（防泄漏）。③ order schema 校验未加（try-catch 已兜底，非必须）。web 48 测试绿。 |
-| FE-mcp-config | feat | **自定义 MCP 配置摆设不联通后端**（FE-012，P2）：`useSettings` 存的 mcpServers 列表仅本地 localStorage；grep mcpServers across client.ts 无任何 API 调用把 mcpServers 发给后端；后端 DiceGm/LoreGm 启动时用的 MCP 是后端构造的固定 dicelore 核心 MCP；testMcp 只测单个 endpoint 连通性不注册到 GM 运行时。玩家在配置页精心配的自定义 MCP 实际跑团时 GM 调不到——配置无效却无提示，玩家以为"配了就能用"；与自定义 MCP 设计叠加（见设计页决策节）——设计定了机制，配置到运行的链路断了 | 2026-06-25 全量体检 | ✗ | ✅ 已裁决（2026-06-25）：**v1 不接入留 v2**。🔧 v1 配置页标注"仅本地、不参与 GM 运行时"避免误导。**v2 规划四点**：① agent 经 skill 扫描 MCP 包安全性、不安全警告；② 服务端可配置是否接受自定义 MCP；③ 服务端可配置是否开 MCP 安全扫描（耗 token）；④ 后端可单独刷新 session 更新列表（turnover 后刷新） |
+| FE-mcp-config | feat | **自定义 MCP 配置摆设不联通后端**（FE-012，P2）：`useSettings` 存的 mcpServers 列表仅本地 localStorage；grep mcpServers across client.ts 无任何 API 调用把 mcpServers 发给后端；后端 DiceGm/LoreGm 启动时用的 MCP 是后端构造的固定 dicelore 核心 MCP；testMcp 只测单个 endpoint 连通性不注册到 GM 运行时。玩家在配置页精心配的自定义 MCP 实际跑团时 GM 调不到——配置无效却无提示，玩家以为"配了就能用"；与自定义 MCP 设计叠加（见设计页决策节）——设计定了机制，配置到运行的链路断了 | 2026-06-25 全量体检 | ✗ | ✅ **已交付（2026-07-10·custom-mcp-install·待测试手动门）**：**推翻原「v1 不接入留 v2」**——v1 接入运行时，配置页两按钮（添加 marketplace + 安装）+ 后端 npx -y 预拉 + config.toml 落配置 + 运行时 stdio 拉起客制 MCP（工具表合并·out-of-canon 徽）+ mcp-test 覆盖。设计沉 [玩家客户端-接口 D10](../04-子系统设计/玩家客户端-接口.md) + [玩家客户端-视觉 §6′](../04-子系统设计/玩家客户端-视觉.md)。**待测试手动门**：npx 真拉 + 真 stdio 安装（真网络/子进程）·裁决文件 [custom-mcp-install](裁决记录/custom-mcp-install.md) 保留。原 v2 规划四点（安全扫描/服务端开关/turnover 刷新）按需另立。 |
 | FE-long-ctx | feat | **长对话无前端护栏**（CROSS-LONG-CONTEXT，P3）：PlayPage L122 `draft.trim()` 空输入守门 OK；但无输入长度限制（draft 无 maxLength）；useSession.ts L45 `setNarration((n) => [...n, msg.text])` 无上限无限增长；PlayPage L313 全量 map 渲染所有段落；`harness/src/dicegm/DiceGm.ts` L94 model 默认 "glm-5.2" + systemPrompt + openingPrompt + skills 全塞 context，长对局下 context 会爆。长对局玩家体验渐进退化（GM 变笨/超时增多/前端卡顿），无护栏提示"建议开新局" | 2026-06-25 全量体检 | ✓（随对局长度越痛） | 🔧 ① narration 数组加上限（如保留最近 200 条，更早的折叠/懒加载）或引入虚拟列表（react-window）；② Markdown 组件 memo 化（React.memo + text prop 比较）避免重渲染未变段落；③ 输入框 maxLength + 字数提示；④ 长对局触发"建议存档开新局"轻推（与 [backlog-core SNAP-1](backlog-core.md) 回滚/FE-end-lock 重开联动） |
 | FE-e2e | feat | **e2e 玩家主线只覆盖开局段**（CROSS-E2E，P1）：`frontend/e2e/play.spec.ts` 只一个 test 验证到 FAKE_GM 流式开场叙事 + 输入框出现即止；不覆盖掷骰闭环/选项闭环/终局/错误恢复/断线重连/长对局；FAKE_GM 只回固定文本不触发掷骰/选择/终局；单测同样集中 happy path（client.test.ts 只测 happy path，useSession.test.tsx 只测 narration_commit/roll_staged/roll_committed 三种 WS 消息）。玩家主线中后段回归无保障——改后端逻辑或前端交互可能默默 break 而测试全绿 | 2026-06-25 全量体检 | ✓✓（随玩家主线增长回归风险线性升） | 🟡 **单测层达成（2026-06-26）**：`FakeDiceGm` 加教练档（`CanonAction[]`，向后兼容）可触发 roll/choice/game_end；`useSession.test.tsx`/`client.test.ts` 覆盖掷骰/选择/终局/错误恢复/断线重连五条玩家主线（web 64 测、backend 92 测）。`play.spec.ts` 五主线 Playwright spec 已写好但**标 fixme**——浏览器 e2e 跑通见下条 **FE-e2e-browser** follow-up。 |
 | FE-e2e-browser | feat | **浏览器 e2e 玩家主线未跑通**（FE-e2e follow-up，2026-06-26 wave2 浮现）：`frontend/e2e/play.spec.ts` 五主线 spec 已写、当前标 **fixme** 未在浏览器实跑 | 2026-06-26 wave2 | ✓ | 🔧 ① 本机 chromium 未装，需 `npx playwright install chromium`；② 浏览器跑 roll/choice/end 需把 `backend/src/server.ts` 的 FAKE_GM 工厂接成教练档（透传 db）——属 server/DiceSession 线、本次未做；③（可选）`e2e/` 纳入独立 tsconfig 让类型门禁覆盖 |
@@ -74,7 +74,22 @@
 
 | # | 类型 | 问题 | 来源 | 恶化 | 下一步/依赖 |
 |---|------|------|------|:--:|--------|
-| CO-前端-可视化 | feat | **token / 金钱消耗可视化**：新界面或跑团页内嵌——per-turn token 数 + 饼图按维度（agent / MCP 工具调用链 / turn）拆分 + 金钱换算（按模型单价）；现前端零成本感知 | 用户 2026-06-25 | ✗ | 依赖 [backlog-后端 CO-后端-采集/接口](backlog-后端.md) + 归因维度决策（见设计页决策节）；饼图维度随该决策定（"每 mcp/skill"概念澄清后方知可拆维度） |
+| CO-前端-可视化 | feat | **token / 金钱消耗可视化**：per-turn token 内联每一轮（随 session 流走·非单独查询面板） | 用户 2026-06-25 | ✗ | ✅ **已交付（2026-07-10·co-play + co-build）**：useSession 按回合分组 + `features/cost/pricing.ts` 估价，跑团页/构建页每轮块尾内联成本行。设计沉 [玩家客户端-视觉 §9.2](../04-子系统设计/玩家客户端-视觉.md)。usage 详情浮窗 mcp/memory 分项（RT-FE19）随 usage-and-context（待测试·手动门）。 |
+
+---
+
+## 主题 · Wave3/4 前端交付 caveat（2026-07-10 acceptance-loop-0706 前端波·playwright track 放宽项）💡🔧
+
+> 前端 IA 重构（frontend-ia-rebuild）+ feature 渲染 playwright 66/0 绿，但下列断言因**共享 FAKE 后端 / vite 代理 / 需真 GM token** 覆盖不到，playwright 放宽（部分退组件单测层），随相关面下次触及或真 GM dogfood 时收口。均非阻断（不违裁决验收）。
+
+| # | 类型 | 问题 | 下一步/依赖 |
+|---|------|------|--------|
+| FE-w34-gm-reply-channel | fix | `reply`（GM 对玩家说话）无非-narrate 文本通道——FAKE 教练档只产 narration_commit，`.reply` 元素渲染 playwright 验不到实数据 | 需真 GM 产 reply 类事件 / FAKE 教练档补 reply 脚本 |
+| FE-w34-tempstack-reveal | fix | `tempstack`（临时披露栈）渲染需 watcher reveal 事件驱动，FAKE 无 reveal 流 → 放宽 | 需 watcher/reveal 事件源（真 GM 或教练档补） |
+| FE-w34-turn-usage-realtoken | fix | `turn-usage` / `ctx-bar context-hint` 占用%真值需真 GM 回传 token（FAKE usage 恒空/零）→ playwright 只验元素结构不验真值 | 真 GM dogfood 验占用%/成本真值 |
+| FE-w34-dice-result-ws | fix | `play-dice-result` 依赖 `roll_committed` WS，在 vite 代理下 WS 不稳 → 退**组件单测**层覆盖，playwright 放宽 | e2e 直连后端（非 vite 代理）或保持组件单测层 |
+| FE-w34-build-emptystate | fix | build 空态断言因**共享后端**（多测共用一个后端实例）不可清 → 空态 playwright 放宽 | 每测隔离后端数据根 / 或组件单测层 |
+| FE-w34-build-lastaction | fix | build session `lastaction`/`lastReply` 后端未回填（SessionSummary 字段空）→ 前端 bay session popover 该列显空 | 后端 loregm 侧回填 lastaction/lastReply（对接 session-surface-flatten §六）→ [backlog-后端](backlog-后端.md) |
 
 ---
 
