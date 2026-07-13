@@ -11,8 +11,8 @@ description: 可用性验收循环（TDD+BDD 范例·前端驱动后端）——
 
 **核心反转（outside-in）**：先落可见的前端原型 → 据原型回写前端 overview → 前端预览收口 → 据前端已定的数据需求补齐后端接口协议。接口服务于前端，而非先定接口再硬塞前端。但**架构仍仲裁**——原型必须从状态机推导（不锚现有 React 代码），前端原型里冒出的、超出架构的数据需求 = finding（超前/新需求），不自动接受进接口。
 
-> 本 skill 只定「怎么做验收」，不解释项目。里程碑设想 → [里程碑.md](../../../docs/wiki/设计/05-现状与计划/里程碑.md)；接口/构建契约 → [玩家客户端-接口.md](../../../docs/wiki/设计/04-子系统设计/玩家客户端-接口.md) + [团本构建工具链.md](../../../docs/wiki/设计/04-子系统设计/团本构建工具链.md)；页面/视觉 → [玩家客户端-视觉.md](../../../docs/wiki/设计/04-子系统设计/玩家客户端-视觉.md)。前置起后端 → `eval-backend-setup`。
-> **范例实例**（照它的形制做后续轮）：[`docs/tdd/acceptance-loop-2026-07-06/`](../../../docs/tdd/acceptance-loop-2026-07-06/README.md)。范例的 `frontend/index.html` 是 harness 逐态预览入口（开浏览器即看实际页面）。
+> 本 skill 只定「怎么做验收」，不解释项目。里程碑设想 → [milestones.md](../../../docs/dev/plan/milestones.md)；接口/构建契约 → [玩家客户端-接口.md](../../../docs/wiki/设计/04-子系统设计/玩家客户端-接口.md) + [团本构建工具链.md](../../../docs/wiki/设计/04-子系统设计/团本构建工具链.md)；页面/视觉 → [玩家客户端-视觉.md](../../../docs/wiki/设计/04-子系统设计/玩家客户端-视觉.md)。前置起后端 → `eval-backend-setup`。
+> **范例实例**（照它的形制做后续轮）：[`docs/dev/tdd/acceptance-loop-2026-07-06/`](../../../docs/dev/tdd/acceptance-loop-2026-07-06/README.md)。范例的 `frontend/index.html` 是 harness 逐态预览入口（开浏览器即看实际页面）。
 
 ## 五条铁律（防作弊 = TDD 纪律，贯穿全程）
 
@@ -53,7 +53,7 @@ description: 可用性验收循环（TDD+BDD 范例·前端驱动后端）——
 
 ## 产物、循环、分档
 
-- **落盘**：一轮一目录 `docs/tdd/acceptance-loop-<YYYY-MM-DD>/`（状态机 + 前端原型 `frontend/`(含 `index.html` 逐态预览) + 前端 overview + 后端接口规约 + curl + playwright + findings 表 + transcript）。
-- **findings → backlog 三池**（core / 后端 / 前端），重排接 `idea-to-roadmap`；不可逆修复进 `裁决记录/` 待用户批准。**不改 `里程碑.md`**（人工维护）。
+- **落盘**：一轮一目录 `docs/dev/tdd/acceptance-loop-<YYYY-MM-DD>/`（状态机 + 前端原型 `frontend/`(含 `index.html` 逐态预览) + 前端 overview + 后端接口规约 + curl + playwright + findings 表 + transcript）。
+- **findings → backlog 三池**（core / 后端 / 前端），重排接 `idea-to-roadmap`；不可逆修复进 `decisions/` 待用户批准。**不改 `milestones.md`**（人工维护）。
 - **分档控成本**：每轮先 Tier 0（假 GM，确定性、便宜、必跑）过了，再 Tier 1（真 LLM，深跑一局、贵）当锚点。
 - **循环终点**：所有 curl/playwright 断言要么绿、要么已落 backlog 带理由，且期望集覆盖里程碑设想。
