@@ -93,13 +93,13 @@ docs/audits/YYYY-MM-DD-<主题>/
 合并规则：按 `title 相似度 + evidence 位置` 去重；多角色命中的同一条 → `confidence` 升高、`severity` 取最高、合并各方 `evidence`、`hit_by` 列出命中角色。
 
 ### 阶段 3·归类入池
-基于 `findings.yaml`，按 `layer` 字段落 backlog 三池 `docs/wiki/06-里程碑与问题/backlog-<层>.md`：
-- `前端`→backlog-前端、`后端`→backlog-后端、`core`→backlog-core
+基于 `findings.yaml`，按 `layer` 字段落 backlog 三池 `docs/dev/plan/backlog-<层>.md`：
+- `前端`→backlog-frontend、`后端`→backlog-backend、`core`→backlog-core
 - `跨层`/`文档`/`流程`/`推导断节` 类 → 归最相关池，条目标注「跨层/推导断节」
 - 与既有条目比对去重，别重开（复用 `idea-to-roadmap` 口径）
 
 ### 阶段 4·重排路线图
-**调用 `idea-to-roadmap` skill** 把新落账条目编进/重排 `路线图.md`：推导断节 + 随规模恶化的 = 最高优先级，进靠前批次。
+**调用 `idea-to-roadmap` skill** 把新落账条目编进/重排 `roadmap.md`：推导断节 + 随规模恶化的 = 最高优先级，进靠前批次。
 
 ### 阶段 5·收尾
 开分支提交（`git checkout -b docs/audit-<日期>`，message `docs(audit): ...`），切回 main `git merge --ff-only`、删分支。**不问"要提交吗"，不 push。** git 一律 `--no-pager`。评估文档目录随本次提交一起入库。
@@ -129,7 +129,7 @@ docs/audits/YYYY-MM-DD-<主题>/
 ```
 你是 Dicelore 项目的产品负责人（PO），对"做什么/不做什么/先做哪个"负责。你是评估推导链的链头，你的产出约束整条链。
 
-任务：读 docs/wiki/01-业务分析、02-领域模型、06-里程碑与问题/路线图.md（路线图 + backlog 三池 + 里程碑），产出【锚定单】+ 产品自扫漏洞，写到 {{AUDIT_DIR}}/00-锚定-产品.md，按角色文档模板。
+任务：读 docs/wiki/项目介绍、docs/wiki/开发指南/01-核心概念、docs/dev/plan/roadmap.md（路线图 + backlog 三池 + 里程碑），产出【锚定单】+ 产品自扫漏洞，写到 {{AUDIT_DIR}}/00-锚定-产品.md，按角色文档模板。
 
 锚定单必含：
 - 用户画像：有哪几类用户/玩家，各自要什么
@@ -270,7 +270,7 @@ docs/audits/YYYY-MM-DD-<主题>/
 - **推导断节必查**：每个角色文档必须有「推导断节」小节，不可只扫领域漏洞。
 - **末端接 `idea-to-roadmap`**：阶段 3-4 复用 idea-to-roadmap 的去重聚类口径和路线图编排规则，别另起一套。
 - **落盘即提交合并 main，不 push**：不问"要提交吗"；git 一律 `--no-pager`。评估文档目录随提交入库。
-- `路线图.md` AI 维护可重排；`里程碑.md` 人工维护、AI 不动。
+- `roadmap.md` AI 维护可重排；`milestones.md` 人工维护、AI 不动。
 - 派 subagent 用 Agent 工具；前端/后端在同一消息内并行派发以节省墙钟时间。
 - subagent 可写自己那份评估文档，但**不碰 git**（分支/提交/合并由主流程做）。
 - 并发会话时评估的写入操作应在 worktree 内隔离。
