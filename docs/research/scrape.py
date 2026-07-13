@@ -12,15 +12,14 @@ from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 
 BASE_DIR = Path(__file__).parent
-COOKIE_FILE = BASE_DIR / ".cookie"
 PROXY = "http://172.17.128.1:7897"
-DELAY = 2  # seconds between requests
-MAX_PAGES = 100
+DELAY = 2  # seconds between requests (QPS 控制 ≈ 0.5)
+MAX_PAGES = 99999  # 靠空页自然停止, 不设人为上限
 
 THREADS = {
-    "38582339": "从刚成年开始的兽人冒险！",
-    "67916530": "总之，来抽卡吧",
-    "54995176": "恶龙团",
+    "63166265": "赛博恐怖",        # 48112 回复 ≈ 2532 页, 体量最小先拉
+    "55362191": "机甲校园",        # 55931 回复 ≈ 2944 页
+    "55224255": "目标是正常毕业",   # 165868 回复 ≈ 8730 页, 最大最后拉
 }
 
 # Fields to extract (mapping from user's CSS class names to API JSON keys)
@@ -33,7 +32,9 @@ THREADS = {
 
 
 def load_cookie():
-    return COOKIE_FILE.read_text().strip()
+    """Cookie 走加密存储(.cookie.enc), 密码从环境变量 NMB_COOKIE_KEY 读。"""
+    from cookie_store import load_cookie as _load
+    return _load()
 
 
 def clean_content(raw_html: str) -> str:
@@ -87,7 +88,7 @@ def fetch_page(thread_id: str, page: int, cookie: str, retries: int = 3) -> dict
     import subprocess
     cmd = [
         "curl", "-s", "--compressed",
-        "--proxy", PROXY,
+        "--noproxy", "*",  # nmbxd 是国内站, 直连; 绕过环境变量里的代理(Clash 故障时挂)
         "-b", cookie,
         "--connect-timeout", "15",
         "--max-time", "30",
@@ -147,19 +148,26 @@ def scrape_thread(thread_id: str, thread_name: str, cookie: str):
         else:
             existing_pages = 0
 
-    print(f"开始抓取: {thread_name} (No.{thread_id}), 目标 {MAX_PAGES} 页")
+    print(f"开始抓取: {thread_name} (No.{thread_id}), 全量(空页停止)")
 
     with open(out_file, "a", encoding="utf-8") as f:
         if existing_pages == 0:
             f.write(f"# {thread_name}\n\n")
             f.write(f"> 串号: No.{thread_id}\n\n")
 
+        consec_fail = 0
         for page in range(max(1, existing_pages + 1), MAX_PAGES + 1):
-            print(f"  抓取第 {page}/{MAX_PAGES} 页...", end="", flush=True)
+            print(f"  抓取第 {page} 页...", end="", flush=True)
             data = fetch_page(thread_id, page, cookie)
             if data is None:
-                print(" 失败，停止")
-                break
+                consec_fail += 1
+                print(f" 失败(连续 {consec_fail})")
+                if consec_fail >= 5:
+                    print("  连续 5 次失败, 停止本串(可重跑续传)")
+                    break
+                time.sleep(DELAY)
+                continue
+            consec_fail = 0
 
             replies = data.get("Replies", [])
             # Filter Tips bot
