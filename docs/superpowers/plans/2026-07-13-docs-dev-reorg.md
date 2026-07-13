@@ -276,9 +276,9 @@ new_string:
 
 Run:
 ```bash
-grep -n "05-现状与计划\|backlog-前端\|backlog-后端\|里程碑\.md\|路线图\.md\|裁决记录/" docs/dev/plan/README.md
+grep -n "backlog-前端\|backlog-后端\|里程碑\.md\|路线图\.md\|裁决记录/" docs/dev/plan/README.md
 ```
-Expected: 无输出。
+Expected: 无输出。(注:不检查裸词"05-现状与计划"——Step 1 的 new_string 里故意保留了一句历史注解"原'05-现状与计划'…",这是合法的历史说明文字,不是残留旧路径引用;首版计划这里 grep 模式写太宽、把这句自己新加的合法文字也判成命中,已修正为只查真正的旧文件名/目录 token。)
 
 - [ ] **Step 3: Commit**
 
@@ -384,9 +384,9 @@ new_string:
 
 Run:
 ```bash
-grep -rn "docs/delivery/\|设计/05-现状与计划\|docs/wiki/设计/05" CLAUDE.md README.md README.zh-CN.md CONTRIBUTING.md SECURITY.md
+grep -rn "docs/delivery/\|docs/dev/plan 之外.*05-现状与计划" CLAUDE.md README.md README.zh-CN.md CONTRIBUTING.md SECURITY.md
 ```
-Expected: 无输出。
+Expected: 无输出。(注:不检查 `docs/wiki/设计/05` ——CLAUDE.md 文档分工表第 14-17 行 + 硬规矩段引用的是 wiki **内部**路径,按 Global Constraints 明确留给姊妹 wiki 计划处理,本任务只改了 `docs/delivery/`/`docs/todo/` 两行;首版计划这里 grep 模式把姊妹计划范围内的 token 也纳入检查,自相矛盾,已修正。)
 
 - [ ] **Step 9: Commit**
 
