@@ -177,3 +177,22 @@ describe("三态 + 新建会话（缺口 #2 / #12）", () => {
     }
   });
 });
+
+// 无活动会话整屏 / 编排中态：e2e 分别受「共享后端不可清空会话」「回合瞬时」限制难确定性到达 → 组件单测兜住渲染路径。
+describe("BuildPage 域机态渲染路径（组件单测兜底）", () => {
+  it("无活动会话：sessions=[] → build-noSession-hint + 新建入口", async () => {
+    listLoreSessions.mockResolvedValue([]);
+    render(<BuildPage />);
+    await waitFor(() => expect(screen.getByTestId("build-noSession-hint")).toBeInTheDocument());
+    expect(screen.getByTestId("build-session-new-main")).toBeInTheDocument();
+  });
+
+  it("编排中态：generating=true → build-generating + 流式工具 + 中止", async () => {
+    loreState.generating = true;
+    loreState.liveTools = [{ tool: "write_lore", args: {}, ok: true }];
+    render(<BuildPage />);
+    await waitFor(() => expect(screen.getByTestId("build-generating")).toBeInTheDocument());
+    expect(screen.getByTestId("build-generating-tools")).toBeInTheDocument();
+    expect(screen.getByTestId("build-generating-cancel")).toBeInTheDocument();
+  });
+});

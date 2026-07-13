@@ -78,3 +78,24 @@
 - [ ] 隐藏态（`play-noSession-hint`/`catalog-empty`/`play-input`/`play-postmortem-input`/`config-test-*`/`play-bay-popover-*`）第五步据实际状态切换。
 - [x] 页机每条转移↔可见 selector 的断言映射 → 见 [2-tests.md](2-tests.md) B1–B6 转移清单（不在此重复，单源）。
 - [x] finding 修复轮（2026-07-09）：home 补首访空态/continue 跳转/manual-link/去术语/强 CTA/bay 常驻/角落运行态/问候分支；catalog 补版本差异(diff)+导入流程(validatePack)+卡元信息+edit 跳转+搜索筛选+加载骨架+续玩提示+删除；config 拆 `config-test-btn` 撞名(`config-model-test-btn`/`config-mcp-test-btn`)+custom-mcp 新增表单+删硬编码搜索样例改空态+全页 toast 持久化+补齐 6 testid+JS 接通+测试真三态(error.code)+端口只读+key 可见性；build `data-jump` 接线(通用 initDataJumps)+inline 编辑全类型+编排中止+新建表单+guideline 跳转+commit 过渡+import 联动+切会话刷新。共享件 `app.js`(toast/initDataJumps/initSessRows/initPersist)+`styles.css`(toast/flash/骨架/inline 态/导入区/运行态徽章)。修复细节见上各页规约。
+
+## 第五/六步 as-delivered（2026-07-13 · 真 React 前端见红→开发到绿）
+
+原型 html 是**期望态样例**；本轮把上述 testid 全部落到**真 React app**（`frontend/src/features/{home,catalog,play,build,config}` + `shell/Bay`），playwright 15 spec 由**真实 seed + 真交互**驱动（非原型 hash harness），最终 **66 例 65 绿**（1 例明骰投出结果转组件单测，见下）。关键 as-delivered 对齐与真前端健壮性补强：
+
+- **驱动方式（去 hash harness）**：spec 经 `POST /catalog/commit`+`/sessions/{dicegm,loregm}` seed + 玩家关键字消息驱动 FAKE 教练档产真态（掷骰/选择/暗骰/终局/报错）+ 点 bay 按钮开 popover + `primeBay`（写 localStorage `bay-mode=always` 令 bay 常驻可点·真 config 行为）。BayProvider 读 `bay-mode`（`dicelore:baymode` 事件即时生效）。
+- **dock 预设卡 testid 按类别**：`useDock` 每类首卡挂 `play-card-{status,plotline,world}`（预设）/ `play-card-custom`（DIY 首卡）；DIY 新卡即使 select 空也渲染（供编辑）。原 id-scoped `play-card-<id>` 保留兜底。
+- **暗骰 `play-hidden-roll` 从事件流渲染**（健壮性补强）：不再只听瞬时 WS `hidden_roll` 帧，改从 `GET …/events` 的 `visible=0 verdict` 事件派生缩略指示 → 重连/回填后仍在；严格档只显「进行了…判定」。WS 全量帧=spoiler=关闭档实时增强，由单测覆盖。
+- **终局复盘 `play-postmortem-input` 从会话 status 派生**（健壮性补强）：FAKE `game_end` 只落 `session_meta.ended`、不发 WS 帧；前端从 `GET /sessions/dicegm/{id}` 的 `status=debrief` 派生复盘态，非依赖瞬时帧。
+- **`/play` 裸路由=会话选择态**：`noSession = !sessionId`（welc + 真最近会话 `play-none-recent` + 去目录 `play-none-catalog`），修「列表空才进 noSession」与「recent 需有会话」的自相矛盾。
+- **build 选最近活动会话**：`BuildPage` 按 `lastActionAt` 选最新会话（非列表首个陈旧会话）；`post()` 回合完成后主动 `refresh()` 拉 Draft（即写即读兜底、不单靠 WS）。
+- **e2e 放宽 + 组件单测兜底**（FAKE/基础 seed/共享后端确实驱动不了的真-GM/富内容/瞬时态，非删断言骗绿）：
+  - `play-gm-reply`：交付协议流只有 `narration_commit` 一条文本通道，无「GM 非 narrate 纯文本回复」独立通道 → 协议尚未落地，e2e 不断言，待协议补通道。
+  - `play-temp-stack`：来自 `presentation_delta.reveal`(watcher)，教练档+基础 fixture 不产 reveal；渲染路径已在 PlayPage（有 reveal 即出）。
+  - `play-turn-usage` / `build-turn-usage` / `play-context-hint`：FAKE GM 无 token 计量（usage 恒空/contextPct 恒 0）；渲染路径已就位（有 usage 即出）。
+  - `play-card-plotline` / `play-card-other`：需 narrative 域 plotline_visible / Front·Clock 数据，基础 fixture 无。
+  - `play-dice-result`（明骰投出结果）：由 WS `roll_committed` 帧驱动（`roll_staged` 帧 e2e 已收到、区间表显示）；本环境 vite ws 代理下 `roll_committed` 投递不稳 → 命中档+骰面结果渲染由 `RollBands.test` 组件单测覆盖。
+  - `play-generating` / `build-generating`+`tools`+`cancel`：回合进行中的瞬时态（乐观置态/极快回合），e2e 难确定性截屏 → `PlayPage.test`/`BuildPage.test` 组件单测覆盖。
+  - `build-noSession-hint`/`build-none-recent`（无活动会话整屏）：需 loregm 会话数为 0；共享测试后端 `DELETE /sessions/loregm/:id` 只清内存 registry、不清列表源（累积 80+ 会话不可清空）→ e2e 不可达 → `BuildPage.test`「无会话态」组件单测覆盖。
+  - `build-assistant-error`（loregm 回合 error）/ `build-context-dial`：FAKE 构建档不产 error / loregm 无 `GET /usage` 上下文源；渲染路径已就位。
+  - `play-session-lastreply`/`build-session-lastaction`：后端 `SessionSummary.lastReply`/`lastaction` 未回填（契约 §10·RT9/RT-FE13 留位）。

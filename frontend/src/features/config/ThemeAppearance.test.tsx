@@ -7,7 +7,7 @@
 // Software Foundation, either version 3 of the License, or (at your option)
 // any later version. See <https://www.gnu.org/licenses/>.
 
-import { render, screen, act, fireEvent } from "@testing-library/react";
+import { render, screen, act } from "@testing-library/react";
 import { ThemeProvider } from "@/shared/theme/ThemeProvider.js";
 import { ThemeAppearance } from "./ThemeAppearance.js";
 
@@ -15,15 +15,15 @@ function mount() {
   return render(<ThemeProvider><ThemeAppearance /></ThemeProvider>);
 }
 
-it("切换明暗写到 <html data-theme>", () => {
+it("点「亮」写到 <html data-theme>（明暗 seg 即时应用）", () => {
   mount();
   expect(document.documentElement.dataset.theme).toBe("dark");
-  act(() => { screen.getByRole("button", { name: "切换明暗" }).click(); });
+  act(() => { screen.getByRole("button", { name: "亮" }).click(); });
   expect(document.documentElement.dataset.theme).toBe("light");
 });
 
-it("选强调色写到 <html data-accent>", () => {
+it("点强调色色板写到 <html data-accent>", () => {
   mount();
-  fireEvent.change(screen.getByLabelText("强调色"), { target: { value: "crimson" } });
+  act(() => { screen.getByRole("button", { name: "绛" }).click(); });
   expect(document.documentElement.dataset.accent).toBe("crimson");
 });

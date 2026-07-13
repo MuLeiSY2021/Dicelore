@@ -1,0 +1,95 @@
+/* Copyright (C) 2026 MuLeiSY2021 — AGPL-3.0-or-later. See <https://www.gnu.org/licenses/>. */
+/* 团本目录页(B3) 专属样式。忠实移植原型 docs/tdd/acceptance-loop-2026-07-06/frontend/catalog.html
+   的 <style>(.tbar/.grid/.pack/.metatags/.empty/.vlist/.vopt) + 其依赖的共享片段
+   (.btn/.modal/.imp-*/.skeleton/toast，取自原型 styles.css)。全部作用域到 .catalog 根，
+   避免与 shell.css / build.css 的全局同名类相互污染。tokens 取自 tokens.css。 */
+
+/* ── 顶栏工具条 ── */
+.catalog .tbar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.catalog .tbar h3 { font-family: var(--serif); font-weight: 600; font-size: 18px; margin: 0; }
+.catalog .tbar .sp { flex: 1; }
+.catalog .tbar .search { display: flex; align-items: center; gap: 7px; padding: 7px 11px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+.catalog .tbar .search .lucide { width: 14px; height: 14px; color: var(--text3); }
+.catalog .tbar .search input { background: none; border: none; color: var(--text); font-size: 12.5px; outline: none; width: 180px; font-family: var(--sans); }
+.catalog .tbar .search input::placeholder { color: var(--text3); }
+.catalog .filter { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; color: var(--text2); font-size: 12px; padding: 7px 9px; cursor: pointer; font-family: var(--sans); }
+
+/* ── 基础按钮(原型 styles.css 全局 .btn，此处作用域到 .catalog) ── */
+.catalog .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 7px; border: 1px solid var(--line2); color: var(--text2); cursor: pointer; font-size: 12px; background: none; text-decoration: none; }
+.catalog .btn:hover { border-color: var(--text3); color: var(--text); }
+.catalog .btn.go { background: linear-gradient(160deg, var(--acc-h), var(--acc)); color: var(--acc-on); border: none; font-weight: 700; }
+.catalog .btn.go:hover { filter: brightness(1.06); }
+.catalog .btn:disabled { opacity: .6; cursor: default; }
+.catalog .btn .lucide { width: 14px; height: 14px; }
+
+/* ── 团本卡片网格 ── */
+.catalog .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.catalog .pack { display: flex; flex-direction: column; gap: 9px; padding: 15px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+.catalog .pack .ph { display: flex; align-items: center; gap: 10px; }
+.catalog .pack .av { width: 38px; height: 38px; border-radius: 8px; background: var(--surface2); display: flex; align-items: center; justify-content: center; color: var(--acc-soft); flex: none; }
+.catalog .pack .av .lucide { width: 18px; height: 18px; }
+.catalog .pack .nm { font-family: var(--serif); font-size: 15.5px; color: var(--text); font-weight: 600; }
+.catalog .pack .vtag { margin-left: auto; font-family: var(--mono); font-size: 9.5px; color: var(--text3); }
+.catalog .pack .desc { font-size: 12px; color: var(--text2); line-height: 1.55; }
+.catalog .metatags { display: flex; flex-wrap: wrap; gap: 5px; }
+.catalog .metatags .tag { font-family: var(--mono); font-size: 9.5px; color: var(--acc-soft); border: 1px solid var(--line2); padding: 1px 7px; border-radius: 8px; }
+.catalog .pack .foot { display: flex; align-items: center; gap: 9px; margin-top: 2px; }
+.catalog .pack .sp { flex: 1; }
+.catalog .pack .btn[data-testid="catalog-delete-btn"] { padding: 7px 9px; color: var(--text3); }
+.catalog .pack .btn[data-testid="catalog-delete-btn"]:hover { color: var(--err); border-color: var(--line2); }
+
+/* ── 空态引导 ── */
+.catalog .empty { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 60px 20px; color: var(--text2); text-align: center; }
+.catalog .empty .lucide { width: 38px; height: 38px; color: var(--text3); }
+.catalog .empty b { color: var(--text); }
+.catalog .empty a { color: var(--acc-soft); }
+.catalog .empty .e-btns { display: flex; gap: 9px; }
+
+/* ── 错误条 ── */
+.catalog .herror { color: var(--err); font-size: 12px; margin-bottom: 12px; }
+
+/* ── modal(原型 styles.css 全局 .modal，作用域到 .catalog；fixed 定位不受祖先影响) ── */
+.catalog .modal { position: fixed; inset: 0; background: #00000088; display: flex; align-items: center; justify-content: center; z-index: 50; }
+.catalog .modal-card { background: var(--surface); border: 1px solid var(--line2); border-radius: 12px; padding: 20px 22px; min-width: 340px; max-width: 460px; box-shadow: 0 20px 60px #0008; }
+.catalog .modal-card.wide { max-width: 560px; width: 92vw; }
+.catalog .modal-card h3 { font-family: var(--serif); font-weight: 600; font-size: 17px; margin: 0 0 4px; }
+.catalog .modal-card .msub { color: var(--text2); font-size: 12px; margin: 0 0 16px; }
+.catalog .modal-foot { display: flex; justify-content: flex-end; gap: 9px; margin-top: 18px; }
+
+/* 版本选择 modal */
+.catalog .vlist { display: flex; flex-direction: column; gap: 7px; }
+.catalog .vopt { display: flex; flex-direction: column; gap: 5px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; font-size: 12.5px; }
+.catalog .vopt.on { border-color: var(--acc); background: var(--surface2); }
+.catalog .vopt .vrow { display: flex; align-items: center; gap: 10px; }
+.catalog .vopt .vt { font-family: var(--mono); color: var(--text); font-weight: 600; }
+.catalog .vopt .vd { color: var(--text3); font-size: 11px; margin-left: auto; }
+.catalog .vopt .latest { color: var(--acc-soft); font-size: 10px; font-family: var(--mono); }
+.catalog .vopt .vchangelog { font-size: 11px; color: var(--text2); line-height: 1.5; padding-left: 2px; }
+
+/* ── 导入流程(A4 信任闸 · 移植原型 styles.css 的 .imp-*) ── */
+.catalog .imp-steps { display: flex; gap: 7px; align-items: center; font-family: var(--mono); font-size: 10.5px; color: var(--text3); margin: 12px 0 10px; }
+.catalog .imp-steps .step { padding: 3px 9px; border: 1px solid var(--line); border-radius: 10px; }
+.catalog .imp-steps .step.on { color: var(--acc-soft); border-color: var(--acc); }
+.catalog .imp-steps .step.done { color: var(--ok); border-color: var(--ok); }
+.catalog .imp-drop { border: 1px dashed var(--line2); border-radius: 10px; padding: 26px 18px; text-align: center; color: var(--text3); font-size: 12.5px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.catalog .imp-drop:hover { border-color: var(--acc); color: var(--text2); }
+.catalog .imp-drop .lucide { width: 26px; height: 26px; }
+.catalog .imp-drop .imp-sub { font-size: 10.5px; color: var(--text3); }
+.catalog .imp-file { margin: 10px 0; font-size: 11px; color: var(--text2); }
+.catalog .imp-log { font-family: var(--mono); font-size: 11px; color: var(--text2); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; max-height: 160px; overflow: auto; line-height: 1.6; white-space: pre-wrap; margin-top: 10px; }
+.catalog .imp-log .err { color: var(--err); }
+.catalog .imp-log .warn { color: var(--warn); }
+.catalog .imp-log .ok { color: var(--ok); }
+.catalog .imp-log .dim { color: var(--text3); }
+
+/* ── 加载骨架(移植原型 styles.css .skeleton) ── */
+.catalog .skeleton { background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 37%, var(--surface) 63%); background-size: 400% 100%; animation: catalog-sk 1.4s ease infinite; border-radius: 8px; }
+.catalog .sk-card { height: 96px; border: 1px solid var(--line); }
+@keyframes catalog-sk { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+
+/* ── toast 反馈(移植原型 styles.css toast) ── */
+.catalog .toast-wrap { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 90; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
+.catalog .toast { background: var(--surface); border: 1px solid var(--line2); border-left: 3px solid var(--acc-soft); border-radius: 8px; padding: 9px 16px; font-size: 12.5px; color: var(--text); box-shadow: 0 8px 30px #000a; max-width: 80vw; }
+.catalog .toast.ok { border-left-color: var(--ok); }
+.catalog .toast.err { border-left-color: var(--err); }
+.catalog .toast.warn { border-left-color: var(--warn); }

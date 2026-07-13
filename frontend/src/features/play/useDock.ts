@@ -30,25 +30,29 @@ function save(key: string, v: unknown): void {
 }
 
 // 从 presentation 派生预设 dock 卡（各卡模板 = 数据选择器 + markdown 体）。
+// 每类首卡挂**类别 testid**（play-card-{status,plotline,world}）供原型断言；其余同类卡回退 id-scoped
+// （避免同 testid 多元素 strict 冲突）。
 export function derivePresetCards(snap: PresentationSnapshot | null): DockCardDef[] {
   if (!snap) return [];
   const cards: DockCardDef[] = [];
+  const seen = new Set<string>();
+  const catTestid = (cat: string): string | undefined => { if (seen.has(cat)) return undefined; seen.add(cat); return `play-card-${cat}`; };
   for (const g of snap.sheets ?? []) {
     const lines = g.cells.map((c) => `- ${c.attr}: \${${c.attr}}`).join("\n");
     cards.push({
-      id: `status:${g.entity}`, title: `角色 · ${g.entity}`, Icon: User, diy: false,
+      id: `status:${g.entity}`, title: `角色 · ${g.entity}`, Icon: User, diy: false, testid: catTestid("status"),
       source: `select ${g.entity}\n\n## 角色 · ${g.entity}\n${lines}`,
     });
   }
   for (const p of snap.plotlines ?? []) {
     cards.push({
-      id: `plotline:${p.id}`, title: `剧情线 · ${p.title}`, Icon: GitBranch, diy: false,
+      id: `plotline:${p.id}`, title: `剧情线 · ${p.title}`, Icon: GitBranch, diy: false, testid: catTestid("plotline"),
       source: `from plotlines\nselect ${p.id}\n\n## 剧情线 · ${p.title}\n状态: ${p.status}${p.summary ? `\n${p.summary}` : ""}`,
     });
   }
   for (const l of snap.lore ?? []) {
     cards.push({
-      id: `world:${l.name}`, title: `世界书 · ${l.name}`, Icon: BookOpen, diy: false,
+      id: `world:${l.name}`, title: `世界书 · ${l.name}`, Icon: BookOpen, diy: false, testid: catTestid("world"),
       source: `from lore\nselect ${l.name}\n\n## ${l.name}\n${l.content}`,
     });
   }
@@ -71,7 +75,8 @@ export function useDock(sid: string, snap: PresentationSnapshot | null) {
   const restore = useCallback((id: string) => setArchived((prev) => { const n = new Set(prev); n.delete(id); save(archivedKey(sid), [...n]); return n; }), [sid]);
   const addDiy = useCallback(() => {
     const id = `diy:${Date.now()}`;
-    persistDiy([...diy, { id, title: "DIY · 新卡", source: "-- 自定义模板\nselect \n\n## 新卡\n- 属性: ${属性}" }]);
+    // 默认模板自足（不依赖 select 取数）→ 新卡立即可见可编辑（避免 select 空→md null→卡被隐藏）。
+    persistDiy([...diy, { id, title: "DIY · 新卡", source: "## 我的新卡\n- 备注: 点「编辑模板」自定义数据选择器" }]);
     return id;
   }, [diy, sid]); // eslint-disable-line react-hooks/exhaustive-deps
   const updateDiy = useCallback((id: string, source: string) => {
@@ -79,7 +84,8 @@ export function useDock(sid: string, snap: PresentationSnapshot | null) {
   }, [diy, sid]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const presets = derivePresetCards(snap);
-  const diyDefs: DockCardDef[] = diy.map((c) => ({ id: c.id, title: c.title, Icon: Wand2, diy: true, source: c.source }));
+  // DIY 卡首张挂 play-card-custom（原型 DIY 卡断言）；其余回退 id-scoped。
+  const diyDefs: DockCardDef[] = diy.map((c, i) => ({ id: c.id, title: c.title, Icon: Wand2, diy: true, source: c.source, testid: i === 0 ? "play-card-custom" : undefined }));
   const all = [...presets, ...diyDefs];
   const visible = all.filter((c) => !archived.has(c.id));
   const archivedCards = all.filter((c) => archived.has(c.id));

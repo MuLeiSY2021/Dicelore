@@ -2,7 +2,7 @@
 // 真前端现状：HomePage 无 home-guide/home-recent-session 等原型 testid → 首跑必红。
 // 路由：/ （router.tsx index → HomePage）。
 
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import { ROUTE, byTestid, expectTestidVisible } from "./helpers";
 
 test.describe("B2 主页", () => {
@@ -35,15 +35,13 @@ test.describe("B2 主页", () => {
     }
   });
 
-  test("首访无会话空态：empty + 烫金主按钮 start-cta → catalog", async ({ page }) => {
-    // 期望（#s=empty 原型态）：无会话首访走空态 home-empty-session（隐藏 resume + 首访欢迎 + home-start-cta → catalog）。
-    // 真 app 不认 #s=empty，但空态由「无会话」触发——新数据根无会话时 HomePage 应显空态。
+  test("空态强 CTA 恒显 + 最近会话摘要卡（真 app 无纯空屏·恒显选择态）", async ({ page }) => {
+    // 真 app（对齐 /play 会话选择态哲学）落地页恒显：最近一个会话摘要卡 + empty-first 强 CTA
+    // （有会话改文案不隐藏），故 recent 与 empty 同在——断言其一可见 + start-cta 恒显。
     await page.goto(ROUTE.home);
-    // 至少二选一：有会话显 recent-session，无会话显 empty-session。期望态两者其一可见。
     const recent = byTestid(page, "home-recent-session");
     const empty = byTestid(page, "home-empty-session");
-    await expect(recent.or(empty)).toBeVisible();
-    // 空态强 CTA。
-    await expectTestidVisible(page, "home-start-cta");
+    await expect(recent.or(empty).first()).toBeVisible();
+    await expectTestidVisible(page, "home-start-cta"); // 烫金主按钮恒显 → /adventures
   });
 });

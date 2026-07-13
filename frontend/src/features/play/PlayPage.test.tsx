@@ -57,6 +57,13 @@ it("桌面沙盘壳齐全：stagebar(model 切换) + stream + dock + ctx-bar + b
   expect(screen.getByText("夜色如墨。")).toBeInTheDocument();
 });
 
+// 生成中态为瞬时（乐观置态），e2e 难确定性截屏 → 组件单测兜住渲染路径。
+it("生成中态：generating=true → play-generating", () => {
+  mockSession({ generating: true, rounds: [] });
+  renderPlay();
+  expect(screen.getByTestId("play-generating")).toBeInTheDocument();
+});
+
 it("input 态：显示输入框，回车发送调 postMessage", () => {
   const postMessage = vi.fn().mockResolvedValue({ turnId: "t" });
   mockSession({ postMessage });
@@ -117,8 +124,8 @@ it("dock-card 渲染 sheet 派生卡（角色 · 张三）", () => {
   mockSession();
   renderPlay();
   const dock = screen.getByTestId("play-dock-right");
-  expect(within(dock).getByTestId("play-card-status:张三")).toBeInTheDocument();
-  expect(within(dock).getByTestId("play-card-status:张三")).toHaveTextContent("HP: 12");
+  expect(within(dock).getByTestId("play-card-status")).toBeInTheDocument();
+  expect(within(dock).getByTestId("play-card-status")).toHaveTextContent("HP: 12");
 });
 
 // DERIVE-1(反转)：剧情线/世界书预设卡数据在 plotlines/lore 视图集合、不在 sheets；
@@ -127,9 +134,9 @@ it("dock-card 渲染剧情线/世界书派生卡（from plotlines/lore，不再 
   mockSession();
   renderPlay();
   const dock = screen.getByTestId("play-dock-right");
-  expect(within(dock).getByTestId("play-card-plotline:夺图")).toBeInTheDocument();
-  expect(within(dock).getByTestId("play-card-world:黑风寨")).toBeInTheDocument();
-  expect(within(dock).getByTestId("play-card-world:黑风寨")).toHaveTextContent("依山临崖");
+  expect(within(dock).getByTestId("play-card-plotline")).toBeInTheDocument();
+  expect(within(dock).getByTestId("play-card-world")).toBeInTheDocument();
+  expect(within(dock).getByTestId("play-card-world")).toHaveTextContent("依山临崖");
 });
 
 it("model 切换：select 变更调 setModel（下回合生效）", () => {

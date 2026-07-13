@@ -1,0 +1,46 @@
+/* Copyright (C) 2026 MuLeiSY2021
+ *
+ * This file is part of Dicelore.
+ *
+ * Dicelore is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU Affero General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version. See <https://www.gnu.org/licenses/>.
+ *
+ * 配置页专属样式，端口自原型 config.html <style>。
+ * 布局/导航/字段/开关/徽标沿用 shell.css 的 .cfg 作用域共享类；
+ * 这里只补 shell.css 未覆盖的原型件：连接测试态 .tstate、MCP 空态 .mcp-empty、
+ * 模态 .modal/.modal-card/.modal-foot/.msub、模态内配置项表 .cfg-table、只读输入 .ro。
+ * 全部限定在 .cfg 下，避免与 build.css/play.css 的同名全局类互串。
+ */
+
+/* 只读真值输入（网络/数据子页 · 来自 health） */
+.cfg input.f.ro { color: var(--text3); border-style: dashed; }
+
+/* 连接测试三态胶囊（model / mcp 子页） */
+.cfg .tstate { font-family: var(--mono); font-size: 11px; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--line2); color: var(--text2); }
+.cfg .tstate.pending { color: var(--text2); }
+.cfg .tstate.ok { color: var(--ok); border-color: var(--ok); }
+.cfg .tstate.fail { color: var(--err); border-color: var(--err); }
+
+/* MCP 空态 */
+.cfg .mcp-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 30px 20px; text-align: center; color: var(--text3); font-size: 12px; border: 1px dashed var(--line); border-radius: 9px; }
+.cfg .mcp-empty .lucide { width: 26px; height: 26px; color: var(--text3); }
+.cfg .mcp-empty .sub { font-size: 11px; }
+
+/* 添加自定义 MCP 模态 */
+.cfg .modal { position: fixed; inset: 0; background: #00000088; display: flex; align-items: center; justify-content: center; z-index: 60; }
+.cfg .modal-card { background: var(--surface); border: 1px solid var(--line2); border-radius: 12px; padding: 18px 20px; min-width: 360px; box-shadow: 0 20px 60px #0008; max-height: 88vh; overflow: auto; }
+.cfg .modal-card.wide { max-width: 540px; width: 92vw; }
+.cfg .modal-card h3 { font-family: var(--serif); font-weight: 600; font-size: 17px; margin: 0 0 6px; color: var(--text); }
+.cfg .msub { color: var(--text2); font-size: 12px; line-height: 1.55; margin: 0 0 12px; }
+.cfg .modal-foot { display: flex; justify-content: flex-end; gap: 9px; margin-top: 14px; }
+
+/* 模态内配置项表（key/value + 删行）——限定在 .cfg-table 内，
+   覆盖 play.css 的全局 .cfg-row（去边框、行内布局）。 */
+.cfg .cfg-table { display: flex; flex-direction: column; gap: 6px; margin-bottom: 9px; }
+.cfg .cfg-table .cfg-row { display: flex; gap: 7px; align-items: center; padding: 0; border: none; }
+.cfg .cfg-table .cfg-row input.f { flex: 1; min-width: 0; }
+.cfg .cfg-del { color: var(--text3); cursor: pointer; background: none; border: none; display: flex; align-items: center; padding: 4px; }
+.cfg .cfg-del:hover { color: var(--err); }
+.cfg .cfg-del .lucide { width: 15px; height: 15px; }

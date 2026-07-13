@@ -29,6 +29,15 @@ export async function listSessions(): Promise<SessionSummary[]> {
   return ((await res.json()) as { sessions: SessionSummary[] }).sessions;
 }
 
+// 会话元信息(GET /sessions/dicegm/:id → {status:active|debrief, ended, title})。
+// 用于让「终局=复盘态」从会话状态派生（重连/回填后仍在），而非仅瞬时 WS game_end 帧。
+export interface SessionMeta { sessionId: string; kind: string; status: "active" | "debrief" | "archived"; ended: boolean; title: string }
+export async function getSessionMeta(sessionId: string): Promise<SessionMeta> {
+  const res = await fetch(`/sessions/dicegm/${encodeURIComponent(sessionId)}`);
+  if (!res.ok) throw new Error(`session meta 请求失败：${res.status}`);
+  return (await res.json()) as SessionMeta;
+}
+
 // 动作进：玩家自由文本输入(接口页 §2 POST /sessions/:id/messages)。
 export async function postMessage(sessionId: string, text: string): Promise<{ turnId: string }> {
   const res = await fetch(`/sessions/dicegm/${encodeURIComponent(sessionId)}/messages`, {
@@ -84,6 +93,15 @@ export async function postChoice(sessionId: string, eventId: number, optionIndex
   });
   if (!res.ok) throw await actionError(res, "提交选择");
   return (await res.json()) as { turnId: string };
+}
+
+// 事件回填(GET /sessions/:id/events)：默认全量含 visible=0（spoiler-tiering §一.2）。
+// 用于让暗骰(kind=verdict·visible=0)缩略指示从事件历史渲染、重连/回填后仍在（非仅瞬时 WS 帧）。
+export interface LogEvent { seq: number; kind: string; text?: string; data?: unknown; visible: number }
+export async function getEvents(sessionId: string, since = 0): Promise<LogEvent[]> {
+  const res = await fetch(`/sessions/dicegm/${encodeURIComponent(sessionId)}/events?since=${since}`);
+  if (!res.ok) throw new Error(`events 请求失败：${res.status}`);
+  return ((await res.json()) as { events: LogEvent[] }).events;
 }
 
 // 左活动轨自查源浏览(GET /sessions/:id/browse)。

@@ -105,8 +105,12 @@ export default function BuildPage() {
   useEffect(() => {
     listLoreSessions().then((s) => {
       setSessions(s);
-      const first = s.find((x) => x.status === "active") ?? s[0];
-      if (first) setActiveId(first.sessionId);
+      // 选**最近活动**的会话（lastActionAt 最大）——刚建/刚编辑的续上，而非列表首个陈旧会话。
+      const active = s.filter((x) => x.status === "active");
+      const pool = active.length > 0 ? active : s;
+      const newest = pool.reduce<LoreSessionSummary | undefined>(
+        (best, x) => (!best || (x.lastActionAt ?? 0) > (best.lastActionAt ?? 0) ? x : best), undefined);
+      if (newest) setActiveId(newest.sessionId);
       setLoaded(true);
     }).catch(() => { setSessions([]); setLoaded(true); });
   }, []);
@@ -134,6 +138,7 @@ export default function BuildPage() {
           role: "a", turnId: r.turnId, usage: r.usage, model,
           text: r.error ? t("bd.err.prefix") + r.error.message : summarizeTurn(),
         }]);
+        lore.refresh(); // 即写即读兜底：回合完成后主动重拉 Draft（不单靠 WS draft_delta，proxy 抖动也不丢）
       })
       .catch((e) => setTurnErr({ code: "send_failed", message: e instanceof Error ? e.message : String(e) }))
       .finally(() => setSending(false));
@@ -295,6 +300,9 @@ export default function BuildPage() {
                     <div className="gen-tools" data-testid="build-generating-tools">
                       {lore.liveTools.map((x, i) => <div className="gen-tool" key={i}>↳ {x.tool}</div>)}
                     </div>
+                    <button className="act gen-cancel" data-testid="build-generating-cancel" onClick={() => lore.clearError()}>
+                      <X className="lucide" />中止本轮
+                    </button>
                   </div>
                 </div>
               )}
@@ -576,19 +584,23 @@ function BayExtras({ t, bayPop, setBayPop, sessions, activeId, setActiveId, onNe
           <div className="pop-card">
             <div className="pop-head"><Coins className="lucide" />{t("bd.bay.usage.title")}<span className="sp" /><span className="x" role="button" tabIndex={0} onClick={() => setBayPop(null)}><X className="lucide" /></span></div>
             <div className="pop-body usage-detail">
+              <div className="ud-sec"><div className="ud-h">{t("bd.usage.session")} · {model || "—"}</div>
+                <div className="ud-row"><span>{t("bd.usage.total")}</span><span className="ud-v"><b>{formatTokens(sessionTok)}</b></span></div>
+                <div className="ud-row"><span>{t("bd.usage.price")}</span><span className="ud-v">≈{formatUsd(sessionCost)}</span></div>
+                <div className="ud-row"><span>上下文占用</span><span className="ud-v">
+                  <span className="ud-dial" data-testid="build-context-dial" title="loregm 无 /usage · v1 无上下文源">
+                    <svg viewBox="0 0 36 36" className="dial-svg"><circle className="dial-bg" cx="18" cy="18" r="15.9" /><circle className="dial-fg" cx="18" cy="18" r="15.9" style={{ strokeDasharray: "0 100" }} /></svg>
+                    <span className="dial-pct">—</span>
+                  </span>
+                </span></div>
+              </div>
               {usageTurns.length === 0 ? <div className="editor-empty">{t("bd.usage.empty")}</div> : (
-                <>
-                  <div className="ud-sec"><div className="ud-h">{t("bd.usage.session")} · {model || "—"}</div>
-                    <div className="ud-row"><span>{t("bd.usage.total")}</span><span className="ud-v"><b>{formatTokens(sessionTok)}</b></span></div>
-                    <div className="ud-row"><span>{t("bd.usage.price")}</span><span className="ud-v">≈{formatUsd(sessionCost)}</span></div>
-                  </div>
-                  <div className="ud-sec"><div className="ud-h">{t("bd.usage.perturn")}</div>
-                    {usageTurns.slice().reverse().map((m, i) => (
-                      <div className="ud-row" key={i}><span className="dim"><Wrench className="lucide" /> {m.turnId?.slice(0, 6) ?? "—"}</span>
-                        <span className="ud-v">↑{formatTokens(m.usage!.inputTokens)} ↓{formatTokens(m.usage!.outputTokens)} · {m.model || "—"}</span></div>
-                    ))}
-                  </div>
-                </>
+                <div className="ud-sec"><div className="ud-h">{t("bd.usage.perturn")}</div>
+                  {usageTurns.slice().reverse().map((m, i) => (
+                    <div className="ud-row" key={i}><span className="dim"><Wrench className="lucide" /> {m.turnId?.slice(0, 6) ?? "—"}</span>
+                      <span className="ud-v">↑{formatTokens(m.usage!.inputTokens)} ↓{formatTokens(m.usage!.outputTokens)} · {m.model || "—"}</span></div>
+                  ))}
+                </div>
               )}
             </div>
           </div>

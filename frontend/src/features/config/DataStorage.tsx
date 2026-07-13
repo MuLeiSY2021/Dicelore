@@ -7,36 +7,32 @@
 // Software Foundation, either version 3 of the License, or (at your option)
 // any later version. See <https://www.gnu.org/licenses/>.
 
-import { useEffect, useState } from "react";
 import { useT } from "@/shared/i18n/index.js";
 import { useHealth } from "@/shell/useHealth.js";
-import { listSessions } from "@/features/play/api.js";
 
-// 配置 → 数据与存储：展示后端真实会话目录 / FTS 模式 + 会话数统计。
+// 配置 → 数据与存储：展示后端真值（来自 health · 只读）。数据目录 = 每局一文件。
 export function DataStorage() {
   const t = useT();
   const { health, offline } = useHealth();
-  const [count, setCount] = useState<number | null>(null);
-  useEffect(() => {
-    let alive = true;
-    listSessions().then((s) => { if (alive) setCount(s.length); }).catch(() => { if (alive) setCount(null); });
-    return () => { alive = false; };
-  }, []);
+  const sessionsDir = offline ? "—" : health?.storage.sessionsDir ?? "…";
+  const dataDir = sessionsDir.replace(/\/sessions\/?$/, "") || sessionsDir;
+  const fts = offline ? "—" : health?.storage.ftsMode ?? "…";
   return (
     <>
       <div className="mhead"><h3>{t("cfg.data")}</h3></div>
-      <div className="section">
+      <div className="mdesc">展示后端真值（来自 health · 只读）。数据目录 = <b style={{ color: "var(--text)" }}>每局一文件</b>。</div>
+      <div className="section" data-testid="config-data-readonly">
         <div className="frow">
-          <span className="flabel">{t("cfg.data.dir")}</span>
-          <div className="fctrl"><span className="fval">{offline ? "—" : health?.storage.sessionsDir ?? "…"}</span><span className="fhint">DICELORE_DATA_DIR</span></div>
+          <span className="flabel">DICELORE_DATA_DIR</span>
+          <div className="fctrl"><input className="f mono ro" style={{ flex: 1 }} value={dataDir} readOnly /></div>
         </div>
         <div className="frow">
-          <span className="flabel">{t("cfg.data.fts")}</span>
-          <div className="fctrl"><span className="fval">{offline ? "—" : health?.storage.ftsMode ?? "…"}</span><span className="fhint">DICELORE_FTS_MODE</span></div>
+          <span className="flabel">sessionsDir</span>
+          <div className="fctrl"><input className="f mono ro" style={{ flex: 1 }} value={sessionsDir} readOnly /></div>
         </div>
         <div className="frow">
-          <span className="flabel">{t("cfg.data.count")}</span>
-          <div className="fctrl"><span className="fval">{count ?? "—"}</span></div>
+          <span className="flabel">DICELORE_FTS_MODE</span>
+          <div className="fctrl"><input className="f mono ro" value={fts} readOnly /></div>
         </div>
       </div>
     </>

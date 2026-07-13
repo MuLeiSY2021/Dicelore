@@ -41,6 +41,24 @@ export function Bay({ children }: { children?: ReactNode }) {
   // 跨页默认态：跑团页收起、其他页展开（每次切页重置，匹配原型 per-page 行为）。
   useEffect(() => { setCollapsed(isPlay); }, [isPlay]);
 
+  // 显隐模式（配置页 bay 行为写 localStorage bay-mode）：focus 聚焦出现 / always 常驻 / hidden 隐藏。
+  // 配置页改后派发 dicelore:baymode 立即生效；跨标签页走 storage 事件。
+  useEffect(() => {
+    const apply = () => {
+      const mode = (typeof localStorage !== "undefined" && localStorage.getItem("bay-mode")) || "focus";
+      document.body.classList.toggle("bay-always", mode === "always");
+      document.body.classList.toggle("bay-hidden", mode === "hidden");
+    };
+    apply();
+    window.addEventListener("dicelore:baymode", apply);
+    window.addEventListener("storage", apply);
+    return () => {
+      window.removeEventListener("dicelore:baymode", apply);
+      window.removeEventListener("storage", apply);
+      document.body.classList.remove("bay-always", "bay-hidden");
+    };
+  }, []);
+
   // body.bay-nav-collapsed 驱动 CSS（tabs 与 ≡导航 按钮互斥显隐 + 跑团页沉浸）。
   useEffect(() => {
     document.body.classList.toggle("bay-nav-collapsed", collapsed);

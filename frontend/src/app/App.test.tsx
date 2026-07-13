@@ -74,7 +74,7 @@ it("Shell 无顶栏、全局底部 app-bay 渲染五块 nav-tab", () => {
 
 it("主页路由渲染主页壳", () => {
   render(tree("/"));
-  expect(screen.getByText("欢迎回到案上")).toBeInTheDocument();
+  expect(screen.getByText("欢迎来到 Dicelore")).toBeInTheDocument();
 });
 
 it("跑团页默认收起导航（body.bay-nav-collapsed）", () => {

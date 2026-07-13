@@ -60,7 +60,8 @@ export function DockCard({ card, sheets, plotlines, foreshadows, lore, onArchive
 
   const { meta, body } = parseTemplate(src);
   const records = runSelect(meta, { sheets, plotlines, foreshadows, lore }, card.diy);
-  const md = expandTemplate(body, records);
+  // DIY 卡即使 select 选不出数据（新建空模板）也渲染原始体，供玩家编辑；预设卡 count=0 才隐藏。
+  const md = expandTemplate(body, records) ?? (card.diy ? body.trim() : null);
   // count=0（select 选不出数据）→ 不渲染 card；编辑态例外（要能改模板）。
   if (md == null && !editing) return null;
   const { markdown, visuals } = extractVisuals(md ?? "", records[0]);

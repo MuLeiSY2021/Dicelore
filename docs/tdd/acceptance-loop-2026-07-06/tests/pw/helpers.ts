@@ -46,7 +46,7 @@ export const waitForBackend = async () => {
   let last = 0;
   while (Date.now() < deadline) {
     try {
-      const r = await fetch(`${BACKEND}/diagnostics/health`);
+      const r = await fetch(`${BACKEND}/diagnostics/health`, { headers: { "x-session-id": `pw-wfb-${Math.random().toString(36).slice(2)}` } });
       if (r.ok) return;
       last = r.status;
       // 429 = 限流（瞬时），继续重试；其他非 200 也重试到 deadline。
@@ -58,4 +58,39 @@ export const waitForBackend = async () => {
   throw new Error(
     `后端未就绪（health=${last}）。先：cd .dicelore-eval && DICELORE_FAKE_GM=1 bash run.sh -f -p 8787`,
   );
+};
+
+/**
+ * 让 bay 常驻可点（对齐真产品「配置页 bay 行为=常驻」这一真实设置，非 hash harness）。
+ * bay 默认「聚焦出现」（opacity:0 + pointer-events:none），playwright 点不到；
+ * 写 localStorage bay-mode=always（BayProvider 读它加 body.bay-always）→ 常驻可交互。
+ * 必须在 goto 前调用（addInitScript 对后续导航生效）。
+ */
+export const primeBay = async (page: Page) => {
+  await page.addInitScript(() => {
+    try { localStorage.setItem("bay-mode", "always"); } catch { /* noop */ }
+  });
+};
+
+/** 开局并等到续玩层输入框（真实流程：点 kickoff → GM 开场回合 → 输入框）。 */
+export const kickoffToInput = async (page: Page) => {
+  const kick = byTestid(page, "play-kickoff-btn");
+  if (await kick.isVisible().catch(() => false)) {
+    await kick.click();
+  }
+  await expect(byTestid(page, "play-input")).toBeVisible({ timeout: 15_000 });
+};
+
+/** 从输入框发一句玩家消息（驱动 FAKE 教练档产真态：掷骰/选择/终局/暗骰/报错）。 */
+export const sendPlayerMessage = async (page: Page, text: string) => {
+  const box = byTestid(page, "play-input").locator("input");
+  await box.fill(text);
+  await box.press("Enter");
+};
+
+/** build 页：等 loregm 会话就绪（ctxbar 出现）后从构建助手发一句指令（驱动 FAKE 构建档写 Draft）。 */
+export const sendBuildMessage = async (page: Page, text: string) => {
+  const box = page.locator(".cin .box");
+  await box.fill(text);
+  await byTestid(page, "build-send").click();
 };

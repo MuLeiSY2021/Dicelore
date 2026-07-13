@@ -13,6 +13,7 @@ import {
   getPresentation, postMessage as apiPostMessage, postRoll as apiPostRoll, postChoice as apiPostChoice,
   postRewind as apiPostRewind, startGame as apiStartGame,
   getConfig as apiGetConfig, postConfig as apiPostConfig, getUsage as apiGetUsage, createBranch as apiCreateBranch,
+  getEvents as apiGetEvents, getSessionMeta as apiGetSessionMeta,
   type UsageReport,
 } from "@/features/play/api.js";
 import type { TurnUsage } from "@/features/cost/pricing.js";
@@ -37,6 +38,9 @@ export function useSession(sessionId: string) {
   const [error, setError] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<string | null>(null);
   const [gameEnd, setGameEnd] = useState<GameEnd | null>(null);
+  // 复盘态（终局）持久来源：会话 status=debrief（game_end MCP 落 meta）。重连/回填后仍在，
+  // 不依赖瞬时 WS game_end 帧（FAKE 教练档 game_end 只落 meta·不发帧）。
+  const [debrief, setDebrief] = useState(false);
   const [reveals, setReveals] = useState<RevealCard[]>([]);
   const [config, setConfigState] = useState<SessionConfig | null>(null);
   const [usage, setUsage] = useState<UsageReport | null>(null);
@@ -55,6 +59,30 @@ export function useSession(sessionId: string) {
   const refetchConfig = useCallback(() => {
     apiGetConfig(sessionId).then((c) => { if (sidRef.current === sessionId) setConfigState(c); }).catch(() => {});
   }, [sessionId]);
+  // 暗骰缩略指示的**持久来源**：从事件流的 visible=0 verdict 派生（重连/回填后仍在历史里），
+  // 与瞬时 WS hidden_roll 帧合并去重（帧=spoiler=off 实时增强）。严格档只显 label、不显 result/DC。
+  const refetchHidden = useCallback(() => {
+    apiGetEvents(sessionId).then((events) => {
+      if (sidRef.current !== sessionId) return;
+      const fromLog: HiddenRoll[] = events
+        .filter((e) => e.kind === "verdict" && e.visible === 0)
+        .map((e) => {
+          const d = (e.data ?? {}) as { context?: string; roll?: number; band?: { label: string; consequence: string }; dc?: number };
+          return { eventId: e.seq, label: d.context ?? e.text ?? "判定", result: d.roll ?? 0, dc: d.dc, band: d.band };
+        });
+      if (fromLog.length === 0) return;
+      setHiddenRolls((prev) => {
+        const seen = new Set(prev.map((x) => x.eventId));
+        const merged = [...prev];
+        for (const h of fromLog) if (!seen.has(h.eventId)) merged.push(h);
+        return merged;
+      });
+    }).catch(() => {});
+  }, [sessionId]);
+  // 复盘态派生：GET /sessions/dicegm/:id → status=debrief 则进复盘（终局）。
+  const refetchDebrief = useCallback(() => {
+    apiGetSessionMeta(sessionId).then((m) => { if (sidRef.current === sessionId) setDebrief(m.status === "debrief"); }).catch(() => {});
+  }, [sessionId]);
 
   useEffect(() => {
     sidRef.current = sessionId;
@@ -67,12 +95,15 @@ export function useSession(sessionId: string) {
     setError(null);
     setErrorCode(null);
     setGameEnd(null);
+    setDebrief(false);
     setReveals([]);
     setUsage(null);
     setCompacting(false);
     refetch();
     refetchConfig();
     refetchUsage();
+    refetchHidden();
+    refetchDebrief();
     let closed = false;
     let retry = 0;
     let ws: WebSocket | null = null;
@@ -124,6 +155,8 @@ export function useSession(sessionId: string) {
             });
           }
           refetchUsage();
+          refetchHidden();
+          refetchDebrief();
           break;
         case "game_end": setGenerating(false); setGameEnd({ reason: msg.reason, outcome: msg.outcome }); break;
         case "error": setGenerating(false); setError(msg.message || msg.code); setErrorCode(msg.code); break;
@@ -148,7 +181,7 @@ export function useSession(sessionId: string) {
     connect();
 
     return () => { closed = true; if (timer) clearTimeout(timer); ws?.close(); };
-  }, [sessionId, refetch, refetchConfig, refetchUsage]);
+  }, [sessionId, refetch, refetchConfig, refetchUsage, refetchHidden, refetchDebrief]);
 
   // 兼容旧消费者：narration 扁平串（rounds 各回合 texts 展平）。
   const narration = useMemo(() => rounds.flatMap((r) => r.texts), [rounds]);
@@ -195,7 +228,7 @@ export function useSession(sessionId: string) {
     apiCreateBranch(sessionId, fromSeq).then((r) => { refetch(); return r; }).catch((e: Error) => { setError(e.message); throw e; }), [sessionId, refetch]);
 
   return {
-    snapshot, rounds, narration, pendingRoll, rollResult, hiddenRolls, generating, error, errorCode, gameEnd, reveals,
+    snapshot, rounds, narration, pendingRoll, rollResult, hiddenRolls, generating, error, errorCode, gameEnd, debrief, reveals,
     config, usage, compacting,
     postMessage, start, roll, choose, rewind, retry, skip, dismissReveal, setModel, setSpoilerTier, branch, refetchUsage,
   };

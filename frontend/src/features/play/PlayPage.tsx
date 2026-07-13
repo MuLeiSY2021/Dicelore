@@ -14,7 +14,7 @@ import {
   Sparkles, CheckCircle2, AlertCircle, RotateCcw, Flag, MessageSquare,
   Pencil, Trash2, MoreHorizontal, AlertTriangle, Rewind, Gauge, Zap,
 } from "lucide-react";
-import { CONTEXT_WINDOW, type SpoilerTier } from "@dicelore/shared";
+import { CONTEXT_WINDOW, type SpoilerTier, type PendingRoll } from "@dicelore/shared";
 import { useSession } from "@/features/play/useSession.js";
 import { useDock } from "@/features/play/useDock.js";
 import { Markdown } from "@/features/play/Markdown.js";
@@ -34,7 +34,7 @@ export default function PlayPage() {
   const { sessionId } = useParams();
   const sid = sessionId ?? DEMO_SESSION;
   const s = useSession(sid);
-  const { snapshot, rounds, pendingRoll, rollResult, hiddenRolls, generating, error, errorCode, gameEnd, reveals,
+  const { snapshot, rounds, pendingRoll, rollResult, hiddenRolls, generating, error, errorCode, gameEnd, debrief, reveals,
     config, usage, compacting, postMessage, start, roll, choose, retry, skip, setModel, setSpoilerTier, branch } = s;
 
   const [draft, setDraft] = useState("");
@@ -47,6 +47,10 @@ export default function PlayPage() {
   const [sentMsgs, setSentMsgs] = useState<string[]>([]);
   const [rewindOpen, setRewindOpen] = useState<number | null>(null);
   const [rewound, setRewound] = useState(false);
+  // 明骰区间块持久化：pendingRoll 掷出后被清空（roll_committed），但区间表 + 结果应留在 stream 里
+  // （命中档高亮·历史可见），故捕获 bands/label，块随 (pendingRoll || rollResult) 显示。
+  const [rollView, setRollView] = useState<PendingRoll | null>(null);
+  useEffect(() => { if (pendingRoll) setRollView(pendingRoll); }, [pendingRoll]);
 
   const dock = useDock(sid, snapshot);
   const spoilerTier: SpoilerTier = config?.spoilerTier ?? "strict";
@@ -60,13 +64,15 @@ export default function PlayPage() {
   useEffect(() => { setChosen(new Set()); }, [choices?.eventId]);
 
   const sessionRow = sessions.find((x) => x.sessionId === sid);
-  const started = kicked || rounds.length > 0 || (snapshot?.narrativeCursor ?? 0) > 0 || sessionRow?.started === true || !!gameEnd;
-  const noSession = !sessionId && sessions.length === 0 && rounds.length === 0 && (snapshot?.sheets?.length ?? 0) === 0;
+  const started = kicked || rounds.length > 0 || (snapshot?.narrativeCursor ?? 0) > 0 || sessionRow?.started === true || !!gameEnd || debrief;
+  // 无 sessionId = /play 裸路由 → 会话选择态（welc + 最近会话 + 去目录）。选了会话才进 kickoff/续玩层。
+  const noSession = !sessionId;
+  const ended = !!gameEnd || debrief;
 
   // 五态 data-screen 驱动（互斥）。
   const screen: "none" | "kickoff" | "input" | "generating" | "roll" | "choices" | "error" | "end" =
     !started ? (noSession ? "none" : "kickoff")
-    : gameEnd ? "end"
+    : ended ? "end"
     : error ? "error"
     : pendingRoll ? "roll"
     : choices ? "choices"
@@ -79,6 +85,7 @@ export default function PlayPage() {
   function send(text: string) {
     const t = text.trim(); if (!t) return;
     setSentMsgs((m) => [...m, t]);
+    setRollView(null);
     postMessage(t).catch(() => {});
     setDraft("");
   }
@@ -238,13 +245,13 @@ export default function PlayPage() {
                 </div>
               ))}
 
-              {/* 明骰内联：区间分档 + 掷出后结果 */}
-              {pendingRoll && (
+              {/* 明骰内联：区间分档 + 掷出后结果（committed 后 pendingRoll 清空仍留结果块） */}
+              {rollView && (pendingRoll || rollResult) && (
                 <div data-screen="roll" style={{ margin: "14px 0" }}>
-                  <div className="divider">待掷 · {pendingRoll.label}</div>
-                  {pendingRoll.bands && pendingRoll.bands.length > 0
-                    ? <RollBands bands={pendingRoll.bands} tier={spoilerTier} result={rollResult} />
-                    : <div className="mech"><Dices className="lucide" />{pendingRoll.label}：{pendingRoll.yourSide.exprDisplay}{pendingRoll.dc != null ? ` vs DC ${pendingRoll.dc}` : ""}</div>}
+                  <div className="divider">待掷 · {rollView.label}</div>
+                  {rollView.bands && rollView.bands.length > 0
+                    ? <RollBands bands={rollView.bands} tier={spoilerTier} result={rollResult} />
+                    : <div className="mech"><Dices className="lucide" />{rollView.label}：{rollView.yourSide.exprDisplay}{rollView.dc != null ? ` vs DC ${rollView.dc}` : ""}</div>}
                 </div>
               )}
 
@@ -252,10 +259,10 @@ export default function PlayPage() {
               {generating && rounds.length === 0 && <div className="gen"><span className="spin" />GM 生成中…</div>}
 
               {/* 终局复盘态：不遮罩、续玩层继续 */}
-              {gameEnd && (
+              {ended && (
                 <div data-screen="end" style={{ margin: "14px 0" }} data-testid="play-endmark">
                   <div className="divider"><span className="endmark"><Flag className="lucide" />终局 · 进入复盘</span></div>
-                  <p className="prose"><b>{gameEnd.outcome}</b> — {gameEnd.reason}</p>
+                  {gameEnd && <p className="prose"><b>{gameEnd.outcome}</b> — {gameEnd.reason}</p>}
                   <div className="rwnote" style={{ borderColor: "var(--acc)", color: "var(--acc-soft)" }}>
                     <MessageSquare className="lucide" />GM 已进入复盘：不再推进剧情，回答你关于本局的任何问题；想改走某轮可
                     <span className="btn" role="button" tabIndex={0} data-testid="play-branch" onClick={() => branch().catch(() => {})}>分支回档</span>。

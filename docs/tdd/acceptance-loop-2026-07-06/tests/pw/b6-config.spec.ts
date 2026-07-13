@@ -2,7 +2,7 @@
 // 真前端现状：ConfigPage 无 config-nav-*/config-model-test-btn 等原型 testid → 首跑必红。
 // 路由：/config （router.tsx）。
 
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import { ROUTE, byTestid, expectTestidVisible } from "./helpers";
 
 test.describe("B6 配置页", () => {

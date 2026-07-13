@@ -7,7 +7,6 @@
 // Software Foundation, either version 3 of the License, or (at your option)
 // any later version. See <https://www.gnu.org/licenses/>.
 
-import { Moon, Sun, Monitor } from "lucide-react";
 import { useTheme, type AccentName, type ThemeMode, type FontPreset } from "@/shared/theme/ThemeProvider.js";
 import { useT } from "@/shared/i18n/index.js";
 
@@ -20,56 +19,55 @@ const ACCENTS: { value: AccentName; hex: string }[] = [
 export function ThemeAppearance() {
   const { mode, setMode, accent, setAccent, font, setFont } = useTheme();
   const t = useT();
-  const MODES: { v: ThemeMode; Icon: typeof Moon; label: string }[] = [
-    { v: "dark", Icon: Moon, label: t("cfg.theme.dark") },
-    { v: "light", Icon: Sun, label: t("cfg.theme.light") },
-    { v: "system", Icon: Monitor, label: t("cfg.theme.system") },
+  const MODES: { v: ThemeMode; label: string }[] = [
+    { v: "dark", label: t("cfg.theme.dark") },
+    { v: "light", label: t("cfg.theme.light") },
+    { v: "system", label: t("cfg.theme.system") },
+  ];
+  const FONTS: { v: FontPreset; label: string }[] = [
+    { v: "default", label: "默认" },
+    { v: "song", label: "思源宋体" },
   ];
   return (
     <>
       <div className="mhead"><h3>{t("cfg.theme")}</h3></div>
+      <div className="mdesc">主题 / 明暗 / 强调色 / 字体，均本地持久化，改完即时应用。</div>
       <div className="section">
         <div className="frow">
           <span className="flabel">{t("cfg.theme.theme")}</span>
-          <div className="fctrl"><span className="fval">{t("cfg.theme.inkgold")}</span></div>
+          <div className="fctrl">
+            <select className="f" data-testid="config-theme-preset" aria-label={t("cfg.theme.theme")} defaultValue="inkgold">
+              <option value="inkgold">{t("cfg.theme.inkgold")}</option>
+            </select>
+          </div>
         </div>
         <div className="frow">
           <span className="flabel">{t("cfg.theme.mode")}</span>
           <div className="fctrl">
-            <div className="seg" role="group" aria-label={t("cfg.theme.mode")}>
-              {MODES.map(({ v, Icon, label }) => (
-                <button key={v} className={mode === v ? "on" : ""} aria-pressed={mode === v} onClick={() => setMode(v)}>
-                  <Icon className="lucide" /> {label}
-                </button>
+            <div className="seg" data-testid="config-theme-mode" role="group" aria-label={t("cfg.theme.mode")}>
+              {MODES.map(({ v, label }) => (
+                <button key={v} className={mode === v ? "on" : ""} aria-pressed={mode === v} onClick={() => setMode(v)}>{label}</button>
               ))}
             </div>
-            {/* 兼容旧用例：保留一个直接切换明暗的按钮 */}
-            <button className="btn" onClick={() => setMode(mode === "dark" ? "light" : "dark")}>切换明暗</button>
           </div>
         </div>
         <div className="frow">
           <span className="flabel">{t("cfg.theme.accent")}</span>
           <div className="fctrl">
-            <span className="swatches" role="group" aria-label="accent-swatches">
+            <span className="swatches" data-testid="config-theme-accent" role="group" aria-label={t("cfg.theme.accent")}>
               {ACCENTS.map(({ value, hex }) => (
                 <button key={value} className={"swatch" + (accent === value ? " on" : "")} style={{ background: hex }}
                   aria-label={t(`accent.${value}`)} aria-pressed={accent === value} onClick={() => setAccent(value)} />
               ))}
             </span>
-            {/* 兼容旧用例 + 可访问：select 控件(aria-label 强调色，唯一) */}
-            <select className="f" aria-label={t("cfg.theme.accent")} value={accent} onChange={(e) => setAccent(e.target.value as AccentName)} style={{ minWidth: 120 }}>
-              {ACCENTS.map(({ value }) => <option key={value} value={value}>{t(`accent.${value}`)}</option>)}
-            </select>
           </div>
         </div>
         <div className="frow">
           <span className="flabel">{t("cfg.theme.font")}</span>
           <div className="fctrl">
-            <div className="seg" role="group" aria-label={t("cfg.theme.font")}>
-              {(["default", "song"] as FontPreset[]).map((f) => (
-                <button key={f} className={font === f ? "on" : ""} onClick={() => setFont(f)}>
-                  {f === "default" ? "Inter / Playfair" : "思源宋体"}
-                </button>
+            <div className="seg" data-testid="config-theme-font" role="group" aria-label={t("cfg.theme.font")}>
+              {FONTS.map(({ v, label }) => (
+                <button key={v} className={font === v ? "on" : ""} onClick={() => setFont(v)}>{label}</button>
               ))}
             </div>
           </div>

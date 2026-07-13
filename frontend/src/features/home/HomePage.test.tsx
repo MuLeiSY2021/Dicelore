@@ -8,13 +8,13 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 import { render, screen } from "@testing-library/react";
-import { vi, type Mock } from "vitest";
+import { vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import HomePage from "./HomePage.js";
-import { listSessions } from "@/features/play/api.js";
-import type { SessionSummary } from "@dicelore/shared";
 
-vi.mock("@/features/play/api.js", () => ({ listSessions: vi.fn() }));
+// HomePage 重构为原型 IA：指南 + 最近一个会话摘要卡 + 首访空态 + 快速入口 + 角落运行态。
+// useHealth 内部 fetch health（离线安全）；这里 mock 掉网络避免噪声。
+vi.mock("@/shell/useHealth.js", () => ({ useHealth: () => ({ health: null, offline: true }) }));
 
 function mount() {
   return render(
@@ -24,27 +24,23 @@ function mount() {
   );
 }
 
-const sessions: SessionSummary[] = [
-  { sessionId: "demo", kind: "dicegm", title: "黄昏旅店", status: "active", packName: "黄昏旅店" },
-  { sessionId: "old", kind: "dicegm", title: "旧档", status: "archived", packName: "旧档" },
-];
-
-it("挂载时拉取会话列表并渲染 session title", async () => {
-  (listSessions as Mock).mockResolvedValue(sessions);
+it("渲染指南 + 使用手册链接（核心）", () => {
   mount();
-  expect(listSessions).toHaveBeenCalled();
-  expect((await screen.findAllByText("黄昏旅店")).length).toBeGreaterThan(0);
-  expect(await screen.findByText("旧档")).toBeInTheDocument();
+  expect(screen.getByTestId("home-guide")).toBeInTheDocument();
+  expect(screen.getByTestId("home-manual-link")).toBeInTheDocument();
 });
 
-it("列表为空显示开新局提示", async () => {
-  (listSessions as Mock).mockResolvedValue([]);
+it("最近一个会话摘要卡（恰一个）+ 继续按钮", () => {
   mount();
-  expect((await screen.findAllByText(/暂无会话/)).length).toBeGreaterThan(0);
+  expect(screen.getAllByTestId("home-recent-session")).toHaveLength(1);
+  expect(screen.getByTestId("home-recent-continue")).toBeInTheDocument();
 });
 
-it("拉取失败显示加载失败提示", async () => {
-  (listSessions as Mock).mockRejectedValue(new Error("boom"));
+it("首访空态强 CTA 始终可见 + 三快速入口 + 角落运行态", () => {
   mount();
-  expect(await screen.findByText(/加载失败/)).toBeInTheDocument();
+  expect(screen.getByTestId("home-start-cta")).toBeInTheDocument();
+  for (const q of ["catalog", "build", "config"]) {
+    expect(screen.getByTestId(`home-quick-${q}`)).toBeInTheDocument();
+  }
+  expect(screen.getByTestId("home-runstatus")).toBeInTheDocument();
 });

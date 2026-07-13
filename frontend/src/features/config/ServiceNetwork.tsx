@@ -7,49 +7,35 @@
 // Software Foundation, either version 3 of the License, or (at your option)
 // any later version. See <https://www.gnu.org/licenses/>.
 
-import { useState } from "react";
-import { Check } from "lucide-react";
 import { useT } from "@/shared/i18n/index.js";
-import { useSettings } from "@/shared/settings/useSettings.js";
 import { useHealth } from "@/shell/useHealth.js";
 
-// 配置 → 服务与网络：展示后端真实端口/notify 状态(diagnostics) + notify URL 覆盖(持久化)。
+// 配置 → 服务与网络：主页端口 / 域名绑定 / 缝A notify webhook。
+// 三者皆后端真值（来自 health · 只读），不可在此改。
 export function ServiceNetwork() {
   const t = useT();
   const { health, offline } = useHealth();
-  const { settings, setNotifyUrl } = useSettings();
-  const [draft, setDraft] = useState<string | null>(null);
-  const value = draft ?? settings.notifyUrl ?? "";
-  const notifyConfigured = health?.notify.configured ?? !!settings.notifyUrl;
+  const port = offline ? "—" : String(health?.port ?? "…");
+  const notify = health?.notify.url ?? "（未配 · v1 走进程内回调）";
 
   return (
     <>
       <div className="mhead"><h3>{t("cfg.service")}</h3></div>
+      <div className="mdesc">
+        主页服务端口 / 域名 / 缝A 跨进程 notify webhook。<b style={{ color: "var(--text)" }}>真值来自 health·只读</b>，不可在此改。
+      </div>
       <div className="section">
         <div className="frow">
-          <span className="flabel">{t("cfg.service.port")}</span>
-          <div className="fctrl"><span className="fval">{offline ? "—" : health?.port ?? "…"}</span></div>
+          <span className="flabel">{t("cfg.service.port")}<div className="fhint">来自 health</div></span>
+          <div className="fctrl"><input className="f mono ro" data-testid="config-net-port" value={port} readOnly /></div>
         </div>
         <div className="frow">
-          <span className="flabel">{t("cfg.service.host")}</span>
-          <div className="fctrl"><span className="fval">127.0.0.1 (loopback)</span></div>
-        </div>
-        <div className="frow top">
-          <span className="flabel">{t("cfg.service.notify")}</span>
-          <div className="fctrl">
-            <input className="f mono" aria-label="DICELORE_NOTIFY_URL"
-              placeholder={health?.notify.url ?? "http://127.0.0.1:8787/internal/notify"}
-              value={value} onChange={(e) => setDraft(e.target.value)} />
-            <button className="btn go" onClick={() => { setNotifyUrl(value); setDraft(null); }}>{t("cfg.save")}</button>
-            <span className={"tres " + (notifyConfigured ? "ok" : "err")}>
-              {notifyConfigured && <Check className="lucide" />}{t("cfg.service.notify.status")}: {notifyConfigured ? t("bar.notify.connected") : t("bar.notify.unset")}
-            </span>
-            <span className="fhint">DICELORE_NOTIFY_URL</span>
-          </div>
+          <span className="flabel">{t("cfg.service.host")}<div className="fhint">来自 health</div></span>
+          <div className="fctrl"><input className="f mono ro" data-testid="config-net-host" value="127.0.0.1" readOnly /></div>
         </div>
         <div className="frow">
-          <span className="flabel">{t("cfg.service.proto")}</span>
-          <div className="fctrl"><span className="fval">{health?.protocol ?? "dicelore.client/1"}</span></div>
+          <span className="flabel">notify webhook<div className="fhint">DICELORE_NOTIFY_URL</div></span>
+          <div className="fctrl"><input className="f mono ro" style={{ flex: 1 }} data-testid="config-net-notify" value={notify} readOnly /></div>
         </div>
       </div>
     </>

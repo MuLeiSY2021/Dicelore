@@ -2,7 +2,7 @@
 // 真前端现状：CatalogPage 无 catalog-list/catalog-item 等原型 testid → 首跑必红。
 // 路由：/adventures （router.tsx）。seed 复用 curl fixture（commitCatalog 造团本，让列表非空）。
 
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import { ROUTE, byTestid, expectTestidVisible, waitForBackend } from "./helpers";
 import { commitCatalog } from "./seed";
 
@@ -17,10 +17,11 @@ test.describe("B3 团本目录页", () => {
     await page.goto(ROUTE.catalog);
     // 期望：catalog-list 每项 catalog-item（题材 tag + 角色预览 chip + catalog-item-session 续玩提示 + catalog-item-version 版本入口 + catalog-edit-btn + catalog-delete-btn + catalog-start-btn）。
     await expectTestidVisible(page, "catalog-list");
-    await expectTestidVisible(page, "catalog-item");
-    await expectTestidVisible(page, "catalog-start-btn");
-    await expectTestidVisible(page, "catalog-edit-btn");
-    await expectTestidVisible(page, "catalog-delete-btn");
+    // 目录含多个团本(共享 eval 后端跨用例累积)→ 逐项 testid 会命中多个，用 .first() 避免 strict-mode 违例。
+    await expect(byTestid(page, "catalog-item").first()).toBeVisible();
+    await expect(byTestid(page, "catalog-start-btn").first()).toBeVisible();
+    await expect(byTestid(page, "catalog-edit-btn").first()).toBeVisible();
+    await expect(byTestid(page, "catalog-delete-btn").first()).toBeVisible();
   });
 
   test("搜索 + 筛选（按名/题材实时过滤）", async ({ page }) => {

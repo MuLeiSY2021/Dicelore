@@ -1,0 +1,52 @@
+/* Copyright (C) 2026 MuLeiSY2021
+ *
+ * This file is part of Dicelore.
+ *
+ * Dicelore is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU Affero General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version. See <https://www.gnu.org/licenses/>.
+ *
+ * 主页页级样式——移植自原型 home.html <style> 块（.guide / .empty-first /
+ * 快速入口 3 栏覆盖 / 角落运行态徽章 / .btn）。页根 .home 下 .hello/.htitle/.hsub/
+ * .resume/.qcard/.quick/.label 已在 shell.css，此处只补原型独有件。 */
+
+/* 指南块 */
+.home .guide { margin: 22px 0; padding: 18px 22px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+.home .guide h3 { font-family: var(--serif); font-weight: 600; font-size: 16px; margin: 0 0 10px; }
+.home .guide ol { margin: 0; padding-left: 20px; color: var(--text2); font-size: 13px; line-height: 1.9; }
+.home .guide ol b { color: var(--text); }
+.home .guide .manual { display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; color: var(--acc-soft); font-size: 12.5px; cursor: pointer; text-decoration: none; }
+.home .guide .manual:hover { text-decoration: underline; }
+.home .guide .manual .lucide { width: 14px; height: 14px; }
+
+.home .hsub b { color: var(--text); }
+
+/* 最近会话摘要卡（整卡是 <a>，续玩按钮内联） */
+.home a.resume { text-decoration: none; }
+.home .resume .cont { text-decoration: none; }
+
+/* 快速入口 3 栏（覆盖 shell.css 的 4 栏；main.home 更高特异度） */
+main.home .quick { grid-template-columns: repeat(3, 1fr); }
+.home .qcard { position: relative; text-decoration: none; }
+.home .qcard.featured { border-color: var(--acc); box-shadow: 0 0 0 1px var(--acc); }
+.home .qcard.featured .tag-rec { position: absolute; top: 9px; right: 10px; font-family: var(--mono); font-size: 9px; color: var(--acc-on); background: linear-gradient(160deg, var(--acc-h), var(--acc)); padding: 2px 7px; border-radius: 8px; }
+
+/* 首访空态 */
+.home .empty-first { display: flex; flex-direction: column; align-items: center; gap: 9px; padding: 40px 20px; text-align: center; background: var(--surface); border: 1px dashed var(--line2); border-radius: 12px; }
+.home .empty-first .lucide { width: 30px; height: 30px; color: var(--acc-soft); }
+.home .empty-first .ef-t { font-family: var(--serif); font-size: 18px; color: var(--text); }
+.home .empty-first .ef-sub { font-size: 12.5px; color: var(--text2); max-width: 420px; line-height: 1.6; }
+
+/* 通用按钮（原型 styles.css .btn，真前端 shell.css 无全局 .btn） */
+.home .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 7px; border: 1px solid var(--line2); color: var(--text2); cursor: pointer; font-size: 12px; text-decoration: none; }
+.home .btn:hover { border-color: var(--text3); color: var(--text); }
+.home .btn.go { background: linear-gradient(160deg, var(--acc-h), var(--acc)); color: var(--acc-on); border: none; font-weight: 700; }
+.home .btn .lucide { width: 14px; height: 14px; }
+.home .btn.lg { padding: 11px 22px; font-size: 14px; margin-top: 6px; }
+
+/* 角落运行态徽章（原型 styles.css .runstatus-pill；真前端无全局 .runstatus-pill） */
+.runstatus-pill { position: fixed; top: 12px; right: 16px; display: flex; align-items: center; gap: 9px; font-family: var(--mono); font-size: 10px; color: var(--text3); padding: 6px 11px; background: var(--surface); border: 1px solid var(--line); border-radius: 9px; z-index: 30; opacity: .85; }
+.runstatus-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); display: inline-block; margin-right: 4px; }
+.runstatus-pill .dot.w { background: var(--warn); }
+.runstatus-pill .dot.off { background: var(--text3); }
