@@ -37,14 +37,14 @@ describe.skipIf(!LIVE)("gm-session-continuity 真 SDK 两回合续接(手动门)
     });
 
     // ── 回合 1 ──
-    const r1 = await session.handleMessage("我叫赵云，报上名号后向前走一步。");
-    expect(r1.error, `回合1 不应 error: ${r1.error?.message ?? ""}`).toBeUndefined();
+    // handleMessage 出错即抛(rethrow)、无返回 error 字段——await 不抛 = 回合无 error。
+    await session.handleMessage("我叫赵云，报上名号后向前走一步。");
     const id1 = backend.metaGet("sdk_session_id");
     expect(id1, "回合1 后应捕获 sdk_session_id").toBeTruthy();
 
     // ── 回合 2（引用回合1 内容，验证 GM 靠 resume 续接而非丢失上下文）──
-    const r2 = await session.handleMessage("我刚才报的名号是什么？直接复述。");
-    expect(r2.error, `回合2 不应 error(resume 应被 SDK 接受): ${r2.error?.message ?? ""}`).toBeUndefined();
+    // 同上：resume 未被 SDK 接受会在 runTurn 内抛出、经 handleMessage 冒泡——await 不抛即续接成功。
+    await session.handleMessage("我刚才报的名号是什么？直接复述。");
     const id2 = backend.metaGet("sdk_session_id");
     expect(id2, "回合2 后 sdk_session_id 应仍在").toBeTruthy();
     expect(id2, "两回合应同一 SDK session(续接、未开新)").toBe(id1);

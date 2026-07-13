@@ -33,8 +33,8 @@ describe.skipIf(!LIVE)("RD-4 教条改进行为抽查(手动门·spot-check)", (
       db, backend, agentFactory: (init) => new DiceGm(init), plugin, debug: true,
     });
 
-    const r = await session.handleMessage("我猛地用肩膀撞向这扇沉重的橡木门，想把它一次撞开。");
-    expect(r.error, `不应 error: ${r.error?.message ?? ""}`).toBeUndefined();
+    // handleMessage 出错即抛(rethrow)、无返回 error 字段——await 不抛 = 回合无 error。
+    await session.handleMessage("我猛地用肩膀撞向这扇沉重的橡木门，想把它一次撞开。");
 
     // 观测：本回合是否产生了掷骰痕迹(pending_roll 行 或 kind=verdict 事件)。
     const pr = db.prepare("SELECT COUNT(*) c FROM pending_roll").get() as { c: number };
