@@ -690,7 +690,7 @@ describe("lore-draft 回退钩子 + loregm transcript 落盘", () => {
     // ① hasNode 读文件校验(过);② lore-draft hook 被调(warn+no-op、不抛);③ moveHead 写 HEAD 成功。
     // 验证 hook 确已注册进编排,且其 no-op 不阻断 transcript 层回退。
     // (注:composition-root 的 transcript 实例内存 _head 相对驱动侧滞后,故用读文件的 rewindTo 而非 rewindLast;
-    //  端点接线 + 实例刷新属 follow-up,见 backlog-后端「lore Draft 按轮快照/回退」。)
+    //  端点接线 + 实例刷新属 follow-up,见 backlog-backend「lore Draft 按轮快照/回退」。)
     const root = mkdtempSync(join(tmpdir(), "dl-lore-rewind-"));
     const catalog = openCatalog(":memory:");
     const lore = createLoreApp({ catalog, agentFactory: (init) => new TranscriptFakeGm(init), sessionsDir: root });

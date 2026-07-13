@@ -55,7 +55,7 @@ export async function runTurn(deps: RunTurnDeps, input: TurnInput): Promise<void
   if (errored) {
     // 删本回合落的 log 段 + 尽力逆回本回合 sheet 变更（轻量 DELETE，非快照 restore）。
     // residue = 无可逆信号的副作用残余（pending_roll/watcher 运行时态等）——不静默吞掉：
-    // 记一条 warn 供运维/日志核对；结构化推给前端属 UI 接线（backlog-前端 CROSS-ERR），不在此处挂。
+    // 记一条 warn 供运维/日志核对；结构化推给前端属 UI 接线（backlog-frontend CROSS-ERR），不在此处挂。
     const report = rollbackAfterSeq(deps.db, startSeq);
     if (report.residue.length > 0) {
       console.warn(

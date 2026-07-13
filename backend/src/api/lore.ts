@@ -58,7 +58,7 @@ const loreReg = new Map<string, { session: LoreSession; draft: Draft; rewind?: R
 // lore-draft 领域态回退钩子(v1 占位)。TR2 的 transcript 层回退(移 HEAD)对 lore 真生效,
 // 但 lore Draft(in-memory 包内容)的「按轮快照/还原」尚未实现——本钩子 rollbackTo 仅 warn 记账 + no-op,
 // 不动 Draft(避免 transcript 已回退而 Draft 停在原地却无声无息)。
-// follow-up(记 backlog-后端「lore Draft 按轮快照/回退」):真正实现 Draft 的 per-turn checkpoint + restore。
+// follow-up(记 backlog-backend「lore Draft 按轮快照/回退」):真正实现 Draft 的 per-turn checkpoint + restore。
 export function createLoreDraftHook(sessionId: string): RollbackHook {
   return {
     name: "lore-draft",

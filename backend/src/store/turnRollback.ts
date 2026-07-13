@@ -12,7 +12,7 @@ import { ftsDelete } from "./fts.js";
 
 // ===== RT-1 中期：回合级事务回滚原语（轻量 DELETE，非快照 restore）=====
 //
-// 背景（backlog-后端 RT-1）：GM 超时兜底现为「脱困不恢复」——超时/error 触发 abort 后
+// 背景（backlog-backend RT-1）：GM 超时兜底现为「脱困不恢复」——超时/error 触发 abort 后
 // turnLoop 裸 return，已落库的 log/state 变更不撤回、半条 narration_commit 已发给前端。
 // 本原语提供 core 回合级回滚：回合开始前记 turn_start_seq，超时/error 时把本回合落的
 // log 段删净，并尽力把本回合的 sheet（state 表）变更逆回起点态。

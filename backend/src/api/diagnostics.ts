@@ -41,7 +41,7 @@ function withTimeout(ms: number): { signal: AbortSignal; cancel: () => void } {
   return { signal: ctrl.signal, cancel: () => clearTimeout(id) };
 }
 
-// ── SSRF 白名单（SEC2，见 backlog-后端）─────────────────────────────────
+// ── SSRF 白名单（SEC2，见 backlog-backend）─────────────────────────────────
 // model-test / mcp-test 的 baseUrl / endpoint 完全用户可控，未防护时可探测云元数据
 // (169.254.169.254)、环回、内网服务。裁决：挡私网/环回/元数据 IP 段 + 限 https；
 // 外部 host 走配置放行。对域名做 DNS 解析后再校验解析出的 IP，挡 DNS rebinding。
