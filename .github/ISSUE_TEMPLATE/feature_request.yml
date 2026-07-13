@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         感谢提建议!较大的设计想法也欢迎先在 issue 里讨论再动手。
-        想了解项目当前的路线与欠账，见 [`docs/wiki/设计/05-现状与计划/`](../../docs/wiki/设计/05-现状与计划/)。
+        想了解项目当前的路线与欠账，见 [`docs/dev/plan/`](../../docs/dev/plan/)。
   - type: textarea
     id: problem
     attributes:

@@ -6,7 +6,7 @@
 
 ## 关联 issue / backlog
 
-<!-- 如 Closes #123，或指向 docs/wiki/设计/05-现状与计划/ 的 backlog 条目。 -->
+<!-- 如 Closes #123，或指向 docs/dev/plan/ 的 backlog 条目。 -->
 
 ## 改动类型
 
