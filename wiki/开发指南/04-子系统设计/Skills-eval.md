@@ -2,7 +2,7 @@
 
 > **本页职责**：定 `dicelore-gm-core`（及流程 skill）的**定向优化方法与工装**——以**真实安价语料**为黄金标准、用可跑的 eval-loop 量化迭代 skill 措辞。这是 [Skills包 §6.1](../02-MCP与Skill体系/Skills包.md) 「措辞终稿靠 eval-loop」的落地蓝本，**未来每轮 skill 迭代以此为据**。
 > **上游依赖**：[Skills包 §6.1](../02-MCP与Skill体系/Skills包.md)（F1/F2/F3 可客观验证 → L3 信号复用作 assertions）；[总体架构 §6 三流](../03-架构/总体架构.md)（玩家视图＝narrate 流 + 输出层面板）；[adapter §4 L3 两档](adapter与L3审计.md)；skill-creator（评测循环 / 反过拟合）；**eval 对照系=`docs/research` 真实案例**（评测对照系修订，非 with/without baseline，见设计页决策节）。
-> **状态**：🟢 工装已落源码（2026-06-21，纯件在 `backend/src/{present/playerView,eval/assertions}` + eval 场景/断言，驱动 harness 在 `harness/eval-dicegm/`；结构见 [后端双路径架构](后端双路径架构.md)）。语义/对标真人的 grader 为规格 + 人/LLM 执行。**2026-06-24 RUN_LIVE 通路验证通过**：CC 经 [play-mcp](../../../docs/dev/plan/路线图.md) 连真后端跑 orc-hunt,真 GM(glm-5.2)+种子生效+WS 事件流闭环(见 [reports/](../../../docs/dev/reports/))。
+> **状态**：🟢 工装已落源码（2026-06-21，纯件在 `backend/src/{present/playerView,eval/assertions}` + eval 场景/断言，驱动 harness 在 `harness/eval-dicegm/`；结构见 [后端双路径架构](后端双路径架构.md)）。语义/对标真人的 grader 为规格 + 人/LLM 执行。**2026-06-24 RUN_LIVE 通路验证通过**：CC 经 [play-mcp](../../../docs/dev/plan/roadmap.md) 连真后端跑 orc-hunt,真 GM(glm-5.2)+种子生效+WS 事件流闭环(见 [reports/](../../../docs/dev/reports/))。
 
 ---
 
