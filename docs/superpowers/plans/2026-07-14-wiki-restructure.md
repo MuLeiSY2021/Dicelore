@@ -208,17 +208,18 @@ old_string 出现处按 Read 工具打开该文件定位 `../../../../backend/sr
 
 - [ ] **Step 5: 深相对路径 N-1 调整 + 目标改名——Skills-eval.md 的多处深链接**
 
-`Skills-eval.md` 里的深相对路径链接需要两类调整:(a) 单纯少一层 `../`;(b) 若指向 `reports/` 需改成 `docs/dev/reports/`(该目录已在姊妹 dev-reorg 计划里搬迁)。用 Read 工具打开 `wiki/开发指南/04-子系统设计/Skills-eval.md` 定位以下原文模式,逐条用 Edit 精确替换:
+`Skills-eval.md` 里的深相对路径链接需要三类调整:(a) 单纯少一层 `../`;(b) 若指向 `reports/` 需改成 `docs/dev/reports/`(该目录已在姊妹 dev-reorg 计划里搬迁);(c) **`grader.md` 是一个更早就存在的死链接**——全仓核实(`find . -iname "grader.md"`)确认这个文件**当前根本不存在于代码库任何位置**(`harness/eval-dicegm/` 实际只有 `play-mcp.ts`/`play-mcp.test.ts`/`run-live.ts`),不是这次迁移造成的断链,是历史遗留(该文件大概在某次重构里被删/改名,wiki 没跟着改)。既然找不到正确的新落点,**不猜路径**,直接把超链接降级成纯文本(去掉 `[...](...)` 包裹,只留代码字体的文件名),避免继续挂一个断链。用 Read 工具打开 `wiki/开发指南/04-子系统设计/Skills-eval.md` 定位以下原文模式,逐条用 Edit 精确替换:
 
-- `../../../research/scraped/` → `../../research/scraped/`(少一层,repo-root 相对目标不变,仍是 `docs/research/scraped/`)
+- `../../../research/scraped/` → `../../../docs/research/scraped/`(**注意:是 3 个 `../` 不是 2 个,且要补回 `docs/` 前缀**——旧位置的 3 个 `../` 恰好落在 `docs/` 这一级、后面裸接 `research/scraped` 省了前缀;新位置没有这个"刚好落在 docs/"的巧合,3 个 `../` 直达仓库根,必须显式写 `docs/research/scraped/`,少算一层或漏了前缀都会指错)
 - `../../../../backend/src/present/playerView.ts` → `../../../backend/src/present/playerView.ts`
 - `../../../../backend/src/eval/assertions.ts` → `../../../backend/src/eval/assertions.ts`
-- `../../../harness/eval-dicegm/grader.md` → `../../harness/eval-dicegm/grader.md`
+- 三处 `[`grader.md`](../../../harness/eval-dicegm/grader.md)` 或 `[grader.md](../../../harness/eval-dicegm/grader.md)`(具体 markdown 语法以 Read 到的原文为准,`grader.md` 在原文件里出现 3 次,每次都是超链接)→ 全部改成**纯文本** `` `grader.md` ``(去掉 `[...]()` 链接包裹,只留代码字体文件名;若已有前序失败执行把这几处错改成了 `../../harness/eval-dicegm/grader.md`(2 个 `../`),同样按此规则改成纯文本,不管当前是几个 `../`,统一去链接化)
 - `../../../../.claude/skills/play-eval/SKILL.md` → `../../../.claude/skills/play-eval/SKILL.md`
 - `../../../../.claude/skills/build-eval/SKILL.md` → `../../../.claude/skills/build-eval/SKILL.md`
 - `../../../../.claude/skills/eval-backend-setup/SKILL.md` → `../../../.claude/skills/eval-backend-setup/SKILL.md`
 - `../../../../reports/` → `../../../docs/dev/reports/`(少一层 **且** 目标改名,因为 reports/ 已经不在旧位置,搬进了 `docs/dev/reports/`)
-- `../../../../harness/eval-dicegm/run.ts` → `../../../harness/eval-dicegm/run.ts`
+
+(注:原计划还列了一条"`../../../../harness/eval-dicegm/run.ts` → `../../../harness/eval-dicegm/run.ts`"——核实后原文件里 `run.ts` 只是**裸文本提及**(如"`harness/eval-dicegm/run.ts`:场景就绪器..."),从来不是带 `../` 前缀的超链接,不需要改、也无法按"改超链接"的方式执行,这条从计划里删除。)
 
 - [ ] **Step 6: 验证深链接目标真实存在**
 
@@ -227,18 +228,17 @@ Run:
 cd wiki/开发指南/04-子系统设计
 test -f ../../../backend/src/store/sheet/visibility.ts && echo "OK: visibility.ts"
 test -d ../../../backend/src/store && echo "OK: store dir"
-test -d ../../research/scraped && echo "OK: research/scraped"
+test -d ../../../docs/research/scraped && echo "OK: research/scraped"
 test -f ../../../backend/src/present/playerView.ts && echo "OK: playerView.ts"
 test -f ../../../backend/src/eval/assertions.ts && echo "OK: assertions.ts"
-test -f ../../harness/eval-dicegm/grader.md && echo "OK: grader.md"
 test -f ../../../.claude/skills/play-eval/SKILL.md && echo "OK: play-eval SKILL"
 test -f ../../../.claude/skills/build-eval/SKILL.md && echo "OK: build-eval SKILL"
 test -f ../../../.claude/skills/eval-backend-setup/SKILL.md && echo "OK: eval-backend-setup SKILL"
 test -d ../../../docs/dev/reports && echo "OK: docs/dev/reports"
-test -f ../../../harness/eval-dicegm/run.ts && echo "OK: run.ts"
+grep -c "\[.grader\.md.\]" Skills-eval.md || echo "OK: grader.md 已去链接化(应无 markdown 链接语法匹配)"
 cd /home/mulei/dicelore
 ```
-Expected: 全部 10 行 `OK: ...` 都打印(任何一条缺失说明对应 Edit 算错了层数,回头核对)。
+Expected: 前 9 行全部 `OK: ...`;最后一行 `grep -c` 应输出 `0`(触发 `||` 分支打印"OK: grader.md 已去链接化")——若 `grep -c` 输出 ≥1,说明还有 `[grader.md](...)` 这种链接语法残留,需要回头补 Edit。
 
 - [ ] **Step 7: Commit**
 
