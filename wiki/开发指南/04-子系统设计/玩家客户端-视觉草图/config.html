@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh"><head><meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+:root{
+  --bg:#0c211a; --surface:#122a22; --surface2:#18342a; --line:#25433a; --line2:#33574a;
+  --text:#e9e3d1; --text2:#9aae9f; --text3:#62756a; --acc:#d4a83e; --acc-h:#e6bd5a; --acc-soft:#ecd28c; --acc-on:#13261d;
+  --warn:#d99a3a; --err:#cd5b4a; --ok:#5fae7e;
+  --serif:'Playfair Display',Georgia,serif; --sans:'Inter',system-ui,sans-serif; --mono:'JetBrains Mono',monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#06130d;font-family:var(--sans);color:var(--text)}
+[data-lucide]{width:16px;height:16px;stroke-width:1.6;vertical-align:middle}
+.page{max-width:1180px;margin:14px auto;padding:0 14px}
+h2{font-family:var(--serif);font-weight:600;font-size:21px;margin:0 0 4px}.subtitle{color:var(--text2);font-size:13px;margin:0 0 14px}
+
+.shell{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--bg);font-size:12px}
+.bar{display:flex;align-items:center;gap:16px;padding:0 14px;height:48px;background:var(--surface);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:9px;font-family:var(--serif);font-weight:700;font-size:17px}
+.brand .logo{width:23px;height:23px;border-radius:5px;background:linear-gradient(150deg,var(--acc-h),var(--acc));display:flex;align-items:center;justify-content:center;color:var(--acc-on)}
+.brand .logo [data-lucide]{width:14px;height:14px}
+.nav{display:flex;gap:1px}
+.nav a{display:flex;align-items:center;gap:7px;padding:0 12px;height:48px;color:var(--text2);font-size:12.5px;font-weight:500;border-bottom:2px solid transparent;cursor:pointer}
+.nav a.on{color:var(--text);border-bottom-color:var(--acc)}.nav a [data-lucide]{width:15px;height:15px}
+.tools{margin-left:auto;display:flex;align-items:center;gap:8px}
+.tool{display:flex;align-items:center;gap:5px;color:var(--text2);cursor:pointer;padding:6px 7px;border-radius:6px}.tool [data-lucide]{width:15px;height:15px}
+
+.body{display:flex;height:438px}
+.sidenav{width:188px;background:var(--surface);border-right:1px solid var(--line);padding:11px 8px;overflow:auto}
+.sn-grp{color:var(--text3);font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:9px 8px 4px}
+.sn{display:flex;align-items:center;gap:10px;padding:8px 9px;border-radius:6px;color:var(--text2);cursor:pointer;font-size:12.5px}
+.sn:hover{background:var(--surface2);color:var(--text)}
+.sn.on{background:var(--surface2);color:var(--text)}.sn.on [data-lucide]{color:var(--acc)}
+.sn [data-lucide]{width:15px;height:15px;color:var(--text3)}
+
+.main{flex:1;overflow:auto;min-width:0;padding:18px 24px}
+.mhead{display:flex;align-items:center;gap:11px;margin-bottom:4px}
+.mhead h3{font-family:var(--serif);font-weight:600;font-size:18px;margin:0}
+.mhead .sp{flex:1}
+.mhead .add{display:flex;align-items:center;gap:6px;padding:7px 13px;border-radius:7px;background:linear-gradient(160deg,var(--acc-h),var(--acc));color:var(--acc-on);font-weight:600;font-size:12px;cursor:pointer}
+.mhead .add [data-lucide]{width:14px;height:14px}
+.mdesc{color:var(--text2);font-size:12px;margin-bottom:18px;max-width:640px;line-height:1.6}
+.sec-l{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);margin:16px 0 9px;display:flex;align-items:center;gap:7px}
+.sec-l:after{content:"";flex:1;height:1px;background:var(--line)}
+
+.srv{display:flex;align-items:center;gap:13px;padding:13px 15px;border:1px solid var(--line);border-radius:9px;background:var(--surface);margin-bottom:9px}
+.srv .ico{width:36px;height:36px;border-radius:8px;background:var(--surface2);display:flex;align-items:center;justify-content:center;color:var(--acc-soft);flex:none}
+.srv .ico [data-lucide]{width:18px}
+.srv .mid{flex:1;min-width:0}
+.srv .nm{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--text);font-weight:600}
+.srv .nm .dot{width:7px;height:7px;border-radius:50%;background:var(--ok)}.srv .nm .dot.off{background:var(--text3)}
+.srv .badge{font-family:var(--mono);font-size:9px;padding:1px 7px;border-radius:10px;border:1px solid var(--line2);color:var(--text2);font-weight:400}
+.srv .badge.core{color:var(--acc-soft);border-color:var(--acc)}
+.srv .badge.ooc{color:var(--warn);border-color:var(--warn)}
+.srv .meta{font-family:var(--mono);font-size:10.5px;color:var(--text3);margin-top:4px;display:flex;gap:12px;flex-wrap:wrap}
+.srv .meta .w{color:var(--warn)}
+.srv .right{display:flex;align-items:center;gap:14px;flex:none}
+.srv .perm{font-size:10.5px;color:var(--ok);display:flex;align-items:center;gap:4px}.srv .perm [data-lucide]{width:13px}
+.lock{color:var(--text3);display:flex;align-items:center;gap:4px;font-size:10.5px}.lock [data-lucide]{width:13px}
+.sw{width:38px;height:21px;border-radius:11px;background:var(--line2);position:relative;cursor:pointer}
+.sw.on{background:var(--acc)}
+.sw:after{content:"";position:absolute;top:2px;left:2px;width:17px;height:17px;border-radius:50%;background:#fff;transition:.15s}
+.sw.on:after{left:19px}
+.note{display:flex;gap:8px;font-size:11px;color:var(--text2);line-height:1.55;background:var(--surface);border:1px solid var(--line);border-left:2px solid var(--acc);border-radius:6px;padding:9px 12px;margin-top:6px}
+.note [data-lucide]{width:14px;flex:none;color:var(--acc-soft);margin-top:1px}
+</style></head>
+<body>
+<div class="page">
+  <h2>A · 配置(导航 + 子页型)· 当前:MCP 服务器</h2>
+  <p class="subtitle">左导航分类;右子页表单。MCP 页:dicelore 规范态来源 + 自定义 MCP(out-of-canon)+ 权限闸 + notify webhook 状态。</p>
+
+  <div class="shell">
+    <div class="bar">
+      <span class="brand"><span>Dicelore<span style="color:#d8553f">.</span></span></span>
+      <nav class="nav">
+        <a><i data-lucide="home"></i>主页</a>
+        <a><i data-lucide="dices"></i>跑团</a>
+        <a><i data-lucide="hammer"></i>团本制作</a>
+        <a class="on"><i data-lucide="settings"></i>配置</a>
+      </nav>
+      <div class="tools"><span class="tool"><i data-lucide="languages"></i></span><span class="tool"><i data-lucide="moon"></i></span></div>
+    </div>
+
+    <div class="body">
+      <div class="sidenav">
+        <div class="sn-grp">设置</div>
+        <div class="sn"><i data-lucide="sliders-horizontal"></i>通用</div>
+        <div class="sn"><i data-lucide="network"></i>服务与网络</div>
+        <div class="sn on"><i data-lucide="plug"></i>MCP 服务器</div>
+        <div class="sn"><i data-lucide="brain-circuit"></i>模型连接</div>
+        <div class="sn"><i data-lucide="palette"></i>主题外观</div>
+        <div class="sn"><i data-lucide="database"></i>数据与存储</div>
+        <div class="sn"><i data-lucide="info"></i>关于</div>
+      </div>
+
+      <div class="main">
+        <div class="mhead">
+          <h3>MCP 服务器</h3><span class="sp"></span>
+          <span class="add"><i data-lucide="plus"></i>添加 MCP</span>
+        </div>
+        <div class="mdesc">GM 可调用的工具来源。<b style="color:var(--text)">规范态(人物卡 / 事件 / 世界 / 裁决)只走 dicelore 自己</b>;自定义 MCP 仅提供周边能力(检索 / 配图 / 氛围),产出作叙述流回,归 out-of-canon。</div>
+
+        <div class="sec-l">核心 · 规范态来源</div>
+        <div class="srv">
+          <span class="ico"><i data-lucide="dices"></i></span>
+          <div class="mid">
+            <div class="nm">dicelore<span class="dot"></span><span class="badge core">规范态来源</span></div>
+            <div class="meta"><span>stdio · 运行时</span><span>18 工具</span><span>notify webhook 已连 · 127.0.0.1/internal/notify</span></div>
+          </div>
+          <div class="right"><span class="lock"><i data-lucide="lock"></i>必需</span></div>
+        </div>
+
+        <div class="sec-l">自定义 · out-of-canon</div>
+        <div class="srv">
+          <span class="ico"><i data-lucide="globe"></i></span>
+          <div class="mid">
+            <div class="nm">联网检索<span class="dot"></span><span class="badge ooc">out-of-canon</span></div>
+            <div class="meta"><span>远程 SSE</span><span>3 工具</span><span class="w">⚠ 联网 · 数据外流</span></div>
+          </div>
+          <div class="right"><span class="perm"><i data-lucide="shield-check"></i>已授权</span><span class="sw on"></span></div>
+        </div>
+        <div class="srv">
+          <span class="ico"><i data-lucide="image"></i></span>
+          <div class="mid">
+            <div class="nm">配图生成<span class="dot off"></span><span class="badge ooc">out-of-canon</span></div>
+            <div class="meta"><span>本地 stdio</span><span>1 工具</span><span>未启用</span></div>
+          </div>
+          <div class="right"><span class="sw"></span></div>
+        </div>
+
+        <div class="note"><i data-lucide="info"></i><span>out-of-canon 工具调用仍落 event 留痕,但<b style="color:var(--text)">不参与 L3 审计比对、不发呈现 notify</b>;外部副作用不进快照、rewind 撤不回。远程 server 首次调用需显式授权。</span></div>
+      </div>
+    </div>
+  </div>
+  <p class="subtitle" style="margin-top:12px">配置页这样对吗?两页都过了我就把整套视觉设计写成 spec 提交 git。</p>
+</div>
+<script>window.addEventListener('load',()=>{if(window.lucide)lucide.createIcons();});</script>
+</body></html>

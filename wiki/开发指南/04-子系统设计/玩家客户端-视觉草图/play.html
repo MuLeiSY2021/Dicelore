@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh"><head><meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+:root{
+  --bg:#0c211a; --surface:#122a22; --surface2:#18342a; --line:#25433a; --line2:#33574a;
+  --text:#e9e3d1; --text2:#9aae9f; --text3:#62756a; --dial-empty:#1a392f;
+  --acc:#d4a83e; --acc-h:#e6bd5a; --acc-soft:#ecd28c; --acc-on:#13261d;
+  --serif:'Playfair Display',Georgia,serif; --sans:'Inter',system-ui,sans-serif; --mono:'JetBrains Mono',monospace;
+}
+body.light{
+  --bg:#dde8de; --surface:#eef4ed; --surface2:#e6efe5; --line:#c8d8c9; --line2:#aec4af;
+  --text:#123a2c; --text2:#4b6356; --text3:#7e9488; --dial-empty:#d3e2d4;
+  --acc:#937420; --acc-h:#a98a2c; --acc-soft:#6f561a; --acc-on:#ffffff;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#06130d;font-family:var(--sans);color:var(--text)}
+body.light{background:#cdddce}
+[data-lucide]{width:16px;height:16px;stroke-width:1.6;vertical-align:middle}
+.page{max-width:1180px;margin:14px auto;padding:0 14px}
+h2{font-family:var(--serif);font-weight:600;font-size:21px;margin:0 0 4px;letter-spacing:.01em}
+.subtitle{color:var(--text2);font-size:13px;margin:0 0 14px}
+
+.shell{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--bg);font-size:12px}
+.bar{display:flex;align-items:center;gap:16px;padding:0 14px;height:48px;background:var(--surface);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:9px;font-family:var(--serif);font-weight:700;font-size:17px;letter-spacing:.02em}
+.brand .logo{width:23px;height:23px;border-radius:5px;background:linear-gradient(150deg,var(--acc-h),var(--acc));display:flex;align-items:center;justify-content:center;color:var(--acc-on);box-shadow:0 0 0 1px #00000022}
+.brand .logo [data-lucide]{width:14px;height:14px}
+.nav{display:flex;gap:1px}
+.nav a{display:flex;align-items:center;gap:7px;padding:0 12px;height:48px;color:var(--text2);text-decoration:none;font-size:12.5px;font-weight:500;border-bottom:2px solid transparent;cursor:pointer}
+.nav a.on{color:var(--text);border-bottom-color:var(--acc)}
+.nav a [data-lucide]{width:15px;height:15px}
+.tools{margin-left:auto;display:flex;align-items:center;gap:8px}
+.tool{display:flex;align-items:center;gap:5px;color:var(--text2);cursor:pointer;font-size:11.5px;padding:6px 7px;border-radius:6px}
+.tool:hover{background:var(--surface2);color:var(--text)}.tool [data-lucide]{width:15px;height:15px}
+.palette{display:flex;align-items:center;gap:5px;padding-left:9px;border-left:1px solid var(--line)}
+.palette>[data-lucide]{width:14px;height:14px;color:var(--text3)}
+.sw{width:15px;height:15px;border-radius:50%;cursor:pointer;border:2px solid var(--surface);outline:1px solid var(--line2)}
+.sw.on{outline:2px solid var(--text)}
+
+.body{display:flex;height:452px}
+.rail{width:48px;background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 0}
+.rail .ic{width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:7px;color:var(--text3);cursor:grab;position:relative}
+.rail .ic.on{color:var(--acc-soft);background:var(--surface2)}
+.rail .ic.on:after{content:"";position:absolute;left:-10px;top:8px;bottom:8px;width:2px;border-radius:2px;background:var(--acc)}
+.rail .ic:hover{color:var(--text);background:var(--surface2)}.rail .sp{flex:1}
+
+.browse{width:198px;background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column}
+.bh{display:flex;align-items:center;gap:8px;padding:12px 13px 7px;color:var(--text);font-family:var(--serif);font-weight:600;font-size:14px}
+.bh [data-lucide]{width:15px;height:15px;color:var(--acc-soft)}
+.bsearch{display:flex;align-items:center;gap:7px;margin:2px 11px 9px;padding:6px 9px;background:var(--bg);border:1px solid var(--line);border-radius:6px;color:var(--text3);font-size:11.5px}
+.bsearch [data-lucide]{width:13px;height:13px}
+.tree{padding:0 7px 8px;overflow:auto;flex:1;font-size:12px}
+.cat{display:flex;align-items:center;gap:5px;color:var(--text3);padding:8px 6px 4px;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.cat [data-lucide]{width:12px;height:12px}
+.leaf{display:flex;align-items:center;color:var(--text);padding:5px 7px 5px 18px;cursor:pointer;border-radius:6px;gap:8px;font-size:12px}
+.leaf:hover{background:var(--surface2)}
+.leaf .lic{color:var(--text3);display:flex}.leaf .lic [data-lucide]{width:13px;height:13px}
+.leaf .nm{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.leaf .tag{font-family:var(--mono);font-size:9.5px;color:var(--text3)}
+.leaf .pin{color:var(--text3);display:flex}.leaf .pin [data-lucide]{width:13px;height:13px}.leaf .pin.on{color:var(--acc)}
+
+.center{flex:1;display:flex;flex-direction:column;background:var(--bg);min-width:0}
+.narr{flex:1;overflow:auto;padding:20px 28px;font-size:14px;line-height:1.85;color:var(--text)}
+.narr .you{display:flex;gap:9px;align-items:flex-start;color:var(--text2);font-style:italic;font-size:12.5px;margin-bottom:15px}
+.narr .you [data-lucide]{width:15px;height:15px;color:var(--text3);margin-top:3px;flex:none}
+.narr p{margin:0 0 12px}
+.mech{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11.5px;color:var(--acc-soft);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:7px 11px;margin:11px 0}
+.mech [data-lucide]{width:14px;height:14px;color:var(--acc)}
+.ranges{margin:17px 0 2px}
+.ranges .rt{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11px;color:var(--text2);margin-bottom:9px;letter-spacing:.03em}
+.ranges .rt [data-lucide]{width:14px;height:14px;color:var(--acc)}
+.rr{display:flex;gap:14px;padding:7px 0 7px 14px;border-left:2px solid var(--line2)}.rr+.rr{border-top:1px solid var(--line)}
+.rr .rg{font-family:var(--mono);color:var(--acc);font-weight:600;min-width:34px;font-size:12px}
+.rr .rd{color:var(--text2);font-size:12.5px;line-height:1.5}
+.split{height:1px;background:var(--line);position:relative}
+.split:after{content:"";position:absolute;left:50%;top:-3px;transform:translateX(-50%);width:34px;height:5px;border-radius:3px;background:var(--line2)}
+.input{padding:16px 28px;display:flex;align-items:center;gap:15px}
+.roll{display:flex;align-items:center;gap:9px;padding:11px 24px;background:linear-gradient(160deg,var(--acc-h),var(--acc));border:none;border-radius:7px;color:var(--acc-on);font-family:var(--sans);font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 8px 22px #d4a83e2e}
+.roll:hover{filter:brightness(1.06)}.roll [data-lucide]{width:18px;height:18px}
+.roll .d{font-family:var(--mono);font-size:11.5px;background:#0000002a;padding:2px 7px;border-radius:4px;font-weight:600}
+.input .h{font-family:var(--mono);font-size:10.5px;color:var(--text3)}
+
+.stage{width:306px;background:var(--surface);border-left:1px solid var(--line);display:flex;flex-direction:column}
+.sh{display:flex;align-items:center;gap:8px;padding:12px 13px;border-bottom:1px solid var(--line);font-family:var(--serif);font-weight:600;font-size:14px}
+.sh [data-lucide]{width:15px;height:15px;color:var(--acc-soft)}
+.sh .mode{margin-left:auto;display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:9.5px;color:var(--text3);border:1px solid var(--line2);padding:2px 7px;border-radius:5px}
+.sh .mode [data-lucide]{width:12px;height:12px}.sh .add{color:var(--text3);cursor:pointer;display:flex}
+.grid{padding:10px;overflow:auto;flex:1;display:grid;grid-template-columns:1fr 1fr;gap:9px;align-content:start}
+.pan{background:var(--surface2);border:1px solid var(--line);border-radius:7px;display:flex;flex-direction:column}
+.pan.wide{grid-column:1/-1}.pan.min{grid-column:1/-1}
+.ph{display:flex;align-items:center;gap:7px;padding:7px 10px;border-bottom:1px solid var(--line);font-size:11.5px;color:var(--text);font-weight:500}
+.pan.min .ph{border-bottom:none}
+.ph .pic{color:var(--text3);display:flex}.ph .pic [data-lucide]{width:14px;height:14px}
+.ph .ctl{margin-left:auto;display:flex;gap:9px;color:var(--text3)}.ph .ctl [data-lucide]{width:14px;height:14px;cursor:pointer}
+.pc{padding:9px 11px}
+.row{display:flex;justify-content:space-between;padding:3px 0;font-family:var(--mono);font-size:12px;color:var(--text2)}.row b{color:var(--text);font-weight:600}
+.clockrow{display:flex;align-items:center;gap:13px}
+.dial{width:54px;height:54px;border-radius:50%;flex:none;background:repeating-conic-gradient(from -90deg,transparent 0 41deg,var(--surface2) 41deg 45deg),conic-gradient(from -90deg,var(--acc) 0 90deg,var(--dial-empty) 90deg);border:1px solid var(--line2)}
+.ck .nm{font-size:12px;color:var(--text)}.ck .v{font-family:var(--mono);font-size:16px;color:var(--acc-soft);font-weight:600}.ck .src{font-family:var(--mono);font-size:9px;color:var(--text3);margin-top:2px}
+.minrow{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--text)}.minrow .mt{margin-left:6px;font-family:var(--mono);font-size:9.5px;color:var(--text3)}.minrow [data-lucide]{width:13px;height:13px;color:var(--text3)}
+.revc{font-size:11.5px;color:var(--text2);line-height:1.55}.revc b{color:var(--text);font-weight:600;font-family:var(--serif)}
+.gm-tag{display:flex;align-items:center;gap:4px;font-family:var(--mono);font-size:9px;color:var(--text3)}.gm-tag [data-lucide]{width:11px;height:11px}
+</style></head>
+<body>
+<div class="page">
+  <h2>v15 · 墨金调深(暗版更沉 · 亮版保住墨绿)</h2>
+  <p class="subtitle">暗:深松绿压到 #0c211a 更沉。亮:青瓷沙绿底 + 深森绿字 + 暗金,不再变米白。点 ☀🌙 / 色板试。</p>
+
+  <div class="shell">
+    <div class="bar">
+      <span class="brand"><span>Dicelore<span style="color:#d8553f">.</span></span></span>
+      <nav class="nav">
+        <a><i data-lucide="home"></i>主页</a>
+        <a class="on"><i data-lucide="dices"></i>跑团</a>
+        <a><i data-lucide="hammer"></i>团本制作</a>
+        <a><i data-lucide="settings"></i>配置</a>
+      </nav>
+      <div class="tools">
+        <span class="tool" title="语言"><i data-lucide="languages"></i><i data-lucide="chevron-down" style="width:12px"></i></span>
+        <span class="tool" id="themeBtn"><i data-lucide="moon"></i></span>
+        <span class="palette" title="强调色(配置里固定)">
+          <i data-lucide="palette"></i>
+          <span class="sw on" data-acc="gold" style="background:#d4a83e"></span>
+          <span class="sw" data-acc="copper" style="background:#c47a3e"></span>
+          <span class="sw" data-acc="teal" style="background:#3aa896"></span>
+          <span class="sw" data-acc="crimson" style="background:#b4453a"></span>
+          <span class="sw" data-acc="indigo" style="background:#6f74e8"></span>
+        </span>
+      </div>
+    </div>
+
+    <div class="body">
+      <div class="rail">
+        <div class="ic on" title="设定"><i data-lucide="book-open"></i></div>
+        <div class="ic" title="规则"><i data-lucide="scale"></i></div>
+        <div class="ic" title="日志"><i data-lucide="scroll-text"></i></div>
+        <div class="ic" title="会话"><i data-lucide="messages-square"></i></div>
+        <div class="sp"></div>
+        <div class="ic" title="拖出生成面板"><i data-lucide="layout-grid"></i></div>
+      </div>
+
+      <div class="browse">
+        <div class="bh"><i data-lucide="book-open"></i>设定</div>
+        <div class="bsearch"><i data-lucide="search"></i>搜设定 / 卡池</div>
+        <div class="tree">
+          <div class="cat"><i data-lucide="file-text"></i>设定文档 · 地点</div>
+          <div class="leaf"><span class="lic"><i data-lucide="file"></i></span><span class="nm">黑风寨</span><span class="tag">据点</span><span class="pin on"><i data-lucide="pin"></i></span></div>
+          <div class="leaf"><span class="lic"><i data-lucide="file"></i></span><span class="nm">钟楼</span><span class="tag">据点</span><span class="pin"><i data-lucide="pin"></i></span></div>
+          <div class="cat"><i data-lucide="file-text"></i>设定文档 · 人物</div>
+          <div class="leaf"><span class="lic"><i data-lucide="file"></i></span><span class="nm">钟三爷</span><span class="tag">头领</span><span class="pin"><i data-lucide="pin"></i></span></div>
+          <div class="cat"><i data-lucide="layers"></i>卡池</div>
+          <div class="leaf"><span class="lic"><i data-lucide="dice-5"></i></span><span class="nm">机缘</span><span class="tag">3·加权</span></div>
+          <div class="leaf"><span class="lic"><i data-lucide="dice-5"></i></span><span class="nm">夜巡遭遇</span><span class="tag">5</span></div>
+        </div>
+      </div>
+
+      <div class="center">
+        <div class="narr">
+          <div class="you"><i data-lucide="corner-down-right"></i><span>翻身上墙,贴阴影摸向钟楼,伺机割断钟绳。</span></div>
+          <p>夜风穿过箭楼,火把压低了身子。你攀上木梯,钟绳在头顶随风轻晃；院内骰盅笑声未停,守卫的脚步在墙根游移。</p>
+          <div class="mech"><i data-lucide="check-circle-2"></i>潜行 d20+4 = 18　已到位</div>
+          <p>就是此刻。你拔出铁剑,刃锋贴上粗绳——成败,看这一下手稳不稳。</p>
+          <div class="ranges">
+            <div class="rt"><i data-lucide="dices"></i>掷一颗 d10,结果如下</div>
+            <div class="rr"><span class="rg">1–2</span><span class="rd">绳没断,钟楼晃出声响（钟楼示警 +2）</span></div>
+            <div class="rr"><span class="rg">3–6</span><span class="rd">割断绳,钟声哑了,你悄然退下</span></div>
+            <div class="rr"><span class="rg">7–9</span><span class="rd">干净利落,顺走守卫的酒壶</span></div>
+            <div class="rr"><span class="rg">0</span><span class="rd">大成功:暗格露出完整寨防图</span></div>
+          </div>
+        </div>
+        <div class="split"></div>
+        <div class="input"><button class="roll"><i data-lucide="dices"></i>丢骰子<span class="d">d10</span></button><span class="h">这一掷决定上面哪一行</span></div>
+      </div>
+
+      <div class="stage">
+        <div class="sh"><i data-lucide="layout-dashboard"></i>呈现台<span class="mode"><i data-lucide="grid-3x3"></i>网格</span><span class="add"><i data-lucide="plus"></i></span></div>
+        <div class="grid">
+          <div class="pan"><div class="ph"><span class="pic"><i data-lucide="user"></i></span>人物属性<span class="ctl"><i data-lucide="minus"></i><i data-lucide="x"></i></span></div>
+            <div class="pc"><div class="row"><span>HP</span><b>12/15</b></div><div class="row"><span>金钱</span><b>77</b></div><div class="row"><span>声望</span><b>+2</b></div></div></div>
+          <div class="pan"><div class="ph"><span class="pic"><i data-lucide="timer"></i></span>倒计时钟<span class="ctl"><i data-lucide="minus"></i><i data-lucide="x"></i></span></div>
+            <div class="pc"><div class="clockrow"><div class="dial"></div><div class="ck"><div class="nm">钟楼示警</div><div class="v">2/8</div><div class="src">满则触发 Front</div></div></div></div></div>
+          <div class="pan min"><div class="ph"><span class="pic"><i data-lucide="chevron-right"></i></span><div class="minrow"><i data-lucide="package"></i>库存<span class="mt">4 件 · 已最小化</span></div><span class="ctl"><i data-lucide="square"></i><i data-lucide="x"></i></span></div></div>
+          <div class="pan wide"><div class="ph"><span class="pic"><i data-lucide="eye"></i></span>揭示 · 设定<span class="ctl"><span class="gm-tag"><i data-lucide="sparkles"></i>GM·7</span><i data-lucide="minus"></i><i data-lucide="x"></i></span></div>
+            <div class="pc"><div class="revc"><b>黑风寨布防</b>　东门两哨、钟楼暗哨一,子时换岗；后窗临崖无人。</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="subtitle" style="margin-top:12px">暗版够沉了吗?亮版的墨绿留住了吗?</p>
+</div>
+<script>
+const accMap={gold:['#d4a83e','#e6bd5a','#ecd28c','#13261d'],copper:['#c47a3e','#d6925a','#e6b189','#1c1209'],teal:['#3aa896','#57c4b1','#8ad9cb','#06231f'],crimson:['#b4453a','#cd6256','#e08b80','#fff'],indigo:['#6f74e8','#8a8ef0','#b3b6f6','#fff']};
+function setAcc(k){const m=accMap[k],r=document.documentElement.style,lt=document.body.classList.contains('light');r.setProperty('--acc',m[0]);r.setProperty('--acc-h',m[1]);r.setProperty('--acc-soft',lt?m[0]:m[2]);r.setProperty('--acc-on',m[3]);}
+document.querySelectorAll('.sw').forEach(s=>s.addEventListener('click',()=>{document.querySelectorAll('.sw').forEach(x=>x.classList.remove('on'));s.classList.add('on');setAcc(s.dataset.acc);}));
+const tb=document.getElementById('themeBtn');
+tb.addEventListener('click',()=>{document.body.classList.toggle('light');const lt=document.body.classList.contains('light');tb.innerHTML=lt?'<i data-lucide="sun"></i>':'<i data-lucide="moon"></i>';const on=document.querySelector('.sw.on');if(on)setAcc(on.dataset.acc);if(window.lucide)lucide.createIcons();});
+window.addEventListener('load',function(){if(window.lucide)lucide.createIcons();});
+</script>
+</body></html>

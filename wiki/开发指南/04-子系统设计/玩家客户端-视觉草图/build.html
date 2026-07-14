@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh"><head><meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+:root{
+  --bg:#0c211a; --surface:#122a22; --surface2:#18342a; --line:#25433a; --line2:#33574a;
+  --text:#e9e3d1; --text2:#9aae9f; --text3:#62756a; --acc:#d4a83e; --acc-h:#e6bd5a; --acc-soft:#ecd28c; --acc-on:#13261d;
+  --warn:#d99a3a; --err:#cd5b4a; --ok:#5fae7e;
+  --serif:'Playfair Display',Georgia,serif; --sans:'Inter',system-ui,sans-serif; --mono:'JetBrains Mono',monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#06130d;font-family:var(--sans);color:var(--text)}
+[data-lucide]{width:16px;height:16px;stroke-width:1.6;vertical-align:middle}
+.page{max-width:1180px;margin:14px auto;padding:0 14px}
+h2{font-family:var(--serif);font-weight:600;font-size:21px;margin:0 0 4px}.subtitle{color:var(--text2);font-size:13px;margin:0 0 14px}
+
+.shell{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--bg);font-size:12px}
+.bar{display:flex;align-items:center;gap:16px;padding:0 14px;height:48px;background:var(--surface);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:9px;font-family:var(--serif);font-weight:700;font-size:17px}
+.brand .logo{width:23px;height:23px;border-radius:5px;background:linear-gradient(150deg,var(--acc-h),var(--acc));display:flex;align-items:center;justify-content:center;color:var(--acc-on)}
+.brand .logo [data-lucide]{width:14px;height:14px}
+.nav{display:flex;gap:1px}
+.nav a{display:flex;align-items:center;gap:7px;padding:0 12px;height:48px;color:var(--text2);font-size:12.5px;font-weight:500;border-bottom:2px solid transparent;cursor:pointer}
+.nav a.on{color:var(--text);border-bottom-color:var(--acc)}.nav a [data-lucide]{width:15px;height:15px}
+.tools{margin-left:auto;display:flex;align-items:center;gap:8px}
+.tool{display:flex;align-items:center;gap:5px;color:var(--text2);cursor:pointer;font-size:11.5px;padding:6px 7px;border-radius:6px}
+.tool [data-lucide]{width:15px;height:15px}
+
+/* 子上下文条 */
+.ctx{display:flex;align-items:center;gap:10px;padding:9px 16px;background:var(--bg);border-bottom:1px solid var(--line);font-size:12px}
+.ctx .name{font-family:var(--serif);font-size:14px;color:var(--text)}
+.ctx .badge{font-family:var(--mono);font-size:10px;color:var(--acc-soft);border:1px solid var(--line2);padding:1px 7px;border-radius:10px}
+.ctx .sp{flex:1}
+.ctx .act{display:flex;align-items:center;gap:6px;padding:6px 11px;border-radius:6px;border:1px solid var(--line2);color:var(--text2);cursor:pointer;font-size:11.5px}
+.ctx .act.go{background:linear-gradient(160deg,var(--acc-h),var(--acc));color:var(--acc-on);border:none;font-weight:600}
+.ctx .act [data-lucide]{width:14px;height:14px}
+
+.body{display:flex;height:420px}
+/* 左:内容类型/阶段 */
+.sidenav{width:194px;background:var(--surface);border-right:1px solid var(--line);padding:9px 8px;overflow:auto}
+.sn-grp{color:var(--text3);font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:9px 8px 4px}
+.sn{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:6px;color:var(--text2);cursor:pointer;font-size:12.5px}
+.sn:hover{background:var(--surface2);color:var(--text)}
+.sn.on{background:var(--surface2);color:var(--text)}.sn.on [data-lucide]{color:var(--acc)}
+.sn [data-lucide]{width:15px;height:15px;color:var(--text3)}
+.sn .ct{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--text3)}
+.sn .stg{margin-left:auto;width:7px;height:7px;border-radius:50%;background:var(--line2)}
+.sn .stg.done{background:var(--ok)}.sn .stg.now{background:var(--acc)}
+
+/* 中:编辑器 */
+.main{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--bg)}
+.mtool{display:flex;align-items:center;gap:9px;padding:10px 16px;border-bottom:1px solid var(--line)}
+.mtool .t{font-family:var(--serif);font-size:15px;color:var(--text)}
+.mtool .sp{flex:1}
+.mtool .btn{display:flex;align-items:center;gap:5px;padding:5px 10px;border:1px solid var(--line2);border-radius:6px;color:var(--text2);font-size:11.5px;cursor:pointer}
+.mtool .btn [data-lucide]{width:13px;height:13px}
+.mbody{flex:1;overflow:auto;padding:14px 16px;display:flex;flex-direction:column;gap:11px}
+.npc{border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.npc .nh{display:flex;align-items:center;gap:9px;padding:10px 13px;border-bottom:1px solid var(--line)}
+.npc .nh .av{width:30px;height:30px;border-radius:6px;background:var(--surface2);display:flex;align-items:center;justify-content:center;color:var(--acc-soft)}
+.npc .nh .nm{font-family:var(--serif);font-size:15px;color:var(--text)}
+.npc .nh .tag{font-family:var(--mono);font-size:9.5px;color:var(--text3);border:1px solid var(--line2);padding:1px 6px;border-radius:4px;margin-left:4px}
+.npc .nh .ed{margin-left:auto;color:var(--text3);display:flex;gap:9px}.npc .nh .ed [data-lucide]{width:14px;height:14px;cursor:pointer}
+.npc .nb{display:flex;gap:14px;padding:12px 13px}
+.npc .prose{flex:1;font-size:12.5px;line-height:1.7;color:var(--text2)}
+.npc .prose .lbl{font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
+.npc .card{width:170px;flex:none;border-left:1px solid var(--line);padding-left:13px}
+.npc .card .lbl{font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--text3);margin-bottom:6px}
+.crow{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11.5px;color:var(--text2);padding:2px 0;border-bottom:1px dashed var(--line)}.crow b{color:var(--text)}
+.npc.collapsed .nb{display:none}
+
+/* 右:构建 agent + 校验 */
+.aside{width:300px;background:var(--surface);border-left:1px solid var(--line);display:flex;flex-direction:column}
+.as-h{display:flex;align-items:center;gap:8px;padding:11px 13px;border-bottom:1px solid var(--line);font-family:var(--serif);font-weight:600;font-size:13.5px}
+.as-h [data-lucide]{width:15px;height:15px;color:var(--acc-soft)}
+.chat{flex:1;overflow:auto;padding:11px;display:flex;flex-direction:column;gap:9px}
+.msg{font-size:12px;line-height:1.55}
+.msg.u{align-self:flex-end;background:var(--surface2);border:1px solid var(--line);border-radius:9px 9px 2px 9px;padding:7px 10px;max-width:84%;color:var(--text)}
+.msg.a{align-self:flex-start;color:var(--text2);max-width:92%}
+.msg.a .who{display:flex;align-items:center;gap:5px;color:var(--acc-soft);font-size:10px;margin-bottom:3px}.msg.a .who [data-lucide]{width:12px;height:12px}
+.msg.a .did{font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:4px}
+.cin{display:flex;gap:7px;padding:10px;border-top:1px solid var(--line)}
+.cin input{flex:1;padding:7px 10px;background:var(--bg);border:1px solid var(--line);border-radius:7px;color:var(--text);font-size:12px}
+.cin .send{width:32px;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,var(--acc-h),var(--acc));border-radius:7px;color:var(--acc-on);cursor:pointer}
+.cin .send [data-lucide]{width:15px}
+.valid{border-top:1px solid var(--line);padding:10px 13px}
+.valid .vh{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--text);margin-bottom:7px}
+.valid .vh .chip{font-family:var(--mono);font-size:10px;padding:1px 7px;border-radius:10px;border:1px solid var(--line2)}
+.valid .vh .chip.ok{color:var(--ok)}.valid .vh .chip.warn{color:var(--warn)}
+.vitem{display:flex;gap:7px;font-size:11px;color:var(--text2);padding:4px 0;line-height:1.45}
+.vitem [data-lucide]{width:13px;height:13px;flex:none;margin-top:1px;color:var(--warn)}
+.vitem .f{font-family:var(--mono);color:var(--text3)}
+</style></head>
+<body>
+<div class="page">
+  <h2>A · 团本制作(组件5 构建台 · 子页型)</h2>
+  <p class="subtitle">左=内容类型/构建阶段;中=即写即读编辑器(NPC 人设散文 + sheet 卡);右=构建 agent 对话 + 整包校验报告。墨金语言一致。</p>
+
+  <div class="shell">
+    <div class="bar">
+      <span class="brand"><span>Dicelore<span style="color:#d8553f">.</span></span></span>
+      <nav class="nav">
+        <a><i data-lucide="home"></i>主页</a>
+        <a><i data-lucide="dices"></i>跑团</a>
+        <a class="on"><i data-lucide="hammer"></i>团本制作</a>
+        <a><i data-lucide="settings"></i>配置</a>
+      </nav>
+      <div class="tools">
+        <span class="tool"><i data-lucide="languages"></i></span>
+        <span class="tool"><i data-lucide="moon"></i></span>
+      </div>
+    </div>
+
+    <div class="ctx">
+      <i data-lucide="book-marked" style="width:15px;color:var(--acc-soft)"></i>
+      <span class="name">黑风寨的钟声</span><span class="badge">草稿 v0.3</span>
+      <span class="sp"></span>
+      <span class="act"><i data-lucide="search-check"></i>校验整包</span>
+      <span class="act"><i data-lucide="package-open"></i>导入原著</span>
+      <span class="act go"><i data-lucide="download"></i>导出团本包</span>
+    </div>
+
+    <div class="body">
+      <div class="sidenav">
+        <div class="sn-grp">内容</div>
+        <div class="sn"><i data-lucide="globe"></i>世界设定<span class="ct">12</span></div>
+        <div class="sn on"><i data-lucide="users"></i>NPC<span class="ct">5</span></div>
+        <div class="sn"><i data-lucide="layers"></i>卡池<span class="ct">3</span></div>
+        <div class="sn"><i data-lucide="sliders-horizontal"></i>规则·分档<span class="ct">4</span></div>
+        <div class="sn"><i data-lucide="swords"></i>阵线 Front<span class="ct">1</span></div>
+        <div class="sn"><i data-lucide="file-cog"></i>Manifest</div>
+        <div class="sn-grp">构建进度</div>
+        <div class="sn"><i data-lucide="circle-check-big"></i>世界观<span class="stg done"></span></div>
+        <div class="sn"><i data-lucide="circle-dot"></i>人物<span class="stg now"></span></div>
+        <div class="sn"><i data-lucide="circle"></i>卡池<span class="stg"></span></div>
+        <div class="sn"><i data-lucide="circle"></i>机制<span class="stg"></span></div>
+      </div>
+
+      <div class="main">
+        <div class="mtool">
+          <span class="t">NPC · 人物</span><span class="sp"></span>
+          <span class="btn"><i data-lucide="search"></i>搜索</span>
+          <span class="btn"><i data-lucide="plus"></i>新建 NPC</span>
+        </div>
+        <div class="mbody">
+          <div class="npc">
+            <div class="nh"><span class="av"><i data-lucide="user"></i></span><span class="nm">钟三爷</span><span class="tag">头领</span><span class="tag">有 sheet 卡</span>
+              <span class="ed"><i data-lucide="pencil"></i><i data-lucide="chevron-up"></i></span></div>
+            <div class="nb">
+              <div class="prose"><div class="lbl">人设散文</div>黑风寨的当家,使一对子母钟锤。耳背,逢整点必亲自巡钟楼;重义轻财,最恨被人坏了规矩。早年是镖师,因一桩冤案落草。</div>
+              <div class="card"><div class="lbl">sheet 卡</div>
+                <div class="crow"><span>HP</span><b>40</b></div>
+                <div class="crow"><span>子母钟锤</span><b>+6</b></div>
+                <div class="crow"><span>耳背</span><b>trait</b></div>
+                <div class="crow" style="border:none"><span>巡逻</span><b>整点</b></div>
+              </div>
+            </div>
+          </div>
+          <div class="npc collapsed">
+            <div class="nh"><span class="av"><i data-lucide="user"></i></span><span class="nm">王捕头</span><span class="tag">追兵</span>
+              <span class="ed"><i data-lucide="pencil"></i><i data-lucide="chevron-down"></i></span></div>
+          </div>
+          <div class="npc collapsed">
+            <div class="nh"><span class="av"><i data-lucide="user"></i></span><span class="nm">哑婆</span><span class="tag">线人</span><span class="tag" style="color:var(--warn);border-color:var(--warn)">缺卡</span>
+              <span class="ed"><i data-lucide="pencil"></i><i data-lucide="chevron-down"></i></span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="aside">
+        <div class="as-h"><i data-lucide="sparkles"></i>构建助手</div>
+        <div class="chat">
+          <div class="msg u">把《黑风寨》第三章里的人物补全,关键的给 sheet 卡</div>
+          <div class="msg a"><div class="who"><i data-lucide="sparkles"></i>构建助手</div>检索到第三章 3 个人物。已为「钟三爷」补 4 条属性,新增「王捕头」「哑婆」。哑婆是线人、暂未给卡。<div class="did">↳ add_npc ×2 · set_sheet_cell ×4</div></div>
+          <div class="msg a"><div class="who"><i data-lucide="sparkles"></i>构建助手</div>建议给哑婆加「听力」trait——她虽哑但耳灵,是情报来源。要加吗?</div>
+        </div>
+        <div class="cin"><input value="给哑婆加听力 trait"><span class="send"><i data-lucide="arrow-up"></i></span></div>
+        <div class="valid">
+          <div class="vh"><i data-lucide="shield-check" style="width:14px;color:var(--ok)"></i>整包校验<span class="chip ok">0 error</span><span class="chip warn">2 warn</span></div>
+          <div class="vitem"><i data-lucide="alert-triangle"></i><span><span class="f">npc/哑婆.md</span> 缺 sheet 卡,运行时无属性可裁决</span></div>
+          <div class="vitem"><i data-lucide="alert-triangle"></i><span><span class="f">manifest.clock</span> 指向「世界.钟楼示警」,该 attr 尚未在 sheets 声明</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="subtitle" style="margin-top:12px">团本制作页这样对吗?对了我画「配置」页(导航+子页:服务/MCP/模型连接/主题)。</p>
+</div>
+<script>window.addEventListener('load',()=>{if(window.lucide)lucide.createIcons();});</script>
+</body></html>

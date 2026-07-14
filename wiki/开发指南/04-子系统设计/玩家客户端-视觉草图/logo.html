@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh"><head><meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Pirata+One&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0c211a;--paper:#ece4d2;--zhu:#d8553f;}
+*{box-sizing:border-box}
+body{margin:0;background:#06130d;font-family:'Playfair Display',serif;color:var(--paper);padding:26px;display:flex;flex-wrap:wrap;gap:22px;align-items:flex-start}
+.cap{width:100%;font-family:'Pirata One',serif;font-size:17px;color:#9aae9f;margin:0 0 -4px}
+.frame{border:1px solid #25433a;border-radius:14px;display:flex;align-items:center;justify-content:center;position:relative}
+.frame.dark{background:var(--ink)} .frame.light{background:#eef4ed}
+.frame .tag{position:absolute;top:9px;left:13px;font-family:'Pirata One',serif;font-size:12px;color:#5d6b60}
+.frame.light .tag{color:#9bb0a0}
+.wm{font-weight:700;line-height:1;white-space:nowrap}
+.wm .g{color:#d4a83e}.wm .w{color:#ece4d2}.wm .dot{color:#d8553f}
+.wm.dk .g{color:#a07e1f}.wm.dk .w{color:#16302a}
+.pirata{font-family:'Pirata One',system-ui}
+.lockup{display:flex;align-items:center;gap:18px}
+.stack{display:flex;flex-direction:column;align-items:center;gap:14px}
+svg{display:block}
+</style></head>
+<body>
+<p class="cap">Dicelore brand / logo — 终版:宝石切面 d20(亮金切面 + 内黑棱 + 外金边)+ Dice金/lore白. + Pirata One "20"</p>
+
+<svg width="0" height="0" style="position:absolute"><defs>
+<g id="fill">
+  <polygon points="32,4.5 8.1,18.25 13,44 32,13" fill="#ecca7a" stroke="#ecca7a" stroke-width=".8"/>
+  <polygon points="32,4.5 32,13 51,44 55.9,18.25" fill="#ecca7a" stroke="#ecca7a" stroke-width=".8"/>
+  <polygon points="32,13 13,44 51,44" fill="#d4a83e" stroke="#d4a83e" stroke-width=".8"/>
+  <polygon points="8.1,18.25 8.1,45.75 13,44" fill="#ad8430" stroke="#ad8430" stroke-width=".8"/>
+  <polygon points="55.9,18.25 51,44 55.9,45.75" fill="#ad8430" stroke="#ad8430" stroke-width=".8"/>
+  <polygon points="13,44 8.1,45.75 32,59.5 32,44" fill="#8a6826" stroke="#8a6826" stroke-width=".8"/>
+  <polygon points="51,44 32,44 32,59.5 55.9,45.75" fill="#8a6826" stroke="#8a6826" stroke-width=".8"/>
+</g>
+<g id="inner" fill="none">
+  <polygon points="32,13 13,44 51,44"/>
+  <line x1="32" y1="13" x2="32" y2="4.5"/>
+  <line x1="13" y1="44" x2="8.1" y2="18.25"/><line x1="51" y1="44" x2="55.9" y2="18.25"/>
+  <line x1="13" y1="44" x2="8.1" y2="45.75"/><line x1="51" y1="44" x2="55.9" y2="45.75"/>
+  <line x1="32" y1="44" x2="32" y2="59.5"/>
+</g>
+</defs></svg>
+
+<!-- 主标 -->
+<div class="frame dark" style="width:470px;height:180px">
+  <span class="tag">主标 · d20 + 字标</span>
+  <span class="lockup">
+    <svg width="86" height="86" viewBox="0 0 64 64" shape-rendering="geometricPrecision">
+      <use href="#fill"/><use href="#inner" stroke="#0c211a" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/>
+      <polygon points="32,4.5 55.9,18.25 55.9,45.75 32,59.5 8.1,45.75 8.1,18.25" fill="none" stroke="#f2d98e" stroke-width="1.6" stroke-linejoin="round"/>
+      <text x="32" y="39" text-anchor="middle" class="pirata" font-size="15" fill="#0c211a">20</text>
+    </svg>
+    <span class="wm" style="font-size:46px"><span class="g">Dice</span><span class="w">lore</span><span class="dot">.</span></span>
+  </span>
+</div>
+
+<!-- 单标 -->
+<div class="frame dark" style="width:180px;height:180px">
+  <span class="tag">d20 单标</span>
+  <svg width="112" height="112" viewBox="0 0 64 64" shape-rendering="geometricPrecision">
+    <use href="#fill"/><use href="#inner" stroke="#0c211a" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/>
+    <polygon points="32,4.5 55.9,18.25 55.9,45.75 32,59.5 8.1,45.75 8.1,18.25" fill="none" stroke="#f2d98e" stroke-width="1.6" stroke-linejoin="round"/>
+    <text x="32" y="39" text-anchor="middle" class="pirata" font-size="15" fill="#0c211a">20</text>
+  </svg>
+</div>
+
+<!-- 纯字标 -->
+<div class="frame dark" style="width:330px;height:180px">
+  <span class="tag">纯字标</span>
+  <span class="wm" style="font-size:52px"><span class="g">Dice</span><span class="w">lore</span><span class="dot">.</span></span>
+</div>
+
+<!-- 竖排 -->
+<div class="frame dark" style="width:230px;height:220px">
+  <span class="tag">竖排</span>
+  <span class="stack">
+    <svg width="80" height="80" viewBox="0 0 64 64" shape-rendering="geometricPrecision">
+      <use href="#fill"/><use href="#inner" stroke="#0c211a" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/>
+      <polygon points="32,4.5 55.9,18.25 55.9,45.75 32,59.5 8.1,45.75 8.1,18.25" fill="none" stroke="#f2d98e" stroke-width="1.6" stroke-linejoin="round"/>
+      <text x="32" y="39" text-anchor="middle" class="pirata" font-size="15" fill="#0c211a">20</text>
+    </svg>
+    <span class="wm" style="font-size:34px"><span class="g">Dice</span><span class="w">lore</span><span class="dot">.</span></span>
+  </span>
+</div>
+
+<!-- 亮底 -->
+<div class="frame light" style="width:400px;height:180px">
+  <span class="tag">亮底</span>
+  <span class="lockup">
+    <svg width="68" height="68" viewBox="0 0 64 64" shape-rendering="geometricPrecision">
+      <use href="#fill"/><use href="#inner" stroke="#3a2f12" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/>
+      <polygon points="32,4.5 55.9,18.25 55.9,45.75 32,59.5 8.1,45.75 8.1,18.25" fill="none" stroke="#9a7b2f" stroke-width="1.6" stroke-linejoin="round"/>
+      <text x="32" y="39" text-anchor="middle" class="pirata" font-size="15" fill="#0c211a">20</text>
+    </svg>
+    <span class="wm dk" style="font-size:46px"><span class="g">Dice</span><span class="w">lore</span><span class="dot">.</span></span>
+  </span>
+</div>
+
+</body></html>

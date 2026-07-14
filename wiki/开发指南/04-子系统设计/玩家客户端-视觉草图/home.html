@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh"><head><meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+:root{
+  --bg:#0c211a; --surface:#122a22; --surface2:#18342a; --line:#25433a; --line2:#33574a;
+  --text:#e9e3d1; --text2:#9aae9f; --text3:#62756a; --acc:#d4a83e; --acc-h:#e6bd5a; --acc-soft:#ecd28c; --acc-on:#13261d;
+  --ok:#5fae7e; --warn:#d99a3a;
+  --serif:'Playfair Display',Georgia,serif; --sans:'Inter',system-ui,sans-serif; --mono:'JetBrains Mono',monospace;
+}
+body.light{
+  --bg:#dde8de; --surface:#eef4ed; --surface2:#e6efe5; --line:#c8d8c9; --line2:#aec4af;
+  --text:#123a2c; --text2:#4b6356; --text3:#7e9488; --acc:#937420; --acc-h:#a98a2c; --acc-soft:#6f561a; --acc-on:#fff;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#06130d;font-family:var(--sans);color:var(--text)}
+body.light{background:#cdddce}
+[data-lucide]{width:16px;height:16px;stroke-width:1.6;vertical-align:middle}
+.page{max-width:1180px;margin:14px auto;padding:0 14px}
+h2{font-family:var(--serif);font-weight:600;font-size:21px;margin:0 0 4px}.subtitle{color:var(--text2);font-size:13px;margin:0 0 14px}
+
+.shell{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--bg);font-size:12px}
+.bar{display:flex;align-items:center;gap:16px;padding:0 14px;height:48px;background:var(--surface);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:9px;font-family:var(--serif);font-weight:700;font-size:17px}
+.brand .logo{width:23px;height:23px;border-radius:5px;background:linear-gradient(150deg,var(--acc-h),var(--acc));display:flex;align-items:center;justify-content:center;color:var(--acc-on)}
+.brand .logo [data-lucide]{width:14px;height:14px}
+.nav{display:flex;gap:1px}
+.nav a{display:flex;align-items:center;gap:7px;padding:0 12px;height:48px;color:var(--text2);font-size:12.5px;font-weight:500;border-bottom:2px solid transparent;cursor:pointer}
+.nav a.on{color:var(--text);border-bottom-color:var(--acc)}.nav a [data-lucide]{width:15px;height:15px}
+.nav a.dim{opacity:.45}
+.tools{margin-left:auto;display:flex;align-items:center;gap:12px}
+.tool{display:flex;align-items:center;gap:5px;color:var(--text2);cursor:pointer;padding:6px 7px;border-radius:6px}.tool [data-lucide]{width:15px;height:15px}
+.status{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:10px;color:var(--text3);padding-left:12px;border-left:1px solid var(--line)}
+.status .dot{width:6px;height:6px;border-radius:50%;background:var(--ok);display:inline-block;margin-right:4px}.status .dot.w{background:var(--warn)}
+
+.home{padding:30px 36px}
+.hello{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--acc-soft)}
+.htitle{font-family:var(--serif);font-size:30px;color:var(--text);font-weight:600;margin:6px 0 4px}
+.hsub{color:var(--text2);font-size:13px}
+
+.resume{display:flex;align-items:center;gap:18px;margin:24px 0;padding:18px 22px;background:var(--surface);border:1px solid var(--line2);border-radius:12px}
+.resume .meta{flex:1}
+.resume .scen{font-family:var(--serif);font-size:18px;color:var(--text);font-weight:600}
+.resume .where{font-family:var(--mono);font-size:11.5px;color:var(--text2);margin-top:5px}
+.resume .cont{display:flex;align-items:center;gap:8px;padding:12px 22px;background:linear-gradient(160deg,var(--acc-h),var(--acc));border:none;border-radius:9px;color:var(--acc-on);font-weight:700;font-size:14px;cursor:pointer}
+.resume .cont [data-lucide]{width:17px}
+
+.quick{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin:20px 0}
+.qcard{padding:16px;background:var(--surface);border:1px solid var(--line);border-radius:10px;cursor:pointer}
+.qcard:hover{border-color:var(--line2)}
+.qcard .ico{width:34px;height:34px;border-radius:8px;background:var(--surface2);display:flex;align-items:center;justify-content:center;color:var(--acc-soft)}
+.qcard .ico [data-lucide]{width:18px}
+.qcard .qt{font-weight:600;color:var(--text);margin-top:10px;font-size:13.5px}
+.qcard .qd{font-size:11px;color:var(--text3);margin-top:3px}
+
+.label{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin:22px 0 9px;display:flex;align-items:center;gap:8px}
+.label:after{content:"";flex:1;height:1px;background:var(--line)}
+.recent{display:flex;flex-direction:column;gap:7px}
+.row{display:flex;align-items:center;gap:13px;padding:11px 14px;background:var(--surface);border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:13px}
+.row [data-lucide]{width:15px;color:var(--text3)}
+.row .rs{color:var(--text);flex:1}
+.row .tag{font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:10px;border:1px solid var(--line2);color:var(--text2)}
+.row .tag.live{color:var(--acc-soft);border-color:var(--acc)}
+.row .rt{font-family:var(--mono);color:var(--text3);font-size:11px}
+</style></head>
+<body>
+<div class="page">
+  <h2>主页 / 欢迎页(墨金)</h2>
+  <p class="subtitle">落地页:继续上次 + 快速入口 + 最近 Session。「跑团」无活动会话时置灰。</p>
+
+  <div class="shell">
+    <div class="bar">
+      <span class="brand"><span>Dicelore<span style="color:#d8553f">.</span></span></span>
+      <nav class="nav">
+        <a class="on"><i data-lucide="home"></i>主页</a>
+        <a class="dim"><i data-lucide="dices"></i>跑团</a>
+        <a><i data-lucide="hammer"></i>团本制作</a>
+        <a><i data-lucide="settings"></i>配置</a>
+      </nav>
+      <div class="tools">
+        <span class="status"><span><span class="dot"></span>模型 Opus 4.8</span><span><span class="dot"></span>MCP</span><span><span class="dot w"></span>notify 未配</span></span>
+        <span class="tool"><i data-lucide="languages"></i></span>
+        <span class="tool"><i data-lucide="moon"></i></span>
+      </div>
+    </div>
+
+    <div class="home">
+      <div class="hello">Good evening · 旅人</div>
+      <div class="htitle">夜还长,要继续黑风寨吗?</div>
+      <div class="hsub">上次离开于第二幕,你正贴着院墙,钟楼示警逼近戒备。</div>
+
+      <div class="resume">
+        <div class="meta">
+          <div class="scen">黑风寨的钟声 · 第二幕「夜入山寨」</div>
+          <div class="where">张三 · HP 12/15 · 金钱 77 · 进度 2/5 · 3 分钟前</div>
+        </div>
+        <button class="cont"><i data-lucide="play"></i>继续跑团</button>
+      </div>
+
+      <div class="quick">
+        <div class="qcard"><div class="ico"><i data-lucide="dices"></i></div><div class="qt">开新局</div><div class="qd">选团本 / 存档起一局</div></div>
+        <div class="qcard"><div class="ico"><i data-lucide="hammer"></i></div><div class="qt">团本制作</div><div class="qd">丢本小说造团本</div></div>
+        <div class="qcard"><div class="ico"><i data-lucide="messages-square"></i></div><div class="qt">会话管理</div><div class="qd">搜索 / 续档 / 删档</div></div>
+        <div class="qcard"><div class="ico"><i data-lucide="settings"></i></div><div class="qt">配置</div><div class="qd">服务 / MCP / 模型</div></div>
+      </div>
+
+      <div class="label">最近 Session</div>
+      <div class="recent">
+        <div class="row"><i data-lucide="swords"></i><span class="rs">黑风寨的钟声 · 第二幕</span><span class="tag live">进行中</span><span class="rt">3 分钟前</span></div>
+        <div class="row"><i data-lucide="clock"></i><span class="rs">长安十二时辰 · 序章</span><span class="tag">已存档</span><span class="rt">昨天</span></div>
+        <div class="row"><i data-lucide="flag"></i><span class="rs">克苏鲁:雾港来信 · 第一章</span><span class="tag">终局</span><span class="rt">3 天前</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>window.addEventListener('load',()=>{if(window.lucide)lucide.createIcons();});</script>
+</body></html>
