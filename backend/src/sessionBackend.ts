@@ -15,7 +15,7 @@
 // 接线已定稿(ADR-0028)：harness(DiceSession/createMcpServer)经注入的 SessionBackend 端口访存，
 // 不再直接 import 这些自由函数；openSessionBackend 是 harness 经端口访存的唯一实现，
 // 由组合根(server.ts/main.ts/hooks)按会话注入。
-// 见 docs/wiki/05-决策记录-ADR/README.md ADR-0028。
+// 见 wiki/开发指南/03-架构/总体架构.md「决策与权衡」节 ADR-0028。
 
 import type { DB, SessionBackend } from "@dicelore/interface";
 

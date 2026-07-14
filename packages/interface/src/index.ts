@@ -9,7 +9,7 @@
 
 // @dicelore/interface —— harness 与 backend 之间的跨层契约（依赖倒置：双方都依赖此处、不互相 import）。
 // storage-port 的 SessionBackend 聚合接口在此（见 backend.ts）。
-// 见 docs/wiki/05-决策记录-ADR/README.md ADR-0028(决策②③)。
+// 见 wiki/开发指南/03-架构/总体架构.md「决策与权衡」节 ADR-0028(决策②③)。
 
 import type Database from "better-sqlite3";
 import type { z } from "zod";

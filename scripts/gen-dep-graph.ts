@@ -9,7 +9,7 @@
 
 // 架构依赖图生成器：扫描各 workspace 包的 src/**/*.{ts,tsx}，正则抓 import/export 边，
 // 重算依赖图数据（dir 层目录聚合 + file 层文件级 + palette 调色板），把结果作为
-// `var DATA={...};` 内联回写进 docs/wiki/设计/03-架构/dep-graph.html（单一来源，无外部 json）。
+// `var DATA={...};` 内联回写进 wiki/开发指南/03-架构/dep-graph.html（单一来源，无外部 json）。
 //
 // 生成策略（重要，幂等可重复跑）：现有 dep-graph.html 已含全部 vis-network 渲染/交互/CSS。
 // 本脚本【不重写交互逻辑】——它读现有 html，用正则把 `var DATA={...};` 整行替换成
@@ -41,7 +41,7 @@ import {
 import { join, dirname, relative, resolve, basename } from "node:path";
 
 const REPO_ROOT = resolve(import.meta.dirname, "..");
-const HTML = join(REPO_ROOT, "docs/wiki/设计/03-架构/dep-graph.html");
+const HTML = join(REPO_ROOT, "wiki/开发指南/03-架构/dep-graph.html");
 
 // 8 色调色板（覆盖全部包短名，明显区分）
 const PALETTE: Record<string, string> = {

@@ -3,10 +3,10 @@
 ## 背景与约定（务必先读）
 - **skill 已建**：`.claude/skills/acceptance-loop/`（`SKILL.md` + `references/`）。它是「可用性验收循环·TDD 范例」，四步：①状态机图（根）②后端接口规约+前端设计概览(html/css) ③大型 curl 脚本+playwright ④开发到测试全绿。**五条防作弊铁律**：期望先于实现·红先行·绿只准改代码·不信 wiki「实现状态列」·确定性+落盘。
 - **首轮工件目录**：`docs/dev/tdd/acceptance-loop-2026-07-06/`，分件：`0-state-machines.md`（状态机=根，A 实体 A1-4 / B 页 B1-6）、`1-backend-interface.md`（`/sessions/{kind}` 对称接口规约）、`1-frontend-overview.md`（selector 规约）、`2-tests.md`（curl/playwright 骨架·待写）、`findings.md`（RT1-9 缺口）、`frontend/`（前端原型）、`README.md`（索引+交接点）。
-- **工作方式**：就地改（不开 worktree）；**只在用户明确要求时才 commit**（当前**尚未 commit** 任何东西）；改代码前对 `docs/wiki/术语表.md` 确认命名。
+- **工作方式**：就地改（不开 worktree）；**只在用户明确要求时才 commit**（当前**尚未 commit** 任何东西）；改代码前对 `wiki/术语表.md` 确认命名。
 
 ## 当前正在做：前端原型（`docs/dev/tdd/acceptance-loop-2026-07-06/frontend/`）
-「墨金」主题（深墨绿+描金），重构自 wiki 视觉草图 `docs/wiki/设计/04-子系统设计/玩家客户端-视觉草图/`。文件：`styles.css`(共享) `app.js`(共享行为) `index.html`(harness) `home/catalog/play/build/config.html`(5 成品页) `README.md`。
+「墨金」主题（深墨绿+描金），重构自 wiki 视觉草图 `wiki/开发指南/04-子系统设计/玩家客户端-视觉草图/`。文件：`styles.css`(共享) `app.js`(共享行为) `index.html`(harness) `home/catalog/play/build/config.html`(5 成品页) `README.md`。
 
 **已确立的关键约定（勿违背，都是用户逐条纠正出来的）**：
 1. **index.html = 预览 harness**：左侧列「页面→状态」，中间 iframe 加载 `page#state`，切换逻辑只在 index。**其他 5 页是成品页**——无预览标题/注释/页内切换下拉，全幅 `appshell`，只靠 hash 响应状态。

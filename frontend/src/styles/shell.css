@@ -1,5 +1,5 @@
 /* Copyright (C) 2026 MuLeiSY2021 — AGPL-3.0-or-later. See <https://www.gnu.org/licenses/>. */
-/* 玩家客户端外壳与各页样式，忠实还原 docs/wiki/04-子系统设计/玩家客户端-视觉草图/*.html。
+/* 玩家客户端外壳与各页样式，忠实还原 wiki/开发指南/04-子系统设计/玩家客户端-视觉草图/*.html。
    token 取自 tokens.css；冲突类名按页根(.home/.cfg/.play)作用域隔离。 */
 
 [data-lucide], .lucide { width: 16px; height: 16px; stroke-width: 1.6; vertical-align: middle; }

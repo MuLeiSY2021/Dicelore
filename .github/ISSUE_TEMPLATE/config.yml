@@ -4,5 +4,5 @@ contact_links:
     url: https://github.com/MuLeiSY2021/Dicelore/security/advisories/new
     about: 安全问题请勿公开提 issue，请走私密漏洞披露渠道（见 SECURITY.md）。
   - name: 📖 文档与设计
-    url: https://github.com/MuLeiSY2021/Dicelore/tree/main/docs/wiki
+    url: https://github.com/MuLeiSY2021/Dicelore/tree/main/wiki
     about: 提问前可先查 wiki（指南 + 设计推导链 + 术语表）。

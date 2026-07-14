@@ -31,8 +31,8 @@
 - [ ] `npm test` 通过
 - [ ] `npm run typecheck` 通过
 - [ ] 改了行为的，补/改了对应测试
-- [ ] 改了设计/决策的，同步更新了 [`docs/wiki/`](../docs/wiki/) 对应页（设计页「决策与权衡」节 / 现状与计划）
-- [ ] 改/加命名的，已对 [`术语表`](../docs/wiki/术语表.md) 确认 canonical
+- [ ] 改了设计/决策的，同步更新了 [`wiki/`](../wiki/) 对应页（设计页「决策与权衡」节 / 现状与计划）
+- [ ] 改/加命名的，已对 [`术语表`](../wiki/术语表.md) 确认 canonical
 - [ ] 新增源文件已加 AGPL 版权头（见 [CONTRIBUTING](../CONTRIBUTING.md)）
 
 ## 补充说明

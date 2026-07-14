@@ -8,7 +8,7 @@
 // any later version. See <https://www.gnu.org/licenses/>.
 
 // Dicelore 品牌标志：宝石切面 d20(亮金切面 + 内黑棱 + 外金边)+ Pirata One「20」+ 字标 Dice金/lore白/.朱。
-// 忠实还原 docs/wiki/04-子系统设计/玩家客户端-视觉草图/logo.html。自包含 SVG(无 <use>/defs，可多实例)；
+// 忠实还原 wiki/开发指南/04-子系统设计/玩家客户端-视觉草图/logo.html。自包含 SVG(无 <use>/defs，可多实例)；
 // 内棱/外边/数字色走 CSS 变量(--logo-edge / --logo-rim)随明暗主题切换(见 tokens.css)。
 
 // 七面切面(各自金色深浅)——与 logo.html #fill 一致。

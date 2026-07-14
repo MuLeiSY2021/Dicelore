@@ -21,7 +21,7 @@ adventures/<slug>/
 └── anchors/*.csv        # 锚点              → anchor 域
 ```
 
-格式与 `backend/src/catalog/import.ts` 的 `importPack` / `validatePack` 对齐；详见 wiki [后端双路径架构 §4](../docs/wiki/04-子系统设计/后端双路径架构.md)。
+格式与 `backend/src/catalog/import.ts` 的 `importPack` / `validatePack` 对齐；详见 wiki [后端双路径架构 §4](../wiki/开发指南/04-子系统设计/后端双路径架构.md)。
 
 ## 怎么进 catalog
 

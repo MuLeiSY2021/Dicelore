@@ -18,7 +18,7 @@
 // hooks 是 CC spawn 的独立进程,结构上无法收注入。
 // 由此 harness↔backend 的**包级**互指(package.json 双向)被**接受为 composition-root 边界**——
 // npm workspaces(软链双向)/TS(无 project references)/运行时(无顶层求值环)全都容忍。
-// 裁决见 docs/wiki/05-决策记录-ADR/README.md ADR-0028(后果段·包级 harness↔backend 互指接受为 composition-root 边界)。
+// 裁决见 wiki/开发指南/03-架构/总体架构.md「决策与权衡」节 ADR-0028(后果段·包级 harness↔backend 互指接受为 composition-root 边界)。
 
 // 玩家闸控明骰 gate（供 orchestrator / 组件7 注入 gate、触发 commit）。
 export { setRollGate, getRollGate, type RollGate } from "./dicegm/mcp/rollGate.js";

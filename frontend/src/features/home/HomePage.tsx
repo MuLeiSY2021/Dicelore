@@ -78,7 +78,7 @@ export default function HomePage() {
           </ol>
           <a
             className="manual"
-            href="/docs/wiki/指南/README.md"
+            href="/wiki/README.md"
             target="_blank"
             rel="noreferrer"
             data-testid="home-manual-link"

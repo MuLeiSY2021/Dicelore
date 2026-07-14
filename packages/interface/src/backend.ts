@@ -18,7 +18,7 @@
 // 收外部团本库句柄 catalogDB 作业务入参)。
 // 端口聚合全部束：Store / Resolver / Meta / Usage / Snapshots / Presentation / Catalog。
 // Toolgen 束(toolgenToToolDef)经 2026-06-29 归属判断划为 backend 资产、不进端口。
-// 见 docs/wiki/05-决策记录-ADR/README.md ADR-0028(决策②③④)。
+// 见 wiki/开发指南/03-架构/总体架构.md「决策与权衡」节 ADR-0028(决策②③④)。
 
 import type {
   StateCell,

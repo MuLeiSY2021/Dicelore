@@ -14,7 +14,7 @@
 // import backend 取这些类型，interface↔backend 即成环。故把**方法面真正用到的**域类型下沉至此
 // (type-only，零行为)，backend 的原模块改为从此处 import 并 re-export，对其公共面零影响。
 //   依赖方向：backend → interface（合法）、interface → @dicelore/dice（叶子包，合法），无环。
-// 见 docs/wiki/05-决策记录-ADR/README.md ADR-0028(决策②③)。
+// 见 wiki/开发指南/03-架构/总体架构.md「决策与权衡」节 ADR-0028(决策②③)。
 
 import type { Rng } from "@dicelore/dice";
 // ToolDef 定义在 index.ts(MCP 工具契约)；ImportResult.toolDefs 引用它。type-only import,无运行时环。

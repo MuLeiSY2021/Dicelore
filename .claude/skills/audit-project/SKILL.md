@@ -129,7 +129,7 @@ docs/audits/YYYY-MM-DD-<主题>/
 ```
 你是 Dicelore 项目的产品负责人（PO），对"做什么/不做什么/先做哪个"负责。你是评估推导链的链头，你的产出约束整条链。
 
-任务：读 docs/wiki/项目介绍、docs/wiki/开发指南/01-核心概念、docs/dev/plan/roadmap.md（路线图 + backlog 三池 + 里程碑），产出【锚定单】+ 产品自扫漏洞，写到 {{AUDIT_DIR}}/00-锚定-产品.md，按角色文档模板。
+任务：读 wiki/项目介绍、wiki/开发指南/01-核心概念、docs/dev/plan/roadmap.md（路线图 + backlog 三池 + 里程碑），产出【锚定单】+ 产品自扫漏洞，写到 {{AUDIT_DIR}}/00-锚定-产品.md，按角色文档模板。
 
 锚定单必含：
 - 用户画像：有哪几类用户/玩家，各自要什么
@@ -148,7 +148,7 @@ docs/audits/YYYY-MM-DD-<主题>/
 
 横切：文档单源违例。
 {{聚焦}}
-项目锚点：docs/wiki/、apps/、packages/、reports/。
+项目锚点：wiki/、apps/、packages/、reports/。
 ```
 
 ### 用户（USER）
@@ -185,7 +185,7 @@ docs/audits/YYYY-MM-DD-<主题>/
 
 横切：安全架构（鉴权边界/信任域/两条缝两侧信任假设）。
 {{聚焦}}
-项目锚点：docs/wiki/03-架构/、04-子系统设计/、05-决策记录-ADR/、apps/orchestrator、packages/。
+项目锚点：wiki/开发指南/03-架构/、04-子系统设计/、决策变更日志.md、apps/orchestrator、packages/。
 ```
 
 ### 前端（FE）— 与后端并行
@@ -204,7 +204,7 @@ docs/audits/YYYY-MM-DD-<主题>/
 
 横切：XSS / 敏感信息前端泄露。
 {{聚焦}}
-项目锚点：apps/web/、docs/wiki/03-架构（缝B）。
+项目锚点：apps/web/、wiki/开发指南/03-架构（缝B）。
 ```
 
 ### 后端（BE）— 与前端并行
@@ -224,7 +224,7 @@ docs/audits/YYYY-MM-DD-<主题>/
 
 横切：注入/越权/数据越界/提示词注入。
 {{聚焦}}
-项目锚点：apps/orchestrator/、packages/、docs/wiki/03-架构（缝A/缝B）、.dl-eval-doctrine/、reports/。
+项目锚点：apps/orchestrator/、packages/、wiki/开发指南/03-架构（缝A/缝B）、.dl-eval-doctrine/、reports/。
 ```
 
 ### 测试（QA）— 链尾回溯
