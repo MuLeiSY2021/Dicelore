@@ -52,3 +52,28 @@
 2. **每页一职责 / 一子系统**：开头一句"本页职责"，越界的内容写到对应页并互链。
 3. **决策就近、单源**：决策内嵌本页「决策与权衡」节，不在多处复写；历史全文进归档。
 
+---
+
+## 开发者速查:两条缝 + 联调起服务
+
+扩展前先分清两条接口缝(详细契约见各权威页,本节只给速查表 + 起服务命令):
+
+| 缝 | 谁 ↔ 谁 | 拓扑 | 机制 | 该不该远程化 | 权威页 |
+|---|---|---|---|---|---|
+| **缝 A** | dicelore MCP(agent 工具面)↔ 编排后端 | 永远同机同进程 | 进程内 `onCanonWrite` 回调(HTTP webhook 是跨进程未来形态) | 不需要 | [玩家客户端-接口 §0/§5](玩家客户端-接口.md) |
+| **缝 B** | 编排后端 ↔ 呈现 UI(web) | web 可远程、未来多租户 | REST + WS,按 `sessionId` 寻址 | 需要 | [玩家客户端-接口 §1-4](玩家客户端-接口.md) |
+
+storage-port(`SessionBackend`,harness↔backend 之间)见 [后端双路径架构](后端双路径架构.md);MCP 工具面(运行时+构建期)见 [MCP工具面](../02-MCP与Skill体系/MCP工具面.md);团本 pack 格式见 [团本与manifest](团本与manifest.md);声明式自定义工具(`sqlGuard`/视图编译/工具编译)见 [团本构建工具链 §7](团本构建工具链.md);CC hook 三件套(SessionStart/UserPromptSubmit/Stop)见 [adapter与L3审计](adapter与L3审计.md)。
+
+**本地联调起服务:**
+
+```bash
+# 后端:FAKE_GM 跳过真 LLM,纯脚本 GM,适合联调
+DICELORE_FAKE_GM=1 PORT=8787 npm run dev -w @dicelore/backend
+# 前端:Vite dev,把 /sessions 代理到 :8787
+npm run dev -w @dicelore/frontend
+```
+
+连通自检:`GET /sessions/demo/presentation` 应回全量快照(空局=空 sheets/mechanics、`choices:null`);浏览器开 `/play` 应建立 `ws://…/sessions/demo/ws`。真 GM 联调去掉 `DICELORE_FAKE_GM`、配 `ANTHROPIC_BASE_URL`/`ANTHROPIC_AUTH_TOKEN`;真 SDK 集成冒烟另设 `RUN_LIVE=1` opt-in(避免常规测试烧 token)。四个 happy-path 用例见 [玩家客户端-接口 §9.2](玩家客户端-接口.md)。
+
+
